@@ -70,6 +70,12 @@ so the next session does not re-derive them.
   `rule_id` (a DISTINCT ON artifact), not the decided priority-ascending
   order. An outer ORDER BY now enforces it; the simulator sorts identically.
 
+- **Drafting a new version must not suspend the running one** — found by the
+  first live simulation: `ActiveRules` used to read each rule's *latest*
+  version's status, so a pending draft silently deactivated the rule. The
+  executing set is now the newest **active** version per rule
+  (`active_rules.sql`); only a latest version of `superseded` retires a rule.
+
 ## 2026-10-01 — actor attribution
 
 - **Every event names its actor**: `cli:<os user>` (override `RHEA_ACTOR`),

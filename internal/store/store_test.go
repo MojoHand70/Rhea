@@ -150,3 +150,43 @@ func TestObjectTypeAndViewDef(t *testing.T) {
 		t.Fatalf("view defs: %+v, %v", vds, err)
 	}
 }
+
+// TestDraftDoesNotSuspendActive: the executing rule set is the newest ACTIVE
+// version per rule. Work in progress (a draft) must not stop live booking;
+// a latest version of superseded retires the rule.
+func TestDraftDoesNotSuspendActive(t *testing.T) {
+	ctx := context.Background()
+	s := testStore(t)
+	spec := core.RuleSpec{
+		Match: core.Match{EventType: "x"},
+		Effect: core.Effect{Object: core.ObjectTemplate{
+			Type: "t", Fields: map[string]string{"f": "v"}}},
+	}
+	ins := func(status string) {
+		t.Helper()
+		if _, err := s.InsertRuleVersion(ctx, core.Rule{
+			ID: "r1", Status: status, Priority: 100, EffectiveFrom: "2026-01-01",
+			CreatedBy: "test", Description: "r1", Spec: spec,
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	ins(core.StatusDraft)  // v1
+	ins(core.StatusActive) // v2
+	active, err := s.ActiveRules(ctx)
+	if err != nil || len(active) != 1 || active[0].Version != 2 {
+		t.Fatalf("active = %+v, %v; want v2", active, err)
+	}
+
+	ins(core.StatusDraft) // v3 in progress
+	active, _ = s.ActiveRules(ctx)
+	if len(active) != 1 || active[0].Version != 2 {
+		t.Fatalf("draft suspended the rule: active = %+v", active)
+	}
+
+	ins(core.StatusSuperseded) // v4 retires it
+	active, _ = s.ActiveRules(ctx)
+	if len(active) != 0 {
+		t.Fatalf("superseded rule still active: %+v", active)
+	}
+}

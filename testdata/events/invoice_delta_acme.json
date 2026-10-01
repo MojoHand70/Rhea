@@ -1,0 +1,12 @@
+{
+  "event_type": "invoice.received",
+  "occurred_at": "2026-09-25",
+  "payload": {
+    "customer": "ACME Sp. z o.o.",
+    "currency": "PLN",
+    "issue_date": "2026-09-25",
+    "lines": [
+      { "desc": "Sprocket", "qty": 3, "amount": "75.25" }
+    ]
+  }
+}

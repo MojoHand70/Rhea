@@ -26,6 +26,9 @@ var unmatchedSQL string
 //go:embed queries/latest_rules.sql
 var latestRulesSQL string
 
+//go:embed queries/active_rules.sql
+var activeRulesSQL string
+
 type Store struct {
 	Pool *pgxpool.Pool
 }
@@ -190,20 +193,16 @@ func (s *Store) LatestRules(ctx context.Context) ([]core.Rule, error) {
 	return scanRules(rows)
 }
 
-// ActiveRules returns rules whose latest version is active, in firing order
-// (priority ascending, rule_id as tiebreak — DECISIONS.md 2026-10-01).
+// ActiveRules returns the executing rule set in firing order (priority
+// ascending, rule_id as tiebreak — DECISIONS.md 2026-10-01): the newest
+// active version of each rule. A draft in progress does not suspend the
+// running version; only a latest version of superseded retires the rule.
 func (s *Store) ActiveRules(ctx context.Context) ([]core.Rule, error) {
-	all, err := s.LatestRules(ctx)
+	rows, err := s.Pool.Query(ctx, activeRulesSQL)
 	if err != nil {
 		return nil, err
 	}
-	var out []core.Rule
-	for _, r := range all {
-		if r.Status == core.StatusActive {
-			out = append(out, r)
-		}
-	}
-	return out, nil
+	return scanRules(rows)
 }
 
 func (s *Store) GetRule(ctx context.Context, id string) (core.Rule, error) {
