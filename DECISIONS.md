@@ -30,3 +30,27 @@ so the next session does not re-derive them.
   reproduces it without any sequence state.
 - **A list view finds its detail view by matching `object_type`** across view defs; the
   first match wins. Good enough until a type legitimately has two detail views.
+
+## 2026-10-01 — refs and master data
+
+- **Master data is objects materialized from events**, same as documents: `company` is
+  an ObjectType, `company.registered` a raw event, a normal rule books it. No special
+  master-data machinery; counterparty vs operating company is the `kind` enum
+  (customer|supplier|self). Multi-tenant stays out (experiment non-goal); multi-company
+  will be a `ref<company>` field when a domain needs it.
+- **`ref<T>` fields hold the target's object_id and are filled only by
+  `=ref(T, field, $.path)`**, which resolves against the object cache at fire time.
+  Unresolved or ambiguous refs abort the firing and the event waits in the worklist —
+  that *is* the unknown-master-data flow. Resolved ids are baked into derived events, so
+  replay never re-resolves and determinism is untouched. Direct-id templates are
+  rejected: referential integrity only through resolution.
+- **`ProcessPending` iterates to a fixpoint** (passes until nothing books), so master
+  data and its dependents can arrive in any order or the same batch; errors reported
+  from the final pass only.
+- **ObjectType gains optional `label_field`**; the shell renders a ref as the target's
+  label, falling back to the raw value (which also covers v1 objects whose field
+  predates the ref). Ref targets are validated syntactically at load, not for
+  existence — definition files may load in any order.
+- **Old-schema objects stay as they are**: invoice v1 rows keep the customer name
+  string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
+  Schema evolution of live objects remains parked (SPEC §7).

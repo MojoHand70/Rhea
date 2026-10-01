@@ -61,9 +61,9 @@ func TestDraftRuleFixture(t *testing.T) {
 
 func TestDraftRuleRejectsBadOutput(t *testing.T) {
 	bad := []string{
-		"I think you should use a rule here.",                         // no JSON
-		`{"rule_id":"x","description":"d","spec":{}}`,                 // empty spec
-		`{"rule_id":"","description":"d"}`,                            // missing id
+		"I think you should use a rule here.",         // no JSON
+		`{"rule_id":"x","description":"d","spec":{}}`, // empty spec
+		`{"rule_id":"","description":"d"}`,            // missing id
 		`{"rule_id":"x","description":"d","spec":{"match":{"event_type":"e"},"effect":{"object":{"type":"invoice","fields":{"bogus":"=$.x"}}}}}`, // unknown field
 	}
 	for i, answer := range bad {

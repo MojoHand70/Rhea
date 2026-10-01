@@ -1,0 +1,10 @@
+{
+  "event_type": "company.registered",
+  "occurred_at": "2026-09-01",
+  "payload": {
+    "name": "ACME Sp. z o.o.",
+    "kind": "customer",
+    "vat_id": "PL5260001246",
+    "country": "PL"
+  }
+}

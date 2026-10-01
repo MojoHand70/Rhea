@@ -130,7 +130,7 @@ func TestVerticalSliceKernel(t *testing.T) {
 	// An EUR invoice does not match the PLN rule and stays in the worklist.
 	if _, err := x.Store.AppendEvent(ctx, core.Event{
 		Kind: core.KindRaw, Type: "invoice.received", OccurredAt: "2026-09-16",
-		Payload: json.RawMessage(`{"customer":"X","currency":"EUR","issue_date":"2026-09-16","lines":[{"amount":"10.00"}]}`),
+		Payload:  json.RawMessage(`{"customer":"X","currency":"EUR","issue_date":"2026-09-16","lines":[{"amount":"10.00"}]}`),
 		DedupKey: "inv-2",
 	}); err != nil {
 		t.Fatal(err)

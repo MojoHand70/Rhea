@@ -2,26 +2,36 @@ package core
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
 // The template expression language, deliberately tiny (SPEC §2, Rule):
 //
-//	literal          any string not starting with "="
-//	=$.a.b[0].c      value at path in the event payload
-//	=sum($.x[*].y)   money sum over decimal strings at path, in minor units
+//	literal                  any string not starting with "="
+//	=$.a.b[0].c              value at path in the event payload
+//	=sum($.x[*].y)           money sum over decimal strings at path, in minor units
+//	=ref(type, field, $.p)   object_id of the single object of that type whose
+//	                         field equals the value at path (ref<type> fields)
 //
 // Paths: $.seg, seg[N], seg[*]. A [*] fans out into a slice of values.
 
 type Template struct {
-	raw  string
-	kind string // "literal" | "path" | "sum"
-	path []pathSeg
+	raw      string
+	kind     string // "literal" | "path" | "sum" | "ref"
+	path     []pathSeg
+	refType  string // ref only: target object type
+	refField string // ref only: field matched against the path's value
 }
+
+// Lookup resolves a ref() against current object state: the object_id of the
+// single object of the given type whose field equals value, or an error (none
+// or several). The executor supplies it; contexts without state pass nil.
+type Lookup func(objectType, field string, value any) (string, error)
 
 type pathSeg struct {
 	key   string
-	index int  // -1 none, -2 wildcard
+	index int // -1 none, -2 wildcard
 	hasIx bool
 }
 
@@ -30,6 +40,21 @@ func ParseTemplate(s string) (Template, error) {
 		return Template{raw: s, kind: "literal"}, nil
 	}
 	body := strings.TrimSpace(s[1:])
+	if strings.HasPrefix(body, "ref(") && strings.HasSuffix(body, ")") {
+		parts := strings.SplitN(body[4:len(body)-1], ",", 3)
+		if len(parts) != 3 {
+			return Template{}, fmt.Errorf("ref() wants (type, field, $.path)")
+		}
+		typ, field := strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
+		if typ == "" || field == "" {
+			return Template{}, fmt.Errorf("ref() wants (type, field, $.path)")
+		}
+		p, err := parsePath(strings.TrimSpace(parts[2]))
+		if err != nil {
+			return Template{}, err
+		}
+		return Template{raw: s, kind: "ref", refType: typ, refField: field, path: p}, nil
+	}
 	if strings.HasPrefix(body, "sum(") && strings.HasSuffix(body, ")") {
 		inner := strings.TrimSpace(body[4 : len(body)-1])
 		p, err := parsePath(inner)
@@ -124,25 +149,36 @@ func resolve(v any, path []pathSeg) (any, error) {
 	return v, nil
 }
 
-// Eval evaluates the template against a decoded payload. The fieldType guides
-// coercion: "money" expects decimal strings and yields int64 minor units.
-func (t Template) Eval(payload any, fieldType string) (any, error) {
+// Eval evaluates the template against a decoded payload. The field def guides
+// coercion and checking: "money" expects decimal strings and yields int64
+// minor units, "enum" admits only the declared values, ref fields resolve
+// through lookup into the target's object_id.
+func (t Template) Eval(payload any, fd FieldDef, lookup Lookup) (any, error) {
 	switch t.kind {
 	case "literal":
-		return t.raw, nil
+		return checked(t.raw, fd)
+	case "ref":
+		if lookup == nil {
+			return nil, fmt.Errorf("ref() needs object state, none available here")
+		}
+		v, err := resolve(payload, t.path)
+		if err != nil {
+			return nil, err
+		}
+		return lookup(t.refType, t.refField, v)
 	case "path":
 		v, err := resolve(payload, t.path)
 		if err != nil {
 			return nil, err
 		}
-		if fieldType == "money" {
+		if fd.Type == "money" {
 			s, ok := v.(string)
 			if !ok {
 				return nil, fmt.Errorf("money field wants a decimal string, got %T", v)
 			}
 			return ParseMoney(s)
 		}
-		return v, nil
+		return checked(v, fd)
 	case "sum":
 		v, err := resolve(payload, t.path)
 		if err != nil {
@@ -167,6 +203,17 @@ func (t Template) Eval(payload any, fieldType string) (any, error) {
 		return total, nil
 	}
 	return nil, fmt.Errorf("unknown template kind %q", t.kind)
+}
+
+// checked enforces per-type value constraints that need the field definition.
+func checked(v any, fd FieldDef) (any, error) {
+	if fd.Type == "enum" {
+		s, ok := v.(string)
+		if !ok || !slices.Contains(fd.Values, s) {
+			return nil, fmt.Errorf("value %v is not one of %v", v, fd.Values)
+		}
+	}
+	return v, nil
 }
 
 // EvalCondition evaluates one match condition against a decoded payload.

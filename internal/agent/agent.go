@@ -82,7 +82,11 @@ Template language for field values:
 - a plain string is a literal
 - "=$.path.to.value" copies a value from the event payload (indexing: $.lines[0].x)
 - "=sum($.lines[*].amount)" sums decimal-string amounts into a money value
+- "=ref(T, field, $.path)" resolves a reference: the id of the single existing object
+  of type T whose field equals the payload value (usually T's label field, e.g. name)
 Money fields MUST use "=$.path" to a decimal string or "=sum(...)". Dates are copied as strings.
+A field typed "ref<T>" MUST use "=ref(T, ...)". A field typed "enum" only accepts one of
+its declared "values".
 
 Every required field of the target object type must be present in "fields".
 Use "where" conditions only for constraints the user's intent actually implies.`

@@ -60,25 +60,25 @@ func TestTemplateEval(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	v, err := tm.Eval(payload, "string")
+	v, err := tm.Eval(payload, FieldDef{Type: "string"}, nil)
 	if err != nil || v != "ACME Sp. z o.o." {
 		t.Errorf("path eval = %v, %v", v, err)
 	}
 
 	tm, _ = ParseTemplate("=sum($.lines[*].amount)")
-	v, err = tm.Eval(payload, "money")
+	v, err = tm.Eval(payload, FieldDef{Type: "money"}, nil)
 	if err != nil || v != int64(35050) {
 		t.Errorf("sum eval = %v, %v; want 35050", v, err)
 	}
 
 	tm, _ = ParseTemplate("faktura")
-	v, _ = tm.Eval(payload, "string")
+	v, _ = tm.Eval(payload, FieldDef{Type: "string"}, nil)
 	if v != "faktura" {
 		t.Errorf("literal eval = %v", v)
 	}
 
 	tm, _ = ParseTemplate("=$.lines[0].desc")
-	v, err = tm.Eval(payload, "string")
+	v, err = tm.Eval(payload, FieldDef{Type: "string"}, nil)
 	if err != nil || v != "Widget" {
 		t.Errorf("indexed eval = %v, %v", v, err)
 	}
@@ -91,7 +91,7 @@ func TestTemplateEval(t *testing.T) {
 	}
 
 	tm, _ = ParseTemplate("=$.missing")
-	if _, err := tm.Eval(payload, "string"); err == nil {
+	if _, err := tm.Eval(payload, FieldDef{Type: "string"}, nil); err == nil {
 		t.Error("missing path: want eval error")
 	}
 }
@@ -175,5 +175,121 @@ func TestRuleSpecValidate(t *testing.T) {
 	s.Match.Where[0].Op = "regex"
 	if err := s.Validate(&ot); err == nil {
 		t.Error("unknown op accepted")
+	}
+}
+
+func TestRefTemplate(t *testing.T) {
+	payload := decode(t, samplePayload)
+
+	tm, err := ParseTemplate("=ref(company, name, $.customer)")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lookup := func(objectType, field string, value any) (string, error) {
+		if objectType != "company" || field != "name" || value != "ACME Sp. z o.o." {
+			t.Fatalf("lookup got (%s, %s, %v)", objectType, field, value)
+		}
+		return "company-7", nil
+	}
+	v, err := tm.Eval(payload, FieldDef{Type: "ref<company>"}, lookup)
+	if err != nil || v != "company-7" {
+		t.Errorf("ref eval = %v, %v; want company-7", v, err)
+	}
+
+	// No object state available: ref() must refuse, not guess.
+	if _, err := tm.Eval(payload, FieldDef{Type: "ref<company>"}, nil); err == nil {
+		t.Error("ref eval without lookup succeeded")
+	}
+
+	for _, bad := range []string{"=ref(company, name)", "=ref(, name, $.x)", "=ref(company, , $.x)", "=ref(company, name, customer)"} {
+		if _, err := ParseTemplate(bad); err == nil {
+			t.Errorf("ParseTemplate(%q): want error", bad)
+		}
+	}
+}
+
+func TestEnumEval(t *testing.T) {
+	fd := FieldDef{Name: "kind", Type: "enum", Values: []string{"customer", "supplier", "self"}}
+	payload := decode(t, `{"kind": "customer"}`)
+
+	tm, _ := ParseTemplate("=$.kind")
+	if v, err := tm.Eval(payload, fd, nil); err != nil || v != "customer" {
+		t.Errorf("enum path eval = %v, %v", v, err)
+	}
+	tm, _ = ParseTemplate("supplier")
+	if v, err := tm.Eval(payload, fd, nil); err != nil || v != "supplier" {
+		t.Errorf("enum literal eval = %v, %v", v, err)
+	}
+	tm, _ = ParseTemplate("partner")
+	if _, err := tm.Eval(payload, fd, nil); err == nil {
+		t.Error("enum accepted a value outside its set")
+	}
+}
+
+func companyType() ObjectType {
+	return ObjectType{
+		Name: "company", Version: 1, Domain: "finance", LabelField: "name",
+		Fields: []FieldDef{
+			{Name: "name", Type: "string", Required: true},
+			{Name: "kind", Type: "enum", Values: []string{"customer", "supplier", "self"}, Required: true},
+		},
+	}
+}
+
+func TestObjectTypeValidate(t *testing.T) {
+	if err := companyType().Validate(); err != nil {
+		t.Fatalf("valid type rejected: %v", err)
+	}
+	ot := companyType()
+	ot.Fields[0].Type = "varchar"
+	if err := ot.Validate(); err == nil {
+		t.Error("unknown field type accepted")
+	}
+	ot = companyType()
+	ot.Fields[1].Values = nil
+	if err := ot.Validate(); err == nil {
+		t.Error("enum without values accepted")
+	}
+	ot = companyType()
+	ot.LabelField = "nope"
+	if err := ot.Validate(); err == nil {
+		t.Error("label_field pointing nowhere accepted")
+	}
+	ot = companyType()
+	ot.Fields[0].Type = "ref<>"
+	if err := ot.Validate(); err == nil {
+		t.Error("empty ref target accepted")
+	}
+}
+
+func TestRuleSpecValidateRefs(t *testing.T) {
+	ot := invoiceType()
+	ot.Version = 2
+	ot.Fields[0] = FieldDef{Name: "customer", Type: "ref<company>", Required: true}
+
+	s := validSpec()
+	s.Effect.Object.Fields["customer"] = "=ref(company, name, $.customer)"
+	if err := s.Validate(&ot); err != nil {
+		t.Fatalf("valid ref spec rejected: %v", err)
+	}
+
+	// A ref field filled without resolution has no referential integrity.
+	s = validSpec()
+	if err := s.Validate(&ot); err == nil {
+		t.Error("ref field with plain path template accepted")
+	}
+
+	s = validSpec()
+	s.Effect.Object.Fields["customer"] = "=ref(account, name, $.customer)"
+	if err := s.Validate(&ot); err == nil {
+		t.Error("ref target mismatch accepted")
+	}
+
+	// And the other way round: ref() into a string field.
+	plain := invoiceType()
+	s = validSpec()
+	s.Effect.Object.Fields["customer"] = "=ref(company, name, $.customer)"
+	if err := s.Validate(&plain); err == nil {
+		t.Error("ref template on string field accepted")
 	}
 }

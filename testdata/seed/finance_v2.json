@@ -1,0 +1,78 @@
+{
+  "object_types": [
+    {
+      "name": "company",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "name",
+      "fields": [
+        { "name": "name", "type": "string", "required": true },
+        { "name": "kind", "type": "enum", "values": ["customer", "supplier", "self"], "required": true },
+        { "name": "vat_id", "type": "string", "required": false },
+        { "name": "country", "type": "string", "required": false }
+      ]
+    },
+    {
+      "name": "invoice",
+      "version": 2,
+      "domain": "finance",
+      "is_document": true,
+      "fields": [
+        { "name": "customer", "type": "ref<company>", "required": true },
+        { "name": "issue_date", "type": "date", "required": true },
+        { "name": "currency", "type": "string", "required": true },
+        { "name": "total", "type": "money", "required": true }
+      ]
+    }
+  ],
+  "view_defs": [
+    {
+      "view_id": "company-list",
+      "version": 1,
+      "notion": "list",
+      "title": "Companies",
+      "domain": "finance",
+      "function": "master data",
+      "spec": {
+        "object_type": "company",
+        "columns": [
+          { "field": "name", "label": "Name" },
+          { "field": "kind", "label": "Kind" },
+          { "field": "country", "label": "Country" }
+        ]
+      }
+    },
+    {
+      "view_id": "company-detail",
+      "version": 1,
+      "notion": "detail",
+      "title": "Company",
+      "domain": "finance",
+      "function": "master data",
+      "spec": {
+        "object_type": "company",
+        "sections": [
+          { "title": "Company", "fields": ["name", "kind"] },
+          { "title": "Registration", "fields": ["vat_id", "country"] }
+        ]
+      }
+    },
+    {
+      "view_id": "invoice-by-customer",
+      "version": 2,
+      "notion": "analysis",
+      "title": "Invoice totals by customer",
+      "domain": "finance",
+      "function": "analysis",
+      "spec": {
+        "sql": "SELECT json_extract_string(c.state, '$.name') AS customer, COUNT(*) AS invoices, printf('%d.%02d', SUM(CAST(json_extract(i.state, '$.total') AS BIGINT)) // 100, SUM(CAST(json_extract(i.state, '$.total') AS BIGINT)) % 100) AS total FROM objects i JOIN objects c ON json_extract_string(i.state, '$.customer') = c.object_id WHERE i.object_type = 'invoice' AND c.object_type = 'company' GROUP BY 1 ORDER BY SUM(CAST(json_extract(i.state, '$.total') AS BIGINT)) DESC",
+        "columns": [
+          { "field": "customer", "label": "Customer" },
+          { "field": "invoices", "label": "Invoices" },
+          { "field": "total", "label": "Total" }
+        ]
+      }
+    }
+  ]
+}

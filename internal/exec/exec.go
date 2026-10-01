@@ -17,31 +17,39 @@ type Executor struct {
 }
 
 // ProcessPending evaluates every unmatched raw event against the active rule
-// set, in event order. Returns how many objects were materialized. An event
-// that matches no rule simply stays in the worklist; an event whose matching
-// rule fails to expand is reported and left in place.
+// set, in event order, and repeats until a pass books nothing: a firing can
+// materialize an object (a company, say) that an earlier event's ref() was
+// waiting for. Returns how many objects were materialized. An event that
+// matches no rule simply stays in the worklist; an event whose matching rule
+// fails to expand is reported (from the final pass) and left in place.
 func (x *Executor) ProcessPending(ctx context.Context) (int, []error) {
-	events, err := x.Store.UnmatchedRawEvents(ctx)
-	if err != nil {
-		return 0, []error{err}
-	}
 	rules, err := x.Store.ActiveRules(ctx)
 	if err != nil {
 		return 0, []error{err}
 	}
 	var booked int
-	var errs []error
-	for _, ev := range events {
-		fired, err := x.evaluate(ctx, ev, rules)
+	for {
+		events, err := x.Store.UnmatchedRawEvents(ctx)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("event %d: %w", ev.ID, err))
-			continue
+			return booked, []error{err}
 		}
-		if fired {
-			booked++
+		pass := 0
+		var errs []error
+		for _, ev := range events {
+			fired, err := x.evaluate(ctx, ev, rules)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("event %d: %w", ev.ID, err))
+				continue
+			}
+			if fired {
+				pass++
+			}
+		}
+		booked += pass
+		if pass == 0 {
+			return booked, errs
 		}
 	}
-	return booked, errs
 }
 
 // evaluate fires the first matching rule (rules arrive in firing order:
@@ -86,7 +94,13 @@ func (x *Executor) fire(ctx context.Context, ev core.Event, r core.Rule, payload
 	if err != nil {
 		return fmt.Errorf("rule %s v%d: %w", r.ID, r.Version, err)
 	}
-	state, err := Expand(tmpl, objType, payload)
+	// ref() resolves against the object cache as of this point in the log;
+	// the resolved id is baked into the derived event, so replay never
+	// re-resolves and determinism (invariant 4) is untouched.
+	lookup := func(typ, field string, value any) (string, error) {
+		return x.Store.FindObjectIDByField(ctx, typ, field, fmt.Sprintf("%v", value))
+	}
+	state, err := Expand(tmpl, objType, payload, lookup)
 	if err != nil {
 		return fmt.Errorf("rule %s v%d expand: %w", r.ID, r.Version, err)
 	}
@@ -133,9 +147,9 @@ func (x *Executor) fire(ctx context.Context, ev core.Event, r core.Rule, payload
 }
 
 // Expand evaluates every field template against the payload, typed by the
-// object type. Missing required fields or evaluation failures abort the whole
-// expansion — a half-materialized object never exists.
-func Expand(tmpl core.ObjectTemplate, objType core.ObjectType, payload any) (map[string]any, error) {
+// object type. Missing required fields, evaluation failures or unresolvable
+// refs abort the whole expansion — a half-materialized object never exists.
+func Expand(tmpl core.ObjectTemplate, objType core.ObjectType, payload any, lookup core.Lookup) (map[string]any, error) {
 	if err := (core.RuleSpec{
 		Match:  core.Match{EventType: "-"},
 		Effect: core.Effect{Object: tmpl},
@@ -149,7 +163,7 @@ func Expand(tmpl core.ObjectTemplate, objType core.ObjectType, payload any) (map
 		if err != nil {
 			return nil, fmt.Errorf("field %q: %w", name, err)
 		}
-		v, err := t.Eval(payload, fd.Type)
+		v, err := t.Eval(payload, fd, lookup)
 		if err != nil {
 			return nil, fmt.Errorf("field %q: %w", name, err)
 		}

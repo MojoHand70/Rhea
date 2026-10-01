@@ -1,0 +1,10 @@
+{
+  "event_type": "company.registered",
+  "occurred_at": "2026-09-02",
+  "payload": {
+    "name": "Beta Industries GmbH",
+    "kind": "customer",
+    "vat_id": "DE811907980",
+    "country": "DE"
+  }
+}

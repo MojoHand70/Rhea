@@ -51,7 +51,7 @@ func writeErr(w http.ResponseWriter, status int, err error) {
 // --- navigation -----------------------------------------------------------
 
 type navFunction struct {
-	Function string        `json:"function"`
+	Function string         `json:"function"`
 	Views    []core.ViewDef `json:"views"`
 }
 
@@ -132,6 +132,34 @@ func (s *Server) handleView(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// displayValue formats one state value; a ref field renders as the referenced
+// object's label_field so humans see "ACME Sp. z o.o.", not "company-7". A
+// ref that does not resolve (old type versions hold plain strings) falls back
+// to the raw value.
+func (s *Server) displayValue(ctx context.Context, v any, fd core.FieldDef) string {
+	if _, isRef := core.RefTarget(fd.Type); isRef {
+		if id, ok := v.(string); ok && id != "" {
+			if label := s.refLabel(ctx, id); label != "" {
+				return label
+			}
+		}
+	}
+	return display(v, fd.Type)
+}
+
+func (s *Server) refLabel(ctx context.Context, objectID string) string {
+	o, err := s.Store.GetObject(ctx, objectID)
+	if err != nil {
+		return ""
+	}
+	ot, err := s.Store.GetObjectType(ctx, o.Type)
+	if err != nil || ot.LabelField == "" {
+		return ""
+	}
+	label, _ := o.State[ot.LabelField].(string)
+	return label
+}
+
 // display formats a state value for humans, by field type. Money arrives from
 // JSON as float64 minor units (exact for int64 magnitudes that fit 2^53).
 func display(v any, fieldType string) string {
@@ -175,7 +203,7 @@ func (s *Server) serveList(ctx context.Context, w http.ResponseWriter, vd *core.
 		row := make([]string, len(spec.Columns))
 		for i, c := range spec.Columns {
 			fd, _ := objType.Field(c.Field)
-			row[i] = display(o.State[c.Field], fd.Type)
+			row[i] = s.displayValue(ctx, o.State[c.Field], fd)
 		}
 		rows = append(rows, row)
 		ids = append(ids, o.ID)
@@ -228,7 +256,7 @@ func (s *Server) serveDetail(ctx context.Context, w http.ResponseWriter, vd *cor
 		so := sectionOut{Title: sec.Title}
 		for _, f := range sec.Fields {
 			fd, _ := objType.Field(f)
-			so.Fields = append(so.Fields, fieldOut{Label: f, Value: display(o.State[f], fd.Type)})
+			so.Fields = append(so.Fields, fieldOut{Label: f, Value: s.displayValue(ctx, o.State[f], fd)})
 		}
 		sections = append(sections, so)
 	}

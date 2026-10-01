@@ -6,6 +6,8 @@ package core
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 )
 
@@ -47,13 +49,59 @@ type ObjectType struct {
 	Version    int        `json:"version"`
 	Domain     string     `json:"domain"`
 	IsDocument bool       `json:"is_document"`
+	LabelField string     `json:"label_field,omitempty"` // field shown when another object references this one
 	Fields     []FieldDef `json:"fields"`
 }
 
 type FieldDef struct {
-	Name     string `json:"name"`
-	Type     string `json:"type"` // string | int | date | money
-	Required bool   `json:"required"`
+	Name     string   `json:"name"`
+	Type     string   `json:"type"` // string | int | date | money | enum | ref<type>
+	Required bool     `json:"required"`
+	Values   []string `json:"values,omitempty"` // enum: the allowed value set
+}
+
+// RefTarget extracts the target type from a ref field type:
+// "ref<company>" → ("company", true).
+func RefTarget(fieldType string) (string, bool) {
+	if strings.HasPrefix(fieldType, "ref<") && strings.HasSuffix(fieldType, ">") {
+		target := fieldType[4 : len(fieldType)-1]
+		return target, target != ""
+	}
+	return "", false
+}
+
+// Validate checks an object type definition: known field types, enum value
+// sets, syntactically sound ref targets, and a label_field that exists. Ref
+// targets are not checked for existence — definitions may load in any order.
+func (t ObjectType) Validate() error {
+	if t.Name == "" {
+		return fmt.Errorf("object type needs a name")
+	}
+	if len(t.Fields) == 0 {
+		return fmt.Errorf("object type %q has no fields", t.Name)
+	}
+	for _, f := range t.Fields {
+		switch f.Type {
+		case "string", "int", "date", "money":
+		case "enum":
+			if len(f.Values) == 0 {
+				return fmt.Errorf("field %q: enum needs values", f.Name)
+			}
+		default:
+			if _, ok := RefTarget(f.Type); !ok {
+				return fmt.Errorf("field %q: unknown type %q", f.Name, f.Type)
+			}
+		}
+		if f.Type != "enum" && len(f.Values) > 0 {
+			return fmt.Errorf("field %q: values only belong on enum fields", f.Name)
+		}
+	}
+	if t.LabelField != "" {
+		if _, ok := t.Field(t.LabelField); !ok {
+			return fmt.Errorf("label_field %q is not a field of %q", t.LabelField, t.Name)
+		}
+	}
+	return nil
 }
 
 func (t ObjectType) Field(name string) (FieldDef, bool) {
@@ -151,13 +199,30 @@ func (s RuleSpec) Validate(target *ObjectType) error {
 		return fmt.Errorf("effect.object.fields is empty")
 	}
 	for name, tmpl := range s.Effect.Object.Fields {
-		if _, err := ParseTemplate(tmpl); err != nil {
+		pt, err := ParseTemplate(tmpl)
+		if err != nil {
 			return fmt.Errorf("field %q template: %w", name, err)
 		}
-		if target != nil {
-			if _, ok := target.Field(name); !ok {
-				return fmt.Errorf("field %q not in object type %q", name, target.Name)
-			}
+		if target == nil {
+			continue
+		}
+		fd, ok := target.Field(name)
+		if !ok {
+			return fmt.Errorf("field %q not in object type %q", name, target.Name)
+		}
+		// Ref fields and ref() templates must pair up, with matching targets:
+		// referential integrity is only guaranteed through resolution.
+		refTarget, isRef := RefTarget(fd.Type)
+		switch {
+		case isRef && pt.kind != "ref":
+			return fmt.Errorf("field %q is %s and must use =ref(%s, <field>, $.path)", name, fd.Type, refTarget)
+		case !isRef && pt.kind == "ref":
+			return fmt.Errorf("field %q is %s, not a ref", name, fd.Type)
+		case isRef && pt.refType != refTarget:
+			return fmt.Errorf("field %q is %s but template resolves a %q", name, fd.Type, pt.refType)
+		}
+		if fd.Type == "enum" && pt.kind == "literal" && !slices.Contains(fd.Values, pt.raw) {
+			return fmt.Errorf("field %q: %q is not one of %v", name, pt.raw, fd.Values)
 		}
 	}
 	if target != nil {
