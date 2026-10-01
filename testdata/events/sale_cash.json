@@ -1,0 +1,9 @@
+{
+  "event_type": "sale.recorded",
+  "occurred_at": "2026-09-28",
+  "payload": {
+    "currency": "PLN",
+    "amount": "320.00",
+    "memo": "Cash sale, store 1"
+  }
+}
