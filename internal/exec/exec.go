@@ -95,34 +95,18 @@ func matchRule(r core.Rule, ev core.Event, payload any) (bool, error) {
 	return true, nil
 }
 
-// fire expands the rule's template and books the result atomically: one
-// derived event in the log plus one row in the object cache, or nothing.
+// fire expands the rule's effect and books the result atomically: derived
+// events in the log plus rows in the object cache — all of it or nothing.
+// An object effect yields one object; a postings effect one balanced entry.
 func (x *Executor) fire(ctx context.Context, ev core.Event, r core.Rule, payload any) error {
-	tmpl := r.Spec.Effect.Object
-	objType, err := x.Store.GetObjectType(ctx, tmpl.Type)
-	if err != nil {
-		return fmt.Errorf("rule %s v%d: %w", r.ID, r.Version, err)
-	}
-	// ref() resolves against the object cache as of this point in the log;
-	// the resolved id is baked into the derived event, so replay never
+	// Lookups resolve against the object cache as of this point in the log;
+	// resolved ids are baked into the derived events, so replay never
 	// re-resolves and determinism (invariant 4) is untouched.
-	lookup := func(typ, field string, value any) (string, error) {
-		return x.Store.FindObjectIDByField(ctx, typ, field, fmt.Sprintf("%v", value))
-	}
-	state, err := Expand(tmpl, objType, payload, lookup)
-	if err != nil {
-		return fmt.Errorf("rule %s v%d expand: %w", r.ID, r.Version, err)
+	lookup := func(typ, field string, value any) ([]string, error) {
+		return x.Store.FindObjectIDsByField(ctx, typ, field, fmt.Sprintf("%v", value))
 	}
 
-	// Deterministic object identity: derived from the causing event, so replay
-	// reproduces it exactly (invariant 4).
-	mat := core.MaterializedObject{
-		ObjectID:    fmt.Sprintf("%s-%d", objType.Name, ev.ID),
-		ObjectType:  objType.Name,
-		TypeVersion: objType.Version,
-		State:       state,
-	}
-	matPayload, err := json.Marshal(mat)
+	mats, err := x.expandEffect(ctx, ev, r, payload, lookup)
 	if err != nil {
 		return err
 	}
@@ -133,27 +117,65 @@ func (x *Executor) fire(ctx context.Context, ev core.Event, r core.Rule, payload
 	}
 	defer tx.Rollback(ctx)
 
-	derivedID, err := store.AppendEvent(ctx, tx, core.Event{
-		Kind:         core.KindDerived,
-		Type:         core.EventObjectMaterialized,
-		OccurredAt:   ev.OccurredAt, // derived events inherit the business date
-		Payload:      matPayload,
-		CauseEventID: &ev.ID,
-		RuleID:       r.ID,
-		RuleVersion:  r.Version,
-		Actor:        "kernel", // rule provenance explains the rest
-	})
-	if err != nil {
-		return err
+	for _, mat := range mats {
+		matPayload, err := json.Marshal(mat)
+		if err != nil {
+			return err
+		}
+		if _, err := store.AppendEvent(ctx, tx, core.Event{
+			Kind:         core.KindDerived,
+			Type:         core.EventObjectMaterialized,
+			OccurredAt:   ev.OccurredAt, // derived events inherit the business date
+			Payload:      matPayload,
+			CauseEventID: &ev.ID,
+			RuleID:       r.ID,
+			RuleVersion:  r.Version,
+			Actor:        "kernel", // rule provenance explains the rest
+		}); err != nil {
+			return err
+		}
+		if err := store.InsertObject(ctx, tx, core.Object{
+			ID: mat.ObjectID, Type: mat.ObjectType, TypeVersion: mat.TypeVersion,
+			State: mat.State, SourceEventID: ev.ID, RuleID: r.ID, RuleVersion: r.Version,
+		}); err != nil {
+			return err
+		}
 	}
-	if err := store.InsertObject(ctx, tx, core.Object{
-		ID: mat.ObjectID, Type: mat.ObjectType, TypeVersion: mat.TypeVersion,
-		State: mat.State, SourceEventID: ev.ID, RuleID: r.ID, RuleVersion: r.Version,
-	}); err != nil {
-		return err
-	}
-	_ = derivedID
 	return tx.Commit(ctx)
+}
+
+// expandEffect turns a matched rule into the objects it materializes, using
+// lookup for all state access so the simulator can reuse it verbatim.
+func (x *Executor) expandEffect(ctx context.Context, ev core.Event, r core.Rule, payload any, lookup core.Lookup) ([]core.MaterializedObject, error) {
+	if r.Spec.Effect.Postings != nil {
+		postingType, err := x.Store.GetObjectType(ctx, PostingObjectType)
+		if err != nil {
+			return nil, fmt.Errorf("rule %s v%d: %w", r.ID, r.Version, err)
+		}
+		mats, err := ExpandPostings(r.Spec.Effect.Postings, postingType, ev, payload, lookup)
+		if err != nil {
+			return nil, fmt.Errorf("rule %s v%d postings: %w", r.ID, r.Version, err)
+		}
+		return mats, nil
+	}
+
+	tmpl := r.Spec.Effect.Object
+	objType, err := x.Store.GetObjectType(ctx, tmpl.Type)
+	if err != nil {
+		return nil, fmt.Errorf("rule %s v%d: %w", r.ID, r.Version, err)
+	}
+	state, err := Expand(tmpl, objType, payload, lookup)
+	if err != nil {
+		return nil, fmt.Errorf("rule %s v%d expand: %w", r.ID, r.Version, err)
+	}
+	// Deterministic object identity: derived from the causing event, so
+	// replay reproduces it exactly (invariant 4).
+	return []core.MaterializedObject{{
+		ObjectID:    fmt.Sprintf("%s-%d", objType.Name, ev.ID),
+		ObjectType:  objType.Name,
+		TypeVersion: objType.Version,
+		State:       state,
+	}}, nil
 }
 
 // Expand evaluates every field template against the payload, typed by the

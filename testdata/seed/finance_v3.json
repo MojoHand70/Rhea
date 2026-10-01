@@ -1,0 +1,125 @@
+{
+  "object_types": [
+    {
+      "name": "account",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "name",
+      "fields": [
+        { "name": "code", "type": "string", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "type", "type": "enum", "values": ["asset", "liability", "equity", "revenue", "expense", "debtor", "creditor", "tax", "bank", "clearing"], "required": true }
+      ]
+    },
+    {
+      "name": "posting",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "fields": [
+        { "name": "entry", "type": "string", "required": true },
+        { "name": "line", "type": "int", "required": true },
+        { "name": "account", "type": "ref<account>", "required": true },
+        { "name": "side", "type": "enum", "values": ["debit", "credit"], "required": true },
+        { "name": "amount", "type": "money", "required": true },
+        { "name": "currency", "type": "string", "required": true },
+        { "name": "date", "type": "date", "required": true }
+      ]
+    },
+    {
+      "name": "period_lock",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "fields": [
+        { "name": "month", "type": "string", "required": true }
+      ]
+    }
+  ],
+  "view_defs": [
+    {
+      "view_id": "account-list",
+      "version": 1,
+      "notion": "list",
+      "title": "Chart of accounts",
+      "domain": "finance",
+      "function": "accounting",
+      "spec": {
+        "object_type": "account",
+        "columns": [
+          { "field": "code", "label": "Code" },
+          { "field": "name", "label": "Account" },
+          { "field": "type", "label": "Type" }
+        ]
+      }
+    },
+    {
+      "view_id": "account-detail",
+      "version": 1,
+      "notion": "detail",
+      "title": "Account",
+      "domain": "finance",
+      "function": "accounting",
+      "spec": {
+        "object_type": "account",
+        "sections": [
+          { "title": "Account", "fields": ["code", "name", "type"] }
+        ]
+      }
+    },
+    {
+      "view_id": "journal",
+      "version": 1,
+      "notion": "list",
+      "title": "Journal",
+      "domain": "finance",
+      "function": "accounting",
+      "spec": {
+        "object_type": "posting",
+        "columns": [
+          { "field": "entry", "label": "Entry" },
+          { "field": "line", "label": "Line" },
+          { "field": "account", "label": "Account" },
+          { "field": "side", "label": "Side" },
+          { "field": "amount", "label": "Amount" },
+          { "field": "currency", "label": "Ccy" },
+          { "field": "date", "label": "Date" }
+        ]
+      }
+    },
+    {
+      "view_id": "posting-detail",
+      "version": 1,
+      "notion": "detail",
+      "title": "Posting",
+      "domain": "finance",
+      "function": "accounting",
+      "spec": {
+        "object_type": "posting",
+        "sections": [
+          { "title": "Posting", "fields": ["entry", "line", "account", "side"] },
+          { "title": "Value", "fields": ["amount", "currency", "date"] }
+        ]
+      }
+    },
+    {
+      "view_id": "trial-balance",
+      "version": 1,
+      "notion": "analysis",
+      "title": "Trial balance",
+      "domain": "finance",
+      "function": "analysis",
+      "spec": {
+        "sql": "SELECT code, account, printf('%d.%02d', d // 100, d % 100) AS debit, printf('%d.%02d', c // 100, c % 100) AS credit, printf('%s%d.%02d', CASE WHEN d - c < 0 THEN '-' ELSE '' END, abs(d - c) // 100, abs(d - c) % 100) AS balance FROM (SELECT json_extract_string(a.state,'$.code') AS code, json_extract_string(a.state,'$.name') AS account, COALESCE(SUM(CASE WHEN json_extract_string(p.state,'$.side')='debit' THEN CAST(json_extract(p.state,'$.amount') AS BIGINT) ELSE 0 END),0) AS d, COALESCE(SUM(CASE WHEN json_extract_string(p.state,'$.side')='credit' THEN CAST(json_extract(p.state,'$.amount') AS BIGINT) ELSE 0 END),0) AS c FROM objects p JOIN objects a ON json_extract_string(p.state,'$.account') = a.object_id WHERE p.object_type = 'posting' AND a.object_type = 'account' GROUP BY 1, 2) t ORDER BY code",
+        "columns": [
+          { "field": "code", "label": "Code" },
+          { "field": "account", "label": "Account" },
+          { "field": "debit", "label": "Debit" },
+          { "field": "credit", "label": "Credit" },
+          { "field": "balance", "label": "Balance" }
+        ]
+      }
+    }
+  ]
+}

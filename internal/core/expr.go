@@ -24,10 +24,26 @@ type Template struct {
 	refField string // ref only: field matched against the path's value
 }
 
-// Lookup resolves a ref() against current object state: the object_id of the
-// single object of the given type whose field equals value, or an error (none
-// or several). The executor supplies it; contexts without state pass nil.
-type Lookup func(objectType, field string, value any) (string, error)
+// Lookup finds objects in current state: the object_ids of every object of
+// the given type whose field equals value (compared as text). The executor
+// supplies it; contexts without state pass nil. ref() demands exactly one
+// match; other callers (the period lock) ask only whether any exist.
+type Lookup func(objectType, field string, value any) ([]string, error)
+
+// ResolveRef applies ref() semantics to a lookup result: exactly one match.
+func ResolveRef(lookup Lookup, objectType, field string, value any) (string, error) {
+	ids, err := lookup(objectType, field, value)
+	if err != nil {
+		return "", err
+	}
+	switch len(ids) {
+	case 0:
+		return "", fmt.Errorf("no %s with %s = %v", objectType, field, value)
+	case 1:
+		return ids[0], nil
+	}
+	return "", fmt.Errorf("%d %s objects have %s = %v, ref is ambiguous", len(ids), objectType, field, value)
+}
 
 type pathSeg struct {
 	key   string
@@ -165,7 +181,7 @@ func (t Template) Eval(payload any, fd FieldDef, lookup Lookup) (any, error) {
 		if err != nil {
 			return nil, err
 		}
-		return lookup(t.refType, t.refField, v)
+		return ResolveRef(lookup, t.refType, t.refField, v)
 	case "path":
 		v, err := resolve(payload, t.path)
 		if err != nil {

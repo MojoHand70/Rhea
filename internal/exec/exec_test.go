@@ -291,3 +291,184 @@ func TestSimulateRule(t *testing.T) {
 		t.Fatalf("diff = %+v", diff)
 	}
 }
+
+// TestDoubleEntry walks the M1 sub-language: chart of accounts as master
+// data, a posting rule booking a balanced entry, the balance invariant, the
+// period lock, simulation with postings, and replay reproducing the ledger.
+func TestDoubleEntry(t *testing.T) {
+	ctx := context.Background()
+	x := &exec.Executor{Store: storetest.New(t)}
+	for _, ot := range []core.ObjectType{
+		{Name: "account", Version: 1, Domain: "finance", LabelField: "name",
+			Fields: []core.FieldDef{
+				{Name: "code", Type: "string", Required: true},
+				{Name: "name", Type: "string", Required: true},
+				{Name: "type", Type: "enum", Required: true,
+					Values: []string{"asset", "liability", "equity", "revenue", "expense", "debtor", "creditor", "tax", "bank", "clearing"}},
+			}},
+		{Name: "posting", Version: 1, Domain: "finance",
+			Fields: []core.FieldDef{
+				{Name: "entry", Type: "string", Required: true},
+				{Name: "line", Type: "int", Required: true},
+				{Name: "account", Type: "ref<account>", Required: true},
+				{Name: "side", Type: "enum", Values: []string{"debit", "credit"}, Required: true},
+				{Name: "amount", Type: "money", Required: true},
+				{Name: "currency", Type: "string", Required: true},
+				{Name: "date", Type: "date", Required: true},
+			}},
+		{Name: "period_lock", Version: 1, Domain: "finance",
+			Fields: []core.FieldDef{{Name: "month", Type: "string", Required: true}}},
+	} {
+		if err := x.Store.InsertObjectType(ctx, ot); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	submit := func(dedup, evType, date, payload string) int64 {
+		t.Helper()
+		id, err := x.Store.AppendEvent(ctx, core.Event{
+			Kind: core.KindRaw, Type: evType, OccurredAt: date,
+			Payload: json.RawMessage(payload), DedupKey: dedup,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return id
+	}
+	activate := func(id string, spec core.RuleSpec) {
+		t.Helper()
+		if _, err := x.Store.InsertRuleVersion(ctx, core.Rule{
+			ID: id, Status: core.StatusDraft, Priority: 100,
+			EffectiveFrom: "2026-01-01", CreatedBy: "test", Description: id, Spec: spec,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if _, _, procErrs, err := x.ApproveRule(ctx, id, "krzysztof", "2026-09-30"); err != nil {
+			t.Fatal(err)
+		} else if len(procErrs) > 0 {
+			t.Fatalf("approve %s: %v", id, procErrs)
+		}
+	}
+
+	// Chart of accounts and the period-lock activity, both as plain rules.
+	activate("register-account", core.RuleSpec{
+		Match: core.Match{EventType: "account.created"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "account",
+			Fields: map[string]string{"code": "=$.code", "name": "=$.name", "type": "=$.type"}}},
+	})
+	activate("lock-period", core.RuleSpec{
+		Match: core.Match{EventType: "period.locked"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "period_lock",
+			Fields: map[string]string{"month": "=$.month"}}},
+	})
+	submit("acc-201", "account.created", "2026-09-01", `{"code":"201","name":"Receivables","type":"debtor"}`)
+	submit("acc-702", "account.created", "2026-09-01", `{"code":"702","name":"Sales revenue","type":"revenue"}`)
+	if n, errs := x.ProcessPending(ctx); n != 2 || len(errs) != 0 {
+		t.Fatalf("accounts: booked %d, errs %v", n, errs)
+	}
+
+	// Draft the posting rule and simulate it first: two balanced lines.
+	postSpec := core.RuleSpec{
+		Match: core.Match{EventType: "invoice.received",
+			Where: []core.Condition{{Path: "$.currency", Op: "eq", Value: "PLN"}}},
+		Effect: core.Effect{Postings: &core.PostingsTemplate{
+			Currency: "=$.currency",
+			Lines: []core.PostingLine{
+				{Account: "201", Debit: "=sum($.lines[*].amount)"},
+				{Account: "702", Credit: "=sum($.lines[*].amount)"},
+			},
+		}},
+	}
+	invoiceEv := submit("inv-1", "invoice.received", "2026-09-15",
+		`{"currency":"PLN","lines":[{"amount":"200.00"},{"amount":"150.50"}]}`)
+	if _, err := x.Store.InsertRuleVersion(ctx, core.Rule{
+		ID: "post-pln-invoice", Status: core.StatusDraft, Priority: 100,
+		EffectiveFrom: "2026-01-01", CreatedBy: "test", Description: "post", Spec: postSpec,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	diff, err := x.SimulateRule(ctx, "post-pln-invoice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diff.Added) != 2 {
+		t.Fatalf("simulated postings = %+v", diff.Added)
+	}
+	if objs, _ := x.Store.ObjectsByType(ctx, "posting"); len(objs) != 0 {
+		t.Fatal("simulation wrote postings")
+	}
+
+	// Approve: the entry books, balanced, with resolved account refs.
+	if _, booked, procErrs, err := x.ApproveRule(ctx, "post-pln-invoice", "krzysztof", "2026-09-30"); err != nil || booked != 1 || len(procErrs) != 0 {
+		t.Fatalf("approve: booked %d, %v, %v", booked, procErrs, err)
+	}
+	postings, _ := x.Store.ObjectsByType(ctx, "posting")
+	if len(postings) != 2 {
+		t.Fatalf("postings = %d", len(postings))
+	}
+	var d, c int64
+	for _, p := range postings {
+		amt := int64(p.State["amount"].(float64))
+		if p.State["side"] == "debit" {
+			d += amt
+		} else {
+			c += amt
+		}
+		if acc, _ := p.State["account"].(string); !strings.HasPrefix(acc, "account-") {
+			t.Fatalf("account not resolved: %v", p.State["account"])
+		}
+		if p.State["entry"] != fmt.Sprintf("entry-%d", invoiceEv) {
+			t.Fatalf("entry key = %v", p.State["entry"])
+		}
+	}
+	if d != 35050 || c != 35050 {
+		t.Fatalf("not balanced: D %d C %d", d, c)
+	}
+
+	// Balance invariant: an unbalanced expansion books nothing.
+	activate("bad-fee", core.RuleSpec{
+		Match: core.Match{EventType: "fee.charged"},
+		Effect: core.Effect{Postings: &core.PostingsTemplate{
+			Currency: "PLN",
+			Lines: []core.PostingLine{
+				{Account: "201", Debit: "10.00"},
+				{Account: "702", Credit: "20.00"},
+			},
+		}},
+	})
+	submit("fee-1", "fee.charged", "2026-09-16", `{}`)
+	if n, errs := x.ProcessPending(ctx); n != 0 || len(errs) == 0 {
+		t.Fatalf("unbalanced entry: booked %d, errs %v", n, errs)
+	}
+	if objs, _ := x.Store.ObjectsByType(ctx, "posting"); len(objs) != 2 {
+		t.Fatal("unbalanced entry left postings behind")
+	}
+
+	// Period lock: lock September, then a September invoice is refused.
+	submit("lock-09", "period.locked", "2026-09-30", `{"month":"2026-09"}`)
+	if n, _ := x.ProcessPending(ctx); n != 1 {
+		t.Fatal("lock did not book")
+	}
+	submit("inv-2", "invoice.received", "2026-09-20",
+		`{"currency":"PLN","lines":[{"amount":"10.00"}]}`)
+	if n, errs := x.ProcessPending(ctx); n != 0 || len(errs) == 0 || !strings.Contains(errs[0].Error(), "locked") {
+		t.Fatalf("locked period: booked %d, errs %v", n, errs)
+	}
+	// An October invoice still books.
+	submit("inv-3", "invoice.received", "2026-10-02",
+		`{"currency":"PLN","lines":[{"amount":"10.00"}]}`)
+	if n, errs := x.ProcessPending(ctx); n != 1 || len(errs) == 0 {
+		// the September invoice keeps failing in the same pass — that error stays
+		t.Fatalf("open period: booked %d, errs %v", n, errs)
+	}
+
+	// Determinism: replay reproduces the ledger exactly.
+	before, _ := x.Store.AllObjects(ctx)
+	if _, err := x.Replay(ctx); err != nil {
+		t.Fatal(err)
+	}
+	after, _ := x.Store.AllObjects(ctx)
+	if !reflect.DeepEqual(normalize(t, before), normalize(t, after)) {
+		t.Fatal("replay diverged")
+	}
+}

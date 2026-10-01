@@ -355,35 +355,26 @@ func (s *Store) AllObjects(ctx context.Context) ([]core.Object, error) {
 	return scanObjects(rows)
 }
 
-// FindObjectIDByField resolves a ref(): the one object of the given type
-// whose state field equals value, compared as text. None or several is an
-// error — an unresolved ref keeps its event in the worklist.
-func (s *Store) FindObjectIDByField(ctx context.Context, typ, field, value string) (string, error) {
+// FindObjectIDsByField backs the kernel's Lookup: every object of the given
+// type whose state field equals value, compared as text. ref() demands one
+// match; the period lock asks only whether any exist.
+func (s *Store) FindObjectIDsByField(ctx context.Context, typ, field, value string) ([]string, error) {
 	rows, err := s.Pool.Query(ctx,
 		`SELECT object_id FROM object WHERE object_type = $1 AND state->>$2 = $3 ORDER BY object_id`,
 		typ, field, value)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer rows.Close()
 	var ids []string
 	for rows.Next() {
 		var id string
 		if err := rows.Scan(&id); err != nil {
-			return "", err
+			return nil, err
 		}
 		ids = append(ids, id)
 	}
-	if err := rows.Err(); err != nil {
-		return "", err
-	}
-	switch len(ids) {
-	case 0:
-		return "", fmt.Errorf("no %s with %s = %q", typ, field, value)
-	case 1:
-		return ids[0], nil
-	}
-	return "", fmt.Errorf("%d %s objects have %s = %q, ref is ambiguous", len(ids), typ, field, value)
+	return ids, rows.Err()
 }
 
 func (s *Store) GetObject(ctx context.Context, id string) (core.Object, error) {

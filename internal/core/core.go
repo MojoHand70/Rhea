@@ -167,8 +167,29 @@ type Condition struct {
 	Value any    `json:"value,omitempty"`
 }
 
+// Effect is what a firing rule does: materialize one object, or post one
+// balanced journal entry (the double-entry sub-language, SPEC M1). Exactly
+// one of the two; Object's zero value means absent.
 type Effect struct {
-	Object ObjectTemplate `json:"object"`
+	Object   ObjectTemplate    `json:"object,omitempty"`
+	Postings *PostingsTemplate `json:"postings,omitempty"`
+}
+
+// PostingsTemplate expands into the lines of one journal entry, materialized
+// as `posting` objects. The kernel enforces, after expansion and before
+// booking (the Sunbeetle lessons): one currency per entry, debits equal to
+// credits, accounts resolved by code, and no posting into a locked period.
+type PostingsTemplate struct {
+	Currency string        `json:"currency"` // template, e.g. "PLN" or "=$.currency"
+	Lines    []PostingLine `json:"lines"`
+}
+
+// PostingLine is one side of value movement: an account code (literal or
+// template) and exactly one of debit/credit as a money template.
+type PostingLine struct {
+	Account string `json:"account"`
+	Debit   string `json:"debit,omitempty"`
+	Credit  string `json:"credit,omitempty"`
 }
 
 // ObjectTemplate maps object fields to values. A value starting with "=" is an
@@ -194,6 +215,12 @@ func (s RuleSpec) Validate(target *ObjectType) error {
 		if _, err := parsePath(c.Path); err != nil {
 			return fmt.Errorf("condition path %q: %w", c.Path, err)
 		}
+	}
+	if s.Effect.Postings != nil {
+		if s.Effect.Object.Type != "" || len(s.Effect.Object.Fields) > 0 {
+			return fmt.Errorf("effect has both object and postings; a rule does one")
+		}
+		return s.Effect.Postings.validate()
 	}
 	if s.Effect.Object.Type == "" {
 		return fmt.Errorf("effect.object.type is required")
@@ -238,6 +265,37 @@ func (s RuleSpec) Validate(target *ObjectType) error {
 					return fmt.Errorf("required field %q missing from template", f.Name)
 				}
 			}
+		}
+	}
+	return nil
+}
+
+// validate checks a postings template structurally. Balance cannot be judged
+// from templates, so it is enforced at expansion — an unbalanced expansion is
+// a rule error and nothing books.
+func (p *PostingsTemplate) validate() error {
+	if p.Currency == "" {
+		return fmt.Errorf("postings.currency is required")
+	}
+	if _, err := ParseTemplate(p.Currency); err != nil {
+		return fmt.Errorf("postings.currency: %w", err)
+	}
+	if len(p.Lines) < 2 {
+		return fmt.Errorf("a journal entry needs at least two lines")
+	}
+	for i, l := range p.Lines {
+		if l.Account == "" {
+			return fmt.Errorf("line %d: account is required", i+1)
+		}
+		if _, err := ParseTemplate(l.Account); err != nil {
+			return fmt.Errorf("line %d account: %w", i+1, err)
+		}
+		if (l.Debit == "") == (l.Credit == "") {
+			return fmt.Errorf("line %d: exactly one of debit or credit", i+1)
+		}
+		amount := l.Debit + l.Credit // one of them is empty
+		if _, err := ParseTemplate(amount); err != nil {
+			return fmt.Errorf("line %d amount: %w", i+1, err)
 		}
 	}
 	return nil

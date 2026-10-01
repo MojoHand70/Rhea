@@ -55,6 +55,32 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-01 — double-entry sub-language (M1)
+
+- **Postings are an effect, lines are objects.** `effect.postings` (currency +
+  lines of account / one-of-debit-credit money templates) expands into
+  `posting` objects — one per line, grouped by an `entry-<event_id>` key, via
+  the ordinary derived-event path. Replay and simulation needed no changes;
+  provenance per line comes free (Sunbeetle invariant 3). No `list<>` field
+  type yet; one object per line avoids it.
+- **Sunbeetle ports**: balance ΣD=ΣC checked after expansion, before booking —
+  an unbalanced expansion is a rule error and nothing books; the period lock
+  is a pre-insert check in the poster (Go, one place); account types take
+  Sunbeetle's full ten (debtor/creditor etc. — AR/AP are filters, not tables),
+  which costs nothing since enums are data.
+- **Accounts resolve by `code`** — a line's account is a code template; the
+  kernel resolves it against `account` objects (chart of accounts = master
+  data from events, like companies). `posting` / `account` / `period_lock`
+  are conventional type names the kernel knows; their definitions are seeded
+  data like any other.
+- **Period locks are events** (`period.locked` → `period_lock` object via a
+  normal rule); a posting whose business month has a lock object is refused
+  and waits in the worklist. No unlock in M1 — the language has no state
+  updates, and re-opening a period is exactly the kind of thing that should
+  hurt. One currency per entry; no base-currency translation yet.
+- **Lookup returns all matches now** — ref() demands exactly one, the period
+  lock asks "any?"; one primitive serves both, in store and simulator alike.
+
 ## 2026-10-01 — rule simulation (M1)
 
 - **Simulation runs in the kernel (Go), not DuckDB.** SPEC M1 says "dry-run in

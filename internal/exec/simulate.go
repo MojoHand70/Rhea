@@ -117,18 +117,10 @@ func (x *Executor) simulate(ctx context.Context, rules []core.Rule) (SimRun, err
 	if err != nil {
 		return SimRun{}, err
 	}
-	typeList, err := x.Store.ListObjectTypes(ctx)
-	if err != nil {
-		return SimRun{}, err
-	}
-	types := map[string]core.ObjectType{}
-	for _, t := range typeList {
-		types[t.Name] = t
-	}
 
 	objects := map[string]core.Object{}
 	var order []string
-	lookup := func(typ, field string, value any) (string, error) {
+	lookup := func(typ, field string, value any) ([]string, error) {
 		want := fmt.Sprintf("%v", value)
 		var ids []string
 		for _, id := range order {
@@ -137,13 +129,7 @@ func (x *Executor) simulate(ctx context.Context, rules []core.Rule) (SimRun, err
 				ids = append(ids, id)
 			}
 		}
-		switch len(ids) {
-		case 0:
-			return "", fmt.Errorf("no %s with %s = %q", typ, field, want)
-		case 1:
-			return ids[0], nil
-		}
-		return "", fmt.Errorf("%d %s objects have %s = %q, ref is ambiguous", len(ids), typ, field, want)
+		return ids, nil
 	}
 
 	explained := map[int64]bool{}
@@ -169,23 +155,19 @@ func (x *Executor) simulate(ctx context.Context, rules []core.Rule) (SimRun, err
 				if !ok {
 					continue
 				}
-				objType, known := types[r.Spec.Effect.Object.Type]
-				if !known {
-					errs = append(errs, fmt.Sprintf("event %d: rule %s targets unknown type %q", ev.ID, r.ID, r.Spec.Effect.Object.Type))
-					break
-				}
-				state, err := Expand(r.Spec.Effect.Object, objType, payload, lookup)
+				mats, err := x.expandEffect(ctx, ev, r, payload, lookup)
 				if err != nil {
-					errs = append(errs, fmt.Sprintf("event %d: rule %s v%d expand: %v", ev.ID, r.ID, r.Version, err))
+					errs = append(errs, fmt.Sprintf("event %d: %v", ev.ID, err))
 					break
 				}
-				id := fmt.Sprintf("%s-%d", objType.Name, ev.ID)
-				if _, seen := objects[id]; !seen {
-					order = append(order, id)
-				}
-				objects[id] = core.Object{
-					ID: id, Type: objType.Name, TypeVersion: objType.Version,
-					State: state, SourceEventID: ev.ID, RuleID: r.ID, RuleVersion: r.Version,
+				for _, m := range mats {
+					if _, seen := objects[m.ObjectID]; !seen {
+						order = append(order, m.ObjectID)
+					}
+					objects[m.ObjectID] = core.Object{
+						ID: m.ObjectID, Type: m.ObjectType, TypeVersion: m.TypeVersion,
+						State: m.State, SourceEventID: ev.ID, RuleID: r.ID, RuleVersion: r.Version,
+					}
 				}
 				explained[ev.ID] = true
 				pass++

@@ -96,7 +96,16 @@ A field typed "ref<T>" MUST use "=ref(T, ...)". A field typed "enum" only accept
 its declared "values".
 
 Every required field of the target object type must be present in "fields".
-Use "where" conditions only for constraints the user's intent actually implies.`
+Use "where" conditions only for constraints the user's intent actually implies.
+
+For ACCOUNTING rules (booking to a chart of accounts), "effect" instead posts one
+balanced journal entry — no "object":
+  "effect": {"postings": {"currency": "=$.currency", "lines": [
+    {"account": "201", "debit": "=sum($.lines[*].amount)"},
+    {"account": "702", "credit": "=sum($.lines[*].amount)"}
+  ]}}
+Each line names an account code (literal or "=$.path") and exactly ONE of debit or
+credit (a money template). Debits must equal credits; the kernel rejects anything else.`
 
 // DraftRule asks the model for a rule and strictly validates the answer
 // against the language and the target object type before returning it.

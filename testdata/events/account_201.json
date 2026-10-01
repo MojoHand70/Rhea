@@ -1,0 +1,9 @@
+{
+  "event_type": "account.created",
+  "occurred_at": "2026-09-01",
+  "payload": {
+    "code": "201",
+    "name": "Rozrachunki z odbiorcami",
+    "type": "debtor"
+  }
+}

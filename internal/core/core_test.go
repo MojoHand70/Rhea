@@ -185,11 +185,11 @@ func TestRefTemplate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	lookup := func(objectType, field string, value any) (string, error) {
+	lookup := func(objectType, field string, value any) ([]string, error) {
 		if objectType != "company" || field != "name" || value != "ACME Sp. z o.o." {
 			t.Fatalf("lookup got (%s, %s, %v)", objectType, field, value)
 		}
-		return "company-7", nil
+		return []string{"company-7"}, nil
 	}
 	v, err := tm.Eval(payload, FieldDef{Type: "ref<company>"}, lookup)
 	if err != nil || v != "company-7" {
@@ -291,5 +291,54 @@ func TestRuleSpecValidateRefs(t *testing.T) {
 	s.Effect.Object.Fields["customer"] = "=ref(company, name, $.customer)"
 	if err := s.Validate(&plain); err == nil {
 		t.Error("ref template on string field accepted")
+	}
+}
+
+func postingsSpec() RuleSpec {
+	return RuleSpec{
+		Match: Match{EventType: "invoice.received"},
+		Effect: Effect{Postings: &PostingsTemplate{
+			Currency: "=$.currency",
+			Lines: []PostingLine{
+				{Account: "201", Debit: "=sum($.lines[*].amount)"},
+				{Account: "702", Credit: "=sum($.lines[*].amount)"},
+			},
+		}},
+	}
+}
+
+func TestPostingsValidate(t *testing.T) {
+	if err := postingsSpec().Validate(nil); err != nil {
+		t.Fatalf("valid postings rejected: %v", err)
+	}
+
+	s := postingsSpec()
+	s.Effect.Object = ObjectTemplate{Type: "invoice", Fields: map[string]string{"x": "y"}}
+	if err := s.Validate(nil); err == nil {
+		t.Error("object and postings together accepted")
+	}
+
+	s = postingsSpec()
+	s.Effect.Postings.Lines = s.Effect.Postings.Lines[:1]
+	if err := s.Validate(nil); err == nil {
+		t.Error("one-line entry accepted")
+	}
+
+	s = postingsSpec()
+	s.Effect.Postings.Lines[0].Credit = "=$.x" // both sides set
+	if err := s.Validate(nil); err == nil {
+		t.Error("line with debit and credit accepted")
+	}
+
+	s = postingsSpec()
+	s.Effect.Postings.Lines[1].Credit = "" // no side
+	if err := s.Validate(nil); err == nil {
+		t.Error("line with neither side accepted")
+	}
+
+	s = postingsSpec()
+	s.Effect.Postings.Currency = ""
+	if err := s.Validate(nil); err == nil {
+		t.Error("missing currency accepted")
 	}
 }
