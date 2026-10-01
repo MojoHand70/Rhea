@@ -78,12 +78,16 @@ func AppendEvent(ctx context.Context, q Querier, ev core.Event) (int64, error) {
 	if ev.RuleID != "" {
 		ruleID, ruleVersion = &ev.RuleID, &ev.RuleVersion
 	}
+	var actor *string
+	if ev.Actor != "" {
+		actor = &ev.Actor
+	}
 	var id int64
 	err := q.QueryRow(ctx, `
-		INSERT INTO event (kind, event_type, occurred_at, payload, cause_event_id, rule_id, rule_version, dedup_key)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO event (kind, event_type, occurred_at, payload, cause_event_id, rule_id, rule_version, dedup_key, actor)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING event_id`,
-		ev.Kind, ev.Type, ev.OccurredAt, ev.Payload, ev.CauseEventID, ruleID, ruleVersion, dedup,
+		ev.Kind, ev.Type, ev.OccurredAt, ev.Payload, ev.CauseEventID, ruleID, ruleVersion, dedup, actor,
 	).Scan(&id)
 	return id, err
 }
@@ -100,8 +104,9 @@ func scanEvents(rows pgx.Rows) ([]core.Event, error) {
 		var ruleID *string
 		var ruleVersion *int
 		var dedup *string
+		var actor *string
 		if err := rows.Scan(&ev.ID, &ev.Kind, &ev.Type, &ev.OccurredAt, &ev.RecordedAt,
-			&ev.Payload, &ev.CauseEventID, &ruleID, &ruleVersion, &dedup); err != nil {
+			&ev.Payload, &ev.CauseEventID, &ruleID, &ruleVersion, &dedup, &actor); err != nil {
 			return nil, err
 		}
 		if ruleID != nil {
@@ -110,13 +115,16 @@ func scanEvents(rows pgx.Rows) ([]core.Event, error) {
 		if dedup != nil {
 			ev.DedupKey = *dedup
 		}
+		if actor != nil {
+			ev.Actor = *actor
+		}
 		out = append(out, ev)
 	}
 	return out, rows.Err()
 }
 
 const eventCols = `event_id, kind, event_type, to_char(occurred_at,'YYYY-MM-DD'), recorded_at,
-	payload, cause_event_id, rule_id, rule_version, dedup_key`
+	payload, cause_event_id, rule_id, rule_version, dedup_key, actor`
 
 func (s *Store) EventsByKind(ctx context.Context, kind string) ([]core.Event, error) {
 	rows, err := s.Pool.Query(ctx,

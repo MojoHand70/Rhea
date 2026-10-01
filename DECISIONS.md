@@ -54,3 +54,12 @@ so the next session does not re-derive them.
 - **Old-schema objects stay as they are**: invoice v1 rows keep the customer name
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
+
+## 2026-10-01 — actor attribution
+
+- **Every event names its actor**: `cli:<os user>` (override `RHEA_ACTOR`),
+  `shell` (until identity exists), `agent:<model>` on drafted rule rows,
+  `kernel` on derived events (rule provenance explains the rest), and the
+  approver's name on `rule.approved`. NULL on events from before the column
+  existed — honestly unknown, never backfilled. Authz stays deferred; this is
+  audit, not access control.

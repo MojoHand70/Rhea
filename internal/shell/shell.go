@@ -357,7 +357,7 @@ func (s *Server) handleDraft(w http.ResponseWriter, r *http.Request) {
 	}
 	rule, err := s.Store.InsertRuleVersion(ctx, core.Rule{
 		ID: draft.RuleID, Status: core.StatusDraft, Priority: draft.Priority,
-		EffectiveFrom: sample.OccurredAt, CreatedBy: "agent",
+		EffectiveFrom: sample.OccurredAt, CreatedBy: "agent:" + agent.Model(),
 		Description: draft.Description, Spec: draft.Spec,
 	})
 	if err != nil {
@@ -390,14 +390,18 @@ func (s *Server) handleSubmit(w http.ResponseWriter, r *http.Request) {
 		OccurredAt string          `json:"occurred_at"`
 		Payload    json.RawMessage `json:"payload"`
 		DedupKey   string          `json:"dedup_key"`
+		Actor      string          `json:"actor"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeErr(w, 400, err)
 		return
 	}
+	if req.Actor == "" {
+		req.Actor = "shell" // single-user experiment; identity arrives with auth, never
+	}
 	id, err := s.Store.AppendEvent(r.Context(), core.Event{
 		Kind: core.KindRaw, Type: req.EventType, OccurredAt: req.OccurredAt,
-		Payload: req.Payload, DedupKey: req.DedupKey,
+		Payload: req.Payload, DedupKey: req.DedupKey, Actor: req.Actor,
 	})
 	if err != nil {
 		writeErr(w, 400, err)

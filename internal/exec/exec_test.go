@@ -110,6 +110,18 @@ func TestVerticalSliceKernel(t *testing.T) {
 	if o.SourceEventID != evID || o.RuleID != "book-pln-invoice" || o.RuleVersion != 2 {
 		t.Fatalf("provenance wrong: %+v", o)
 	}
+
+	// Actor attribution: the approval names the human, the derived event the kernel.
+	raws, _ := x.Store.EventsByKind(ctx, core.KindRaw)
+	for _, ev := range raws {
+		if ev.Type == "rule.approved" && ev.Actor != "krzysztof" {
+			t.Fatalf("approval actor = %q, want krzysztof", ev.Actor)
+		}
+	}
+	derived, _ := x.Store.EventsByKind(ctx, core.KindDerived)
+	if len(derived) == 0 || derived[0].Actor != "kernel" {
+		t.Fatalf("derived actor wrong: %+v", derived)
+	}
 	if o.State["total"] != float64(35050) && o.State["total"] != int64(35050) {
 		t.Fatalf("total = %v (%T), want 35050 minor units", o.State["total"], o.State["total"])
 	}

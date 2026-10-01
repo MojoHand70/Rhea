@@ -132,6 +132,7 @@ func (x *Executor) fire(ctx context.Context, ev core.Event, r core.Rule, payload
 		CauseEventID: &ev.ID,
 		RuleID:       r.ID,
 		RuleVersion:  r.Version,
+		Actor:        "kernel", // rule provenance explains the rest
 	})
 	if err != nil {
 		return err
@@ -227,6 +228,7 @@ func (x *Executor) ApproveRule(ctx context.Context, ruleID, approvedBy, business
 	if _, err := x.Store.AppendEvent(ctx, core.Event{
 		Kind: core.KindRaw, Type: "rule.approved", OccurredAt: businessDate,
 		Payload: approval, DedupKey: fmt.Sprintf("approve/%s/%d", r.ID, r.Version+1),
+		Actor: approvedBy,
 	}); err != nil {
 		return core.Rule{}, 0, err
 	}

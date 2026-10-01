@@ -23,6 +23,9 @@ type Event struct {
 	RuleID       string          `json:"rule_id,omitempty"`
 	RuleVersion  int             `json:"rule_version,omitempty"`
 	DedupKey     string          `json:"dedup_key,omitempty"`
+	// Actor is who caused the event: "cli:<user>", "shell:<user>",
+	// "agent:<model>", "kernel". Empty on events from before actors existed.
+	Actor string `json:"actor,omitempty"`
 }
 
 const (

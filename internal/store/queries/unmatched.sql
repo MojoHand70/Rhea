@@ -1,7 +1,7 @@
 -- The worklist: raw events that no rule has acted on — no derived event names
 -- them as cause.
 SELECT event_id, kind, event_type, to_char(occurred_at,'YYYY-MM-DD'), recorded_at,
-       payload, cause_event_id, rule_id, rule_version, dedup_key
+       payload, cause_event_id, rule_id, rule_version, dedup_key, actor
 FROM event e
 WHERE e.kind = 'raw'
   -- the rule.* namespace is system activities (approvals), not business events

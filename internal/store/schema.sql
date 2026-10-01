@@ -12,9 +12,15 @@ CREATE TABLE IF NOT EXISTS event (
     rule_id        TEXT,
     rule_version   INT,
     dedup_key      TEXT UNIQUE,
+    -- who caused the event: cli:<user>, shell:<user>, agent:<model>, kernel.
+    -- NULL means recorded before actors existed — honestly unknown.
+    actor          TEXT,
     -- a derived event always knows what caused it and which rule fired
     CHECK (kind = 'raw' OR (cause_event_id IS NOT NULL AND rule_id IS NOT NULL))
 );
+
+-- Idempotent migration for databases created before the actor column.
+ALTER TABLE event ADD COLUMN IF NOT EXISTS actor TEXT;
 
 CREATE TABLE IF NOT EXISTS rule (
     rule_id        TEXT NOT NULL,
