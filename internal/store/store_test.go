@@ -1,50 +1,16 @@
-package store
+package store_test
 
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"strings"
 	"testing"
-	"time"
 
 	"rhea/internal/core"
+	"rhea/internal/store"
+	"rhea/internal/store/storetest"
 )
 
-// testStore connects to the rhea Postgres, creates a throwaway database and
-// returns a Store on it. Skips when Postgres is unreachable.
-func testStore(t *testing.T) *Store {
-	t.Helper()
-	ctx := context.Background()
-	admin, err := Open(ctx, DSN())
-	if err != nil {
-		t.Skipf("postgres unavailable: %v", err)
-	}
-	defer admin.Close()
-	name := fmt.Sprintf("rhea_test_%d", time.Now().UnixNano())
-	if _, err := admin.Pool.Exec(ctx, "CREATE DATABASE "+name); err != nil {
-		t.Fatalf("create test db: %v", err)
-	}
-	// Swap only the database segment (the part after the last "/").
-	base := DSN()
-	dsn := base[:strings.LastIndex(base, "/")+1] + name
-	s, err := Open(ctx, dsn)
-	if err != nil {
-		t.Fatalf("open test db: %v", err)
-	}
-	if err := s.Init(ctx); err != nil {
-		t.Fatalf("init schema: %v", err)
-	}
-	t.Cleanup(func() {
-		s.Close()
-		a, err := Open(context.Background(), DSN())
-		if err == nil {
-			a.Pool.Exec(context.Background(), "DROP DATABASE "+name+" WITH (FORCE)")
-			a.Close()
-		}
-	})
-	return s
-}
+func testStore(t *testing.T) *store.Store { return storetest.New(t) }
 
 func rawEvent(dedup string) core.Event {
 	return core.Event{
