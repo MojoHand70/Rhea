@@ -1,0 +1,12 @@
+{
+  "event_type": "invoice.received",
+  "occurred_at": "2026-09-20",
+  "payload": {
+    "customer": "Gamma SARL",
+    "currency": "EUR",
+    "issue_date": "2026-09-20",
+    "lines": [
+      { "desc": "Licence", "qty": 1, "amount": "99.00" }
+    ]
+  }
+}

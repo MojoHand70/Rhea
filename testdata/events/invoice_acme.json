@@ -1,0 +1,13 @@
+{
+  "event_type": "invoice.received",
+  "occurred_at": "2026-09-15",
+  "payload": {
+    "customer": "ACME Sp. z o.o.",
+    "currency": "PLN",
+    "issue_date": "2026-09-15",
+    "lines": [
+      { "desc": "Widget", "qty": 2, "amount": "200.00" },
+      { "desc": "Gadget", "qty": 1, "amount": "150.50" }
+    ]
+  }
+}

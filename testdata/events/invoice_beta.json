@@ -1,0 +1,12 @@
+{
+  "event_type": "invoice.received",
+  "occurred_at": "2026-09-18",
+  "payload": {
+    "customer": "Beta Industries GmbH",
+    "currency": "PLN",
+    "issue_date": "2026-09-18",
+    "lines": [
+      { "desc": "Consulting", "qty": 1, "amount": "1200.00" }
+    ]
+  }
+}

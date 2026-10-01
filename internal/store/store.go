@@ -236,6 +236,29 @@ func (s *Store) GetObjectType(ctx context.Context, name string) (core.ObjectType
 	return t, json.Unmarshal(spec, &t)
 }
 
+// ListObjectTypes returns the newest version of every object type.
+func (s *Store) ListObjectTypes(ctx context.Context) ([]core.ObjectType, error) {
+	rows, err := s.Pool.Query(ctx, `
+		SELECT DISTINCT ON (name) spec FROM object_type ORDER BY name, version DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []core.ObjectType
+	for rows.Next() {
+		var spec []byte
+		if err := rows.Scan(&spec); err != nil {
+			return nil, err
+		}
+		var t core.ObjectType
+		if err := json.Unmarshal(spec, &t); err != nil {
+			return nil, err
+		}
+		out = append(out, t)
+	}
+	return out, rows.Err()
+}
+
 // --- view defs ------------------------------------------------------------
 
 func (s *Store) InsertViewDef(ctx context.Context, v core.ViewDef) error {
