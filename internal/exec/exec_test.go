@@ -91,7 +91,10 @@ func TestVerticalSliceKernel(t *testing.T) {
 
 	// Draft + approve: approval re-evaluates the worklist and books.
 	draftRule(t, x)
-	r, booked, err := x.ApproveRule(ctx, "book-pln-invoice", "krzysztof", "2026-09-15")
+	r, booked, procErrs, err := x.ApproveRule(ctx, "book-pln-invoice", "krzysztof", "2026-09-15")
+	if len(procErrs) > 0 {
+		t.Fatalf("processing errors: %v", procErrs)
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,10 +188,10 @@ func TestApproveRejectsNonDraft(t *testing.T) {
 	x := &exec.Executor{Store: storetest.New(t)}
 	seed(t, x)
 	draftRule(t, x)
-	if _, _, err := x.ApproveRule(ctx, "book-pln-invoice", "k", "2026-09-15"); err != nil {
+	if _, _, _, err := x.ApproveRule(ctx, "book-pln-invoice", "k", "2026-09-15"); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := x.ApproveRule(ctx, "book-pln-invoice", "k", "2026-09-15"); err == nil {
+	if _, _, _, err := x.ApproveRule(ctx, "book-pln-invoice", "k", "2026-09-15"); err == nil {
 		t.Fatal("approving an active rule succeeded")
 	}
 }
@@ -264,7 +267,7 @@ func TestSimulateRule(t *testing.T) {
 
 	// With the company rule active, simulating the invoice draft resolves
 	// the ref against the simulated company via the in-memory lookup.
-	if _, _, err := x.ApproveRule(ctx, "register-company", "krzysztof", "2026-09-16"); err != nil {
+	if _, _, _, err := x.ApproveRule(ctx, "register-company", "krzysztof", "2026-09-16"); err != nil {
 		t.Fatal(err)
 	}
 	draft("book-invoice", core.RuleSpec{

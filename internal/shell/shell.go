@@ -376,13 +376,17 @@ func (s *Server) handleApprove(w http.ResponseWriter, r *http.Request) {
 	if req.ApprovedBy == "" {
 		req.ApprovedBy = "human"
 	}
-	rule, booked, err := s.Exec.ApproveRule(r.Context(), r.PathValue("id"),
+	rule, booked, procErrs, err := s.Exec.ApproveRule(r.Context(), r.PathValue("id"),
 		req.ApprovedBy, time.Now().Format("2006-01-02"))
 	if err != nil {
 		writeErr(w, 400, err)
 		return
 	}
-	writeJSON(w, 200, map[string]any{"rule": rule, "booked": booked})
+	resp := map[string]any{"rule": rule, "booked": booked}
+	if len(procErrs) > 0 {
+		resp["errors"] = fmt.Sprintf("%v", procErrs)
+	}
+	writeJSON(w, 200, resp)
 }
 
 // handleSimulate dry-runs a rule against the whole log in memory (SPEC M1).

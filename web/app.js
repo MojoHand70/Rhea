@@ -277,7 +277,8 @@ function openRules() {
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ approved_by: "human" }),
               });
-              toast(`${r.rule_id} active (v${res.rule.version}); booked ${res.booked} pending event(s).`);
+              toast(`${r.rule_id} active (v${res.rule.version}); booked ${res.booked} pending event(s).` +
+                (res.errors ? ` Still failing: ${res.errors}` : ""));
               refreshActive();
             } catch (e) { toast(e.message, true); b.disabled = false; }
           },
