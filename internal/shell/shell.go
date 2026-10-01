@@ -33,6 +33,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/rules", s.handleRules)
 	mux.HandleFunc("POST /api/rules/draft", s.handleDraft)
 	mux.HandleFunc("POST /api/rules/{id}/approve", s.handleApprove)
+	mux.HandleFunc("POST /api/rules/{id}/simulate", s.handleSimulate)
 	mux.HandleFunc("POST /api/events", s.handleSubmit)
 	mux.Handle("GET /", http.FileServerFS(web.FS))
 	return mux
@@ -382,6 +383,17 @@ func (s *Server) handleApprove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, 200, map[string]any{"rule": rule, "booked": booked})
+}
+
+// handleSimulate dry-runs a rule against the whole log in memory (SPEC M1).
+// Read-only: the human sees the diff before deciding to approve.
+func (s *Server) handleSimulate(w http.ResponseWriter, r *http.Request) {
+	diff, err := s.Exec.SimulateRule(r.Context(), r.PathValue("id"))
+	if err != nil {
+		writeErr(w, 400, err)
+		return
+	}
+	writeJSON(w, 200, diff)
 }
 
 func (s *Server) handleSubmit(w http.ResponseWriter, r *http.Request) {

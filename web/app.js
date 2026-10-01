@@ -223,6 +223,30 @@ function draftForm(ev, objectTypes) {
       el("span", { class: "hint", style: "margin:0" }, "materialize as"), typeSel, btn));
 }
 
+/* The dry run (SPEC M1): what approving this rule would change, from an
+   in-memory replay of the whole log. Rendered generically, like everything. */
+function renderSimDiff(d) {
+  const added = d.added || [], changed = d.changed || [], removed = d.removed || [];
+  const before = (d.unexplained_before || []).length, after = (d.unexplained_after || []).length;
+  const box = el("div", { class: "draft-form" },
+    el("strong", {}, `If approved: ${added.length} object(s) materialize, ` +
+      `${changed.length} change, ${removed.length} disappear; ` +
+      `unexplained events ${before} → ${after}.`));
+  const objTable = (title, objs) => {
+    if (!objs.length) return;
+    box.append(el("h3", {}, title), dataTable(["object", "rule", "state"],
+      objs.map(o => [o.object_id, `${o.rule_id} v${o.rule_version}`, JSON.stringify(o.state)])));
+  };
+  objTable("Would materialize", added);
+  if (changed.length) {
+    box.append(el("h3", {}, "Would change"), dataTable(["object", "before", "after"],
+      changed.map(c => [c.after.object_id, JSON.stringify(c.before.state), JSON.stringify(c.after.state)])));
+  }
+  objTable("Would disappear", removed);
+  if ((d.errors || []).length) box.append(el("h3", {}, "Simulation errors"), el("pre", {}, d.errors.join("\n")));
+  return box;
+}
+
 function openRules() {
   openTab("rules", "Rules", async () => {
     const rules = await api("/api/rules");
@@ -232,7 +256,19 @@ function openRules() {
     const tbody = el("tbody", {});
     for (const r of rules) {
       const actions = el("td", {});
+      const simBox = el("div", {});
       if (r.status === "draft") {
+        const s = el("button", {
+          onclick: async () => {
+            s.disabled = true; s.textContent = "Simulating…";
+            try {
+              const d = await api(`/api/rules/${encodeURIComponent(r.rule_id)}/simulate`, { method: "POST" });
+              simBox.replaceChildren(renderSimDiff(d));
+            } catch (e) { toast(e.message, true); }
+            s.disabled = false; s.textContent = "Simulate";
+          },
+        }, "Simulate");
+        actions.append(s, " ");
         const b = el("button", {
           onclick: async () => {
             b.disabled = true;
@@ -255,7 +291,8 @@ function openRules() {
           el("td", {}, r.created_by), el("td", {}, r.description), actions),
         el("tr", {}, el("td", { colspan: "6" },
           el("details", {}, el("summary", {}, "spec"),
-            el("pre", {}, JSON.stringify(r.spec, null, 2))))));
+            el("pre", {}, JSON.stringify(r.spec, null, 2))),
+          simBox)));
     }
     out.push(el("table", {},
       el("thead", {}, el("tr", {},

@@ -3,7 +3,9 @@ package exec_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"rhea/internal/core"
@@ -188,5 +190,101 @@ func TestApproveRejectsNonDraft(t *testing.T) {
 	}
 	if _, _, err := x.ApproveRule(ctx, "book-pln-invoice", "k", "2026-09-15"); err == nil {
 		t.Fatal("approving an active rule succeeded")
+	}
+}
+
+// TestSimulateRule proves the dry run (SPEC M1): a draft rule replayed in
+// memory shows what it would change — refs resolving against the simulated
+// world — while writing nothing.
+func TestSimulateRule(t *testing.T) {
+	ctx := context.Background()
+	x := &exec.Executor{Store: storetest.New(t)}
+	if err := x.Store.InsertObjectType(ctx, core.ObjectType{
+		Name: "company", Version: 1, Domain: "finance", LabelField: "name",
+		Fields: []core.FieldDef{
+			{Name: "name", Type: "string", Required: true},
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := x.Store.InsertObjectType(ctx, core.ObjectType{
+		Name: "invoice", Version: 1, Domain: "finance", IsDocument: true,
+		Fields: []core.FieldDef{
+			{Name: "customer", Type: "ref<company>", Required: true},
+			{Name: "total", Type: "money", Required: true},
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	// The invoice arrives before the company is registered.
+	for i, ev := range []core.Event{
+		{Kind: core.KindRaw, Type: "invoice.received", OccurredAt: "2026-09-15",
+			Payload: json.RawMessage(`{"customer":"ACME","lines":[{"amount":"10.00"}]}`)},
+		{Kind: core.KindRaw, Type: "company.registered", OccurredAt: "2026-09-16",
+			Payload: json.RawMessage(`{"name":"ACME"}`)},
+	} {
+		ev.DedupKey = fmt.Sprintf("sim-%d", i)
+		if _, err := x.Store.AppendEvent(ctx, ev); err != nil {
+			t.Fatal(err)
+		}
+	}
+	draft := func(id string, spec core.RuleSpec) {
+		t.Helper()
+		if _, err := x.Store.InsertRuleVersion(ctx, core.Rule{
+			ID: id, Status: core.StatusDraft, Priority: 100,
+			EffectiveFrom: "2026-01-01", CreatedBy: "test", Description: id, Spec: spec,
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	draft("register-company", core.RuleSpec{
+		Match: core.Match{EventType: "company.registered"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "company",
+			Fields: map[string]string{"name": "=$.name"}}},
+	})
+
+	// Simulating the company draft: one object appears, one event stays
+	// unexplained (the invoice has no rule yet) — and nothing is written.
+	diff, err := x.SimulateRule(ctx, "register-company")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diff.Added) != 1 || diff.Added[0].Type != "company" {
+		t.Fatalf("added = %+v", diff.Added)
+	}
+	if len(diff.UnexplainedBefore) != 2 || len(diff.UnexplainedAfter) != 1 {
+		t.Fatalf("unexplained %v -> %v", diff.UnexplainedBefore, diff.UnexplainedAfter)
+	}
+	if objs, _ := x.Store.AllObjects(ctx); len(objs) != 0 {
+		t.Fatalf("simulation wrote %d objects", len(objs))
+	}
+	if evs, _ := x.Store.EventsByKind(ctx, core.KindDerived); len(evs) != 0 {
+		t.Fatalf("simulation wrote %d derived events", len(evs))
+	}
+
+	// With the company rule active, simulating the invoice draft resolves
+	// the ref against the simulated company via the in-memory lookup.
+	if _, _, err := x.ApproveRule(ctx, "register-company", "krzysztof", "2026-09-16"); err != nil {
+		t.Fatal(err)
+	}
+	draft("book-invoice", core.RuleSpec{
+		Match: core.Match{EventType: "invoice.received"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "invoice",
+			Fields: map[string]string{
+				"customer": "=ref(company, name, $.customer)",
+				"total":    "=sum($.lines[*].amount)"}}},
+	})
+	diff, err = x.SimulateRule(ctx, "book-invoice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diff.Added) != 1 || diff.Added[0].Type != "invoice" {
+		t.Fatalf("added = %+v", diff.Added)
+	}
+	if ref, _ := diff.Added[0].State["customer"].(string); !strings.HasPrefix(ref, "company-") {
+		t.Fatalf("simulated ref = %v", diff.Added[0].State["customer"])
+	}
+	if len(diff.UnexplainedAfter) != 0 || len(diff.Changed) != 0 || len(diff.Removed) != 0 {
+		t.Fatalf("diff = %+v", diff)
 	}
 }

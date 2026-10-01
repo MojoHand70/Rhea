@@ -55,6 +55,21 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-01 — rule simulation (M1)
+
+- **Simulation runs in the kernel (Go), not DuckDB.** SPEC M1 says "dry-run in
+  DuckDB", but the simulator reuses the executor's own match/expand/ref path
+  (`matchRule`, `Expand`), so a dry run cannot drift from live firing. DuckDB
+  stays the analysis read side. Recorded as a deliberate deviation.
+- **The diff is replay vs replay**: all raw business events through the active
+  rules, then through active + the candidate's latest version, both fully in
+  memory with refs resolving against the simulated world. Diffing against the
+  *actual* cache would mix the candidate's effect with drift from superseded
+  rule versions; replay-vs-replay isolates the rule being judged.
+- **Firing-order bug fixed on the way**: `latest_rules.sql` ordered rules by
+  `rule_id` (a DISTINCT ON artifact), not the decided priority-ascending
+  order. An outer ORDER BY now enforces it; the simulator sorts identically.
+
 ## 2026-10-01 — actor attribution
 
 - **Every event names its actor**: `cli:<os user>` (override `RHEA_ACTOR`),

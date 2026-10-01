@@ -366,6 +366,17 @@ func TestMasterDataRefStory(t *testing.T) {
 		"sample_event_id": invoiceEv.ID,
 		"object_type":     "invoice",
 	}, &rule)
+
+	// Dry run before approving (SPEC M1): the diff names the invoice that
+	// would book, with its ref resolved against the simulated world.
+	var sim struct {
+		Added []core.Object `json:"added"`
+	}
+	post("/api/rules/book-pln-invoice/simulate", nil, &sim)
+	if len(sim.Added) != 1 || sim.Added[0].Type != "invoice" {
+		t.Fatalf("simulate added = %+v", sim.Added)
+	}
+
 	post("/api/rules/book-pln-invoice/approve", map[string]any{"approved_by": "krzysztof"}, &approved)
 	if approved.Booked != 1 {
 		t.Fatalf("invoice approve booked %d, want 1", approved.Booked)

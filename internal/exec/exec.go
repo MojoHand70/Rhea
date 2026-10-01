@@ -61,29 +61,38 @@ func (x *Executor) evaluate(ctx context.Context, ev core.Event, rules []core.Rul
 		return false, fmt.Errorf("payload: %w", err)
 	}
 	for _, r := range rules {
-		if r.Spec.Match.EventType != ev.Type {
-			continue
+		ok, err := matchRule(r, ev, payload)
+		if err != nil {
+			return false, err
 		}
-		if r.EffectiveFrom > ev.OccurredAt { // YYYY-MM-DD compares lexically
-			continue
-		}
-		matched := true
-		for _, c := range r.Spec.Match.Where {
-			ok, err := core.EvalCondition(payload, c)
-			if err != nil {
-				return false, fmt.Errorf("rule %s v%d condition: %w", r.ID, r.Version, err)
-			}
-			if !ok {
-				matched = false
-				break
-			}
-		}
-		if !matched {
+		if !ok {
 			continue
 		}
 		return true, x.fire(ctx, ev, r, payload)
 	}
 	return false, nil
+}
+
+// matchRule reports whether rule r fires on ev (payload already decoded):
+// event type, effective date, and every where condition. Shared between the
+// live executor and the simulator, so a dry run cannot drift from reality.
+func matchRule(r core.Rule, ev core.Event, payload any) (bool, error) {
+	if r.Spec.Match.EventType != ev.Type {
+		return false, nil
+	}
+	if r.EffectiveFrom > ev.OccurredAt { // YYYY-MM-DD compares lexically
+		return false, nil
+	}
+	for _, c := range r.Spec.Match.Where {
+		ok, err := core.EvalCondition(payload, c)
+		if err != nil {
+			return false, fmt.Errorf("rule %s v%d condition: %w", r.ID, r.Version, err)
+		}
+		if !ok {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 // fire expands the rule's template and books the result atomically: one
