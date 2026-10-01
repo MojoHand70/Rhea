@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/anthropics/anthropic-sdk-go"
+	"github.com/anthropics/anthropic-sdk-go/option"
 
 	"rhea/internal/core"
 )
@@ -37,8 +38,14 @@ func Model() string {
 }
 
 // New returns an Agent backed by the Anthropic API (key from ANTHROPIC_API_KEY).
+// A user-scoped key (sk-ant-usr…) is not bound to a workspace, so the API then
+// requires the workspace id with every request: ANTHROPIC_WORKSPACE_ID.
 func New() *Agent {
-	client := anthropic.NewClient()
+	var opts []option.RequestOption
+	if ws := os.Getenv("ANTHROPIC_WORKSPACE_ID"); ws != "" {
+		opts = append(opts, option.WithHeader("anthropic-workspace-id", ws))
+	}
+	client := anthropic.NewClient(opts...)
 	return &Agent{Complete: func(ctx context.Context, system, user string) (string, error) {
 		msg, err := client.Messages.New(ctx, anthropic.MessageNewParams{
 			Model:     anthropic.Model(Model()),
