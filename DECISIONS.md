@@ -55,6 +55,25 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-02 — M2: the falsifiability test passed
+
+- **Warehousing runs on the unchanged kernel.** Locations and items are master
+  data, receipts and issues are documents, stock movements are objects,
+  stock-on-hand is an analysis view; a goods receipt multi-fires into a
+  document plus a movement; the supplier is a cross-domain `ref<company>`.
+  The M2 commit adds only a seed file, five events and a test — `git diff`
+  against the kernel is empty. The language held.
+- **Single-line goods documents** for now (one item per receipt/issue) — the
+  language still has no `list<>` fields; same simplification as invoices
+  having no line-level objects. Lines are the likely next language need.
+- **No retroactivity**: an event is explained by the rules active when it was
+  evaluated; a rule approved later never re-fires old events. Multi-fire makes
+  the sequencing visible — approve the full rule set before the events arrive,
+  or let blocked refs hold events back until the set is complete. Backfill
+  belongs with the cascade design (post-M2), not before it.
+- **Stock may go negative.** No stock invariant yet; that is worklist/case
+  territory, not a kernel rule.
+
 ## 2026-10-02 — multi-rule firing
 
 - **Every matching rule fires; the event books atomically.** First-match-wins

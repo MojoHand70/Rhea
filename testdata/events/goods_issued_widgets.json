@@ -1,0 +1,11 @@
+{
+  "event_type": "goods.issued",
+  "occurred_at": "2026-09-12",
+  "payload": {
+    "item": "WID-1",
+    "location": "MAIN",
+    "qty": 8,
+    "reason": "production order 7",
+    "date": "2026-09-12"
+  }
+}

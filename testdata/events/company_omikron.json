@@ -1,0 +1,10 @@
+{
+  "event_type": "company.registered",
+  "occurred_at": "2026-09-05",
+  "payload": {
+    "name": "Omikron GmbH",
+    "kind": "supplier",
+    "vat_id": "DE129273398",
+    "country": "DE"
+  }
+}
