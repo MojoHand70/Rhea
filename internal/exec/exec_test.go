@@ -417,7 +417,7 @@ func TestDoubleEntry(t *testing.T) {
 		if acc, _ := p.State["account"].(string); !strings.HasPrefix(acc, "account-") {
 			t.Fatalf("account not resolved: %v", p.State["account"])
 		}
-		if p.State["entry"] != fmt.Sprintf("entry-%d", invoiceEv) {
+		if p.State["entry"] != fmt.Sprintf("entry-%d-post-pln-invoice", invoiceEv) {
 			t.Fatalf("entry key = %v", p.State["entry"])
 		}
 	}
@@ -470,5 +470,142 @@ func TestDoubleEntry(t *testing.T) {
 	after, _ := x.Store.AllObjects(ctx)
 	if !reflect.DeepEqual(normalize(t, before), normalize(t, after)) {
 		t.Fatal("replay diverged")
+	}
+}
+
+// TestMultiRuleFiring: every matching rule fires, atomically per event — one
+// invoice event becomes a document AND a balanced ledger entry. Two rules
+// claiming the same object id are a conflict: the event is refused whole.
+func TestMultiRuleFiring(t *testing.T) {
+	ctx := context.Background()
+	x := &exec.Executor{Store: storetest.New(t)}
+	seed(t, x) // invoice v1 object type
+	for _, ot := range []core.ObjectType{
+		{Name: "account", Version: 1, Domain: "finance",
+			Fields: []core.FieldDef{
+				{Name: "code", Type: "string", Required: true},
+				{Name: "name", Type: "string", Required: true},
+			}},
+		{Name: "posting", Version: 1, Domain: "finance",
+			Fields: []core.FieldDef{
+				{Name: "entry", Type: "string", Required: true},
+				{Name: "line", Type: "int", Required: true},
+				{Name: "account", Type: "ref<account>", Required: true},
+				{Name: "side", Type: "enum", Values: []string{"debit", "credit"}, Required: true},
+				{Name: "amount", Type: "money", Required: true},
+				{Name: "currency", Type: "string", Required: true},
+				{Name: "date", Type: "date", Required: true},
+			}},
+	} {
+		if err := x.Store.InsertObjectType(ctx, ot); err != nil {
+			t.Fatal(err)
+		}
+	}
+	activateRule := func(id string, priority int, spec core.RuleSpec) {
+		t.Helper()
+		if _, err := x.Store.InsertRuleVersion(ctx, core.Rule{
+			ID: id, Status: core.StatusDraft, Priority: priority,
+			EffectiveFrom: "2026-01-01", CreatedBy: "test", Description: id, Spec: spec,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if _, _, procErrs, err := x.ApproveRule(ctx, id, "k", "2026-09-15"); err != nil || len(procErrs) > 0 {
+			t.Fatalf("approve %s: %v %v", id, procErrs, err)
+		}
+	}
+	activateRule("register-account", 10, core.RuleSpec{
+		Match: core.Match{EventType: "account.created"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "account",
+			Fields: map[string]string{"code": "=$.code", "name": "=$.name"}}},
+	})
+	for _, acc := range []string{`{"code":"201","name":"Receivables"}`, `{"code":"702","name":"Revenue"}`} {
+		if _, err := x.Store.AppendEvent(ctx, core.Event{
+			Kind: core.KindRaw, Type: "account.created", OccurredAt: "2026-09-01",
+			Payload: json.RawMessage(acc), DedupKey: acc[9:12],
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if n, errs := x.ProcessPending(ctx); n != 2 || len(errs) != 0 {
+		t.Fatalf("accounts: %d %v", n, errs)
+	}
+
+	// Document rule and ledger rule, both matching invoice.received.
+	activateRule("book-invoice-document", 100, core.RuleSpec{
+		Match: core.Match{EventType: "invoice.received"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "invoice",
+			Fields: map[string]string{
+				"customer": "=$.customer", "issue_date": "=$.issue_date",
+				"currency": "=$.currency", "total": "=sum($.lines[*].amount)"}}},
+	})
+	activateRule("post-invoice-ledger", 200, core.RuleSpec{
+		Match: core.Match{EventType: "invoice.received"},
+		Effect: core.Effect{Postings: &core.PostingsTemplate{
+			Currency: "=$.currency",
+			Lines: []core.PostingLine{
+				{Account: "201", Debit: "=sum($.lines[*].amount)"},
+				{Account: "702", Credit: "=sum($.lines[*].amount)"},
+			},
+		}},
+	})
+	evID, err := x.Store.AppendEvent(ctx, core.Event{
+		Kind: core.KindRaw, Type: "invoice.received", OccurredAt: "2026-09-15",
+		Payload: json.RawMessage(invoicePayload), DedupKey: "multi-1",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n, errs := x.ProcessPending(ctx); n != 1 || len(errs) != 0 {
+		t.Fatalf("multi-fire: booked %d, errs %v", n, errs)
+	}
+	if wl, _ := x.Store.UnmatchedRawEvents(ctx); len(wl) != 0 {
+		t.Fatalf("worklist not cleared: %d", len(wl))
+	}
+	invoices, _ := x.Store.ObjectsByType(ctx, "invoice")
+	postings, _ := x.Store.ObjectsByType(ctx, "posting")
+	if len(invoices) != 1 || len(postings) != 2 {
+		t.Fatalf("got %d invoices, %d postings; want 1 and 2", len(invoices), len(postings))
+	}
+	if invoices[0].RuleID != "book-invoice-document" || postings[0].RuleID != "post-invoice-ledger" {
+		t.Fatalf("provenance: %s / %s", invoices[0].RuleID, postings[0].RuleID)
+	}
+	if postings[0].State["entry"] != fmt.Sprintf("entry-%d-post-invoice-ledger", evID) {
+		t.Fatalf("entry key = %v", postings[0].State["entry"])
+	}
+
+	// Replay reproduces the multi-fired state.
+	before, _ := x.Store.AllObjects(ctx)
+	if _, err := x.Replay(ctx); err != nil {
+		t.Fatal(err)
+	}
+	after, _ := x.Store.AllObjects(ctx)
+	if !reflect.DeepEqual(normalize(t, before), normalize(t, after)) {
+		t.Fatal("replay diverged")
+	}
+
+	// Conflict: a second rule claiming the invoice document of the same
+	// event. The whole event is refused — no document, no postings.
+	activateRule("book-invoice-again", 300, core.RuleSpec{
+		Match: core.Match{EventType: "invoice.received"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "invoice",
+			Fields: map[string]string{
+				"customer": "x", "issue_date": "=$.issue_date",
+				"currency": "=$.currency", "total": "=sum($.lines[*].amount)"}}},
+	})
+	if _, err := x.Store.AppendEvent(ctx, core.Event{
+		Kind: core.KindRaw, Type: "invoice.received", OccurredAt: "2026-09-16",
+		Payload: json.RawMessage(invoicePayload), DedupKey: "multi-2",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	n, errs := x.ProcessPending(ctx)
+	if n != 0 || len(errs) == 0 || !strings.Contains(errs[0].Error(), "both materialize") {
+		t.Fatalf("conflict: booked %d, errs %v", n, errs)
+	}
+	if objs, _ := x.Store.ObjectsByType(ctx, "posting"); len(objs) != 2 {
+		t.Fatal("conflicting event booked postings")
+	}
+	if wl, _ := x.Store.UnmatchedRawEvents(ctx); len(wl) != 1 {
+		t.Fatalf("conflicting event not left in worklist: %d", len(wl))
 	}
 }

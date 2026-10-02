@@ -52,14 +52,32 @@ func (x *Executor) ProcessPending(ctx context.Context) (int, []error) {
 	}
 }
 
-// evaluate fires the first matching rule (rules arrive in firing order:
-// priority ascending, rule_id tiebreak) whose effective_from covers the
-// event's business date.
+// firing is one rule's expanded effect for one event, awaiting booking.
+type firing struct {
+	rule core.Rule
+	mats []core.MaterializedObject
+}
+
+// evaluate fires every matching rule (rules arrive in priority order, which
+// is now ordering, not conflict resolution) and books all their effects
+// atomically: an invoice event can become a document and post to the ledger
+// in one transaction. Expansions see state as of before the event —
+// intra-event dependencies are cascade territory (post-M2, DECISIONS.md).
+// Two rules materializing the same object id is a conflict: the whole event
+// is refused and waits for a human.
 func (x *Executor) evaluate(ctx context.Context, ev core.Event, rules []core.Rule) (bool, error) {
 	var payload any
 	if err := json.Unmarshal(ev.Payload, &payload); err != nil {
 		return false, fmt.Errorf("payload: %w", err)
 	}
+	// Lookups resolve against the object cache as of this point in the log;
+	// resolved ids are baked into the derived events, so replay never
+	// re-resolves and determinism (invariant 4) is untouched.
+	lookup := func(typ, field string, value any) ([]string, error) {
+		return x.Store.FindObjectIDsByField(ctx, typ, field, fmt.Sprintf("%v", value))
+	}
+	var firings []firing
+	owner := map[string]string{} // object id → rule that claimed it
 	for _, r := range rules {
 		ok, err := matchRule(r, ev, payload)
 		if err != nil {
@@ -68,9 +86,22 @@ func (x *Executor) evaluate(ctx context.Context, ev core.Event, rules []core.Rul
 		if !ok {
 			continue
 		}
-		return true, x.fire(ctx, ev, r, payload)
+		mats, err := x.expandEffect(ctx, ev, r, payload, lookup)
+		if err != nil {
+			return false, err
+		}
+		for _, m := range mats {
+			if prev, clash := owner[m.ObjectID]; clash {
+				return false, fmt.Errorf("rules %s and %s both materialize %s — conflicting rules need a human", prev, r.ID, m.ObjectID)
+			}
+			owner[m.ObjectID] = r.ID
+		}
+		firings = append(firings, firing{rule: r, mats: mats})
 	}
-	return false, nil
+	if len(firings) == 0 {
+		return false, nil
+	}
+	return true, x.book(ctx, ev, firings)
 }
 
 // matchRule reports whether rule r fires on ev (payload already decoded):
@@ -95,50 +126,40 @@ func matchRule(r core.Rule, ev core.Event, payload any) (bool, error) {
 	return true, nil
 }
 
-// fire expands the rule's effect and books the result atomically: derived
-// events in the log plus rows in the object cache — all of it or nothing.
-// An object effect yields one object; a postings effect one balanced entry.
-func (x *Executor) fire(ctx context.Context, ev core.Event, r core.Rule, payload any) error {
-	// Lookups resolve against the object cache as of this point in the log;
-	// resolved ids are baked into the derived events, so replay never
-	// re-resolves and determinism (invariant 4) is untouched.
-	lookup := func(typ, field string, value any) ([]string, error) {
-		return x.Store.FindObjectIDsByField(ctx, typ, field, fmt.Sprintf("%v", value))
-	}
-
-	mats, err := x.expandEffect(ctx, ev, r, payload, lookup)
-	if err != nil {
-		return err
-	}
-
+// book writes every firing of one event atomically: derived events in the
+// log plus rows in the object cache — all of it or nothing, so an event is
+// never half-explained.
+func (x *Executor) book(ctx context.Context, ev core.Event, firings []firing) error {
 	tx, err := x.Store.Pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback(ctx)
 
-	for _, mat := range mats {
-		matPayload, err := json.Marshal(mat)
-		if err != nil {
-			return err
-		}
-		if _, err := store.AppendEvent(ctx, tx, core.Event{
-			Kind:         core.KindDerived,
-			Type:         core.EventObjectMaterialized,
-			OccurredAt:   ev.OccurredAt, // derived events inherit the business date
-			Payload:      matPayload,
-			CauseEventID: &ev.ID,
-			RuleID:       r.ID,
-			RuleVersion:  r.Version,
-			Actor:        "kernel", // rule provenance explains the rest
-		}); err != nil {
-			return err
-		}
-		if err := store.InsertObject(ctx, tx, core.Object{
-			ID: mat.ObjectID, Type: mat.ObjectType, TypeVersion: mat.TypeVersion,
-			State: mat.State, SourceEventID: ev.ID, RuleID: r.ID, RuleVersion: r.Version,
-		}); err != nil {
-			return err
+	for _, f := range firings {
+		for _, mat := range f.mats {
+			matPayload, err := json.Marshal(mat)
+			if err != nil {
+				return err
+			}
+			if _, err := store.AppendEvent(ctx, tx, core.Event{
+				Kind:         core.KindDerived,
+				Type:         core.EventObjectMaterialized,
+				OccurredAt:   ev.OccurredAt, // derived events inherit the business date
+				Payload:      matPayload,
+				CauseEventID: &ev.ID,
+				RuleID:       f.rule.ID,
+				RuleVersion:  f.rule.Version,
+				Actor:        "kernel", // rule provenance explains the rest
+			}); err != nil {
+				return err
+			}
+			if err := store.InsertObject(ctx, tx, core.Object{
+				ID: mat.ObjectID, Type: mat.ObjectType, TypeVersion: mat.TypeVersion,
+				State: mat.State, SourceEventID: ev.ID, RuleID: f.rule.ID, RuleVersion: f.rule.Version,
+			}); err != nil {
+				return err
+			}
 		}
 	}
 	return tx.Commit(ctx)
@@ -152,7 +173,7 @@ func (x *Executor) expandEffect(ctx context.Context, ev core.Event, r core.Rule,
 		if err != nil {
 			return nil, fmt.Errorf("rule %s v%d: %w", r.ID, r.Version, err)
 		}
-		mats, err := ExpandPostings(r.Spec.Effect.Postings, postingType, ev, payload, lookup)
+		mats, err := ExpandPostings(r.Spec.Effect.Postings, postingType, ev, r.ID, payload, lookup)
 		if err != nil {
 			return nil, fmt.Errorf("rule %s v%d postings: %w", r.ID, r.Version, err)
 		}

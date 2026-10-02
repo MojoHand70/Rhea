@@ -55,6 +55,29 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-02 — multi-rule firing
+
+- **Every matching rule fires; the event books atomically.** First-match-wins
+  (M0 placeholder) is superseded: an invoice event becomes a document AND a
+  ledger entry in one transaction, all firings or none. Priority now means
+  order, not conflict resolution. Expansions see state as of before the
+  event; intra-event dependencies wait for cascade.
+- **Cascade (rules matching derived events, with atomicity) is the intended
+  end-state — KK's call.** All-matching-fire is the stepping stone; revisit
+  after M2, which will likely demand it (receipt → stock move → valuation).
+- **Collisions**: two rules materializing the same object id refuse the whole
+  event, which waits for a human — for documents and master data that is the
+  semantics (one object per type per event, two claimants = real ambiguity).
+  Posting ids and entry keys are rule-qualified (`posting-<event>-<rule>-<n>`)
+  so several ledger rules may book one event (VAT beside revenue) without
+  false conflict. Semantic double-booking across types is invisible
+  structurally — surfacing it pre-approval is what simulation is for; static
+  conflict detection stays parked (SPEC §7).
+- **Exclusivity is explicit in match predicates now** (PLN vs ne-PLN). The
+  fallback-by-priority idiom is gone deliberately: silently suppressing a
+  matching rule is how ambiguity hides. An overlapping fallback on the same
+  type collides by id and asks a human.
+
 ## 2026-10-01 — double-entry sub-language (M1)
 
 - **Postings are an effect, lines are objects.** `effect.postings` (currency +
