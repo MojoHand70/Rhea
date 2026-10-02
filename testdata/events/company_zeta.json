@@ -1,0 +1,10 @@
+{
+  "event_type": "company.registered",
+  "occurred_at": "2026-09-05",
+  "payload": {
+    "name": "Zeta Works sp.j.",
+    "kind": "customer",
+    "vat_id": "PL1132191233",
+    "country": "PL"
+  }
+}

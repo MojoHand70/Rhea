@@ -1,0 +1,12 @@
+{
+  "event_type": "invoice.received",
+  "occurred_at": "2026-09-26",
+  "payload": {
+    "customer": "Zeta Works sp.j.",
+    "currency": "PLN",
+    "issue_date": "2026-09-26",
+    "lines": [
+      { "desc": "Maintenance", "qty": 1, "amount": "450.00" }
+    ]
+  }
+}
