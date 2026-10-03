@@ -55,6 +55,27 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-03 — M4: the second market proved the pack boundary
+
+- **Germany is one data file** (`packs/de`): SKR03 chart, 19/7/0 rates,
+  1400/8400/1776 booking, German-labeled views. The pack file and its test
+  are the entire diff — kernel, pack loader and adapter contract are
+  byte-for-byte what Poland runs on.
+- **M4 forced one base correction, which is exactly its job**: `vat_rate`
+  and `sales_invoice` sat in the PL pack but are market-neutral, and a
+  German pack requiring Poland would have been a fake boundary. They moved
+  to the finance base (`finance_v4` seed). Germany ships **zero object
+  types**: a market can be pure rules + master data + views.
+- **Cross-market exclusivity is explicit in match predicates** (the
+  multi-fire idiom): PL's document rule claims PLN, DE's claims EUR; a PLN
+  invoice in a German-only installation waits in the worklist instead of
+  booking by accident.
+- **Parked, recorded: true cohabitation of two markets in one ledger.** The
+  packs' register-account rules are identical and would collide if both were
+  approved (approve one); both markets' analysis views aggregate the shared
+  `sales_invoice` type. Company-/market-scoped events wait until
+  cohabitation is a real goal, not before.
+
 ## 2026-10-03 — M3 complete: the statutory adapter contract
 
 - **An adapter is a user, not a kernel extension** (Alpha's "the agent is a

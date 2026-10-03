@@ -33,6 +33,7 @@ func TestM3PolandPack(t *testing.T) {
 	seedFromFile(t, s, "finance.json")    // invoice v1 base
 	seedFromFile(t, s, "finance_v2.json") // company master data
 	seedFromFile(t, s, "finance_v3.json") // account / posting / trial balance
+	seedFromFile(t, s, "finance_v4.json") // market-neutral: vat_rate, sales_invoice
 
 	srv := &shell.Server{
 		Store: s, Exec: &exec.Executor{Store: s},
@@ -78,13 +79,13 @@ func TestM3PolandPack(t *testing.T) {
 		}
 	}
 
-	// Load the pack: 3 types, 5 views, 5 draft rules, 30 master-data events.
+	// Load the pack: 1 type, 5 views, 5 draft rules, 30 master-data events.
 	packPath := filepath.Join("..", "..", "packs", "pl", "pack.json")
 	sum, err := pack.Load(ctx, s, packPath, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 3 || sum.Views != 5 || sum.Rules != 5 || sum.Events != 30 || sum.Skipped != 0 {
+	if sum.Types != 1 || sum.Views != 5 || sum.Rules != 5 || sum.Events != 30 || sum.Skipped != 0 {
 		t.Fatalf("first load: %+v", sum)
 	}
 	// Idempotent: a reload changes nothing.
@@ -92,7 +93,7 @@ func TestM3PolandPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Events != 0 || sum.Skipped != 43 {
+	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Events != 0 || sum.Skipped != 41 {
 		t.Fatalf("reload: %+v", sum)
 	}
 

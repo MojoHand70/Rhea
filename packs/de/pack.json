@@ -1,0 +1,141 @@
+{
+  "pack": "de",
+  "version": 1,
+  "description": "Deutschland: SKR03-Kontenrahmen, Umsatzsteuersätze, Buchungsregeln — der zweite Markt als Daten",
+  "requires": ["company", "account", "posting", "vat_rate", "sales_invoice"],
+  "object_types": [],
+  "view_defs": [
+    {
+      "view_id": "rechnungen-list",
+      "version": 1,
+      "notion": "list",
+      "title": "Ausgangsrechnungen",
+      "domain": "finance",
+      "function": "documents",
+      "spec": {
+        "object_type": "sales_invoice",
+        "columns": [
+          { "field": "number", "label": "Nummer" },
+          { "field": "issue_date", "label": "Datum" },
+          { "field": "buyer", "label": "Käufer" },
+          { "field": "net", "label": "Netto" },
+          { "field": "vat", "label": "USt" },
+          { "field": "gross", "label": "Brutto" }
+        ]
+      }
+    },
+    {
+      "view_id": "rechnung-detail",
+      "version": 1,
+      "notion": "detail",
+      "title": "Ausgangsrechnung",
+      "domain": "finance",
+      "function": "documents",
+      "spec": {
+        "object_type": "sales_invoice",
+        "sections": [
+          { "title": "Rechnung", "fields": ["number", "issue_date"] },
+          { "title": "Parteien", "fields": ["buyer"] },
+          { "title": "Beträge", "fields": ["net", "vat", "gross", "vat_rate", "currency"] }
+        ]
+      }
+    },
+    {
+      "view_id": "ust-je-monat",
+      "version": 1,
+      "notion": "analysis",
+      "title": "Umsatzsteuer je Monat",
+      "domain": "finance",
+      "function": "vat",
+      "spec": {
+        "sql": "SELECT month, rate, printf('%d.%02d', n // 100, n % 100) AS net, printf('%d.%02d', v // 100, v % 100) AS vat, printf('%d.%02d', g // 100, g % 100) AS gross FROM (SELECT substr(json_extract_string(i.state,'$.issue_date'),1,7) AS month, json_extract_string(r.state,'$.code') AS rate, SUM(CAST(json_extract(i.state,'$.net') AS BIGINT)) AS n, SUM(CAST(json_extract(i.state,'$.vat') AS BIGINT)) AS v, SUM(CAST(json_extract(i.state,'$.gross') AS BIGINT)) AS g FROM objects i JOIN objects r ON json_extract_string(i.state,'$.vat_rate') = r.object_id WHERE i.object_type = 'sales_invoice' AND r.object_type = 'vat_rate' GROUP BY 1, 2) ORDER BY month, rate",
+        "columns": [
+          { "field": "month", "label": "Monat" },
+          { "field": "rate", "label": "Satz" },
+          { "field": "net", "label": "Netto" },
+          { "field": "vat", "label": "USt" },
+          { "field": "gross", "label": "Brutto" }
+        ]
+      }
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "de-register-account",
+      "priority": 10,
+      "effective_from": "2026-01-01",
+      "description": "Ein Konto aus dem Kontenrahmen wird zum account-Objekt",
+      "spec": {
+        "match": { "event_type": "account.created" },
+        "effect": { "object": { "type": "account", "fields": {
+          "code": "=$.code", "name": "=$.name", "type": "=$.type" } } }
+      }
+    },
+    {
+      "rule_id": "de-register-vat-rate",
+      "priority": 10,
+      "effective_from": "2026-01-01",
+      "description": "Ein Umsatzsteuersatz wird zum vat_rate-Objekt",
+      "spec": {
+        "match": { "event_type": "vat_rate.defined" },
+        "effect": { "object": { "type": "vat_rate", "fields": {
+          "code": "=$.code", "name": "=$.name", "percent": "=$.percent" } } }
+      }
+    },
+    {
+      "rule_id": "de-book-sales-invoice",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Eine ausgestellte EUR-Rechnung wird zum sales_invoice-Dokument",
+      "spec": {
+        "match": { "event_type": "sales.invoice.issued", "where": [
+          { "path": "$.currency", "op": "eq", "value": "EUR" }
+        ] },
+        "effect": { "object": { "type": "sales_invoice", "fields": {
+          "number": "=$.number",
+          "issue_date": "=$.issue_date",
+          "buyer": "=ref(company, vat_id, $.buyer_nip)",
+          "net": "=$.net",
+          "vat": "=$.vat",
+          "gross": "=$.gross",
+          "vat_rate": "=ref(vat_rate, code, $.vat_rate)",
+          "currency": "=$.currency" } } }
+      }
+    },
+    {
+      "rule_id": "de-post-sales-invoice",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "EUR-Rechnung bucht: 1400 brutto / 8400 netto, 1776 USt",
+      "spec": {
+        "match": { "event_type": "sales.invoice.issued", "where": [
+          { "path": "$.currency", "op": "eq", "value": "EUR" }
+        ] },
+        "effect": { "postings": { "currency": "=$.currency", "lines": [
+          { "account": "1400", "debit": "=$.gross" },
+          { "account": "8400", "credit": "=$.net" },
+          { "account": "1776", "credit": "=$.vat" }
+        ] } }
+      }
+    }
+  ],
+  "events": [
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/de/account/0420", "payload": { "code": "0420", "name": "Büroeinrichtung", "type": "asset" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/de/account/0800", "payload": { "code": "0800", "name": "Gezeichnetes Kapital", "type": "equity" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/de/account/1000", "payload": { "code": "1000", "name": "Kasse", "type": "bank" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/de/account/1200", "payload": { "code": "1200", "name": "Bank", "type": "bank" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/de/account/1400", "payload": { "code": "1400", "name": "Forderungen aus Lieferungen und Leistungen", "type": "debtor" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/de/account/1576", "payload": { "code": "1576", "name": "Abziehbare Vorsteuer 19%", "type": "tax" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/de/account/1600", "payload": { "code": "1600", "name": "Verbindlichkeiten aus Lieferungen und Leistungen", "type": "creditor" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/de/account/1741", "payload": { "code": "1741", "name": "Verbindlichkeiten aus Lohn und Gehalt", "type": "creditor" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/de/account/1776", "payload": { "code": "1776", "name": "Umsatzsteuer 19%", "type": "tax" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/de/account/3400", "payload": { "code": "3400", "name": "Wareneingang 19% Vorsteuer", "type": "expense" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/de/account/4120", "payload": { "code": "4120", "name": "Gehälter", "type": "expense" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/de/account/4930", "payload": { "code": "4930", "name": "Bürobedarf", "type": "expense" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/de/account/8300", "payload": { "code": "8300", "name": "Erlöse 7% USt", "type": "revenue" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/de/account/8400", "payload": { "code": "8400", "name": "Erlöse 19% USt", "type": "revenue" } },
+    { "event_type": "vat_rate.defined", "occurred_at": "2026-01-01", "dedup_key": "pack/de/vat/19", "payload": { "code": "19", "name": "Regelsteuersatz 19%", "percent": 19 } },
+    { "event_type": "vat_rate.defined", "occurred_at": "2026-01-01", "dedup_key": "pack/de/vat/7", "payload": { "code": "7", "name": "Ermäßigter Steuersatz 7%", "percent": 7 } },
+    { "event_type": "vat_rate.defined", "occurred_at": "2026-01-01", "dedup_key": "pack/de/vat/0", "payload": { "code": "0", "name": "Steuersatz 0%", "percent": 0 } }
+  ]
+}
