@@ -46,14 +46,81 @@ empirical counterpart to Rhea's language experiment. Worth porting in spirit:
   ordered by the life of a business object rather than by department, tabs
   as URLs, assistant panel with the current tab as context.
 
+## The network: Rhea learns explanations (KK, 2026-10-03)
+
+The endgame concept, adopted as direction. Rhea runs for thousands of
+smaller and bigger EU businesses, free (monetization deliberately deferred —
+KK), and becomes wiser by collecting and generalizing *rules*, never data.
+
+- **What flows upward is explanations, not facts.** Rule-shapes, anonymized
+  and parameterized (stripping instance literals is itself an AI task).
+  Business data never leaves; structure does — GDPR-friendly by
+  construction.
+- **Packs are the distribution vehicle.** The network clusters rule-shapes
+  by market and event shape; consensus patterns above a support threshold
+  (never a single business's pattern — it may encode their secrets) promote
+  into pack version bumps. Thousands of Polish bakeries book flour the same
+  way; the pack learns it once.
+- **The approval gate is the trust boundary.** A network suggestion arrives
+  at every subscriber as a *draft*, simulated against their own history
+  before approval. The mechanism that makes one business safe makes the
+  network safe: collective wisdom, locally falsified.
+- **The agent gets wiser two ways**: the pack library grows as explicit,
+  auditable knowledge; and drafting gains priors from similar businesses —
+  "3,400 like you explain this event shape this way; you deviate because
+  you're cash-method."
+- **The signals are already recorded**: approvals, rejections, edits of
+  drafts (the richest — a human correcting the AI), and worklist residue.
+  Residue across the network is demand: "7% of PL businesses receive events
+  the pack cannot explain" is the pack roadmap writing itself.
+- **The design principle this imposes now**: consensus over small
+  declarative specs is tractable; over code it is hopeless. Everything that
+  keeps rules tiny data — sub-languages instead of rule-level programs —
+  is what makes the network effect computable. This retroactively justifies
+  the arithmetic stance below.
+- **Phase (a) is the collection mechanism**: every discovery conversation
+  that ends in approved rules is labeled training data for the flywheel.
+  Cold start: packs we author ourselves (begun 2026-10-03, pl + de).
+
+One line: *Rhea never learns facts; it learns explanations — packs are the
+distribution vehicle, the approval gate is the trust boundary.*
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
   with atomicity, is the intended end-state (receipt → stock move →
   valuation posting). Shipped 2026-10-03 (see DECISIONS): cause-qualified
   rooted identity, chain-visible refs, per-line cascade valuation; loops hit
-  a depth-cap error naming the looping rule. Backfill of already-explained
-  events remains open.
+  a depth-cap error naming the looping rule.
+- **Arithmetic is a language problem; effects compute in the kernel**
+  (agreed 2026-10-03). Effect arithmetic runs at firing time and is baked
+  into derived events — that is where provenance and replay-fixity live;
+  a number computed in a database at read time explains nothing. DuckDB
+  keeps *analysis* arithmetic only. What's missing is notation as data:
+  operators, reads through refs (`item.std_cost` — refs resolve to ids only
+  today), and an explicit rounding stance — division is where determinism
+  dies, and rounding is itself statutory (per-line vs per-document VAT
+  rounding differs by country: pack data). Algorithmics — FIFO valuation,
+  production allocation, stock counting — arrive as *kernel sub-languages
+  parameterized by rules* (the postings and `each` precedent):
+  deterministic method vocabulary in code, choice and parameters as data.
+  The AI composes sub-languages; it never authors loops.
+- **Lifecycle: status is a projection, never an update** (KK, 2026-10-03:
+  every object has a life, and month-end status must be answerable). An
+  invoice becomes "paid" because a payment event, matched by a rule, emits
+  a derived amendment referencing it — append-only untouched, provenance
+  per amendment. ObjectTypes declare status fields and allowed transitions
+  as data; the kernel validates transitions like it validates balance (the
+  invariant layer grows). As-of is replay with a cutoff — "what status at
+  month-end" is a parameter on machinery determinism already paid for.
+  Amendments carry business dates and respect period locks.
+- **Backfill is ruled** (KK, 2026-10-03: "a closed month is a closed
+  month"). Backfill is the promotion of a simulation diff into the log,
+  as an explicit approval-gated activity recorded as an event — the log
+  stays honest about when understanding arrived vs when facts occurred.
+  A backfill firing into a locked period is refused per event, no
+  exceptions; the open-period correction (korekta) is the human
+  alternative. Nothing retroactive ever happens silently.
 - **Conflicts stay human.** Same-object-id claims refuse the event into the
   worklist; semantic double-booking is simulation's job to reveal before
   approval; static conflict detection is parked (SPEC §7).
