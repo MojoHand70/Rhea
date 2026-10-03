@@ -85,6 +85,46 @@ KK), and becomes wiser by collecting and generalizing *rules*, never data.
 One line: *Rhea never learns facts; it learns explanations — packs are the
 distribution vehicle, the approval gate is the trust boundary.*
 
+## The UX is a replaceable interpreter (KK, 2026-10-03)
+
+Alpha's shell (activity bar, submenu, tabs, omnibox, cases) stays the
+reference UX — but as *a* client, never the UI. The contract, in one
+sentence: **a shell is anything that can render the notions and offer the
+activities.** What can be seen and what can be done are both declared as
+data; every surface — web shell, TUI, native, voice, the phase-(a) agent
+itself — is an interpreter of the same two vocabularies.
+
+- **Typed view API.** Today `/api/views` returns pre-formatted strings
+  (money already through FormatMoney) — presentation leaking into the API.
+  The declared contract carries semantics: typed values (money as minor
+  units + currency), plus the notion spec; renderers decide formatting.
+  Server-side formatting was experiment-phase safety, not the contract.
+- **Default visualization is derived from the ObjectType** — fields, types,
+  label_field and is_document already say enough for a serviceable list and
+  detail with zero ViewDefs. Objects *have* their visualization, by
+  derivation. ViewDefs become exceptions, authored only where seeing is
+  genuinely a point of view: localization, role, emphasis. M4 is the proof
+  views cannot live on the type: one base `sales_invoice`, Polish and
+  German eyes on it.
+- **The complaint question dissolves into four concepts the language
+  already has.** *Registering* a complaint is an Activity (a declared verb
+  with typed inputs emitting a raw event — what the omnibox runs by name);
+  *that it happened* is the Event; *the complaint* is an Object — a
+  document with a lifecycle (open → investigating → resolved, as
+  projections); *that someone must act* is a **case**: another object,
+  raised by a rule from the event, carrying deadline and resolving verbs,
+  closing itself by projection when the world moves on. "An empty list
+  means the day's work is done" becomes a property of the event log, not
+  of a screen.
+- **Cases need no kernel** — with cascade, lifecycle amendments and `each`,
+  a case is a conventional object type plus rules, like `posting` and
+  `period_lock` before it. That is the next falsifiability test in waiting:
+  express Alpha's case model as pure data.
+- Rough order of work: derived default views (kills ViewDef boilerplate),
+  typed view API (the replaceability contract), Activities as data (the
+  verbs — also what the agent needs to know what can be done), cases as
+  pure data.
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
