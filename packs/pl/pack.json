@@ -1,0 +1,200 @@
+{
+  "pack": "pl",
+  "version": 1,
+  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF — rynek jako dane",
+  "requires": ["company", "account", "posting"],
+  "object_types": [
+    {
+      "name": "vat_rate",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "name",
+      "fields": [
+        { "name": "code", "type": "string", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "percent", "type": "int", "required": true }
+      ]
+    },
+    {
+      "name": "ksef_invoice",
+      "version": 1,
+      "domain": "finance",
+      "is_document": true,
+      "label_field": "number",
+      "fields": [
+        { "name": "number", "type": "string", "required": true },
+        { "name": "issue_date", "type": "date", "required": true },
+        { "name": "buyer", "type": "ref<company>", "required": true },
+        { "name": "net", "type": "money", "required": true },
+        { "name": "vat", "type": "money", "required": true },
+        { "name": "gross", "type": "money", "required": true },
+        { "name": "vat_rate", "type": "ref<vat_rate>", "required": true },
+        { "name": "currency", "type": "string", "required": true },
+        { "name": "ksef_ref", "type": "string", "required": true }
+      ]
+    }
+  ],
+  "view_defs": [
+    {
+      "view_id": "vat-rate-list",
+      "version": 1,
+      "notion": "list",
+      "title": "Stawki VAT",
+      "domain": "finance",
+      "function": "master data",
+      "spec": {
+        "object_type": "vat_rate",
+        "columns": [
+          { "field": "code", "label": "Kod" },
+          { "field": "name", "label": "Nazwa" },
+          { "field": "percent", "label": "%" }
+        ]
+      }
+    },
+    {
+      "view_id": "ksef-invoice-list",
+      "version": 1,
+      "notion": "list",
+      "title": "Faktury KSeF",
+      "domain": "finance",
+      "function": "documents",
+      "spec": {
+        "object_type": "ksef_invoice",
+        "columns": [
+          { "field": "number", "label": "Numer" },
+          { "field": "issue_date", "label": "Data" },
+          { "field": "buyer", "label": "Nabywca" },
+          { "field": "net", "label": "Netto" },
+          { "field": "vat", "label": "VAT" },
+          { "field": "gross", "label": "Brutto" }
+        ]
+      }
+    },
+    {
+      "view_id": "ksef-invoice-detail",
+      "version": 1,
+      "notion": "detail",
+      "title": "Faktura KSeF",
+      "domain": "finance",
+      "function": "documents",
+      "spec": {
+        "object_type": "ksef_invoice",
+        "sections": [
+          { "title": "Faktura", "fields": ["number", "issue_date", "ksef_ref"] },
+          { "title": "Strony", "fields": ["buyer"] },
+          { "title": "Kwoty", "fields": ["net", "vat", "gross", "vat_rate", "currency"] }
+        ]
+      }
+    },
+    {
+      "view_id": "rejestr-vat-sprzedazy",
+      "version": 1,
+      "notion": "analysis",
+      "title": "Rejestr VAT sprzedaży",
+      "domain": "finance",
+      "function": "vat",
+      "spec": {
+        "sql": "SELECT month, rate, printf('%d.%02d', n // 100, n % 100) AS net, printf('%d.%02d', v // 100, v % 100) AS vat, printf('%d.%02d', g // 100, g % 100) AS gross FROM (SELECT substr(json_extract_string(i.state,'$.issue_date'),1,7) AS month, json_extract_string(r.state,'$.code') AS rate, SUM(CAST(json_extract(i.state,'$.net') AS BIGINT)) AS n, SUM(CAST(json_extract(i.state,'$.vat') AS BIGINT)) AS v, SUM(CAST(json_extract(i.state,'$.gross') AS BIGINT)) AS g FROM objects i JOIN objects r ON json_extract_string(i.state,'$.vat_rate') = r.object_id WHERE i.object_type = 'ksef_invoice' AND r.object_type = 'vat_rate' GROUP BY 1, 2) ORDER BY month, rate",
+        "columns": [
+          { "field": "month", "label": "Miesiąc" },
+          { "field": "rate", "label": "Stawka" },
+          { "field": "net", "label": "Netto" },
+          { "field": "vat", "label": "VAT" },
+          { "field": "gross", "label": "Brutto" }
+        ]
+      }
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "pl-register-account",
+      "priority": 10,
+      "effective_from": "2026-01-01",
+      "description": "Konto z planu kont staje się obiektem account",
+      "spec": {
+        "match": { "event_type": "account.created" },
+        "effect": { "object": { "type": "account", "fields": {
+          "code": "=$.code", "name": "=$.name", "type": "=$.type" } } }
+      }
+    },
+    {
+      "rule_id": "pl-register-vat-rate",
+      "priority": 10,
+      "effective_from": "2026-01-01",
+      "description": "Stawka VAT staje się obiektem vat_rate",
+      "spec": {
+        "match": { "event_type": "vat_rate.defined" },
+        "effect": { "object": { "type": "vat_rate", "fields": {
+          "code": "=$.code", "name": "=$.name", "percent": "=$.percent" } } }
+      }
+    },
+    {
+      "rule_id": "pl-book-ksef-sales-invoice",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Faktura sprzedaży z KSeF staje się dokumentem ksef_invoice",
+      "spec": {
+        "match": { "event_type": "ksef.invoice.received" },
+        "effect": { "object": { "type": "ksef_invoice", "fields": {
+          "number": "=$.number",
+          "issue_date": "=$.issue_date",
+          "buyer": "=ref(company, vat_id, $.buyer_nip)",
+          "net": "=$.net",
+          "vat": "=$.vat",
+          "gross": "=$.gross",
+          "vat_rate": "=ref(vat_rate, code, $.vat_rate)",
+          "currency": "=$.currency",
+          "ksef_ref": "=$.ksef_ref" } } }
+      }
+    },
+    {
+      "rule_id": "pl-post-ksef-sales-invoice",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Faktura sprzedaży księguje się: 201 brutto / 700 netto, 222 VAT",
+      "spec": {
+        "match": { "event_type": "ksef.invoice.received", "where": [
+          { "path": "$.currency", "op": "eq", "value": "PLN" }
+        ] },
+        "effect": { "postings": { "currency": "=$.currency", "lines": [
+          { "account": "201", "debit": "=$.gross" },
+          { "account": "700", "credit": "=$.net" },
+          { "account": "222", "credit": "=$.vat" }
+        ] } }
+      }
+    }
+  ],
+  "events": [
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/pl/account/010", "payload": { "code": "010", "name": "Środki trwałe", "type": "asset" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/pl/account/071", "payload": { "code": "071", "name": "Umorzenie środków trwałych", "type": "asset" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/pl/account/100", "payload": { "code": "100", "name": "Kasa", "type": "bank" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/pl/account/130", "payload": { "code": "130", "name": "Rachunek bieżący", "type": "bank" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/pl/account/201", "payload": { "code": "201", "name": "Rozrachunki z odbiorcami", "type": "debtor" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/pl/account/202", "payload": { "code": "202", "name": "Rozrachunki z dostawcami", "type": "creditor" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/pl/account/221", "payload": { "code": "221", "name": "VAT naliczony", "type": "tax" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/pl/account/222", "payload": { "code": "222", "name": "VAT należny", "type": "tax" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/pl/account/225", "payload": { "code": "225", "name": "Pozostałe rozrachunki publicznoprawne", "type": "tax" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/pl/account/231", "payload": { "code": "231", "name": "Rozrachunki z tytułu wynagrodzeń", "type": "creditor" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/pl/account/300", "payload": { "code": "300", "name": "Rozliczenie zakupu", "type": "clearing" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/pl/account/310", "payload": { "code": "310", "name": "Materiały", "type": "asset" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/pl/account/330", "payload": { "code": "330", "name": "Towary", "type": "asset" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/pl/account/401", "payload": { "code": "401", "name": "Amortyzacja", "type": "expense" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/pl/account/402", "payload": { "code": "402", "name": "Zużycie materiałów i energii", "type": "expense" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/pl/account/403", "payload": { "code": "403", "name": "Usługi obce", "type": "expense" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/pl/account/404", "payload": { "code": "404", "name": "Wynagrodzenia", "type": "expense" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/pl/account/405", "payload": { "code": "405", "name": "Ubezpieczenia społeczne i inne świadczenia", "type": "expense" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/pl/account/409", "payload": { "code": "409", "name": "Pozostałe koszty rodzajowe", "type": "expense" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/pl/account/490", "payload": { "code": "490", "name": "Rozliczenie kosztów", "type": "clearing" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/pl/account/700", "payload": { "code": "700", "name": "Sprzedaż produktów", "type": "revenue" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/pl/account/730", "payload": { "code": "730", "name": "Sprzedaż towarów", "type": "revenue" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/pl/account/760", "payload": { "code": "760", "name": "Pozostałe przychody operacyjne", "type": "revenue" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/pl/account/801", "payload": { "code": "801", "name": "Kapitał podstawowy", "type": "equity" } },
+    { "event_type": "account.created", "occurred_at": "2026-01-01", "dedup_key": "pack/pl/account/860", "payload": { "code": "860", "name": "Wynik finansowy", "type": "equity" } },
+    { "event_type": "vat_rate.defined", "occurred_at": "2026-01-01", "dedup_key": "pack/pl/vat/23", "payload": { "code": "23", "name": "Stawka podstawowa 23%", "percent": 23 } },
+    { "event_type": "vat_rate.defined", "occurred_at": "2026-01-01", "dedup_key": "pack/pl/vat/8", "payload": { "code": "8", "name": "Stawka obniżona 8%", "percent": 8 } },
+    { "event_type": "vat_rate.defined", "occurred_at": "2026-01-01", "dedup_key": "pack/pl/vat/5", "payload": { "code": "5", "name": "Stawka obniżona 5%", "percent": 5 } },
+    { "event_type": "vat_rate.defined", "occurred_at": "2026-01-01", "dedup_key": "pack/pl/vat/0", "payload": { "code": "0", "name": "Stawka 0%", "percent": 0 } },
+    { "event_type": "vat_rate.defined", "occurred_at": "2026-01-01", "dedup_key": "pack/pl/vat/zw", "payload": { "code": "zw", "name": "Zwolnione z VAT", "percent": 0 } }
+  ]
+}

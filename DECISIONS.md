@@ -55,6 +55,34 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-03 — M3: the Poland pack; a market pack is one data file
+
+- **Pack = one JSON manifest** (`packs/pl/pack.json`): object types, view
+  defs, rules and master-data events, plus a `requires` list naming the base
+  types it builds on (company, account, posting) without shipping them — base
+  definitions belong to the base, and M4's second market proves the boundary
+  by reusing them. Loaded by `rhea pack FILE` or `pack.Load`.
+- **A pack installs no behavior.** Its rules land as *drafts*; its events (the
+  chart of accounts, VAT rates) wait in the worklist; approving the pack's
+  rules in the shell IS the installation. The approval gate needed no new
+  machinery to become a pack-install UX.
+- **Loading is idempotent**: every pack event must carry a dedup key
+  (`pack/pl/account/201`); types and views skip on an existing
+  (name, version); a rule id the system already knows is left alone — pack
+  updates will arrive as pack version bumps, not silent redrafts.
+- **The invariant layer audits the pack's own data**: the KSeF sales entry
+  books 201 gross / 700 net / 222 VAT, so an invoice whose gross ≠ net + VAT
+  is refused by the double-entry balance check — statutory arithmetic
+  enforced by a domain invariant, not by pack code.
+- **Localization is data**: Polish titles and labels in the pack's views;
+  `function` keys stay English since they are grouping keys shared with base
+  submenus. Wzorcowy plan kont mapping to the ten account types: Kasa and
+  Rachunek bieżący are `bank`, VAT and rozrachunki publicznoprawne `tax`,
+  Rozliczenie zakupu/kosztów `clearing`, zespół 4 `expense`, zespół 7
+  `revenue`.
+- **Still open in M3**: the statutory adapter (KSeF submission) as code
+  behind a declared contract — the SPEC §7 adapter-contract question.
+
 ## 2026-10-03 — cause-qualified cascade identity
 
 - **The forcing domain arrived the same day**: `each` × cascade. Two line

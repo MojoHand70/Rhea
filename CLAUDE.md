@@ -45,9 +45,11 @@ internal/core/     the language: Event, ObjectType, Object, Rule, ViewDef types 
 internal/store/    Postgres event log + versioned definition stores (.sql embedded)
 internal/exec/     deterministic executor: match → expand → emit derived events → project
 internal/agent/    Anthropic calls; drafts rule JSON; no side effects, no store access
+internal/pack/     market-pack loader: definitions + draft rules + master-data events
 internal/project/  event log → DuckDB projections for analysis views
 internal/shell/    HTTP JSON API + embedded web shell
 web/               activity bar / submenu / tabs shell (vanilla)
+packs/             market packs as data (pl: CoA, VAT, KSeF)
 testdata/          sample raw events, expected objects, expected analysis output
 SPEC.md            the design
 ```
