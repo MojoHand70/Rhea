@@ -7,6 +7,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 
@@ -59,6 +60,14 @@ func (s *Store) Close() { s.Pool.Close() }
 func (s *Store) Init(ctx context.Context) error {
 	_, err := s.Pool.Exec(ctx, schemaSQL)
 	return err
+}
+
+// IsDuplicate reports a unique-constraint violation — how append-only tables
+// say "already there". Idempotent loaders (packs, adapter retries) treat it
+// as a skip, not an error.
+func IsDuplicate(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23505"
 }
 
 // Querier is satisfied by both *pgxpool.Pool and pgx.Tx, so executor code can

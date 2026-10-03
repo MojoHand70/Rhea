@@ -11,11 +11,8 @@ package pack
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
-
-	"github.com/jackc/pgx/v5/pgconn"
 
 	"rhea/internal/core"
 	"rhea/internal/store"
@@ -94,7 +91,7 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 		switch err := s.InsertObjectType(ctx, t); {
 		case err == nil:
 			sum.Types++
-		case isDuplicate(err):
+		case store.IsDuplicate(err):
 			sum.Skipped++
 		default:
 			return sum, fmt.Errorf("object type %s: %w", t.Name, err)
@@ -104,7 +101,7 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 		switch err := s.InsertViewDef(ctx, v); {
 		case err == nil:
 			sum.Views++
-		case isDuplicate(err):
+		case store.IsDuplicate(err):
 			sum.Skipped++
 		default:
 			return sum, fmt.Errorf("view def %s: %w", v.ID, err)
@@ -148,16 +145,11 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 		switch {
 		case err == nil:
 			sum.Events++
-		case isDuplicate(err):
+		case store.IsDuplicate(err):
 			sum.Skipped++
 		default:
 			return sum, fmt.Errorf("event %s (%s): %w", ev.DedupKey, ev.EventType, err)
 		}
 	}
 	return sum, nil
-}
-
-func isDuplicate(err error) bool {
-	var pgErr *pgconn.PgError
-	return errors.As(err, &pgErr) && pgErr.Code == "23505"
 }

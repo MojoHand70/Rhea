@@ -55,6 +55,31 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-03 — M3 complete: the statutory adapter contract
+
+- **An adapter is a user, not a kernel extension** (Alpha's "the agent is a
+  user", applied to integrations). The declared contract
+  (`internal/adapter`): read projected objects, talk to the outside world
+  through your own client, return raw events; the runner appends them under
+  actor `adapter:<name>`. The kernel never calls out, and replay never
+  re-runs an adapter — its events are already in the log. This answers SPEC
+  §7's parked questions: *async* by construction (a pass polls the projected
+  world for what the outside world still owes the log, and pending statutory
+  state is ordinary objects from ordinary pack rules); *retry* is free
+  (evidence events carry deterministic dedup keys — `ksef/submit/<invoice
+  id>` — so a crashed pass re-submits into a no-op); *evidence* lives in the
+  event payload (KSeF reference + UPO) — the append-only log is the evidence
+  store.
+- **The KSeF client is an interface; the experiment ships a deterministic
+  fake** (reference and UPO derived from the invoice number), so demos and
+  replays reproduce. `rhea ksef` runs one pass.
+- **Renamed before anything consumed it**: `ksef_invoice` →
+  `sales_invoice`, event `ksef.invoice.received` → `sales.invoice.issued`,
+  and the document no longer carries `ksef_ref` — the invoice is ours at
+  issue time; the KSeF reference is *evidence of submission* and belongs on
+  the `ksef_submission` object the adapter's event materializes. An invoice
+  is "in KSeF" only if the adapter ran: exactly the statutory truth.
+
 ## 2026-10-03 — M3: the Poland pack; a market pack is one data file
 
 - **Pack = one JSON manifest** (`packs/pl/pack.json`): object types, view

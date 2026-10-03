@@ -45,6 +45,7 @@ internal/core/     the language: Event, ObjectType, Object, Rule, ViewDef types 
 internal/store/    Postgres event log + versioned definition stores (.sql embedded)
 internal/exec/     deterministic executor: match → expand → emit derived events → project
 internal/agent/    Anthropic calls; drafts rule JSON; no side effects, no store access
+internal/adapter/  statutory adapters behind the declared contract (read objects, return events)
 internal/pack/     market-pack loader: definitions + draft rules + master-data events
 internal/project/  event log → DuckDB projections for analysis views
 internal/shell/    HTTP JSON API + embedded web shell
