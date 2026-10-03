@@ -477,8 +477,9 @@ func TestDoubleEntry(t *testing.T) {
 // end-state). A goods receipt becomes a stock movement, whose materialization
 // event fires a valuation rule — postings and a note referencing the movement
 // created in the same chain — all booked atomically with the root event.
-// Cascaded identity stays rooted in the raw event, so simulation reproduces
-// it and a cyclic rule set collides with itself instead of recursing.
+// Cascaded identity builds on the causing object's id, itself rooted in the
+// raw event, so simulation reproduces it with no sequence state; a cyclic
+// rule set runs into the depth cap, which names the looping rule.
 func TestCascade(t *testing.T) {
 	ctx := context.Background()
 	x := &exec.Executor{Store: storetest.New(t)}
@@ -660,7 +661,8 @@ func TestCascade(t *testing.T) {
 	}
 	var d, c int64
 	for _, p := range postings {
-		if p.State["entry"] != fmt.Sprintf("entry-%d-value-stock-in", gr2) {
+		// A cascaded entry is keyed by the causing object, not the root event.
+		if p.State["entry"] != fmt.Sprintf("entry-stock_movement-%d-value-stock-in", gr2) {
 			t.Fatalf("entry key = %v", p.State["entry"])
 		}
 		amt := int64(p.State["amount"].(float64))
@@ -717,8 +719,9 @@ func TestCascade(t *testing.T) {
 		t.Fatal("refused chain left a movement behind")
 	}
 
-	// A cyclic rule — a note firing on the note's own materialization — claims
-	// an id the chain already owns and surfaces as a conflict, not a loop.
+	// A cyclic rule — a note firing on the note's own materialization — mints
+	// a fresh cause-qualified id each generation, so the depth cap is what
+	// stops it, naming the looping rule and the id that shows the loop.
 	// (Approved directly: the locked receipt still reports from the worklist.)
 	draft("echo-note", 400, core.RuleSpec{
 		Match: core.Match{EventType: core.EventObjectMaterialized, Where: []core.Condition{
@@ -734,7 +737,7 @@ func TestCascade(t *testing.T) {
 		`{"item":"WID-1","location":"MAIN","qty":3,"date":"2026-09-20","value":"999.00"}`)
 	n, errs = x.ProcessPending(ctx)
 	joined := fmt.Sprintf("%v", errs)
-	if n != 0 || !strings.Contains(joined, "both materialize") {
+	if n != 0 || !strings.Contains(joined, "exceeded") || !strings.Contains(joined, "echo-note") {
 		t.Fatalf("cycle: booked %d, errs %v", n, errs)
 	}
 	if ns, _ := x.Store.ObjectsByType(ctx, "valuation_note"); len(ns) != 1 {
@@ -930,6 +933,168 @@ func TestEachEffect(t *testing.T) {
 	}
 
 	// Determinism holds across fan-outs.
+	before, _ := x.Store.AllObjects(ctx)
+	if _, err := x.Replay(ctx); err != nil {
+		t.Fatal(err)
+	}
+	after, _ := x.Store.AllObjects(ctx)
+	if !reflect.DeepEqual(normalize(t, before), normalize(t, after)) {
+		t.Fatal("replay diverged")
+	}
+}
+
+// TestCascadePerLine: the combination that forced cause-qualified identity —
+// an each-effect fans a receipt into one movement per line, and the valuation
+// cascade fires once per movement, each firing booking its own balanced
+// journal entry keyed by its movement's id. One raw event, two lines, two
+// entries, four postings, one transaction.
+func TestCascadePerLine(t *testing.T) {
+	ctx := context.Background()
+	x := &exec.Executor{Store: storetest.New(t)}
+	for _, ot := range []core.ObjectType{
+		{Name: "item", Version: 1, Domain: "warehouse", LabelField: "name",
+			Fields: []core.FieldDef{
+				{Name: "sku", Type: "string", Required: true},
+				{Name: "name", Type: "string", Required: true},
+			}},
+		{Name: "stock_movement", Version: 1, Domain: "warehouse",
+			Fields: []core.FieldDef{
+				{Name: "grn", Type: "string", Required: true},
+				{Name: "item", Type: "ref<item>", Required: true},
+				{Name: "direction", Type: "enum", Values: []string{"in", "out"}, Required: true},
+				{Name: "qty", Type: "int", Required: true},
+				{Name: "date", Type: "date", Required: true},
+				{Name: "value", Type: "money", Required: true},
+			}},
+		{Name: "account", Version: 1, Domain: "finance",
+			Fields: []core.FieldDef{
+				{Name: "code", Type: "string", Required: true},
+				{Name: "name", Type: "string", Required: true},
+			}},
+		{Name: "posting", Version: 1, Domain: "finance",
+			Fields: []core.FieldDef{
+				{Name: "entry", Type: "string", Required: true},
+				{Name: "line", Type: "int", Required: true},
+				{Name: "account", Type: "ref<account>", Required: true},
+				{Name: "side", Type: "enum", Values: []string{"debit", "credit"}, Required: true},
+				{Name: "amount", Type: "money", Required: true},
+				{Name: "currency", Type: "string", Required: true},
+				{Name: "date", Type: "date", Required: true},
+			}},
+	} {
+		if err := x.Store.InsertObjectType(ctx, ot); err != nil {
+			t.Fatal(err)
+		}
+	}
+	submit := func(dedup, evType, date, payload string) int64 {
+		t.Helper()
+		id, err := x.Store.AppendEvent(ctx, core.Event{
+			Kind: core.KindRaw, Type: evType, OccurredAt: date,
+			Payload: json.RawMessage(payload), DedupKey: dedup,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return id
+	}
+	activate := func(id string, priority int, spec core.RuleSpec) {
+		t.Helper()
+		if _, err := x.Store.InsertRuleVersion(ctx, core.Rule{
+			ID: id, Status: core.StatusDraft, Priority: priority,
+			EffectiveFrom: "2026-01-01", CreatedBy: "test", Description: id, Spec: spec,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if _, _, procErrs, err := x.ApproveRule(ctx, id, "krzysztof", "2026-09-01"); err != nil || len(procErrs) > 0 {
+			t.Fatalf("approve %s: %v %v", id, procErrs, err)
+		}
+	}
+	obj := func(typ string, fields map[string]string) core.Effect {
+		return core.Effect{Object: core.ObjectTemplate{Type: typ, Fields: fields}}
+	}
+
+	activate("register-item", 10, core.RuleSpec{
+		Match:  core.Match{EventType: "item.created"},
+		Effect: obj("item", map[string]string{"sku": "=$.sku", "name": "=$.name"})})
+	activate("register-account", 10, core.RuleSpec{
+		Match:  core.Match{EventType: "account.created"},
+		Effect: obj("account", map[string]string{"code": "=$.code", "name": "=$.name"})})
+	activate("move-lines", 100, core.RuleSpec{
+		Match: core.Match{EventType: "goods.received"},
+		Effect: core.Effect{Object: core.ObjectTemplate{
+			Type: "stock_movement", Each: "=$.lines[*]",
+			Fields: map[string]string{
+				"grn": "=$.doc.grn", "item": "=ref(item, sku, $.line.item)",
+				"direction": "in", "qty": "=$.line.qty", "date": "=$.doc.date",
+				"value": "=$.line.value",
+			}}}})
+	activate("value-movement", 200, core.RuleSpec{
+		Match: core.Match{EventType: core.EventObjectMaterialized, Where: []core.Condition{
+			{Path: "$.object_type", Op: "eq", Value: "stock_movement"},
+			{Path: "$.state.direction", Op: "eq", Value: "in"},
+		}},
+		Effect: core.Effect{Postings: &core.PostingsTemplate{
+			Currency: "PLN",
+			Lines: []core.PostingLine{
+				{Account: "310", Debit: "=$.state.value"},
+				{Account: "300", Credit: "=$.state.value"},
+			},
+		}}})
+	submit("item-w", "item.created", "2026-09-01", `{"sku":"WID-1","name":"Widget"}`)
+	submit("item-g", "item.created", "2026-09-01", `{"sku":"GAD-1","name":"Gadget"}`)
+	submit("acc-310", "account.created", "2026-09-01", `{"code":"310","name":"Materials"}`)
+	submit("acc-300", "account.created", "2026-09-01", `{"code":"300","name":"GR/IR clearing"}`)
+	if n, errs := x.ProcessPending(ctx); n != 4 || len(errs) != 0 {
+		t.Fatalf("masters: booked %d, errs %v", n, errs)
+	}
+
+	gr := submit("gr-1", "goods.received", "2026-09-15",
+		`{"grn":"GRN-7","date":"2026-09-15","lines":[
+			{"item":"WID-1","qty":10,"value":"100.00"},
+			{"item":"GAD-1","qty":5,"value":"50.00"}]}`)
+	if n, errs := x.ProcessPending(ctx); n != 1 || len(errs) != 0 {
+		t.Fatalf("receipt: booked %d, errs %v", n, errs)
+	}
+
+	movements, _ := x.Store.ObjectsByType(ctx, "stock_movement")
+	postings, _ := x.Store.ObjectsByType(ctx, "posting")
+	if len(movements) != 2 || len(postings) != 4 {
+		t.Fatalf("movements %d, postings %d", len(movements), len(postings))
+	}
+
+	// Each movement got its own journal entry, keyed by the movement's id,
+	// and each entry balances on its own line's value.
+	byEntry := map[string][2]int64{} // entry key → [debits, credits]
+	for _, p := range postings {
+		k := p.State["entry"].(string)
+		dc := byEntry[k]
+		amt := int64(p.State["amount"].(float64))
+		if p.State["side"] == "debit" {
+			dc[0] += amt
+		} else {
+			dc[1] += amt
+		}
+		byEntry[k] = dc
+	}
+	wantEntries := map[string][2]int64{
+		fmt.Sprintf("entry-stock_movement-%d-1-value-movement", gr): {10000, 10000},
+		fmt.Sprintf("entry-stock_movement-%d-2-value-movement", gr): {5000, 5000},
+	}
+	if !reflect.DeepEqual(byEntry, wantEntries) {
+		t.Fatalf("entries = %v, want %v", byEntry, wantEntries)
+	}
+
+	// Per-line provenance: the two entries trace to two different causing
+	// events — each movement's own materialization.
+	causes := map[int64]bool{}
+	for _, p := range postings {
+		causes[p.SourceEventID] = true
+	}
+	if len(causes) != 2 {
+		t.Fatalf("posting causes = %v, want one per movement", causes)
+	}
+
+	// Determinism holds across per-line cascades.
 	before, _ := x.Store.AllObjects(ctx)
 	if _, err := x.Replay(ctx); err != nil {
 		t.Fatal(err)

@@ -55,6 +55,28 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-03 — cause-qualified cascade identity
+
+- **The forcing domain arrived the same day**: `each` × cascade. Two line
+  movements from one receipt both fire the valuation rule, and per-root
+  posting ids collided — refusing exactly the story the cascade exists for
+  (receipt → N movements → N valuation entries). The open edge below is
+  hereby closed.
+- **A cascaded firing's ids build on the causing object's id, not the root
+  event's**: objects `<type>-<cause object id>`, postings
+  `posting-<cause id>-<rule>-<n>`, entries `entry-<cause id>-<rule>`. Root
+  firings keep `<type>-<root event id>` — every pre-existing id is unchanged.
+  The causing object's id is itself rooted, so identity still needs no
+  sequence state and simulation still reproduces cascaded ids exactly.
+- **The traded-away guard, as recorded**: cascade cycles no longer
+  self-collide (each generation mints a fresh qualified id), so the
+  16-generation depth cap is now the loop guard for cascaded rules. Its
+  error names the looping rule and the id it keeps materializing — the id
+  shows the loop, one type name per generation. Collision still guards every
+  same-cause and root-level ambiguity.
+- **Each line's valuation is its own balanced journal entry** (per-cause
+  entry keys); balance stays enforced per firing, as always.
+
 ## 2026-10-03 — multi-line documents: lines are objects, via `each`
 
 - **Lines stay objects; `list<>` fields are deliberately not built.** The fork

@@ -21,10 +21,12 @@ const PostingObjectType = "posting"
 // currency per entry, each account resolved by code to an existing account
 // object, debits equal to credits, and the event's month not locked by a
 // period_lock object. Pure given the lookup — the executor passes store
-// state, the simulator its in-memory world. Ids and the entry key are
-// rule-qualified so several ledger rules may book the same event (a VAT
-// entry beside a revenue entry) without colliding.
-func ExpandPostings(p *core.PostingsTemplate, postingType core.ObjectType, ev core.Event, ruleID string, payload any, lookup core.Lookup) ([]core.MaterializedObject, error) {
+// state, the simulator its in-memory world. Ids and the entry key build on
+// idBase (the root event id, or the causing object's id when cascaded) and
+// are rule-qualified, so several ledger rules may book the same event (a VAT
+// entry beside a revenue entry) and one ledger rule may book each of an
+// event's lines (a valuation entry per movement) without colliding.
+func ExpandPostings(p *core.PostingsTemplate, postingType core.ObjectType, ev core.Event, idBase, ruleID string, payload any, lookup core.Lookup) ([]core.MaterializedObject, error) {
 	if lookup == nil {
 		return nil, fmt.Errorf("postings need object state, none available here")
 	}
@@ -75,11 +77,11 @@ func ExpandPostings(p *core.PostingsTemplate, postingType core.ObjectType, ev co
 			credits += amount
 		}
 		out = append(out, core.MaterializedObject{
-			ObjectID:    fmt.Sprintf("posting-%d-%s-%d", ev.ID, ruleID, i+1),
+			ObjectID:    fmt.Sprintf("posting-%s-%s-%d", idBase, ruleID, i+1),
 			ObjectType:  PostingObjectType,
 			TypeVersion: postingType.Version,
 			State: map[string]any{
-				"entry":    fmt.Sprintf("entry-%d-%s", ev.ID, ruleID),
+				"entry":    fmt.Sprintf("entry-%s-%s", idBase, ruleID),
 				"line":     i + 1,
 				"account":  accountID,
 				"side":     side,

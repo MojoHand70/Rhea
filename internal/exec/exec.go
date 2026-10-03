@@ -61,9 +61,10 @@ type chainNode struct {
 	cause int
 }
 
-// maxCascadeDepth caps chain generations. Rooted object identity makes a
-// genuinely cyclic rule set collide on its own ids within a generation or
-// two, so this is a backstop with a clear error, not the loop prevention.
+// maxCascadeDepth caps chain generations — the loop guard for cascaded rules,
+// since cause-qualified identity mints a fresh id each generation and a cycle
+// never self-collides. Its error names the looping rule and the id it keeps
+// materializing; the id itself shows the loop, one type name per generation.
 const maxCascadeDepth = 16
 
 // evaluate fires every matching rule on the event and cascades: each firing's
@@ -95,13 +96,15 @@ func (x *Executor) evaluate(ctx context.Context, ev core.Event, rules []core.Rul
 
 // expandChain evaluates the rule set against the root event, then against the
 // derived events its firings would emit, generation by generation until no
-// rule fires. Object identity stays rooted in the raw event (<type>-<root>),
-// so simulation reproduces cascaded identity exactly and a cyclic rule set
-// collides with itself instead of recursing. Expansions see state as of
-// before the root event plus the chain's earlier generations — the receipt's
-// movement is visible to the valuation rule — never their own siblings.
-// Shared verbatim by the live path and the simulator, so a dry run cannot
-// drift from reality.
+// rule fires. Identity needs no sequence state anywhere: a root firing's ids
+// derive from the raw event (<type>-<root id>), a cascaded firing's from the
+// causing object's id (<type>-<cause object id>), which is itself rooted — so
+// simulation reproduces every cascaded id exactly, and one rule firing on two
+// sibling derived events (two line movements of one receipt) mints distinct
+// ids instead of colliding. Expansions see state as of before the root event
+// plus the chain's earlier generations — the receipt's movement is visible to
+// the valuation rule — never their own siblings. Shared verbatim by the live
+// path and the simulator, so a dry run cannot drift from reality.
 func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []core.Rule, payload any, base core.Lookup) ([]chainNode, error) {
 	var nodes []chainNode
 	owner := map[string]string{} // object id → rule that claimed it
@@ -120,6 +123,10 @@ func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []cor
 		return ids, nil
 	}
 	fire := func(ev core.Event, evPayload any, cause int) error {
+		idBase := fmt.Sprintf("%d", root.ID)
+		if cause >= 0 {
+			idBase = nodes[cause].mat.ObjectID
+		}
 		for _, r := range rules {
 			ok, err := matchRule(r, ev, evPayload)
 			if err != nil {
@@ -128,7 +135,7 @@ func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []cor
 			if !ok {
 				continue
 			}
-			mats, err := x.expandEffect(ctx, root, r, evPayload, lookup)
+			mats, err := x.expandEffect(ctx, root, idBase, r, evPayload, lookup)
 			if err != nil {
 				return err
 			}
@@ -148,7 +155,9 @@ func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []cor
 	lo, hi := 0, len(nodes)
 	for gen := 1; lo < hi; gen++ {
 		if gen > maxCascadeDepth {
-			return nil, fmt.Errorf("cascade exceeded %d generations", maxCascadeDepth)
+			last := nodes[len(nodes)-1]
+			return nil, fmt.Errorf("cascade exceeded %d generations — rule %s keeps materializing %s",
+				maxCascadeDepth, last.rule.ID, last.mat.ObjectID)
 		}
 		visible = hi
 		for i := lo; i < hi; i++ {
@@ -244,16 +253,17 @@ func (x *Executor) book(ctx context.Context, root core.Event, nodes []chainNode)
 
 // expandEffect turns a matched rule into the objects it materializes, using
 // lookup for all state access so the simulator can reuse it verbatim. The
-// payload may be the root event's or a cascaded derived event's; identity and
-// business date always come from the root, which keeps cascaded ids
-// reproducible without any sequence state.
-func (x *Executor) expandEffect(ctx context.Context, root core.Event, r core.Rule, payload any, lookup core.Lookup) ([]core.MaterializedObject, error) {
+// payload may be the root event's or a cascaded derived event's; the business
+// date always comes from the root, and ids build on idBase — the root event
+// id for root firings, the causing object's id for cascaded ones — which
+// keeps every id reproducible without any sequence state.
+func (x *Executor) expandEffect(ctx context.Context, root core.Event, idBase string, r core.Rule, payload any, lookup core.Lookup) ([]core.MaterializedObject, error) {
 	if r.Spec.Effect.Postings != nil {
 		postingType, err := x.Store.GetObjectType(ctx, PostingObjectType)
 		if err != nil {
 			return nil, fmt.Errorf("rule %s v%d: %w", r.ID, r.Version, err)
 		}
-		mats, err := ExpandPostings(r.Spec.Effect.Postings, postingType, root, r.ID, payload, lookup)
+		mats, err := ExpandPostings(r.Spec.Effect.Postings, postingType, root, idBase, r.ID, payload, lookup)
 		if err != nil {
 			return nil, fmt.Errorf("rule %s v%d postings: %w", r.ID, r.Version, err)
 		}
@@ -270,10 +280,11 @@ func (x *Executor) expandEffect(ctx context.Context, root core.Event, r core.Rul
 		if err != nil {
 			return nil, fmt.Errorf("rule %s v%d expand: %w", r.ID, r.Version, err)
 		}
-		// Deterministic object identity: derived from the root event, so
-		// replay and simulation reproduce it exactly (invariant 4).
+		// Deterministic object identity: derived from the root event (or the
+		// causing object when cascaded), so replay and simulation reproduce
+		// it exactly (invariant 4).
 		return []core.MaterializedObject{{
-			ObjectID:    fmt.Sprintf("%s-%d", objType.Name, root.ID),
+			ObjectID:    fmt.Sprintf("%s-%s", objType.Name, idBase),
 			ObjectType:  objType.Name,
 			TypeVersion: objType.Version,
 			State:       state,
@@ -308,7 +319,7 @@ func (x *Executor) expandEffect(ctx context.Context, root core.Event, r core.Rul
 			return nil, fmt.Errorf("rule %s v%d line %d: %w", r.ID, r.Version, i+1, err)
 		}
 		mats = append(mats, core.MaterializedObject{
-			ObjectID:    fmt.Sprintf("%s-%d-%d", objType.Name, root.ID, i+1),
+			ObjectID:    fmt.Sprintf("%s-%s-%d", objType.Name, idBase, i+1),
 			ObjectType:  objType.Name,
 			TypeVersion: objType.Version,
 			State:       state,
