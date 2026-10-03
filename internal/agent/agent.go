@@ -98,6 +98,12 @@ its declared "values".
 Every required field of the target object type must be present in "fields".
 Use "where" conditions only for constraints the user's intent actually implies.
 
+For MULTI-LINE events (one object per array element), add "each" to the object:
+  "effect": {"object": {"type": "stock_movement", "each": "=$.lines[*]", "fields": {
+    "item": "=ref(item, sku, $.line.item)", "qty": "=$.line.qty", "date": "=$.doc.date"}}}
+Inside an "each" rule, field templates see {"doc": the whole event payload,
+"line": one array element, "n": the 1-based line number} instead of the payload.
+
 For ACCOUNTING rules (booking to a chart of accounts), "effect" instead posts one
 balanced journal entry — no "object":
   "effect": {"postings": {"currency": "=$.currency", "lines": [

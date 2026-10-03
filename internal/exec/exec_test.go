@@ -763,6 +763,183 @@ func TestCascade(t *testing.T) {
 	}
 }
 
+// TestEachEffect: multi-line documents, the M2 simplification lifted. An
+// "each" object effect fans out over an array in the payload and materializes
+// one object per element — the posting pattern generalized to any type — with
+// per-line provenance, line-numbered rooted ids, and the same all-or-nothing
+// booking as every other firing.
+func TestEachEffect(t *testing.T) {
+	ctx := context.Background()
+	x := &exec.Executor{Store: storetest.New(t)}
+	for _, ot := range []core.ObjectType{
+		{Name: "item", Version: 1, Domain: "warehouse", LabelField: "name",
+			Fields: []core.FieldDef{
+				{Name: "sku", Type: "string", Required: true},
+				{Name: "name", Type: "string", Required: true},
+			}},
+		{Name: "location", Version: 1, Domain: "warehouse", LabelField: "name",
+			Fields: []core.FieldDef{
+				{Name: "code", Type: "string", Required: true},
+				{Name: "name", Type: "string", Required: true},
+			}},
+		{Name: "goods_receipt", Version: 1, Domain: "warehouse", IsDocument: true,
+			Fields: []core.FieldDef{
+				{Name: "grn", Type: "string", Required: true},
+				{Name: "location", Type: "ref<location>", Required: true},
+				{Name: "date", Type: "date", Required: true},
+			}},
+		{Name: "stock_movement", Version: 1, Domain: "warehouse",
+			Fields: []core.FieldDef{
+				{Name: "grn", Type: "string", Required: true}, // the parent document's business key
+				{Name: "item", Type: "ref<item>", Required: true},
+				{Name: "location", Type: "ref<location>", Required: true},
+				{Name: "direction", Type: "enum", Values: []string{"in", "out"}, Required: true},
+				{Name: "qty", Type: "int", Required: true},
+				{Name: "date", Type: "date", Required: true},
+			}},
+	} {
+		if err := x.Store.InsertObjectType(ctx, ot); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	submit := func(dedup, evType, date, payload string) int64 {
+		t.Helper()
+		id, err := x.Store.AppendEvent(ctx, core.Event{
+			Kind: core.KindRaw, Type: evType, OccurredAt: date,
+			Payload: json.RawMessage(payload), DedupKey: dedup,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return id
+	}
+	obj := func(typ string, fields map[string]string) core.Effect {
+		return core.Effect{Object: core.ObjectTemplate{Type: typ, Fields: fields}}
+	}
+	activate := func(id string, priority int, spec core.RuleSpec) {
+		t.Helper()
+		if _, err := x.Store.InsertRuleVersion(ctx, core.Rule{
+			ID: id, Status: core.StatusDraft, Priority: priority,
+			EffectiveFrom: "2026-01-01", CreatedBy: "test", Description: id, Spec: spec,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if _, _, procErrs, err := x.ApproveRule(ctx, id, "krzysztof", "2026-09-01"); err != nil || len(procErrs) > 0 {
+			t.Fatalf("approve %s: %v %v", id, procErrs, err)
+		}
+	}
+
+	activate("register-item", 10, core.RuleSpec{
+		Match:  core.Match{EventType: "item.created"},
+		Effect: obj("item", map[string]string{"sku": "=$.sku", "name": "=$.name"})})
+	activate("register-location", 10, core.RuleSpec{
+		Match:  core.Match{EventType: "location.created"},
+		Effect: obj("location", map[string]string{"code": "=$.code", "name": "=$.name"})})
+	activate("book-receipt", 100, core.RuleSpec{
+		Match: core.Match{EventType: "goods.received"},
+		Effect: obj("goods_receipt", map[string]string{
+			"grn": "=$.grn", "location": "=ref(location, code, $.location)", "date": "=$.date"})})
+	submit("item-w", "item.created", "2026-09-01", `{"sku":"WID-1","name":"Widget"}`)
+	submit("item-g", "item.created", "2026-09-01", `{"sku":"GAD-1","name":"Gadget"}`)
+	submit("loc-1", "location.created", "2026-09-01", `{"code":"MAIN","name":"Main"}`)
+	if n, errs := x.ProcessPending(ctx); n != 3 || len(errs) != 0 {
+		t.Fatalf("masters: booked %d, errs %v", n, errs)
+	}
+
+	// A two-line receipt while only the document rule runs: header books,
+	// lines wait for their rule.
+	gr1 := submit("gr-1", "goods.received", "2026-09-15",
+		`{"grn":"GRN-7","location":"MAIN","date":"2026-09-15","lines":[{"item":"WID-1","qty":10},{"item":"GAD-1","qty":4}]}`)
+	if n, errs := x.ProcessPending(ctx); n != 1 || len(errs) != 0 {
+		t.Fatalf("receipt 1: booked %d, errs %v", n, errs)
+	}
+
+	// The lines rule: one movement per line, templates scoped {doc, line, n}.
+	linesSpec := core.RuleSpec{
+		Match: core.Match{EventType: "goods.received"},
+		Effect: core.Effect{Object: core.ObjectTemplate{
+			Type: "stock_movement", Each: "=$.lines[*]",
+			Fields: map[string]string{
+				"grn":      "=$.doc.grn",
+				"item":     "=ref(item, sku, $.line.item)",
+				"location": "=ref(location, code, $.doc.location)",
+				"direction": "in", "qty": "=$.line.qty", "date": "=$.doc.date",
+			}}}}
+
+	// Simulated as a draft first: the dry run fans out too — two movements
+	// for the historical receipt — and writes nothing.
+	if _, err := x.Store.InsertRuleVersion(ctx, core.Rule{
+		ID: "move-lines", Status: core.StatusDraft, Priority: 200,
+		EffectiveFrom: "2026-01-01", CreatedBy: "test", Description: "move-lines", Spec: linesSpec,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	diff, err := x.SimulateRule(ctx, "move-lines")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diff.Added) != 2 || diff.Added[0].ID != fmt.Sprintf("stock_movement-%d-1", gr1) {
+		t.Fatalf("simulated lines = %+v", diff.Added)
+	}
+	if objs, _ := x.Store.ObjectsByType(ctx, "stock_movement"); len(objs) != 0 {
+		t.Fatal("simulation wrote movements")
+	}
+	if _, booked, procErrs, err := x.ApproveRule(ctx, "move-lines", "krzysztof", "2026-09-16"); err != nil || booked != 0 || len(procErrs) != 0 {
+		t.Fatalf("approve move-lines: booked %d, %v, %v", booked, procErrs, err) // no retroactivity
+	}
+
+	// A second receipt books header and both lines in one transaction.
+	gr2 := submit("gr-2", "goods.received", "2026-09-17",
+		`{"grn":"GRN-8","location":"MAIN","date":"2026-09-17","lines":[{"item":"WID-1","qty":5},{"item":"GAD-1","qty":3}]}`)
+	if n, errs := x.ProcessPending(ctx); n != 1 || len(errs) != 0 {
+		t.Fatalf("receipt 2: booked %d, errs %v", n, errs)
+	}
+	movements, _ := x.Store.ObjectsByType(ctx, "stock_movement")
+	if len(movements) != 2 {
+		t.Fatalf("movements = %d", len(movements))
+	}
+	for i, m := range movements {
+		if m.ID != fmt.Sprintf("stock_movement-%d-%d", gr2, i+1) {
+			t.Fatalf("line id = %s", m.ID)
+		}
+		if m.State["grn"] != "GRN-8" || m.RuleID != "move-lines" {
+			t.Fatalf("line %d: %+v", i+1, m)
+		}
+		if ref, _ := m.State["item"].(string); !strings.HasPrefix(ref, "item-") {
+			t.Fatalf("line %d item not resolved: %v", i+1, m.State["item"])
+		}
+	}
+	if movements[0].State["qty"] != float64(5) || movements[1].State["qty"] != float64(3) {
+		t.Fatalf("line qtys = %v, %v", movements[0].State["qty"], movements[1].State["qty"])
+	}
+
+	// A receipt with no lines is malformed, not silently explained: the whole
+	// event is refused — no header either — and waits for a human.
+	submit("gr-3", "goods.received", "2026-09-18",
+		`{"grn":"GRN-9","location":"MAIN","date":"2026-09-18","lines":[]}`)
+	n, errs := x.ProcessPending(ctx)
+	if n != 0 || len(errs) == 0 || !strings.Contains(errs[0].Error(), "no elements") {
+		t.Fatalf("empty lines: booked %d, errs %v", n, errs)
+	}
+	if docs, _ := x.Store.ObjectsByType(ctx, "goods_receipt"); len(docs) != 2 {
+		t.Fatalf("empty-lines receipt half-booked: %d docs", len(docs))
+	}
+	if wl, _ := x.Store.UnmatchedRawEvents(ctx); len(wl) != 1 {
+		t.Fatalf("worklist = %d", len(wl))
+	}
+
+	// Determinism holds across fan-outs.
+	before, _ := x.Store.AllObjects(ctx)
+	if _, err := x.Replay(ctx); err != nil {
+		t.Fatal(err)
+	}
+	after, _ := x.Store.AllObjects(ctx)
+	if !reflect.DeepEqual(normalize(t, before), normalize(t, after)) {
+		t.Fatal("replay diverged")
+	}
+}
+
 // TestMultiRuleFiring: every matching rule fires, atomically per event — one
 // invoice event becomes a document AND a balanced ledger entry. Two rules
 // claiming the same object id are a conflict: the event is refused whole.

@@ -193,9 +193,14 @@ type PostingLine struct {
 }
 
 // ObjectTemplate maps object fields to values. A value starting with "=" is an
-// expression (see expr.go); anything else is a literal string.
+// expression (see expr.go); anything else is a literal string. With Each set —
+// a "=$.path" fan-out into an array — the rule materializes one object per
+// element (a multi-line document's lines, the posting pattern generalized),
+// and field templates evaluate against {"doc": <the event payload>, "line":
+// <the element>, "n": <1-based line number>} instead of the payload alone.
 type ObjectTemplate struct {
 	Type   string            `json:"type"`
+	Each   string            `json:"each,omitempty"`
 	Fields map[string]string `json:"fields"`
 }
 
@@ -227,6 +232,15 @@ func (s RuleSpec) Validate(target *ObjectType) error {
 	}
 	if len(s.Effect.Object.Fields) == 0 {
 		return fmt.Errorf("effect.object.fields is empty")
+	}
+	if s.Effect.Object.Each != "" {
+		pt, err := ParseTemplate(s.Effect.Object.Each)
+		if err != nil {
+			return fmt.Errorf("effect.object.each: %w", err)
+		}
+		if pt.kind != "path" {
+			return fmt.Errorf("effect.object.each wants a =$.path fan-out, got %q", s.Effect.Object.Each)
+		}
 	}
 	for name, tmpl := range s.Effect.Object.Fields {
 		pt, err := ParseTemplate(tmpl)

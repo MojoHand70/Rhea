@@ -55,6 +55,37 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-03 — multi-line documents: lines are objects, via `each`
+
+- **Lines stay objects; `list<>` fields are deliberately not built.** The fork
+  was real: SPEC §2 names `list<...>`, but embedding lines in a document field
+  would have cost per-line provenance (invariant 5), needed a new detail-view
+  renderer, new validation, and JSON-array gymnastics on the analysis side —
+  while M1 already decided "postings are an effect, lines are objects" and got
+  all of that for free. So the posting pattern is generalized instead: an
+  object effect may set `each`, a `=$.path` fan-out, and materializes one
+  object per array element. Revisit `list<>` only if display demands true
+  embedding.
+- **Each-templates see `{doc, line, n}`** — the whole event payload, the
+  element, the 1-based line number — explicitly scoped, no merge magic.
+  Refs resolve per line (`=ref(item, sku, $.line.item)`).
+- **Line ids are rooted and numbered**: `<type>-<root event id>-<n>`. Two
+  each-rules claiming the same type collide on line 1 like any same-id
+  ambiguity and ask a human. An empty fan-out is a rule error — a document
+  with no lines is malformed, and the whole event waits in the worklist (the
+  header does not book either; atomicity as everywhere).
+- **Parent linkage is a business key, not a synthetic ref**: line objects
+  carry the document's natural key (`grn`, invoice number) from the payload.
+  A kernel-made parent ref would need a new primitive and sibling visibility
+  at generation 0; the paper world's own key costs nothing. Revisit when a
+  domain has genuinely keyless documents.
+- **Open edge, recorded**: a cascade rule firing on several sibling derived
+  events of one root still collides (rooted ids are per root, not per cause).
+  Valuing each line's movement via a cascaded postings rule will demand
+  cause-qualified identity — which would trade away collision-as-loop-guard
+  (the depth cap would become the real guard). Decide when a domain forces
+  it, not before.
+
 ## 2026-10-03 — rule cascade
 
 - **Rules match derived events now — with zero language changes.** A cascade

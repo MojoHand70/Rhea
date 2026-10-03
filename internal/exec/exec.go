@@ -265,18 +265,56 @@ func (x *Executor) expandEffect(ctx context.Context, root core.Event, r core.Rul
 	if err != nil {
 		return nil, fmt.Errorf("rule %s v%d: %w", r.ID, r.Version, err)
 	}
-	state, err := Expand(tmpl, objType, payload, lookup)
-	if err != nil {
-		return nil, fmt.Errorf("rule %s v%d expand: %w", r.ID, r.Version, err)
+	if tmpl.Each == "" {
+		state, err := Expand(tmpl, objType, payload, lookup)
+		if err != nil {
+			return nil, fmt.Errorf("rule %s v%d expand: %w", r.ID, r.Version, err)
+		}
+		// Deterministic object identity: derived from the root event, so
+		// replay and simulation reproduce it exactly (invariant 4).
+		return []core.MaterializedObject{{
+			ObjectID:    fmt.Sprintf("%s-%d", objType.Name, root.ID),
+			ObjectType:  objType.Name,
+			TypeVersion: objType.Version,
+			State:       state,
+		}}, nil
 	}
-	// Deterministic object identity: derived from the root event, so replay
-	// and simulation reproduce it exactly (invariant 4).
-	return []core.MaterializedObject{{
-		ObjectID:    fmt.Sprintf("%s-%d", objType.Name, root.ID),
-		ObjectType:  objType.Name,
-		TypeVersion: objType.Version,
-		State:       state,
-	}}, nil
+
+	// Each: one object per element of the fan-out — the posting pattern
+	// generalized to any type. Templates evaluate against {doc, line, n};
+	// ids gain the line number, so two each-rules claiming the same type
+	// collide like any other same-id ambiguity. An empty fan-out is a rule
+	// error: a document with no lines is malformed, not silently explained.
+	t, err := core.ParseTemplate(tmpl.Each)
+	if err != nil {
+		return nil, fmt.Errorf("rule %s v%d each: %w", r.ID, r.Version, err)
+	}
+	v, err := t.Eval(payload, core.FieldDef{}, nil)
+	if err != nil {
+		return nil, fmt.Errorf("rule %s v%d each: %w", r.ID, r.Version, err)
+	}
+	arr, ok := v.([]any)
+	if !ok {
+		return nil, fmt.Errorf("rule %s v%d each: %s is not an array", r.ID, r.Version, tmpl.Each)
+	}
+	if len(arr) == 0 {
+		return nil, fmt.Errorf("rule %s v%d each: %s matched no elements", r.ID, r.Version, tmpl.Each)
+	}
+	mats := make([]core.MaterializedObject, 0, len(arr))
+	for i, el := range arr {
+		scope := map[string]any{"doc": payload, "line": el, "n": i + 1}
+		state, err := Expand(tmpl, objType, scope, lookup)
+		if err != nil {
+			return nil, fmt.Errorf("rule %s v%d line %d: %w", r.ID, r.Version, i+1, err)
+		}
+		mats = append(mats, core.MaterializedObject{
+			ObjectID:    fmt.Sprintf("%s-%d-%d", objType.Name, root.ID, i+1),
+			ObjectType:  objType.Name,
+			TypeVersion: objType.Version,
+			State:       state,
+		})
+	}
+	return mats, nil
 }
 
 // Expand evaluates every field template against the payload, typed by the
