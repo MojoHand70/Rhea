@@ -125,6 +125,62 @@ itself — is an interpreter of the same two vocabularies.
   verbs — also what the agent needs to know what can be done), cases as
   pure data.
 
+## Vocabulary governance: small grammar, open dictionary (KK, 2026-10-04)
+
+The thesis depends on the language staying small while ERP is an ocean. The
+resolution: the vocabulary has layers, and they grow by different rules —
+like a natural language's closed class (prepositions: one per century) and
+open class (nouns: daily).
+
+- **The open class** — types, rules, views, packs, naming conventions — is
+  pure data with unlimited growth, governed only by the approval gate.
+  Richness lives here and needs no further safeguarding: three days in it
+  held double-entry, warehousing and two statutory markets.
+- **The closed class** — the six concepts, the template expressions, the
+  sub-languages (postings, `each`, the coming costing and amendments), the
+  notion library — grows rarely and only by proof. Admission requires all
+  four: (1) **fail-as-data first** — a domain demonstrably inexpressible
+  with the current vocabulary (postings, `each` and cascade each earned
+  their place this way; M2 and M4 are the negative proofs where nothing was
+  earned); (2) **no invariant, no primitive** — a primitive without an
+  enforceable kernel law is sugar, and sugar is how languages rot;
+  (3) a **determinism proof** — replay survives it; (4) the **network
+  test** — small and declarative enough that thousands of uses cluster.
+  The language earns primitives the way science earns laws: by exhausted
+  attempts to do without them.
+- **The grammar is append-only by physics, not policy.** The log must
+  replay forever, so a primitive's semantics can never change once any log
+  depends on it — only be superseded. Primitives have the rule lifecycle:
+  experimental → active → superseded-but-honored-in-replay-forever.
+  Deprecation means "stop authoring," never "remove."
+- **Completeness has two yardsticks.** Theoretical: REA as a checklist, not
+  a design (SPEC §7) — read against it, our one untested concept is the
+  **commitment**: events that *should* happen (orders, reservations,
+  budgets, production plans). Expect it to become unavoidable at M5, where
+  plans are commitments on a time axis. Empirical: the network — worklist
+  residue at scale is a completeness measurement, and **rule-shape
+  contortions** (thousands of businesses independently using the same
+  awkward encoding, as we carried precomputed values before deciding on
+  arithmetic) are missing primitives announcing themselves. Gaps become
+  data.
+- **The agent is the gardener.** Dialect drift, not bloat, is the threat to
+  the open class — a thousand names for the same thing blinds the network's
+  clustering. Conventions are never enforced: the agent authors with the
+  canonical ontology (seeded by the conventional names `posting`,
+  `account`, `period_lock`), so they propagate through drafting. Deviation
+  that spreads is itself a promotion signal.
+- **Stewardship is the same gate, one level up.** Today: KK, DECISIONS.md
+  and the falsifiability habit. At scale: the language gets its own
+  worklist (fed by residue and contortions), candidate primitives are
+  simulated against the corpus, and a human editorial layer — plausibly
+  accountants and auditors, not programmers — approves. Rhea has never
+  needed a second governance mechanism for anything; needing one here
+  would be a design smell.
+
+One line: *richness grows as data behind the gate we have; grammar grows
+only by proof behind the same gate, one level up — and the log makes the
+grammar append-only whether we like it or not.*
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
