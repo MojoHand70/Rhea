@@ -52,19 +52,26 @@ func (x *Executor) ProcessPending(ctx context.Context) (int, []error) {
 	}
 }
 
-// firing is one rule's expanded effect for one event, awaiting booking.
-type firing struct {
-	rule core.Rule
-	mats []core.MaterializedObject
+// chainNode is one would-be materialization in a cascade chain: the object a
+// rule firing produced, and which chain entry's derived event caused it
+// (-1 is the root raw event). Nodes book in chain order.
+type chainNode struct {
+	mat   core.MaterializedObject
+	rule  core.Rule
+	cause int
 }
 
-// evaluate fires every matching rule (rules arrive in priority order, which
-// is now ordering, not conflict resolution) and books all their effects
-// atomically: an invoice event can become a document and post to the ledger
-// in one transaction. Expansions see state as of before the event —
-// intra-event dependencies are cascade territory (post-M2, DECISIONS.md).
-// Two rules materializing the same object id is a conflict: the whole event
-// is refused and waits for a human.
+// maxCascadeDepth caps chain generations. Rooted object identity makes a
+// genuinely cyclic rule set collide on its own ids within a generation or
+// two, so this is a backstop with a clear error, not the loop prevention.
+const maxCascadeDepth = 16
+
+// evaluate fires every matching rule on the event and cascades: each firing's
+// derived event is itself evaluated against the rule set (receipt → stock
+// movement → valuation posting), and the whole chain books atomically — all
+// of it or none, so an event is never half-explained. Two rules materializing
+// the same object id anywhere in the chain is a conflict: the event is
+// refused whole and waits for a human.
 func (x *Executor) evaluate(ctx context.Context, ev core.Event, rules []core.Rule) (bool, error) {
 	var payload any
 	if err := json.Unmarshal(ev.Payload, &payload); err != nil {
@@ -76,32 +83,96 @@ func (x *Executor) evaluate(ctx context.Context, ev core.Event, rules []core.Rul
 	lookup := func(typ, field string, value any) ([]string, error) {
 		return x.Store.FindObjectIDsByField(ctx, typ, field, fmt.Sprintf("%v", value))
 	}
-	var firings []firing
-	owner := map[string]string{} // object id → rule that claimed it
-	for _, r := range rules {
-		ok, err := matchRule(r, ev, payload)
-		if err != nil {
-			return false, err
-		}
-		if !ok {
-			continue
-		}
-		mats, err := x.expandEffect(ctx, ev, r, payload, lookup)
-		if err != nil {
-			return false, err
-		}
-		for _, m := range mats {
-			if prev, clash := owner[m.ObjectID]; clash {
-				return false, fmt.Errorf("rules %s and %s both materialize %s — conflicting rules need a human", prev, r.ID, m.ObjectID)
-			}
-			owner[m.ObjectID] = r.ID
-		}
-		firings = append(firings, firing{rule: r, mats: mats})
+	nodes, err := x.expandChain(ctx, ev, rules, payload, lookup)
+	if err != nil {
+		return false, err
 	}
-	if len(firings) == 0 {
+	if len(nodes) == 0 {
 		return false, nil
 	}
-	return true, x.book(ctx, ev, firings)
+	return true, x.book(ctx, ev, nodes)
+}
+
+// expandChain evaluates the rule set against the root event, then against the
+// derived events its firings would emit, generation by generation until no
+// rule fires. Object identity stays rooted in the raw event (<type>-<root>),
+// so simulation reproduces cascaded identity exactly and a cyclic rule set
+// collides with itself instead of recursing. Expansions see state as of
+// before the root event plus the chain's earlier generations — the receipt's
+// movement is visible to the valuation rule — never their own siblings.
+// Shared verbatim by the live path and the simulator, so a dry run cannot
+// drift from reality.
+func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []core.Rule, payload any, base core.Lookup) ([]chainNode, error) {
+	var nodes []chainNode
+	owner := map[string]string{} // object id → rule that claimed it
+	visible := 0                 // how many nodes earlier generations contributed
+	lookup := func(typ, field string, value any) ([]string, error) {
+		ids, err := base(typ, field, value)
+		if err != nil {
+			return nil, err
+		}
+		want := fmt.Sprintf("%v", value)
+		for _, n := range nodes[:visible] {
+			if n.mat.ObjectType == typ && fmt.Sprintf("%v", n.mat.State[field]) == want {
+				ids = append(ids, n.mat.ObjectID)
+			}
+		}
+		return ids, nil
+	}
+	fire := func(ev core.Event, evPayload any, cause int) error {
+		for _, r := range rules {
+			ok, err := matchRule(r, ev, evPayload)
+			if err != nil {
+				return err
+			}
+			if !ok {
+				continue
+			}
+			mats, err := x.expandEffect(ctx, root, r, evPayload, lookup)
+			if err != nil {
+				return err
+			}
+			for _, m := range mats {
+				if prev, clash := owner[m.ObjectID]; clash {
+					return fmt.Errorf("rules %s and %s both materialize %s — conflicting rules need a human", prev, r.ID, m.ObjectID)
+				}
+				owner[m.ObjectID] = r.ID
+				nodes = append(nodes, chainNode{mat: m, rule: r, cause: cause})
+			}
+		}
+		return nil
+	}
+	if err := fire(root, payload, -1); err != nil {
+		return nil, err
+	}
+	lo, hi := 0, len(nodes)
+	for gen := 1; lo < hi; gen++ {
+		if gen > maxCascadeDepth {
+			return nil, fmt.Errorf("cascade exceeded %d generations", maxCascadeDepth)
+		}
+		visible = hi
+		for i := lo; i < hi; i++ {
+			n := nodes[i]
+			derived := core.Event{
+				Kind: core.KindDerived, Type: core.EventObjectMaterialized,
+				OccurredAt: root.OccurredAt, // business date is inherited down the chain
+				RuleID:     n.rule.ID, RuleVersion: n.rule.Version,
+			}
+			// What a cascade rule sees is the materialization itself, shaped
+			// exactly as it will be written to the log.
+			evPayload := map[string]any{
+				"object_id":    n.mat.ObjectID,
+				"object_type":  n.mat.ObjectType,
+				"type_version": n.mat.TypeVersion,
+				"state":        n.mat.State,
+			}
+			if err := fire(derived, evPayload, i); err != nil {
+				return nil, err
+			}
+		}
+		lo, hi = hi, len(nodes)
+	}
+	return nodes, nil
 }
 
 // matchRule reports whether rule r fires on ev (payload already decoded):
@@ -126,54 +197,63 @@ func matchRule(r core.Rule, ev core.Event, payload any) (bool, error) {
 	return true, nil
 }
 
-// book writes every firing of one event atomically: derived events in the
-// log plus rows in the object cache — all of it or nothing, so an event is
-// never half-explained.
-func (x *Executor) book(ctx context.Context, ev core.Event, firings []firing) error {
+// book writes one event's whole cascade chain atomically: derived events in
+// the log plus rows in the object cache — all of it or nothing, so an event
+// is never half-explained. A cascaded entry names the derived event that
+// caused it, so provenance walks back to the root through the log.
+func (x *Executor) book(ctx context.Context, root core.Event, nodes []chainNode) error {
 	tx, err := x.Store.Pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback(ctx)
 
-	for _, f := range firings {
-		for _, mat := range f.mats {
-			matPayload, err := json.Marshal(mat)
-			if err != nil {
-				return err
-			}
-			if _, err := store.AppendEvent(ctx, tx, core.Event{
-				Kind:         core.KindDerived,
-				Type:         core.EventObjectMaterialized,
-				OccurredAt:   ev.OccurredAt, // derived events inherit the business date
-				Payload:      matPayload,
-				CauseEventID: &ev.ID,
-				RuleID:       f.rule.ID,
-				RuleVersion:  f.rule.Version,
-				Actor:        "kernel", // rule provenance explains the rest
-			}); err != nil {
-				return err
-			}
-			if err := store.InsertObject(ctx, tx, core.Object{
-				ID: mat.ObjectID, Type: mat.ObjectType, TypeVersion: mat.TypeVersion,
-				State: mat.State, SourceEventID: ev.ID, RuleID: f.rule.ID, RuleVersion: f.rule.Version,
-			}); err != nil {
-				return err
-			}
+	ids := make([]int64, len(nodes))
+	for i, n := range nodes {
+		matPayload, err := json.Marshal(n.mat)
+		if err != nil {
+			return err
+		}
+		cause := root.ID
+		if n.cause >= 0 {
+			cause = ids[n.cause]
+		}
+		id, err := store.AppendEvent(ctx, tx, core.Event{
+			Kind:         core.KindDerived,
+			Type:         core.EventObjectMaterialized,
+			OccurredAt:   root.OccurredAt, // derived events inherit the business date
+			Payload:      matPayload,
+			CauseEventID: &cause,
+			RuleID:       n.rule.ID,
+			RuleVersion:  n.rule.Version,
+			Actor:        "kernel", // rule provenance explains the rest
+		})
+		if err != nil {
+			return err
+		}
+		ids[i] = id
+		if err := store.InsertObject(ctx, tx, core.Object{
+			ID: n.mat.ObjectID, Type: n.mat.ObjectType, TypeVersion: n.mat.TypeVersion,
+			State: n.mat.State, SourceEventID: cause, RuleID: n.rule.ID, RuleVersion: n.rule.Version,
+		}); err != nil {
+			return err
 		}
 	}
 	return tx.Commit(ctx)
 }
 
 // expandEffect turns a matched rule into the objects it materializes, using
-// lookup for all state access so the simulator can reuse it verbatim.
-func (x *Executor) expandEffect(ctx context.Context, ev core.Event, r core.Rule, payload any, lookup core.Lookup) ([]core.MaterializedObject, error) {
+// lookup for all state access so the simulator can reuse it verbatim. The
+// payload may be the root event's or a cascaded derived event's; identity and
+// business date always come from the root, which keeps cascaded ids
+// reproducible without any sequence state.
+func (x *Executor) expandEffect(ctx context.Context, root core.Event, r core.Rule, payload any, lookup core.Lookup) ([]core.MaterializedObject, error) {
 	if r.Spec.Effect.Postings != nil {
 		postingType, err := x.Store.GetObjectType(ctx, PostingObjectType)
 		if err != nil {
 			return nil, fmt.Errorf("rule %s v%d: %w", r.ID, r.Version, err)
 		}
-		mats, err := ExpandPostings(r.Spec.Effect.Postings, postingType, ev, r.ID, payload, lookup)
+		mats, err := ExpandPostings(r.Spec.Effect.Postings, postingType, root, r.ID, payload, lookup)
 		if err != nil {
 			return nil, fmt.Errorf("rule %s v%d postings: %w", r.ID, r.Version, err)
 		}
@@ -189,10 +269,10 @@ func (x *Executor) expandEffect(ctx context.Context, ev core.Event, r core.Rule,
 	if err != nil {
 		return nil, fmt.Errorf("rule %s v%d expand: %w", r.ID, r.Version, err)
 	}
-	// Deterministic object identity: derived from the causing event, so
-	// replay reproduces it exactly (invariant 4).
+	// Deterministic object identity: derived from the root event, so replay
+	// and simulation reproduce it exactly (invariant 4).
 	return []core.MaterializedObject{{
-		ObjectID:    fmt.Sprintf("%s-%d", objType.Name, ev.ID),
+		ObjectID:    fmt.Sprintf("%s-%d", objType.Name, root.ID),
 		ObjectType:  objType.Name,
 		TypeVersion: objType.Version,
 		State:       state,

@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"math"
 	"slices"
 	"strings"
 )
@@ -188,11 +189,18 @@ func (t Template) Eval(payload any, fd FieldDef, lookup Lookup) (any, error) {
 			return nil, err
 		}
 		if fd.Type == "money" {
-			s, ok := v.(string)
-			if !ok {
-				return nil, fmt.Errorf("money field wants a decimal string, got %T", v)
+			switch n := v.(type) {
+			case string: // the boundary form: a decimal string
+				return ParseMoney(n)
+			case int64: // the internal form: minor units, as derived payloads carry them
+				return n, nil
+			case float64: // minor units after a JSON round trip
+				if n != math.Trunc(n) {
+					return nil, fmt.Errorf("money field wants minor units, got %v", n)
+				}
+				return int64(n), nil
 			}
-			return ParseMoney(s)
+			return nil, fmt.Errorf("money field wants a decimal string or minor units, got %T", v)
 		}
 		return checked(v, fd)
 	case "sum":

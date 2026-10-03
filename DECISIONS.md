@@ -55,6 +55,45 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-03 — rule cascade
+
+- **Rules match derived events now — with zero language changes.** A cascade
+  rule is an ordinary rule whose `match.event_type` is `object.materialized`,
+  with conditions over the materialization payload (`$.object_type`,
+  `$.state.*`). The kernel evaluates the rule set against each firing's
+  derived event, generation by generation, until nothing fires: receipt →
+  stock movement → valuation postings. All-matching-fire was the stepping
+  stone; this is the recorded end-state.
+- **The whole chain books atomically**, in one transaction with the root
+  event's own firings — a locked period on the valuation refuses the movement
+  too; an event is never half-explained. Cascaded derived events name the
+  intermediate materialization event as `cause_event_id`, so provenance walks
+  back to the root through the log; the object cache carries the same source.
+- **Cascaded object identity stays rooted in the raw event**
+  (`<type>-<root id>`, postings `posting-<root>-<rule>-<n>`), not in the
+  intermediate event's id. Two reasons: simulation reproduces live identity
+  exactly without sequence state, and a cyclic rule set re-claims ids it
+  already owns — cycles surface as same-id conflicts for a human, not as
+  recursion. A depth cap (16 generations) remains as a backstop with a clear
+  error, not as the loop prevention. One object of a type per root event is
+  the semantics; a rule firing on two sibling derived events collides by id
+  and asks a human.
+- **Each generation sees state as of before the root event plus all earlier
+  generations, never its own siblings** — so a cascade rule's `ref()` can
+  resolve the very movement created one generation up, while sibling rules
+  stay order-independent. One `expandChain` is shared verbatim by the live
+  executor and the simulator (the simulator's duplicated firing loop is
+  gone); the simulator attributes cascaded objects to the root event, since
+  intermediate events have no ids until actually booked.
+- **Money inside derived payloads is minor units as numbers.** `Template.Eval`
+  on money fields now takes integral numbers as minor units; decimal strings
+  remain the boundary form for raw events. Non-integral numbers are errors.
+- **The `object.materialized` namespace is the kernel's**: raw events may not
+  use it (store-level guard), or a submitted fake could trigger cascade rules
+  for facts that never happened.
+- **Backfill stays open.** Cascade did not add retroactivity: a cascade rule
+  approved later never re-fires already-explained events, same as before.
+
 ## 2026-10-02 — M2: the falsifiability test passed
 
 - **Warehousing runs on the unchanged kernel.** Locations and items are master

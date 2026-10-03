@@ -72,6 +72,12 @@ type Querier interface {
 // --- events ---------------------------------------------------------------
 
 func AppendEvent(ctx context.Context, q Querier, ev core.Event) (int64, error) {
+	// The materialization namespace is the kernel's own: a raw event spelled
+	// like a derived one could trigger cascade rules without the fact they
+	// claim to report ever having happened.
+	if ev.Kind == core.KindRaw && ev.Type == core.EventObjectMaterialized {
+		return 0, fmt.Errorf("event type %q is reserved for the kernel", ev.Type)
+	}
 	var dedup *string
 	if ev.DedupKey != "" {
 		dedup = &ev.DedupKey

@@ -473,6 +473,296 @@ func TestDoubleEntry(t *testing.T) {
 	}
 }
 
+// TestCascade: rules match derived events (DECISIONS 2026-10-02, the intended
+// end-state). A goods receipt becomes a stock movement, whose materialization
+// event fires a valuation rule — postings and a note referencing the movement
+// created in the same chain — all booked atomically with the root event.
+// Cascaded identity stays rooted in the raw event, so simulation reproduces
+// it and a cyclic rule set collides with itself instead of recursing.
+func TestCascade(t *testing.T) {
+	ctx := context.Background()
+	x := &exec.Executor{Store: storetest.New(t)}
+	for _, ot := range []core.ObjectType{
+		{Name: "item", Version: 1, Domain: "warehouse", LabelField: "name",
+			Fields: []core.FieldDef{
+				{Name: "sku", Type: "string", Required: true},
+				{Name: "name", Type: "string", Required: true},
+			}},
+		{Name: "location", Version: 1, Domain: "warehouse", LabelField: "name",
+			Fields: []core.FieldDef{
+				{Name: "code", Type: "string", Required: true},
+				{Name: "name", Type: "string", Required: true},
+			}},
+		{Name: "stock_movement", Version: 1, Domain: "warehouse",
+			Fields: []core.FieldDef{
+				{Name: "item", Type: "ref<item>", Required: true},
+				{Name: "location", Type: "ref<location>", Required: true},
+				{Name: "direction", Type: "enum", Values: []string{"in", "out"}, Required: true},
+				{Name: "qty", Type: "int", Required: true},
+				{Name: "date", Type: "date", Required: true},
+				{Name: "value", Type: "money", Required: true},
+			}},
+		{Name: "valuation_note", Version: 1, Domain: "warehouse",
+			Fields: []core.FieldDef{
+				{Name: "movement", Type: "ref<stock_movement>", Required: true},
+				{Name: "value", Type: "money", Required: true},
+			}},
+		{Name: "account", Version: 1, Domain: "finance",
+			Fields: []core.FieldDef{
+				{Name: "code", Type: "string", Required: true},
+				{Name: "name", Type: "string", Required: true},
+			}},
+		{Name: "posting", Version: 1, Domain: "finance",
+			Fields: []core.FieldDef{
+				{Name: "entry", Type: "string", Required: true},
+				{Name: "line", Type: "int", Required: true},
+				{Name: "account", Type: "ref<account>", Required: true},
+				{Name: "side", Type: "enum", Values: []string{"debit", "credit"}, Required: true},
+				{Name: "amount", Type: "money", Required: true},
+				{Name: "currency", Type: "string", Required: true},
+				{Name: "date", Type: "date", Required: true},
+			}},
+		{Name: "period_lock", Version: 1, Domain: "finance",
+			Fields: []core.FieldDef{{Name: "month", Type: "string", Required: true}}},
+	} {
+		if err := x.Store.InsertObjectType(ctx, ot); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	submit := func(dedup, evType, date, payload string) int64 {
+		t.Helper()
+		id, err := x.Store.AppendEvent(ctx, core.Event{
+			Kind: core.KindRaw, Type: evType, OccurredAt: date,
+			Payload: json.RawMessage(payload), DedupKey: dedup,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return id
+	}
+	draft := func(id string, priority int, spec core.RuleSpec) {
+		t.Helper()
+		if _, err := x.Store.InsertRuleVersion(ctx, core.Rule{
+			ID: id, Status: core.StatusDraft, Priority: priority,
+			EffectiveFrom: "2026-01-01", CreatedBy: "test", Description: id, Spec: spec,
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	activate := func(id string, priority int, spec core.RuleSpec) {
+		t.Helper()
+		draft(id, priority, spec)
+		if _, _, procErrs, err := x.ApproveRule(ctx, id, "krzysztof", "2026-09-01"); err != nil {
+			t.Fatalf("approve %s: %v", id, err)
+		} else if len(procErrs) > 0 {
+			t.Fatalf("approve %s: %v", id, procErrs)
+		}
+	}
+	obj := func(typ string, fields map[string]string) core.Effect {
+		return core.Effect{Object: core.ObjectTemplate{Type: typ, Fields: fields}}
+	}
+
+	// Master data and the movement rule — the M2 state of the world, plus a
+	// value carried on the movement for the valuation to post from.
+	activate("register-item", 10, core.RuleSpec{
+		Match:  core.Match{EventType: "item.created"},
+		Effect: obj("item", map[string]string{"sku": "=$.sku", "name": "=$.name"})})
+	activate("register-location", 10, core.RuleSpec{
+		Match:  core.Match{EventType: "location.created"},
+		Effect: obj("location", map[string]string{"code": "=$.code", "name": "=$.name"})})
+	activate("register-account", 10, core.RuleSpec{
+		Match:  core.Match{EventType: "account.created"},
+		Effect: obj("account", map[string]string{"code": "=$.code", "name": "=$.name"})})
+	activate("lock-period", 10, core.RuleSpec{
+		Match:  core.Match{EventType: "period.locked"},
+		Effect: obj("period_lock", map[string]string{"month": "=$.month"})})
+	activate("move-stock-in", 100, core.RuleSpec{
+		Match: core.Match{EventType: "goods.received"},
+		Effect: obj("stock_movement", map[string]string{
+			"item": "=ref(item, sku, $.item)", "location": "=ref(location, code, $.location)",
+			"direction": "in", "qty": "=$.qty", "date": "=$.date", "value": "=$.value"})})
+	submit("item-1", "item.created", "2026-09-01", `{"sku":"WID-1","name":"Widget"}`)
+	submit("loc-1", "location.created", "2026-09-01", `{"code":"MAIN","name":"Main"}`)
+	submit("acc-310", "account.created", "2026-09-01", `{"code":"310","name":"Materials"}`)
+	submit("acc-300", "account.created", "2026-09-01", `{"code":"300","name":"GR/IR clearing"}`)
+	if n, errs := x.ProcessPending(ctx); n != 4 || len(errs) != 0 {
+		t.Fatalf("masters: booked %d, errs %v", n, errs)
+	}
+
+	// A receipt before any cascade rule exists: movement only.
+	submit("gr-1", "goods.received", "2026-09-10",
+		`{"item":"WID-1","location":"MAIN","qty":25,"date":"2026-09-10","value":"1250.00"}`)
+	if n, errs := x.ProcessPending(ctx); n != 1 || len(errs) != 0 {
+		t.Fatalf("receipt 1: booked %d, errs %v", n, errs)
+	}
+
+	// The valuation rule matches the movement's own materialization event.
+	valueSpec := core.RuleSpec{
+		Match: core.Match{EventType: core.EventObjectMaterialized, Where: []core.Condition{
+			{Path: "$.object_type", Op: "eq", Value: "stock_movement"},
+			{Path: "$.state.direction", Op: "eq", Value: "in"},
+		}},
+		Effect: core.Effect{Postings: &core.PostingsTemplate{
+			Currency: "PLN",
+			Lines: []core.PostingLine{
+				{Account: "310", Debit: "=$.state.value"},
+				{Account: "300", Credit: "=$.state.value"},
+			},
+		}},
+	}
+
+	// Simulated first: the dry run cascades too, showing the postings the
+	// historical receipt would have produced — while writing nothing.
+	draft("value-stock-in", 200, valueSpec)
+	diff, err := x.SimulateRule(ctx, "value-stock-in")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diff.Added) != 2 || diff.Added[0].Type != "posting" {
+		t.Fatalf("simulated cascade added %+v", diff.Added)
+	}
+	if objs, _ := x.Store.ObjectsByType(ctx, "posting"); len(objs) != 0 {
+		t.Fatal("simulation wrote postings")
+	}
+
+	// Approving it books nothing: receipt 1 is already explained, and a rule
+	// approved later never re-fires old events (no retroactivity).
+	if _, booked, procErrs, err := x.ApproveRule(ctx, "value-stock-in", "krzysztof", "2026-09-11"); err != nil || booked != 0 || len(procErrs) != 0 {
+		t.Fatalf("approve valuation: booked %d, %v, %v", booked, procErrs, err)
+	}
+
+	// A second cascade rule whose ref resolves against the chain itself: the
+	// movement it references does not exist in the cache while it expands.
+	activate("note-valuation", 300, core.RuleSpec{
+		Match: core.Match{EventType: core.EventObjectMaterialized, Where: []core.Condition{
+			{Path: "$.object_type", Op: "eq", Value: "stock_movement"},
+			{Path: "$.state.direction", Op: "eq", Value: "in"},
+		}},
+		Effect: obj("valuation_note", map[string]string{
+			"movement": "=ref(stock_movement, value, $.state.value)",
+			"value":    "=$.state.value"})})
+
+	// The full chain: receipt → movement → postings + note, one transaction.
+	gr2 := submit("gr-2", "goods.received", "2026-09-12",
+		`{"item":"WID-1","location":"MAIN","qty":16,"date":"2026-09-12","value":"800.00"}`)
+	if n, errs := x.ProcessPending(ctx); n != 1 || len(errs) != 0 {
+		t.Fatalf("receipt 2: booked %d, errs %v", n, errs)
+	}
+	movements, _ := x.Store.ObjectsByType(ctx, "stock_movement")
+	postings, _ := x.Store.ObjectsByType(ctx, "posting")
+	notes, _ := x.Store.ObjectsByType(ctx, "valuation_note")
+	if len(movements) != 2 || len(postings) != 2 || len(notes) != 1 {
+		t.Fatalf("movements %d, postings %d, notes %d", len(movements), len(postings), len(notes))
+	}
+	if notes[0].State["movement"] != fmt.Sprintf("stock_movement-%d", gr2) {
+		t.Fatalf("chain ref = %v", notes[0].State["movement"])
+	}
+	var d, c int64
+	for _, p := range postings {
+		if p.State["entry"] != fmt.Sprintf("entry-%d-value-stock-in", gr2) {
+			t.Fatalf("entry key = %v", p.State["entry"])
+		}
+		amt := int64(p.State["amount"].(float64))
+		if p.State["side"] == "debit" {
+			d += amt
+		} else {
+			c += amt
+		}
+	}
+	if d != 80000 || c != 80000 {
+		t.Fatalf("not balanced: D %d C %d", d, c)
+	}
+
+	// Provenance walks the chain through the log: the movement's cause is the
+	// receipt, the postings' and note's cause is the movement's own
+	// materialization event — and the object cache agrees.
+	derived, _ := x.Store.EventsByKind(ctx, core.KindDerived)
+	var movementEv int64
+	for _, ev := range derived {
+		if ev.CauseEventID != nil && *ev.CauseEventID == gr2 {
+			if movementEv != 0 {
+				t.Fatalf("more than one event caused directly by receipt %d", gr2)
+			}
+			movementEv = ev.ID
+		}
+	}
+	cascaded := 0
+	for _, ev := range derived {
+		if ev.CauseEventID != nil && *ev.CauseEventID == movementEv {
+			cascaded++
+		}
+	}
+	if movementEv == 0 || cascaded != 3 {
+		t.Fatalf("cause chain: movement event %d, cascaded %d (want 3)", movementEv, cascaded)
+	}
+	if postings[0].SourceEventID != movementEv || notes[0].SourceEventID != movementEv {
+		t.Fatalf("cascaded provenance: posting %d, note %d, want %d",
+			postings[0].SourceEventID, notes[0].SourceEventID, movementEv)
+	}
+
+	// A locked period refuses the whole chain: no postings means no movement
+	// either — the event is never half-explained.
+	submit("lock-10", "period.locked", "2026-09-30", `{"month":"2026-10"}`)
+	if n, _ := x.ProcessPending(ctx); n != 1 {
+		t.Fatal("lock did not book")
+	}
+	submit("gr-3", "goods.received", "2026-10-05",
+		`{"item":"WID-1","location":"MAIN","qty":5,"date":"2026-10-05","value":"250.00"}`)
+	n, errs := x.ProcessPending(ctx)
+	if n != 0 || len(errs) == 0 || !strings.Contains(errs[0].Error(), "locked") {
+		t.Fatalf("locked chain: booked %d, errs %v", n, errs)
+	}
+	if ms, _ := x.Store.ObjectsByType(ctx, "stock_movement"); len(ms) != 2 {
+		t.Fatal("refused chain left a movement behind")
+	}
+
+	// A cyclic rule — a note firing on the note's own materialization — claims
+	// an id the chain already owns and surfaces as a conflict, not a loop.
+	// (Approved directly: the locked receipt still reports from the worklist.)
+	draft("echo-note", 400, core.RuleSpec{
+		Match: core.Match{EventType: core.EventObjectMaterialized, Where: []core.Condition{
+			{Path: "$.object_type", Op: "eq", Value: "valuation_note"},
+		}},
+		Effect: obj("valuation_note", map[string]string{
+			"movement": "=ref(stock_movement, value, $.state.value)",
+			"value":    "=$.state.value"})})
+	if _, _, _, err := x.ApproveRule(ctx, "echo-note", "krzysztof", "2026-09-20"); err != nil {
+		t.Fatal(err)
+	}
+	submit("gr-4", "goods.received", "2026-09-20",
+		`{"item":"WID-1","location":"MAIN","qty":3,"date":"2026-09-20","value":"999.00"}`)
+	n, errs = x.ProcessPending(ctx)
+	joined := fmt.Sprintf("%v", errs)
+	if n != 0 || !strings.Contains(joined, "both materialize") {
+		t.Fatalf("cycle: booked %d, errs %v", n, errs)
+	}
+	if ns, _ := x.Store.ObjectsByType(ctx, "valuation_note"); len(ns) != 1 {
+		t.Fatal("cyclic chain booked notes")
+	}
+	if wl, _ := x.Store.UnmatchedRawEvents(ctx); len(wl) != 2 {
+		t.Fatalf("worklist = %d, want the locked and the cyclic receipt", len(wl))
+	}
+
+	// The derived namespace cannot be submitted from outside.
+	if _, err := x.Store.AppendEvent(ctx, core.Event{
+		Kind: core.KindRaw, Type: core.EventObjectMaterialized, OccurredAt: "2026-09-21",
+		Payload: json.RawMessage(`{"object_type":"stock_movement","state":{"direction":"in","value":100}}`),
+	}); err == nil {
+		t.Fatal("raw object.materialized accepted")
+	}
+
+	// Determinism (invariant 4) holds across cascades.
+	before, _ := x.Store.AllObjects(ctx)
+	if _, err := x.Replay(ctx); err != nil {
+		t.Fatal(err)
+	}
+	after, _ := x.Store.AllObjects(ctx)
+	if !reflect.DeepEqual(normalize(t, before), normalize(t, after)) {
+		t.Fatal("replay diverged")
+	}
+}
+
 // TestMultiRuleFiring: every matching rule fires, atomically per event — one
 // invoice event becomes a document AND a balanced ledger entry. Two rules
 // claiming the same object id are a conflict: the event is refused whole.

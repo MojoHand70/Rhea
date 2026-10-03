@@ -50,8 +50,9 @@ empirical counterpart to Rhea's language experiment. Worth porting in spirit:
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
   with atomicity, is the intended end-state (receipt → stock move →
-  valuation posting). All-matching-rules-fire (shipped) is the stepping
-  stone. Revisit when M2 warehousing demands chains.
+  valuation posting). Shipped 2026-10-03 (see DECISIONS): rooted identity,
+  chain-visible refs, cycles collide instead of recursing. Backfill of
+  already-explained events remains open.
 - **Conflicts stay human.** Same-object-id claims refuse the event into the
   worklist; semantic double-booking is simulation's job to reveal before
   approval; static conflict detection is parked (SPEC §7).

@@ -146,49 +146,23 @@ func (x *Executor) simulate(ctx context.Context, rules []core.Rule) (SimRun, err
 				errs = append(errs, fmt.Sprintf("event %d payload: %v", ev.ID, err))
 				continue
 			}
-			// Mirror evaluate(): every matching rule fires, the event books
-			// all-or-nothing, same-id claims are a conflict.
-			var pending []core.Object
-			owner := map[string]string{}
-			failed := false
-			fired := false
-			for _, r := range rules {
-				ok, err := matchRule(r, ev, payload)
-				if err != nil {
-					errs = append(errs, fmt.Sprintf("event %d: %v", ev.ID, err))
-					failed = true
-					break
-				}
-				if !ok {
-					continue
-				}
-				mats, err := x.expandEffect(ctx, ev, r, payload, lookup)
-				if err != nil {
-					errs = append(errs, fmt.Sprintf("event %d: %v", ev.ID, err))
-					failed = true
-					break
-				}
-				for _, m := range mats {
-					if prev, clash := owner[m.ObjectID]; clash {
-						errs = append(errs, fmt.Sprintf("event %d: rules %s and %s both materialize %s", ev.ID, prev, r.ID, m.ObjectID))
-						failed = true
-						break
-					}
-					owner[m.ObjectID] = r.ID
-					pending = append(pending, core.Object{
-						ID: m.ObjectID, Type: m.ObjectType, TypeVersion: m.TypeVersion,
-						State: m.State, SourceEventID: ev.ID, RuleID: r.ID, RuleVersion: r.Version,
-					})
-				}
-				if failed {
-					break
-				}
-				fired = true
-			}
-			if failed || !fired {
+			// The exact chain expansion live firing runs — cascade included —
+			// with refs resolving against the simulated world.
+			nodes, err := x.expandChain(ctx, ev, rules, payload, lookup)
+			if err != nil {
+				errs = append(errs, fmt.Sprintf("event %d: %v", ev.ID, err))
 				continue
 			}
-			for _, o := range pending {
+			if len(nodes) == 0 {
+				continue
+			}
+			for _, n := range nodes {
+				// Cascaded objects are attributed to the root event here: the
+				// intermediate derived events only get ids when really booked.
+				o := core.Object{
+					ID: n.mat.ObjectID, Type: n.mat.ObjectType, TypeVersion: n.mat.TypeVersion,
+					State: n.mat.State, SourceEventID: ev.ID, RuleID: n.rule.ID, RuleVersion: n.rule.Version,
+				}
 				if _, seen := objects[o.ID]; !seen {
 					order = append(order, o.ID)
 				}
