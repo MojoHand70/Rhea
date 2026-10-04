@@ -300,10 +300,22 @@ sub-language build.
   network-clusterable. The first closed-class change since cascade;
   deserves the `each` discipline — the failed data-only attempt goes to
   DECISIONS.md before the primitive lands.
-- **E2 — the entity dimension.** `company` objects go plural (`kind: self`
-  more than once), events carry a company ref, packs bind per company:
-  one company under the PL pack, one under DE, one kernel, one log. Also
-  un-parks "multi-market cohabitation in one ledger" (DECISIONS). Proves:
+- **E2 — the entity dimension.** Shipped 2026-10-04 (see DECISIONS): an
+  M2-style negative proof — pure data, nothing earned. The attempt failed
+  silently twice (first-approved registration rule captures the other
+  market's master data; currency-as-market misroutes a Polish EUR invoice
+  into the SKR03) and loudly once (both packs' "0" VAT rate is globally
+  ambiguous). The fix is pack v2s: market where-guards on shared-type
+  rules, the seller as a ref on `sales_invoice` v2, books per market so
+  E1 is the per-company close, registers joining the seller's country,
+  globally unique resolution keys. Two self companies, one kernel, one
+  log, one replay. Un-parked "multi-market cohabitation in one ledger".
+  Contortions carried with named exits: payload `market` dies when
+  ref-reads arrive; book names cannot compose company × GAAP yet; a 0%
+  invoice cannot post (conditional lines); adapters don't bind per market
+  yet. The original plan, kept for the record: `company` objects go
+  plural (`kind: self` more than once), events carry a company ref, packs
+  bind per company — one company under the PL pack, one under DE. Proves:
   enterprise structure is refs, not tenancy. Depends on E1.
 - **E3 — currency.** Foreign-currency events post in transaction and
   functional currency. Depends on the arithmetic sub-language (rate reads
