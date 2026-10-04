@@ -336,12 +336,21 @@ sub-language build.
   foreign-currency events post in transaction and functional currency;
   FX rate tables (NBP, ECB) are master-data events, so every conversion
   is replay-deterministic by construction.
-- **E4 — intercompany.** Cascade across company refs: entity A's sale
-  emits entity B's purchase as a derived event whose provenance crosses
-  the boundary. The killer demo: intercompany reconciliation — big ERP's
-  monthly nightmare — *matches by construction*, because both sides share
-  a cause event id. Transfer pricing is just the rule that prices the
-  derived event. Depends on E2.
+- **E4 — intercompany.** Shipped 2026-10-04 (see DECISIONS): another
+  negative proof — pure data, nothing earned. The attempt failed on one
+  seam (a ref cannot be re-referenced: direct ids rejected by design,
+  value resolution hands vat_id an id), fixed by the recorded-contortion
+  family: sales_invoice v3 echoes intragroup and the resolution keys,
+  exit at ref-reads. Two group-level mirror rules — what phase (a)
+  drafts for a subsidiary pair — raise the buyer's purchase document and
+  its entry from the seller's invoice materialization, E3's convert
+  composing with the cascade: Alfa books converted PLN, Beta books EUR,
+  one raw event, all atomic. The killer demo is now a test assertion:
+  every object on both sides provenance-chains to the same root event,
+  so receivable and payable cannot disagree — nothing to reconcile, only
+  to display. The original plan, kept for the record: cascade across
+  company refs, provenance crossing the boundary, transfer pricing as
+  the rule that prices the derived event. Depends on E2.
 - **E5 — consolidation.** The group is one more explanation: a
   consolidation rule-book whose eliminations match on intercompany
   provenance. Starts life on the analysis side in DuckDB. Depends on E4.
