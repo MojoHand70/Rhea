@@ -55,6 +55,33 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-04 — E2 attempt: two markets in one kernel fail as pure data
+
+- **The attempt** (`TestCohabitation`): both market packs loaded into one
+  kernel over one log, all rules approved. It fails three ways, and the
+  worst two are silent:
+- **Silent capture.** Packs register master data from shared neutral event
+  types (`account.created`, `vat_rate.defined`) with no market binding, and
+  approval re-evaluates eagerly — so whichever market's registration rule
+  is approved first claims the other market's events too. The German SKR03
+  materializes with `pl-register-account` as its explanation. Provenance
+  records the mis-explanation honestly; nothing flags it.
+- **Silent misrouting.** The packs route invoices by currency (`$.currency
+  eq PLN`/`EUR`) — disjoint guards, so the same-id conflict that would at
+  least refuse loudly never fires. A Polish company's EUR-denominated
+  domestic invoice books cleanly into the German SKR03. Currency is not a
+  market, and it is certainly not a company.
+- **Global ref namespace.** Both packs ship a VAT rate coded "0";
+  `=ref(vat_rate, code, ...)` resolves globally, so a 0% invoice's rate is
+  ambiguous and the event waits forever.
+- **Verdict pending the fix**: the binding of events to a market/company
+  looks expressible as data (payload market field + where guards + seller
+  refs + E1 books) — E2 may yet be an M2-style negative proof. What is
+  already clear: match conditions cannot read through refs (the seller's
+  country), so events must carry routing facts denormalized; that gap is
+  recorded on the arithmetic sub-language's destiny list (DIRECTION), and
+  `market` on the payload dies the day ref-reads arrive.
+
 ## 2026-10-04 — E1: parallel books fail as pure data; `book` earns admission
 
 - **The attempt** (`TestParallelBooksAsPureData`): a group-GAAP rule-book
