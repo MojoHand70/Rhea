@@ -1,6 +1,6 @@
 {
   "pack": "pl",
-  "version": 1,
+  "version": 2,
   "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF — rynek jako dane",
   "requires": [
     "company",
@@ -141,13 +141,13 @@
     },
     {
       "view_id": "rejestr-vat-sprzedazy",
-      "version": 1,
+      "version": 2,
       "notion": "analysis",
       "title": "Rejestr VAT sprzedaży",
       "domain": "finance",
       "function": "vat",
       "spec": {
-        "sql": "SELECT month, rate, printf('%d.%02d', n // 100, n % 100) AS net, printf('%d.%02d', v // 100, v % 100) AS vat, printf('%d.%02d', g // 100, g % 100) AS gross FROM (SELECT substr(json_extract_string(i.state,'$.issue_date'),1,7) AS month, json_extract_string(r.state,'$.code') AS rate, SUM(CAST(json_extract(i.state,'$.net') AS BIGINT)) AS n, SUM(CAST(json_extract(i.state,'$.vat') AS BIGINT)) AS v, SUM(CAST(json_extract(i.state,'$.gross') AS BIGINT)) AS g FROM objects i JOIN objects r ON json_extract_string(i.state,'$.vat_rate') = r.object_id WHERE i.object_type = 'sales_invoice' AND r.object_type = 'vat_rate' GROUP BY 1, 2) ORDER BY month, rate",
+        "sql": "SELECT month, rate, printf('%d.%02d', n // 100, n % 100) AS net, printf('%d.%02d', v // 100, v % 100) AS vat, printf('%d.%02d', g // 100, g % 100) AS gross FROM (SELECT substr(json_extract_string(i.state,'$.issue_date'),1,7) AS month, json_extract_string(r.state,'$.code') AS rate, SUM(CAST(json_extract(i.state,'$.net') AS BIGINT)) AS n, SUM(CAST(json_extract(i.state,'$.vat') AS BIGINT)) AS v, SUM(CAST(json_extract(i.state,'$.gross') AS BIGINT)) AS g FROM objects i JOIN objects r ON json_extract_string(i.state,'$.vat_rate') = r.object_id JOIN objects c ON json_extract_string(i.state,'$.seller') = c.object_id WHERE c.object_type = 'company' AND json_extract_string(c.state,'$.country') = 'PL' AND i.object_type = 'sales_invoice' AND r.object_type = 'vat_rate' GROUP BY 1, 2) ORDER BY month, rate",
         "columns": [
           {
             "field": "month",
@@ -210,7 +210,14 @@
       "description": "Konto z planu kont staje się obiektem account",
       "spec": {
         "match": {
-          "event_type": "account.created"
+          "event_type": "account.created",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            }
+          ]
         },
         "effect": {
           "object": {
@@ -231,7 +238,14 @@
       "description": "Stawka VAT staje się obiektem vat_rate",
       "spec": {
         "match": {
-          "event_type": "vat_rate.defined"
+          "event_type": "vat_rate.defined",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            }
+          ]
         },
         "effect": {
           "object": {
@@ -255,9 +269,9 @@
           "event_type": "sales.invoice.issued",
           "where": [
             {
-              "path": "$.currency",
+              "path": "$.market",
               "op": "eq",
-              "value": "PLN"
+              "value": "pl"
             }
           ]
         },
@@ -272,7 +286,8 @@
               "vat": "=$.vat",
               "gross": "=$.gross",
               "vat_rate": "=ref(vat_rate, code, $.vat_rate)",
-              "currency": "=$.currency"
+              "currency": "=$.currency",
+              "seller": "=ref(company, vat_id, $.seller_nip)"
             }
           }
         }
@@ -288,9 +303,9 @@
           "event_type": "sales.invoice.issued",
           "where": [
             {
-              "path": "$.currency",
+              "path": "$.market",
               "op": "eq",
-              "value": "PLN"
+              "value": "pl"
             }
           ]
         },
@@ -310,7 +325,8 @@
                 "account": "222",
                 "credit": "=$.vat"
               }
-            ]
+            ],
+            "book": "pl-stat"
           }
         }
       }
@@ -346,7 +362,8 @@
       "payload": {
         "code": "010",
         "name": "Środki trwałe",
-        "type": "asset"
+        "type": "asset",
+        "market": "pl"
       }
     },
     {
@@ -356,7 +373,8 @@
       "payload": {
         "code": "071",
         "name": "Umorzenie środków trwałych",
-        "type": "asset"
+        "type": "asset",
+        "market": "pl"
       }
     },
     {
@@ -366,7 +384,8 @@
       "payload": {
         "code": "100",
         "name": "Kasa",
-        "type": "bank"
+        "type": "bank",
+        "market": "pl"
       }
     },
     {
@@ -376,7 +395,8 @@
       "payload": {
         "code": "130",
         "name": "Rachunek bieżący",
-        "type": "bank"
+        "type": "bank",
+        "market": "pl"
       }
     },
     {
@@ -386,7 +406,8 @@
       "payload": {
         "code": "201",
         "name": "Rozrachunki z odbiorcami",
-        "type": "debtor"
+        "type": "debtor",
+        "market": "pl"
       }
     },
     {
@@ -396,7 +417,8 @@
       "payload": {
         "code": "202",
         "name": "Rozrachunki z dostawcami",
-        "type": "creditor"
+        "type": "creditor",
+        "market": "pl"
       }
     },
     {
@@ -406,7 +428,8 @@
       "payload": {
         "code": "221",
         "name": "VAT naliczony",
-        "type": "tax"
+        "type": "tax",
+        "market": "pl"
       }
     },
     {
@@ -416,7 +439,8 @@
       "payload": {
         "code": "222",
         "name": "VAT należny",
-        "type": "tax"
+        "type": "tax",
+        "market": "pl"
       }
     },
     {
@@ -426,7 +450,8 @@
       "payload": {
         "code": "225",
         "name": "Pozostałe rozrachunki publicznoprawne",
-        "type": "tax"
+        "type": "tax",
+        "market": "pl"
       }
     },
     {
@@ -436,7 +461,8 @@
       "payload": {
         "code": "231",
         "name": "Rozrachunki z tytułu wynagrodzeń",
-        "type": "creditor"
+        "type": "creditor",
+        "market": "pl"
       }
     },
     {
@@ -446,7 +472,8 @@
       "payload": {
         "code": "300",
         "name": "Rozliczenie zakupu",
-        "type": "clearing"
+        "type": "clearing",
+        "market": "pl"
       }
     },
     {
@@ -456,7 +483,8 @@
       "payload": {
         "code": "310",
         "name": "Materiały",
-        "type": "asset"
+        "type": "asset",
+        "market": "pl"
       }
     },
     {
@@ -466,7 +494,8 @@
       "payload": {
         "code": "330",
         "name": "Towary",
-        "type": "asset"
+        "type": "asset",
+        "market": "pl"
       }
     },
     {
@@ -476,7 +505,8 @@
       "payload": {
         "code": "401",
         "name": "Amortyzacja",
-        "type": "expense"
+        "type": "expense",
+        "market": "pl"
       }
     },
     {
@@ -486,7 +516,8 @@
       "payload": {
         "code": "402",
         "name": "Zużycie materiałów i energii",
-        "type": "expense"
+        "type": "expense",
+        "market": "pl"
       }
     },
     {
@@ -496,7 +527,8 @@
       "payload": {
         "code": "403",
         "name": "Usługi obce",
-        "type": "expense"
+        "type": "expense",
+        "market": "pl"
       }
     },
     {
@@ -506,7 +538,8 @@
       "payload": {
         "code": "404",
         "name": "Wynagrodzenia",
-        "type": "expense"
+        "type": "expense",
+        "market": "pl"
       }
     },
     {
@@ -516,7 +549,8 @@
       "payload": {
         "code": "405",
         "name": "Ubezpieczenia społeczne i inne świadczenia",
-        "type": "expense"
+        "type": "expense",
+        "market": "pl"
       }
     },
     {
@@ -526,7 +560,8 @@
       "payload": {
         "code": "409",
         "name": "Pozostałe koszty rodzajowe",
-        "type": "expense"
+        "type": "expense",
+        "market": "pl"
       }
     },
     {
@@ -536,7 +571,8 @@
       "payload": {
         "code": "490",
         "name": "Rozliczenie kosztów",
-        "type": "clearing"
+        "type": "clearing",
+        "market": "pl"
       }
     },
     {
@@ -546,7 +582,8 @@
       "payload": {
         "code": "700",
         "name": "Sprzedaż produktów",
-        "type": "revenue"
+        "type": "revenue",
+        "market": "pl"
       }
     },
     {
@@ -556,7 +593,8 @@
       "payload": {
         "code": "730",
         "name": "Sprzedaż towarów",
-        "type": "revenue"
+        "type": "revenue",
+        "market": "pl"
       }
     },
     {
@@ -566,7 +604,8 @@
       "payload": {
         "code": "760",
         "name": "Pozostałe przychody operacyjne",
-        "type": "revenue"
+        "type": "revenue",
+        "market": "pl"
       }
     },
     {
@@ -576,7 +615,8 @@
       "payload": {
         "code": "801",
         "name": "Kapitał podstawowy",
-        "type": "equity"
+        "type": "equity",
+        "market": "pl"
       }
     },
     {
@@ -586,7 +626,8 @@
       "payload": {
         "code": "860",
         "name": "Wynik finansowy",
-        "type": "equity"
+        "type": "equity",
+        "market": "pl"
       }
     },
     {
@@ -596,7 +637,8 @@
       "payload": {
         "code": "23",
         "name": "Stawka podstawowa 23%",
-        "percent": 23
+        "percent": 23,
+        "market": "pl"
       }
     },
     {
@@ -606,7 +648,8 @@
       "payload": {
         "code": "8",
         "name": "Stawka obniżona 8%",
-        "percent": 8
+        "percent": 8,
+        "market": "pl"
       }
     },
     {
@@ -616,7 +659,8 @@
       "payload": {
         "code": "5",
         "name": "Stawka obniżona 5%",
-        "percent": 5
+        "percent": 5,
+        "market": "pl"
       }
     },
     {
@@ -626,7 +670,8 @@
       "payload": {
         "code": "0",
         "name": "Stawka 0%",
-        "percent": 0
+        "percent": 0,
+        "market": "pl"
       }
     },
     {
@@ -636,7 +681,8 @@
       "payload": {
         "code": "zw",
         "name": "Zwolnione z VAT",
-        "percent": 0
+        "percent": 0,
+        "market": "pl"
       }
     }
   ]

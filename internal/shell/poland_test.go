@@ -34,6 +34,8 @@ func TestM3PolandPack(t *testing.T) {
 	seedFromFile(t, s, "finance_v2.json") // company master data
 	seedFromFile(t, s, "finance_v3.json") // account / posting / trial balance
 	seedFromFile(t, s, "finance_v4.json") // market-neutral: vat_rate, sales_invoice
+	seedFromFile(t, s, "finance_v5.json") // books: posting v2, per-book trial balance
+	seedFromFile(t, s, "finance_v6.json") // sales_invoice v2: the seller is a ref
 
 	srv := &shell.Server{
 		Store: s, Exec: &exec.Executor{Store: s},
@@ -139,6 +141,11 @@ func TestM3PolandPack(t *testing.T) {
 		"payload": map[string]any{"name": "Nabywca S.A.", "kind": "customer",
 			"vat_id": "5260001246", "country": "PL"},
 	}, nil)
+	post("/api/events", map[string]any{
+		"event_type": "company.registered", "occurred_at": "2026-09-01", "dedup_key": "seller",
+		"payload": map[string]any{"name": "Sprzedawca Sp. z o.o.", "kind": "self",
+			"vat_id": "5250001111", "country": "PL"},
+	}, nil)
 
 	// A KSeF sales invoice arrives: one event becomes a document AND a
 	// three-line VAT entry, atomically — and the double-entry balance
@@ -147,7 +154,8 @@ func TestM3PolandPack(t *testing.T) {
 	post("/api/events", map[string]any{
 		"event_type": "sales.invoice.issued", "occurred_at": "2026-09-21", "dedup_key": "fv-1",
 		"payload": map[string]any{
-			"number": "FV 1/09/2026", "issue_date": "2026-09-21", "buyer_nip": "5260001246",
+			"number": "FV 1/09/2026", "issue_date": "2026-09-21", "market": "pl",
+			"seller_nip": "5250001111", "buyer_nip": "5260001246",
 			"net": "1000.00", "vat": "230.00", "gross": "1230.00",
 			"vat_rate": "23", "currency": "PLN",
 		},
@@ -176,9 +184,9 @@ func TestM3PolandPack(t *testing.T) {
 	want := map[string][2]string{"201": {"1230.00", "0.00"}, "700": {"0.00", "1000.00"}, "222": {"0.00", "230.00"}}
 	seen := 0
 	for _, r := range tb.Rows {
-		if w, ok := want[r[0]]; ok {
-			if r[2] != w[0] || r[3] != w[1] {
-				t.Fatalf("account %s: debit %s credit %s, want %v", r[0], r[2], r[3], w)
+		if w, ok := want[r[1]]; ok {
+			if r[0] != "pl-stat" || r[3] != w[0] || r[4] != w[1] {
+				t.Fatalf("account %s: book %s debit %s credit %s, want pl-stat %v", r[1], r[0], r[3], r[4], w)
 			}
 			seen++
 		}
@@ -231,7 +239,8 @@ func TestM3PolandPack(t *testing.T) {
 	post("/api/events", map[string]any{
 		"event_type": "sales.invoice.issued", "occurred_at": "2026-09-22", "dedup_key": "fv-bad",
 		"payload": map[string]any{
-			"number": "FV 2/09/2026", "issue_date": "2026-09-22", "buyer_nip": "5260001246",
+			"number": "FV 2/09/2026", "issue_date": "2026-09-22", "market": "pl",
+			"seller_nip": "5250001111", "buyer_nip": "5260001246",
 			"net": "1000.00", "vat": "230.00", "gross": "1200.00",
 			"vat_rate": "23", "currency": "PLN",
 		},

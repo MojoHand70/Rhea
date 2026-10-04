@@ -33,6 +33,8 @@ func TestM4GermanyPack(t *testing.T) {
 	seedFromFile(t, s, "finance_v2.json") // company master data
 	seedFromFile(t, s, "finance_v3.json") // account / posting / trial balance
 	seedFromFile(t, s, "finance_v4.json") // market-neutral: vat_rate, sales_invoice
+	seedFromFile(t, s, "finance_v5.json") // books: posting v2, per-book trial balance
+	seedFromFile(t, s, "finance_v6.json") // sales_invoice v2: the seller is a ref
 
 	srv := &shell.Server{
 		Store: s, Exec: &exec.Executor{Store: s},
@@ -119,13 +121,19 @@ func TestM4GermanyPack(t *testing.T) {
 		"payload": map[string]any{"name": "Käufer GmbH", "kind": "customer",
 			"vat_id": "DE123456789", "country": "DE"},
 	}, nil)
+	post("/api/events", map[string]any{
+		"event_type": "company.registered", "occurred_at": "2026-09-01", "dedup_key": "verkaeufer",
+		"payload": map[string]any{"name": "Verkäufer GmbH", "kind": "self",
+			"vat_id": "DE811111111", "country": "DE"},
+	}, nil)
 
-	// A EUR invoice books document + 1400/8400/1776 entry atomically.
+	// A German invoice books document + 1400/8400/1776 entry atomically.
 	var resp map[string]any
 	post("/api/events", map[string]any{
 		"event_type": "sales.invoice.issued", "occurred_at": "2026-09-23", "dedup_key": "re-1",
 		"payload": map[string]any{
-			"number": "RE 2026-001", "issue_date": "2026-09-23", "buyer_nip": "DE123456789",
+			"number": "RE 2026-001", "issue_date": "2026-09-23", "market": "de",
+			"seller_nip": "DE811111111", "buyer_nip": "DE123456789",
 			"net": "500.00", "vat": "95.00", "gross": "595.00",
 			"vat_rate": "19", "currency": "EUR",
 		},
@@ -152,9 +160,9 @@ func TestM4GermanyPack(t *testing.T) {
 	want := map[string][2]string{"1400": {"595.00", "0.00"}, "8400": {"0.00", "500.00"}, "1776": {"0.00", "95.00"}}
 	seen := 0
 	for _, r := range tb.Rows {
-		if w, ok := want[r[0]]; ok {
-			if r[2] != w[0] || r[3] != w[1] {
-				t.Fatalf("account %s: debit %s credit %s, want %v", r[0], r[2], r[3], w)
+		if w, ok := want[r[1]]; ok {
+			if r[0] != "de-stat" || r[3] != w[0] || r[4] != w[1] {
+				t.Fatalf("account %s: book %s debit %s credit %s, want de-stat %v", r[1], r[0], r[3], r[4], w)
 			}
 			seen++
 		}
@@ -174,14 +182,16 @@ func TestM4GermanyPack(t *testing.T) {
 		t.Fatalf("ust row = %v", r)
 	}
 
-	// Exclusivity is explicit in the match predicates: a PLN invoice matches
-	// no German rule and waits in the worklist — no silent cross-market booking.
+	// Exclusivity is explicit in the match predicates: a Polish-market
+	// invoice matches no German rule and waits in the worklist — no silent
+	// cross-market booking, whatever its currency says.
 	post("/api/events", map[string]any{
 		"event_type": "sales.invoice.issued", "occurred_at": "2026-09-24", "dedup_key": "fv-pl",
 		"payload": map[string]any{
-			"number": "FV 3/09/2026", "issue_date": "2026-09-24", "buyer_nip": "DE123456789",
+			"number": "FV 3/09/2026", "issue_date": "2026-09-24", "market": "pl",
+			"seller_nip": "5250001111", "buyer_nip": "DE123456789",
 			"net": "100.00", "vat": "23.00", "gross": "123.00",
-			"vat_rate": "19", "currency": "PLN",
+			"vat_rate": "19", "currency": "EUR",
 		},
 	}, &resp)
 	if resp["booked"].(float64) != 0 {

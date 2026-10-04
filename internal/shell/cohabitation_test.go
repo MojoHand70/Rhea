@@ -1,21 +1,18 @@
 package shell_test
 
-// E2 of the enterprise-structure ladder (DIRECTION): two operating companies,
-// one under the PL pack, one under DE, in one kernel over one log. This file
-// is the recorded fail-as-data attempt (DECISIONS 2026-10-04), and the
-// failure is worse than a conflict — it is silent, twice. First: packs
-// register master data from the same neutral event types with no market
-// binding, and approvals process eagerly, so whichever market's
-// registration rule is approved first captures the other market's chart of
-// accounts too — the German SKR03 materializes with `pl-register-account`
-// as its explanation, provenance recording the mis-explanation honestly,
-// nothing flagging it. Second: the packs route invoices by currency
-// (`$.currency eq PLN`/`EUR`), which keeps their matches disjoint — so the
-// same-id conflict that would at least refuse loudly never fires, and a
-// Polish company's EUR-denominated invoice books into the German SKR03
-// instead. Currency is not a market, and it is certainly not a company.
-// The one loud failure: both packs ship a VAT rate coded "0", and ref
-// resolution is global, so a 0% invoice cannot resolve its rate at all.
+// E2 of the enterprise-structure ladder (DIRECTION): two operating companies
+// — Alfa under the PL pack, Beta under the DE pack — in one kernel over one
+// log. The pure-data attempt failed three ways (DECISIONS 2026-10-04, git
+// history): silent master-data capture, silent currency-as-market
+// misrouting, and a globally ambiguous vat_rate "0". The fix is also pure
+// data — pack v2s: shared-type rules carry a market binding, invoices carry
+// their seller as a ref, posting rules name their book, resolution keys stay
+// globally unique. No kernel change anywhere — E2 is an M2-style negative
+// proof. Enterprise structure is refs, not tenancy: each market's rules
+// explain only its company's events, each company's ledger closes on its
+// own (book, month), the statutory registers split by the seller's country,
+// an event naming no market waits for a human instead of guessing, and one
+// replay reproduces both companies exactly.
 
 import (
 	"bytes"
@@ -42,6 +39,8 @@ func TestCohabitation(t *testing.T) {
 	seedFromFile(t, s, "finance_v2.json")
 	seedFromFile(t, s, "finance_v3.json")
 	seedFromFile(t, s, "finance_v4.json")
+	seedFromFile(t, s, "finance_v5.json") // books: posting v2, per-book trial balance
+	seedFromFile(t, s, "finance_v6.json") // sales_invoice v2: the seller is a ref
 
 	x := &exec.Executor{Store: s}
 	srv := &shell.Server{
@@ -52,7 +51,23 @@ func TestCohabitation(t *testing.T) {
 	ts := httptest.NewServer(srv.Handler())
 	defer ts.Close()
 
-	post := func(path string, body any) {
+	get := func(path string, out any) {
+		t.Helper()
+		res, err := ts.Client().Get(ts.URL + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+		if res.StatusCode != 200 {
+			var e map[string]string
+			json.NewDecoder(res.Body).Decode(&e)
+			t.Fatalf("GET %s: %d %s", path, res.StatusCode, e["error"])
+		}
+		if err := json.NewDecoder(res.Body).Decode(out); err != nil {
+			t.Fatal(err)
+		}
+	}
+	post := func(path string, body any, out any) {
 		t.Helper()
 		b, _ := json.Marshal(body)
 		res, err := ts.Client().Post(ts.URL+path, "application/json", bytes.NewReader(b))
@@ -65,10 +80,39 @@ func TestCohabitation(t *testing.T) {
 			json.NewDecoder(res.Body).Decode(&e)
 			t.Fatalf("POST %s: %d %s", path, res.StatusCode, e["error"])
 		}
+		if out != nil {
+			if err := json.NewDecoder(res.Body).Decode(out); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	activate := func(id string, spec core.RuleSpec) {
+		t.Helper()
+		if _, err := s.InsertRuleVersion(ctx, core.Rule{
+			ID: id, Status: core.StatusDraft, Priority: 10,
+			EffectiveFrom: "2026-01-01", CreatedBy: "human", Description: id, Spec: spec,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		post("/api/rules/"+id+"/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	}
+	invoice := func(dedup, date, market, seller, number, net, vat, gross, rate, currency string) map[string]any {
+		var resp map[string]any
+		post("/api/events", map[string]any{
+			"event_type": "sales.invoice.issued", "occurred_at": date, "dedup_key": dedup,
+			"payload": map[string]any{
+				"number": number, "issue_date": date, "market": market,
+				"seller_nip": seller, "buyer_nip": map[string]string{"pl": "5260001246", "de": "DE123456789"}[market],
+				"net": net, "vat": vat, "gross": gross,
+				"vat_rate": rate, "currency": currency,
+			},
+		}, &resp)
+		return resp
 	}
 
-	// Both markets into one kernel: the loads themselves succeed — packs are
-	// data, and data merges.
+	// Both markets into one kernel; approving each pack's rules installs
+	// only its own master data now — the market binding keeps the other
+	// pack's events out of reach.
 	for _, p := range []string{"pl", "de"} {
 		if _, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", p, "pack.json"), "test"); err != nil {
 			t.Fatal(err)
@@ -78,109 +122,158 @@ func TestCohabitation(t *testing.T) {
 		"pl-book-sales-invoice", "pl-post-sales-invoice", "pl-record-ksef-submission",
 		"de-register-account", "de-register-vat-rate",
 		"de-book-sales-invoice", "de-post-sales-invoice"} {
-		post("/api/rules/"+id+"/approve", map[string]any{"approved_by": "krzysztof"})
+		post("/api/rules/"+id+"/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	}
-
-	// Buyers are ordinary base master data (as in the single-market tests).
-	if _, err := s.InsertRuleVersion(ctx, core.Rule{
-		ID: "register-company", Status: core.StatusDraft, Priority: 10,
-		EffectiveFrom: "2026-01-01", CreatedBy: "human", Description: "register-company",
-		Spec: core.RuleSpec{
-			Match: core.Match{EventType: "company.registered"},
-			Effect: core.Effect{Object: core.ObjectTemplate{Type: "company",
-				Fields: map[string]string{"name": "=$.name", "kind": "=$.kind",
-					"vat_id": "=$.vat_id", "country": "=$.country"}}},
-		},
-	}); err != nil {
-		t.Fatal(err)
-	}
-	post("/api/rules/register-company/approve", map[string]any{"approved_by": "krzysztof"})
-	post("/api/events", map[string]any{
-		"event_type": "company.registered", "occurred_at": "2026-09-01", "dedup_key": "buyer-pl",
-		"payload": map[string]any{"name": "Nabywca S.A.", "kind": "customer",
-			"vat_id": "5260001246", "country": "PL"}})
-	post("/api/events", map[string]any{
-		"event_type": "company.registered", "occurred_at": "2026-09-01", "dedup_key": "buyer-de",
-		"payload": map[string]any{"name": "Käufer AG", "kind": "customer",
-			"vat_id": "DE129273398", "country": "DE"}})
-
-	// The silent failure: pl-register-account was approved first, so its
-	// eager re-evaluation captured ALL 39 account events — the German SKR03
-	// included — before de-register-account existed. No conflict, no error,
-	// a clean worklist, and the wrong explanation recorded with perfect
-	// provenance.
 	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {
-		t.Fatalf("worklist = %d, want 0 — the capture is silent", len(wl))
+		t.Fatalf("worklist = %d, want 0 — both markets' master data installed", len(wl))
 	}
-	accs, err := s.ObjectsByType(ctx, "account")
-	if err != nil || len(accs) != 39 {
-		t.Fatalf("accounts = %d (%v), want all 39 of both markets", len(accs), err)
+	accs, _ := s.ObjectsByType(ctx, "account")
+	if len(accs) != 39 {
+		t.Fatalf("accounts = %d, want both charts", len(accs))
 	}
-	captured := 0
+	// The capture is gone: the SKR03 is explained by its own market's rule.
 	for _, a := range accs {
-		if code, _ := a.State["code"].(string); strings.HasPrefix(code, "0") || len(code) == 4 {
-			// a German SKR03 account, explained by the Polish rule
-			if a.RuleID == "pl-register-account" {
-				captured++
+		if code, _ := a.State["code"].(string); len(code) == 4 && a.RuleID != "de-register-account" {
+			t.Fatalf("SKR03 account %s explained by %s", code, a.RuleID)
+		}
+	}
+	// The namespace holds: both zero rates exist under distinct codes.
+	for _, code := range []string{"0", "0-de"} {
+		if ids, _ := s.FindObjectIDsByField(ctx, "vat_rate", "code", code); len(ids) != 1 {
+			t.Fatalf("vat_rate %q = %d objects", code, len(ids))
+		}
+	}
+
+	// Two operating companies and their buyers — all ordinary master data.
+	activate("register-company", core.RuleSpec{
+		Match: core.Match{EventType: "company.registered"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "company",
+			Fields: map[string]string{"name": "=$.name", "kind": "=$.kind",
+				"vat_id": "=$.vat_id", "country": "=$.country"}}},
+	})
+	for dedup, c := range map[string]map[string]any{
+		"alfa":     {"name": "Alfa Sp. z o.o.", "kind": "self", "vat_id": "5250001111", "country": "PL"},
+		"beta":     {"name": "Beta GmbH", "kind": "self", "vat_id": "DE811111111", "country": "DE"},
+		"buyer-pl": {"name": "Nabywca S.A.", "kind": "customer", "vat_id": "5260001246", "country": "PL"},
+		"buyer-de": {"name": "Käufer AG", "kind": "customer", "vat_id": "DE123456789", "country": "DE"},
+	} {
+		post("/api/events", map[string]any{
+			"event_type": "company.registered", "occurred_at": "2026-09-01",
+			"dedup_key": dedup, "payload": c}, nil)
+	}
+
+	// Each company's invoice is explained by its own market only.
+	if r := invoice("fv-a1", "2026-09-21", "pl", "5250001111", "FV 1/09/2026", "1000.00", "230.00", "1230.00", "23", "PLN"); r["booked"].(float64) != 1 {
+		t.Fatalf("alfa invoice: %v", r)
+	}
+	if r := invoice("re-b1", "2026-09-23", "de", "DE811111111", "RE 2026-001", "500.00", "95.00", "595.00", "19", "EUR"); r["booked"].(float64) != 1 {
+		t.Fatalf("beta invoice: %v", r)
+	}
+	// Currency no longer routes: Alfa's EUR-denominated domestic invoice
+	// stays Polish — the misrouting of the recorded attempt is dead.
+	if r := invoice("fv-a2", "2026-10-02", "pl", "5250001111", "FV 1/10/2026", "200.00", "46.00", "246.00", "23", "EUR"); r["booked"].(float64) != 1 {
+		t.Fatalf("alfa EUR invoice: %v", r)
+	}
+	alfa, _ := s.FindObjectIDsByField(ctx, "company", "vat_id", "5250001111")
+	invoices, _ := s.ObjectsByType(ctx, "sales_invoice")
+	if len(invoices) != 3 {
+		t.Fatalf("invoices = %d", len(invoices))
+	}
+	for _, inv := range invoices {
+		if inv.State["currency"] == "EUR" && inv.State["number"] == "FV 1/10/2026" {
+			if inv.RuleID != "pl-book-sales-invoice" || inv.State["seller"] != alfa[0] {
+				t.Fatalf("EUR invoice: rule %s seller %v — the misrouting is back", inv.RuleID, inv.State["seller"])
 			}
 		}
 	}
-	if captured == 0 {
-		t.Fatal("expected the Polish rule to have captured German accounts")
+
+	// The statutory registers split by the seller's country: each market's
+	// register sees only its company's invoices.
+	var reg, ust struct {
+		Rows [][]string `json:"rows"`
+	}
+	get("/api/views/rejestr-vat-sprzedazy", &reg)
+	if len(reg.Rows) != 2 ||
+		reg.Rows[0][0] != "2026-09" || reg.Rows[0][1] != "23" || reg.Rows[0][4] != "1230.00" ||
+		reg.Rows[1][0] != "2026-10" || reg.Rows[1][4] != "246.00" {
+		t.Fatalf("rejestr = %+v", reg.Rows)
+	}
+	get("/api/views/ust-je-monat", &ust)
+	if len(ust.Rows) != 1 || ust.Rows[0][0] != "2026-09" || ust.Rows[0][1] != "19" || ust.Rows[0][4] != "595.00" {
+		t.Fatalf("ust = %+v", ust.Rows)
 	}
 
-	// The second silent failure: a Polish company issues a domestic invoice
-	// denominated in EUR (legal and ordinary). Currency-as-market routes it
-	// to the German pack: it books — cleanly, provenance and all — as a
-	// German invoice, VAT and revenue on the SKR03 accounts.
-	post("/api/events", map[string]any{
-		"event_type": "sales.invoice.issued", "occurred_at": "2026-09-21", "dedup_key": "fv-eur",
-		"payload": map[string]any{
-			"number": "FV 3/09/2026", "issue_date": "2026-09-21", "buyer_nip": "5260001246",
-			"net": "1000.00", "vat": "230.00", "gross": "1230.00",
-			"vat_rate": "23", "currency": "EUR",
-		},
-	})
-	invoices, err := s.ObjectsByType(ctx, "sales_invoice")
-	if err != nil || len(invoices) != 1 {
-		t.Fatalf("invoices = %d (%v), want the EUR invoice booked", len(invoices), err)
+	// One trial balance notion, two companies' ledgers.
+	var tb struct {
+		Rows [][]string `json:"rows"`
 	}
-	if invoices[0].RuleID != "de-book-sales-invoice" {
-		t.Fatalf("invoice explained by %s — expected the silent German capture", invoices[0].RuleID)
+	get("/api/views/trial-balance", &tb)
+	want := map[string][3]string{
+		"201":  {"pl-stat", "1476.00", "0.00"},
+		"700":  {"pl-stat", "0.00", "1200.00"},
+		"222":  {"pl-stat", "0.00", "276.00"},
+		"1400": {"de-stat", "595.00", "0.00"},
+		"8400": {"de-stat", "0.00", "500.00"},
+		"1776": {"de-stat", "0.00", "95.00"},
 	}
-	id1400, err := s.FindObjectIDsByField(ctx, "account", "code", "1400")
-	if err != nil || len(id1400) != 1 {
-		t.Fatalf("SKR03 1400: %v %v", id1400, err)
+	seen := 0
+	for _, r := range tb.Rows {
+		if w, ok := want[r[1]]; ok {
+			if r[0] != w[0] || r[3] != w[1] || r[4] != w[2] {
+				t.Fatalf("account %s: %v, want %v", r[1], r, w)
+			}
+			seen++
+		}
 	}
-	var onSKR03 bool
-	postings, _ := s.ObjectsByType(ctx, "posting")
-	for _, p := range postings {
-		onSKR03 = onSKR03 || p.State["account"] == id1400[0]
-	}
-	if !onSKR03 {
-		t.Fatal("expected the Polish EUR invoice posted to German Forderungen 1400")
+	if seen != 6 {
+		t.Fatalf("trial balance = %+v", tb.Rows)
 	}
 
-	// The loud failure, second form: a 0% PLN invoice matches only Polish
-	// rules, but both packs shipped a VAT rate coded "0" and ref resolution
-	// is global — the rate is ambiguous and the event waits forever.
-	post("/api/events", map[string]any{
-		"event_type": "sales.invoice.issued", "occurred_at": "2026-09-22", "dedup_key": "fv-0",
-		"payload": map[string]any{
-			"number": "FV 2/09/2026", "issue_date": "2026-09-22", "buyer_nip": "5260001246",
-			"net": "500.00", "vat": "0.00", "gross": "500.00",
-			"vat_rate": "0", "currency": "PLN",
-		},
+	// Alfa closes September; Beta's September stays open — the E1 book
+	// machinery is the per-company close.
+	activate("lock-book-period", core.RuleSpec{
+		Match: core.Match{EventType: "period.locked"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "period_lock",
+			Fields: map[string]string{"month": "=$.month", "book": "=$.book"}}},
 	})
-	n, errs := x.ProcessPending(ctx)
-	if n != 0 || len(errs) == 0 {
-		t.Fatalf("0%% invoice: booked %d, errs %v", n, errs)
+	post("/api/events", map[string]any{
+		"event_type": "period.locked", "occurred_at": "2026-09-30", "dedup_key": "lock-a-09",
+		"payload": map[string]any{"month": "2026-09", "book": "pl-stat"}}, nil)
+	if r := invoice("fv-a3", "2026-09-28", "pl", "5250001111", "FV 2/09/2026", "10.00", "2.30", "12.30", "23", "PLN"); r["booked"].(float64) != 0 ||
+		!strings.Contains(fmt.Sprint(r["errors"]), "locked for book pl-stat") {
+		t.Fatalf("alfa after close: %v", r)
 	}
-	var ambiguous bool
-	for _, e := range errs {
-		ambiguous = ambiguous || strings.Contains(e.Error(), "ref is ambiguous")
+	if r := invoice("re-b2", "2026-09-29", "de", "DE811111111", "RE 2026-002", "100.00", "19.00", "119.00", "19", "EUR"); r["booked"].(float64) != 1 {
+		t.Fatalf("beta after alfa's close: %v", r)
 	}
-	if !ambiguous {
-		t.Fatalf("expected an ambiguous vat_rate ref, got %v", errs)
+
+	// An event naming no market matches nothing and waits for a human —
+	// the silent captures of the attempt are structurally gone.
+	var resp map[string]any
+	post("/api/events", map[string]any{
+		"event_type": "sales.invoice.issued", "occurred_at": "2026-09-25", "dedup_key": "fv-x",
+		"payload": map[string]any{
+			"number": "FV ???", "issue_date": "2026-09-25", "seller_nip": "5250001111",
+			"buyer_nip": "5260001246", "net": "1.00", "vat": "0.23", "gross": "1.23",
+			"vat_rate": "23", "currency": "PLN",
+		},
+	}, &resp)
+	if resp["booked"].(float64) != 0 {
+		t.Fatalf("marketless invoice booked: %v", resp)
+	}
+	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 2 { // fv-a3 (locked) + fv-x (unroutable)
+		t.Fatalf("worklist = %d", len(wl))
+	}
+
+	// One replay, two companies, identical state.
+	before, _ := s.AllObjects(ctx)
+	if _, err := x.Replay(ctx); err != nil {
+		t.Fatal(err)
+	}
+	after, _ := s.AllObjects(ctx)
+	bj, _ := json.Marshal(before)
+	aj, _ := json.Marshal(after)
+	if !bytes.Equal(bj, aj) {
+		t.Fatal("replay diverged")
 	}
 }

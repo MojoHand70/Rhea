@@ -1,0 +1,58 @@
+{
+    "object_types": [
+        {
+            "name": "sales_invoice",
+            "version": 2,
+            "domain": "finance",
+            "is_document": true,
+            "label_field": "number",
+            "fields": [
+                {
+                    "name": "number",
+                    "type": "string",
+                    "required": true
+                },
+                {
+                    "name": "issue_date",
+                    "type": "date",
+                    "required": true
+                },
+                {
+                    "name": "seller",
+                    "type": "ref<company>",
+                    "required": true
+                },
+                {
+                    "name": "buyer",
+                    "type": "ref<company>",
+                    "required": true
+                },
+                {
+                    "name": "net",
+                    "type": "money",
+                    "required": true
+                },
+                {
+                    "name": "vat",
+                    "type": "money",
+                    "required": true
+                },
+                {
+                    "name": "gross",
+                    "type": "money",
+                    "required": true
+                },
+                {
+                    "name": "vat_rate",
+                    "type": "ref<vat_rate>",
+                    "required": true
+                },
+                {
+                    "name": "currency",
+                    "type": "string",
+                    "required": true
+                }
+            ]
+        }
+    ]
+}

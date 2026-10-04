@@ -74,13 +74,28 @@ so the next session does not re-derive them.
 - **Global ref namespace.** Both packs ship a VAT rate coded "0";
   `=ref(vat_rate, code, ...)` resolves globally, so a 0% invoice's rate is
   ambiguous and the event waits forever.
-- **Verdict pending the fix**: the binding of events to a market/company
-  looks expressible as data (payload market field + where guards + seller
-  refs + E1 books) — E2 may yet be an M2-style negative proof. What is
-  already clear: match conditions cannot read through refs (the seller's
-  country), so events must carry routing facts denormalized; that gap is
-  recorded on the arithmetic sub-language's destiny list (DIRECTION), and
-  `market` on the payload dies the day ref-reads arrive.
+- **Verdict: E2 passed as pure data — an M2-style negative proof, nothing
+  earned.** The fix is pack v2s and one seed: every rule matching a shared
+  neutral event type carries a `$.market` where-guard (the binding of pack
+  rules to a market is rule data); `sales_invoice` v2 makes the seller a
+  `ref<company>` filled by `=ref(company, vat_id, $.seller_nip)` (the
+  binding of a document to its company is a ref); posting rules name their
+  book (`pl-stat`/`de-stat`), so the E1 machinery is the per-company close;
+  the statutory registers join the seller's country (the read side CAN
+  follow refs today — only the match side cannot); and de's zero rate is
+  recoded `0-de` because resolution keys of a shared type are one global
+  namespace (the E1 account-codes decision, extended). An event naming no
+  market matches nothing and waits — unroutable beats misrouted.
+- **Contortions carried, with named exits**: `market` is denormalized onto
+  every payload because match conditions cannot read through refs (the
+  seller's country) — dies when ref-reads arrive (DIRECTION, arithmetic
+  destiny list). One company per market per book, because book names
+  cannot compose (company × GAAP) — a second same-market company forces
+  that question. A 0% invoice still cannot post (the VAT line's amount
+  must be positive; conditional lines are inexpressible) — postings
+  sub-language residue, left for its own fail-as-data. The KSeF adapter
+  still reads all invoices; binding adapters per market joins the adapter
+  contract's open questions.
 
 ## 2026-10-04 — E1: parallel books fail as pure data; `book` earns admission
 
