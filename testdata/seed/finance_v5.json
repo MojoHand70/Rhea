@@ -1,0 +1,189 @@
+{
+    "object_types": [
+        {
+            "name": "posting",
+            "version": 2,
+            "domain": "finance",
+            "is_document": false,
+            "fields": [
+                {
+                    "name": "entry",
+                    "type": "string",
+                    "required": true
+                },
+                {
+                    "name": "line",
+                    "type": "int",
+                    "required": true
+                },
+                {
+                    "name": "book",
+                    "type": "string",
+                    "required": true
+                },
+                {
+                    "name": "account",
+                    "type": "ref<account>",
+                    "required": true
+                },
+                {
+                    "name": "side",
+                    "type": "enum",
+                    "values": [
+                        "debit",
+                        "credit"
+                    ],
+                    "required": true
+                },
+                {
+                    "name": "amount",
+                    "type": "money",
+                    "required": true
+                },
+                {
+                    "name": "currency",
+                    "type": "string",
+                    "required": true
+                },
+                {
+                    "name": "date",
+                    "type": "date",
+                    "required": true
+                }
+            ]
+        },
+        {
+            "name": "period_lock",
+            "version": 2,
+            "domain": "finance",
+            "is_document": false,
+            "fields": [
+                {
+                    "name": "month",
+                    "type": "string",
+                    "required": true
+                },
+                {
+                    "name": "book",
+                    "type": "string",
+                    "required": true
+                }
+            ]
+        }
+    ],
+    "view_defs": [
+        {
+            "view_id": "journal",
+            "version": 2,
+            "notion": "list",
+            "title": "Journal",
+            "domain": "finance",
+            "function": "documents",
+            "spec": {
+                "object_type": "posting",
+                "columns": [
+                    {
+                        "field": "entry",
+                        "label": "Entry"
+                    },
+                    {
+                        "field": "line",
+                        "label": "Line"
+                    },
+                    {
+                        "field": "book",
+                        "label": "Book"
+                    },
+                    {
+                        "field": "account",
+                        "label": "Account"
+                    },
+                    {
+                        "field": "side",
+                        "label": "Side"
+                    },
+                    {
+                        "field": "amount",
+                        "label": "Amount"
+                    },
+                    {
+                        "field": "currency",
+                        "label": "Ccy"
+                    },
+                    {
+                        "field": "date",
+                        "label": "Date"
+                    }
+                ]
+            }
+        },
+        {
+            "view_id": "posting-detail",
+            "version": 2,
+            "notion": "detail",
+            "title": "Posting",
+            "domain": "finance",
+            "function": "documents",
+            "spec": {
+                "object_type": "posting",
+                "sections": [
+                    {
+                        "title": "Posting",
+                        "fields": [
+                            "entry",
+                            "line",
+                            "book",
+                            "account",
+                            "side"
+                        ]
+                    },
+                    {
+                        "title": "Value",
+                        "fields": [
+                            "amount",
+                            "currency",
+                            "date"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "view_id": "trial-balance",
+            "version": 2,
+            "notion": "analysis",
+            "title": "Trial balance",
+            "domain": "finance",
+            "function": "analysis",
+            "spec": {
+                "sql": "SELECT book, code, account, printf('%d.%02d', d // 100, d % 100) AS debit, printf('%d.%02d', c // 100, c % 100) AS credit, printf('%s%d.%02d', CASE WHEN d - c < 0 THEN '-' ELSE '' END, abs(d - c) // 100, abs(d - c) % 100) AS balance FROM (SELECT COALESCE(json_extract_string(p.state,'$.book'),'main') AS book, json_extract_string(a.state,'$.code') AS code, json_extract_string(a.state,'$.name') AS account, COALESCE(SUM(CASE WHEN json_extract_string(p.state,'$.side')='debit' THEN CAST(json_extract(p.state,'$.amount') AS BIGINT) ELSE 0 END),0) AS d, COALESCE(SUM(CASE WHEN json_extract_string(p.state,'$.side')='credit' THEN CAST(json_extract(p.state,'$.amount') AS BIGINT) ELSE 0 END),0) AS c FROM objects p JOIN objects a ON json_extract_string(p.state,'$.account') = a.object_id WHERE p.object_type = 'posting' AND a.object_type = 'account' GROUP BY 1, 2, 3) t ORDER BY book, code",
+                "columns": [
+                    {
+                        "field": "book",
+                        "label": "Book"
+                    },
+                    {
+                        "field": "code",
+                        "label": "Code"
+                    },
+                    {
+                        "field": "account",
+                        "label": "Account"
+                    },
+                    {
+                        "field": "debit",
+                        "label": "Debit"
+                    },
+                    {
+                        "field": "credit",
+                        "label": "Credit"
+                    },
+                    {
+                        "field": "balance",
+                        "label": "Balance"
+                    }
+                ]
+            }
+        }
+    ]
+}
