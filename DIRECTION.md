@@ -351,9 +351,27 @@ sub-language build.
   to display. The original plan, kept for the record: cascade across
   company refs, provenance crossing the boundary, transfer pricing as
   the rule that prices the derived event. Depends on E2.
-- **E5 — consolidation.** The group is one more explanation: a
-  consolidation rule-book whose eliminations match on intercompany
-  provenance. Starts life on the analysis side in DuckDB. Depends on E4.
+- **E5 — consolidation.** Shipped 2026-10-04 (see DECISIONS): no attempt
+  ceremony — E5 asked nothing of the closed class. One read-side change
+  (the DuckDB projection carries `root_event_id`: invariant 5 arriving
+  whole on the analysis side) and two analysis ViewDefs:
+  intercompany-positions (both sides matched by shared root, difference
+  zero by construction — the reconciliation screen with nothing to
+  reconcile) and the group trial balance in EUR (translation at the
+  latest rate, eliminations by provenance except tax-typed accounts, the
+  transaction-vs-closing residue as a visible CTA row). The write-side
+  form — elimination entries in a group book — waits on book
+  composition; statutory translation methods are pack depth. The
+  original plan, kept for the record: the group is one more explanation,
+  a consolidation rule-book whose eliminations match on intercompany
+  provenance, starting on the analysis side. Depends on E4.
+
+**The ladder is complete** (2026-10-04, one day end to end): E1 earned
+`book`, E3 earned `convert`; E2, E4 and E5 passed as pure data — two
+primitives, three negative proofs, the grammar still small. The gap named
+in "What 'big' means" above is closed: parallel books, entities as refs,
+functional currency, intercompany matching by construction, and the group
+as one more explanation — one kernel, one log, one replay.
 
 One line: *the enterprise structure model is five proofs — book, entity,
 currency, boundary-crossing cause, group-as-explanation — each pure data
