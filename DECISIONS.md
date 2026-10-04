@@ -55,6 +55,32 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-04 — E4 attempt: intercompany fails on one gap — a ref cannot be re-referenced
+
+- **The attempt** (`TestIntercompany`): entity A's sale raising entity B's
+  purchase by cascade — the mirror rule matches the sales invoice's
+  materialization and books the buyer's side. Everything fits the existing
+  vocabulary except one seam, with two jaws: the invoice's state carries
+  seller/buyer as resolved object ids, and a direct-id template into the
+  purchase's supplier ref is rejected by design (referential integrity only
+  through resolution), while resolving by value hands `=ref(company,
+  vat_id, $.state.seller)` an object id. Atomicity makes the gap total —
+  the broken mirror refuses the whole root event, so A's own document does
+  not book either: never half-explained across entities, but intercompany
+  stays inexpressible.
+- **A second seam**: the invoice object cannot say it is intragroup — the
+  attempt's mirror is keyed to a literal invoice number, an absurdity that
+  sharpens the verdict.
+- **Verdict: no primitive is earned** — the governance bar is
+  *inexpressible*, and this is expressible with denormalization, so E4 is
+  another negative proof. The fix as data: `sales_invoice` v3 carries
+  `intragroup` and the resolution keys (`seller_nip`, `buyer_nip`) as
+  plain fields, so downstream rules re-resolve by value. The contortion
+  joins the recorded family (payload `market`, composite codes) with the
+  same named exit: ref-reads — reading through a ref, or passing a
+  chain-provenance-sound id — on the arithmetic destiny list. When that
+  arrives, the nip echo fields die with the market flag.
+
 ## 2026-10-04 — E3 attempt: currency fails as pure data; `convert` earns admission
 
 - **The attempt** (`TestCurrencyAsPureData`): booking a EUR invoice into a
