@@ -316,8 +316,10 @@ func TestDoubleEntry(t *testing.T) {
 				{Name: "currency", Type: "string", Required: true},
 				{Name: "date", Type: "date", Required: true},
 			}},
-		{Name: "period_lock", Version: 1, Domain: "finance",
-			Fields: []core.FieldDef{{Name: "month", Type: "string", Required: true}}},
+		{Name: "period_lock", Version: 2, Domain: "finance",
+			Fields: []core.FieldDef{
+				{Name: "month", Type: "string", Required: true},
+				{Name: "book", Type: "string", Required: true}}},
 	} {
 		if err := x.Store.InsertObjectType(ctx, ot); err != nil {
 			t.Fatal(err)
@@ -359,7 +361,7 @@ func TestDoubleEntry(t *testing.T) {
 	activate("lock-period", core.RuleSpec{
 		Match: core.Match{EventType: "period.locked"},
 		Effect: core.Effect{Object: core.ObjectTemplate{Type: "period_lock",
-			Fields: map[string]string{"month": "=$.month"}}},
+			Fields: map[string]string{"month": "=$.month", "book": "main"}}},
 	})
 	submit("acc-201", "account.created", "2026-09-01", `{"code":"201","name":"Receivables","type":"debtor"}`)
 	submit("acc-702", "account.created", "2026-09-01", `{"code":"702","name":"Sales revenue","type":"revenue"}`)
@@ -523,8 +525,10 @@ func TestCascade(t *testing.T) {
 				{Name: "currency", Type: "string", Required: true},
 				{Name: "date", Type: "date", Required: true},
 			}},
-		{Name: "period_lock", Version: 1, Domain: "finance",
-			Fields: []core.FieldDef{{Name: "month", Type: "string", Required: true}}},
+		{Name: "period_lock", Version: 2, Domain: "finance",
+			Fields: []core.FieldDef{
+				{Name: "month", Type: "string", Required: true},
+				{Name: "book", Type: "string", Required: true}}},
 	} {
 		if err := x.Store.InsertObjectType(ctx, ot); err != nil {
 			t.Fatal(err)
@@ -577,7 +581,7 @@ func TestCascade(t *testing.T) {
 		Effect: obj("account", map[string]string{"code": "=$.code", "name": "=$.name"})})
 	activate("lock-period", 10, core.RuleSpec{
 		Match:  core.Match{EventType: "period.locked"},
-		Effect: obj("period_lock", map[string]string{"month": "=$.month"})})
+		Effect: obj("period_lock", map[string]string{"month": "=$.month", "book": "main"})})
 	activate("move-stock-in", 100, core.RuleSpec{
 		Match: core.Match{EventType: "goods.received"},
 		Effect: obj("stock_movement", map[string]string{

@@ -14,34 +14,56 @@ import (
 
 // PostingObjectType is the conventional object type postings materialize as.
 // It is seeded data like any other type; the kernel only fixes the name and
-// the field meaning (entry, line, account, side, amount, currency, date).
+// the field meaning (entry, line, book, account, side, amount, currency,
+// date).
 const PostingObjectType = "posting"
 
-// ExpandPostings evaluates a postings template against one event: one
-// currency per entry, each account resolved by code to an existing account
-// object, debits equal to credits, and the event's month not locked by a
-// period_lock object. Pure given the lookup — the executor passes store
-// state, the simulator its in-memory world. Ids and the entry key build on
-// idBase (the root event id, or the causing object's id when cascaded) and
-// are rule-qualified, so several ledger rules may book the same event (a VAT
-// entry beside a revenue entry) and one ledger rule may book each of an
-// event's lines (a valuation entry per movement) without colliding.
+// DefaultBook is the book an entry belongs to when its template names none.
+const DefaultBook = "main"
+
+// ExpandPostings evaluates a postings template against one event: one book
+// and one currency per entry, each account resolved by code to an existing
+// account object, debits equal to credits, and the event's month not locked
+// for the entry's book by a period_lock object. Pure given the lookup — the
+// executor passes store state, the simulator its in-memory world. Ids and
+// the entry key build on idBase (the root event id, or the causing object's
+// id when cascaded) and are rule-qualified, so several ledger rules may book
+// the same event (a VAT entry beside a revenue entry) and one ledger rule
+// may book each of an event's lines (a valuation entry per movement) without
+// colliding.
 func ExpandPostings(p *core.PostingsTemplate, postingType core.ObjectType, ev core.Event, idBase, ruleID string, payload any, lookup core.Lookup) ([]core.MaterializedObject, error) {
 	if lookup == nil {
 		return nil, fmt.Errorf("postings need object state, none available here")
 	}
 
-	// Period lock: no posting into a locked month (business date decides).
 	if len(ev.OccurredAt) < 7 {
 		return nil, fmt.Errorf("event has no business date")
 	}
+	book := DefaultBook
+	if p.Book != "" {
+		var err error
+		if book, err = evalString(p.Book, payload); err != nil {
+			return nil, fmt.Errorf("book: %w", err)
+		}
+	}
+
+	// Period lock: no posting into a month locked for this entry's book
+	// (business date decides). A lock names its (book, month); a lock object
+	// from before books existed matches no book and locks nothing from here
+	// on (DECISIONS 2026-10-04, E1).
 	month := ev.OccurredAt[:7]
-	locks, err := lookup("period_lock", "month", month)
+	monthLocks, err := lookup("period_lock", "month", month)
 	if err != nil {
 		return nil, err
 	}
-	if len(locks) > 0 {
-		return nil, fmt.Errorf("period %s is locked", month)
+	if len(monthLocks) > 0 {
+		bookLocks, err := lookup("period_lock", "book", book)
+		if err != nil {
+			return nil, err
+		}
+		if intersects(monthLocks, bookLocks) {
+			return nil, fmt.Errorf("period %s is locked for book %s", month, book)
+		}
 	}
 
 	currency, err := evalString(p.Currency, payload)
@@ -83,6 +105,7 @@ func ExpandPostings(p *core.PostingsTemplate, postingType core.ObjectType, ev co
 			State: map[string]any{
 				"entry":    fmt.Sprintf("entry-%s-%s", idBase, ruleID),
 				"line":     i + 1,
+				"book":     book,
 				"account":  accountID,
 				"side":     side,
 				"amount":   amount,
@@ -96,6 +119,21 @@ func ExpandPostings(p *core.PostingsTemplate, postingType core.ObjectType, ev co
 			core.FormatMoney(debits), core.FormatMoney(credits), currency)
 	}
 	return out, nil
+}
+
+// intersects reports whether two id lists share an element — the lock check
+// composes two single-field lookups, so the Lookup contract stays one field.
+func intersects(a, b []string) bool {
+	set := make(map[string]struct{}, len(a))
+	for _, id := range a {
+		set[id] = struct{}{}
+	}
+	for _, id := range b {
+		if _, ok := set[id]; ok {
+			return true
+		}
+	}
+	return false
 }
 
 func evalString(tmpl string, payload any) (string, error) {

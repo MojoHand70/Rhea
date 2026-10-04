@@ -80,6 +80,15 @@ so the next session does not re-derive them.
   globally unique codes — group CoAs have their own code schemes in
   practice, so book-scoped account resolution waits for a real collision
   to demand it (its own fail-as-data, when it comes).
+- **Shipped semantics** (`TestParallelBooks`): `postings.book` is an
+  optional entry-level template defaulting to `"main"`; every posting
+  carries its book first-class; `period_lock` names its (book, month) and
+  the kernel check intersects two single-field lookups, so the Lookup
+  contract stays one field. A pre-book lock object matches no book and is
+  inert from here on — history is untouched because lock effects bake into
+  the log at firing time. A mixed event matching an open and a closed book
+  refuses whole (never half-explained); the open-book half is a separate
+  event in an open period — korekta territory, per the backfill stance.
 
 ## 2026-10-03 — M4: the second market proved the pack boundary
 

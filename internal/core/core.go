@@ -178,8 +178,14 @@ type Effect struct {
 // PostingsTemplate expands into the lines of one journal entry, materialized
 // as `posting` objects. The kernel enforces, after expansion and before
 // booking (the Sunbeetle lessons): one currency per entry, debits equal to
-// credits, accounts resolved by code, and no posting into a locked period.
+// credits, accounts resolved by code, and no posting into a period locked
+// for the entry's book.
 type PostingsTemplate struct {
+	// Book names the ledger book this entry belongs to — parallel accounting
+	// as parallel rule-books over one log (DECISIONS 2026-10-04, E1). A
+	// literal or template; empty means "main". Declared at entry level, so an
+	// entry cannot straddle books by construction.
+	Book     string        `json:"book,omitempty"`
 	Currency string        `json:"currency"` // template, e.g. "PLN" or "=$.currency"
 	Lines    []PostingLine `json:"lines"`
 }
@@ -288,6 +294,11 @@ func (s RuleSpec) Validate(target *ObjectType) error {
 // from templates, so it is enforced at expansion — an unbalanced expansion is
 // a rule error and nothing books.
 func (p *PostingsTemplate) validate() error {
+	if p.Book != "" {
+		if _, err := ParseTemplate(p.Book); err != nil {
+			return fmt.Errorf("postings.book: %w", err)
+		}
+	}
 	if p.Currency == "" {
 		return fmt.Errorf("postings.currency is required")
 	}

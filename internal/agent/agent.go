@@ -111,7 +111,10 @@ balanced journal entry — no "object":
     {"account": "702", "credit": "=sum($.lines[*].amount)"}
   ]}}
 Each line names an account code (literal or "=$.path") and exactly ONE of debit or
-credit (a money template). Debits must equal credits; the kernel rejects anything else.`
+credit (a money template). Debits must equal credits; the kernel rejects anything else.
+An optional "book" (literal or template) beside "currency" names the ledger book the
+entry belongs to — parallel accounting is parallel rule-books, one book per entry.
+Omitted, the entry books to "main"; periods close per (book, month).`
 
 // DraftRule asks the model for a rule and strictly validates the answer
 // against the language and the target object type before returning it.
