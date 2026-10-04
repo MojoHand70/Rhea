@@ -38,7 +38,7 @@ func TestIntercompany(t *testing.T) {
 	s := storetest.New(t)
 	for _, f := range []string{"finance.json", "finance_v2.json", "finance_v3.json",
 		"finance_v4.json", "finance_v5.json", "finance_v6.json", "finance_v7.json",
-		"finance_v8.json"} {
+		"finance_v8.json", "finance_v9.json"} {
 		seedFromFile(t, s, f)
 	}
 
@@ -102,7 +102,8 @@ func TestIntercompany(t *testing.T) {
 	}
 	for _, id := range []string{"pl-register-account", "pl-register-vat-rate",
 		"pl-book-sales-invoice", "pl-post-sales-invoice",
-		"de-register-account", "de-register-vat-rate"} {
+		"de-register-account", "de-register-vat-rate",
+		"de-book-sales-invoice", "de-post-sales-invoice"} {
 		post("/api/rules/"+id+"/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	}
 	activate("register-company", core.RuleSpec{
@@ -118,8 +119,9 @@ func TestIntercompany(t *testing.T) {
 				"quote": "=$.quote", "date": "=$.date", "rate": "=$.rate"}}},
 	})
 	for dedup, c := range map[string]map[string]any{
-		"alfa": {"name": "Alfa Sp. z o.o.", "kind": "self", "vat_id": "5250001111", "country": "PL"},
-		"beta": {"name": "Beta GmbH", "kind": "self", "vat_id": "DE811111111", "country": "DE"},
+		"alfa":     {"name": "Alfa Sp. z o.o.", "kind": "self", "vat_id": "5250001111", "country": "PL"},
+		"beta":     {"name": "Beta GmbH", "kind": "self", "vat_id": "DE811111111", "country": "DE"},
+		"buyer-de": {"name": "Käufer AG", "kind": "customer", "vat_id": "DE123456789", "country": "DE"},
 	} {
 		post("/api/events", map[string]any{
 			"event_type": "company.registered", "occurred_at": "2026-09-01",
@@ -257,13 +259,14 @@ func TestIntercompany(t *testing.T) {
 		t.Fatal("the purchase is not caused by the sales invoice's materialization")
 	}
 
-	// An ordinary (non-intragroup) invoice raises no mirror.
+	// An ordinary (non-intragroup) invoice raises no mirror. Its amounts
+	// are chosen to translate cleanly at the closing rate below.
 	post("/api/events", map[string]any{
 		"event_type": "sales.invoice.issued", "occurred_at": "2026-10-06", "dedup_key": "fv-n1",
 		"payload": map[string]any{
 			"number": "FV 2/10/2026", "issue_date": "2026-10-06", "market": "pl",
-			"intragroup": "no", "seller_nip": "5250001111", "buyer_nip": "DE811111111",
-			"net": "100.00", "vat": "23.00", "gross": "123.00",
+			"intragroup": "no", "seller_nip": "5250001111", "buyer_nip": "DE123456789",
+			"net": "410.00", "vat": "94.30", "gross": "504.30",
 			"vat_rate": "23", "currency": "PLN",
 		},
 	}, &resp)
@@ -273,6 +276,19 @@ func TestIntercompany(t *testing.T) {
 	if purchases, _ := s.ObjectsByType(ctx, "purchase_invoice"); len(purchases) != 1 {
 		t.Fatalf("a plain invoice raised a mirror: %d purchases", len(purchases))
 	}
+	// Beta trades with third parties too.
+	post("/api/events", map[string]any{
+		"event_type": "sales.invoice.issued", "occurred_at": "2026-10-06", "dedup_key": "re-b1",
+		"payload": map[string]any{
+			"number": "RE 2026-003", "issue_date": "2026-10-06", "market": "de",
+			"seller_nip": "DE811111111", "buyer_nip": "DE123456789",
+			"net": "200.00", "vat": "38.00", "gross": "238.00",
+			"vat_rate": "19", "currency": "EUR",
+		},
+	}, &resp)
+	if resp["booked"].(float64) != 1 {
+		t.Fatalf("beta invoice: %v", resp)
+	}
 
 	// One trial balance, the group position visible: Alfa's receivable in
 	// PLN, Beta's payable in EUR, both from the one event.
@@ -281,12 +297,15 @@ func TestIntercompany(t *testing.T) {
 	}
 	get("/api/views/trial-balance", &tb)
 	want := map[string][3]string{
-		"201":  {"pl-stat", "5412.00", "0.00"}, // 5289.00 + 123.00
-		"700":  {"pl-stat", "0.00", "4400.00"},
-		"222":  {"pl-stat", "0.00", "1012.00"},
+		"201":  {"pl-stat", "5793.30", "0.00"}, // 5289.00 + 504.30
+		"700":  {"pl-stat", "0.00", "4710.00"},
+		"222":  {"pl-stat", "0.00", "1083.30"},
 		"3400": {"de-stat", "1000.00", "0.00"},
 		"1576": {"de-stat", "230.00", "0.00"},
 		"1600": {"de-stat", "0.00", "1230.00"},
+		"1400": {"de-stat", "238.00", "0.00"},
+		"8400": {"de-stat", "0.00", "200.00"},
+		"1776": {"de-stat", "0.00", "38.00"},
 	}
 	seen := 0
 	for _, r := range tb.Rows {
@@ -297,8 +316,52 @@ func TestIntercompany(t *testing.T) {
 			seen++
 		}
 	}
-	if seen != 6 {
+	if seen != 9 {
 		t.Fatalf("trial balance = %+v", tb.Rows)
+	}
+
+	// ——— E5: consolidation. The group is one more explanation, living on
+	// the analysis side: eliminations match on provenance, not heuristics.
+
+	// The intercompany-positions view is the killer demo on a screen: both
+	// sides of the position, matched by their shared root event, at their
+	// original transaction amounts. The difference is zero by construction.
+	post("/api/events", map[string]any{
+		"event_type": "fx.rate.published", "occurred_at": "2026-10-31", "dedup_key": "nbp-1031",
+		"payload": map[string]any{"code": "EUR/PLN/2026-10-31", "base": "EUR",
+			"quote": "PLN", "date": "2026-10-31", "rate": "4.10"}}, nil)
+	var ic struct {
+		Rows [][]string `json:"rows"`
+	}
+	get("/api/views/intercompany-positions", &ic)
+	if len(ic.Rows) != 1 {
+		t.Fatalf("positions = %+v", ic.Rows)
+	}
+	if r := ic.Rows[0]; r[0] != fmt.Sprint(root) || r[1] != "1230.00" || r[2] != "1230.00" || r[3] != "0.00" {
+		t.Fatalf("position row = %v (root %d)", r, root)
+	}
+
+	// The group trial balance in EUR: PLN translates at the latest rate
+	// (4.10), intercompany positions are eliminated by root — receivable,
+	// payable, revenue and cost vanish, each entity's VAT against its tax
+	// office survives — and the translation residue (the IC entry booked at
+	// 4.30, translated at 4.10) is a visible CTA line, not a hidden leak.
+	var gtb struct {
+		Rows [][]string `json:"rows"`
+	}
+	get("/api/views/group-trial-balance", &gtb)
+	wantGroup := [][]string{
+		{"1400", "Forderungen aus Lieferungen und Leistungen", "238.00", "0.00", "238.00"},
+		{"1576", "Abziehbare Vorsteuer 19%", "230.00", "0.00", "230.00"},
+		{"1776", "Umsatzsteuer 19%", "0.00", "38.00", "-38.00"},
+		{"201", "Rozrachunki z odbiorcami", "123.00", "0.00", "123.00"},
+		{"222", "VAT należny", "0.00", "264.22", "-264.22"},
+		{"700", "Sprzedaż produktów", "0.00", "100.00", "-100.00"},
+		{"8400", "Erlöse 19% USt", "0.00", "200.00", "-200.00"},
+		{"CTA", "Translation difference", "11.22", "0.00", "11.22"},
+	}
+	if !reflect.DeepEqual(gtb.Rows, wantGroup) {
+		t.Fatalf("group trial balance:\n got %v\nwant %v", gtb.Rows, wantGroup)
 	}
 
 	// One replay, two entities, identical state — the intercompany chain

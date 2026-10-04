@@ -55,6 +55,39 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-04 — E5: consolidation — the group is one more explanation
+
+- **No attempt ceremony this time**: E5 asked nothing of the closed class.
+  The one code change is read-side — the DuckDB projection now carries
+  `root_event_id` (one ordered pass; causes precede effects in the log) —
+  which is invariant 5 finally arriving whole on the analysis side.
+  Everything else is two analysis ViewDefs (finance_v9): the group lives
+  entirely in open-class data, exactly as DIRECTION prescribed ("starts
+  life on the analysis side").
+- **intercompany-positions**: both sides of each position, matched by
+  their shared root event at original transaction amounts, difference
+  zero by construction — the reconciliation screen with nothing to
+  reconcile, only to display.
+- **group-trial-balance (EUR)**: PLN translates at the latest EUR/PLN
+  rate; postings whose root is an intercompany root are eliminated unless
+  their account is tax-typed — intra-group positions vanish, each
+  entity's claim against its tax office is third-party and survives. The
+  residue of booking at the transaction rate but translating at closing
+  surfaces as a visible CTA row — the rounding-plug aesthetic at group
+  level: differences are displayed, never leaked.
+- **Simplifications recorded, exits named**: closing rate = latest known
+  rate (statutory translation methods — closing/average/historical per
+  line item — are pack depth); one currency pair assumed (general
+  multi-currency translation is analysis-side work when a third currency
+  arrives); elimination-by-exclusion balances only because the CTA row
+  absorbs the residue — elimination *entries* in a group book are the
+  write-side form, waiting on book composition (E2 residue); equity
+  consolidation and minority interests stay outside the experiment.
+- **The enterprise-structure ladder is complete.** Five rungs in one day:
+  E1 earned `book`, E3 earned `convert`; E2, E4 and E5 passed as pure
+  data. Two primitives, three negative proofs — the grammar stayed small
+  while the gap named in "What big means" closed end to end.
+
 ## 2026-10-04 — E4 attempt: intercompany fails on one gap — a ref cannot be re-referenced
 
 - **The attempt** (`TestIntercompany`): entity A's sale raising entity B's
