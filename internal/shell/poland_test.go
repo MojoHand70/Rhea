@@ -36,6 +36,7 @@ func TestM3PolandPack(t *testing.T) {
 	seedFromFile(t, s, "finance_v4.json") // market-neutral: vat_rate, sales_invoice
 	seedFromFile(t, s, "finance_v5.json") // books: posting v2, per-book trial balance
 	seedFromFile(t, s, "finance_v6.json") // sales_invoice v2: the seller is a ref
+	seedFromFile(t, s, "finance_v7.json") // posting v3 (tx trace), fx_rate
 
 	srv := &shell.Server{
 		Store: s, Exec: &exec.Executor{Store: s},
@@ -87,7 +88,7 @@ func TestM3PolandPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 1 || sum.Views != 5 || sum.Rules != 5 || sum.Events != 30 || sum.Skipped != 0 {
+	if sum.Types != 1 || sum.Views != 5 || sum.Rules != 5 || sum.Events != 31 || sum.Skipped != 0 {
 		t.Fatalf("first load: %+v", sum)
 	}
 	// Idempotent: a reload changes nothing.
@@ -95,14 +96,14 @@ func TestM3PolandPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Events != 0 || sum.Skipped != 41 {
+	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Events != 0 || sum.Skipped != 42 {
 		t.Fatalf("reload: %+v", sum)
 	}
 
 	// Nothing is installed yet: the chart of accounts sits in the worklist,
 	// because the pack's rules are drafts behind the human gate.
-	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 30 {
-		t.Fatalf("worklist = %d, want 30 pack events waiting", len(wl))
+	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 31 {
+		t.Fatalf("worklist = %d, want 31 pack events waiting", len(wl))
 	}
 
 	// Approving the pack's rules IS the installation: the chart of accounts
@@ -114,7 +115,7 @@ func TestM3PolandPack(t *testing.T) {
 	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {
 		t.Fatalf("worklist not cleared after approvals: %d", len(wl))
 	}
-	if accs, _ := s.ObjectsByType(ctx, "account"); len(accs) != 25 {
+	if accs, _ := s.ObjectsByType(ctx, "account"); len(accs) != 26 {
 		t.Fatalf("accounts = %d, want the chart of accounts", len(accs))
 	}
 	if rates, _ := s.ObjectsByType(ctx, "vat_rate"); len(rates) != 5 {

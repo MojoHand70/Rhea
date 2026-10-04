@@ -1,13 +1,14 @@
 {
   "pack": "pl",
-  "version": 2,
+  "version": 3,
   "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF — rynek jako dane",
   "requires": [
     "company",
     "account",
     "posting",
     "vat_rate",
-    "sales_invoice"
+    "sales_invoice",
+    "fx_rate"
   ],
   "object_types": [
     {
@@ -326,7 +327,13 @@
                 "credit": "=$.vat"
               }
             ],
-            "book": "pl-stat"
+            "book": "pl-stat",
+            "convert": {
+              "to": "PLN",
+              "date": "=$.issue_date",
+              "rounding": "half_up",
+              "rounding_account": "756"
+            }
           }
         }
       }
@@ -682,6 +689,17 @@
         "code": "zw",
         "name": "Zwolnione z VAT",
         "percent": 0,
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.created",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/account/756",
+      "payload": {
+        "code": "756",
+        "name": "Różnice kursowe i zaokrąglenia",
+        "type": "expense",
         "market": "pl"
       }
     }

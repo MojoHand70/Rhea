@@ -1,0 +1,131 @@
+{
+    "object_types": [
+        {
+            "name": "posting",
+            "version": 3,
+            "domain": "finance",
+            "is_document": false,
+            "fields": [
+                {
+                    "name": "entry",
+                    "type": "string",
+                    "required": true
+                },
+                {
+                    "name": "line",
+                    "type": "int",
+                    "required": true
+                },
+                {
+                    "name": "book",
+                    "type": "string",
+                    "required": true
+                },
+                {
+                    "name": "account",
+                    "type": "ref<account>",
+                    "required": true
+                },
+                {
+                    "name": "side",
+                    "type": "enum",
+                    "values": [
+                        "debit",
+                        "credit"
+                    ],
+                    "required": true
+                },
+                {
+                    "name": "amount",
+                    "type": "money",
+                    "required": true
+                },
+                {
+                    "name": "currency",
+                    "type": "string",
+                    "required": true
+                },
+                {
+                    "name": "date",
+                    "type": "date",
+                    "required": true
+                },
+                {
+                    "name": "tx_amount",
+                    "type": "money",
+                    "required": false
+                },
+                {
+                    "name": "tx_currency",
+                    "type": "string",
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "fx_rate",
+            "version": 1,
+            "domain": "finance",
+            "is_document": false,
+            "label_field": "code",
+            "fields": [
+                {
+                    "name": "code",
+                    "type": "string",
+                    "required": true
+                },
+                {
+                    "name": "base",
+                    "type": "string",
+                    "required": true
+                },
+                {
+                    "name": "quote",
+                    "type": "string",
+                    "required": true
+                },
+                {
+                    "name": "date",
+                    "type": "date",
+                    "required": true
+                },
+                {
+                    "name": "rate",
+                    "type": "string",
+                    "required": true
+                }
+            ]
+        }
+    ],
+    "view_defs": [
+        {
+            "view_id": "fx-rates",
+            "version": 1,
+            "notion": "list",
+            "title": "FX rates",
+            "domain": "finance",
+            "function": "documents",
+            "spec": {
+                "object_type": "fx_rate",
+                "columns": [
+                    {
+                        "field": "date",
+                        "label": "Date"
+                    },
+                    {
+                        "field": "base",
+                        "label": "From"
+                    },
+                    {
+                        "field": "quote",
+                        "label": "To"
+                    },
+                    {
+                        "field": "rate",
+                        "label": "Rate"
+                    }
+                ]
+            }
+        }
+    ]
+}

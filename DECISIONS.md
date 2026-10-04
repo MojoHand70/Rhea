@@ -95,6 +95,17 @@ so the next session does not re-derive them.
   domestic and foreign invoices alike, finishing what E2's "currency does
   not route" started. A missing rate refuses the event into the worklist:
   unexplainable beats guessed.
+- **Shipped** (`TestConvert`, pl pack v3): the rounding stance and the
+  rounding account are statutory and therefore pack data — pl-post gains
+  `convert{to PLN, date =$.issue_date, half_up, 756}` and account 756
+  (różnice kursowe) joins the wzorcowy plan kont. State reads arrive as
+  `core.Getter`, shared verbatim by executor and simulator with chain
+  overlay — the kernel's one new surface. In cohabitation the pl-stat
+  trial balance is currency-coherent for the first time: PLN plus
+  converted-PLN, never EUR mixed in. Rate registration stays a base rule
+  (rates have no market; a per-pack rule would recreate E2's capture):
+  base rules — register-company, register-fx-rate — still have no home,
+  and a base pack is recorded residue for later.
 
 ## 2026-10-04 — E2 attempt: two markets in one kernel fail as pure data
 

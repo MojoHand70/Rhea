@@ -41,6 +41,7 @@ func TestCohabitation(t *testing.T) {
 	seedFromFile(t, s, "finance_v4.json")
 	seedFromFile(t, s, "finance_v5.json") // books: posting v2, per-book trial balance
 	seedFromFile(t, s, "finance_v6.json") // sales_invoice v2: the seller is a ref
+	seedFromFile(t, s, "finance_v7.json") // posting v3 (tx trace), fx_rate
 
 	x := &exec.Executor{Store: s}
 	srv := &shell.Server{
@@ -128,7 +129,7 @@ func TestCohabitation(t *testing.T) {
 		t.Fatalf("worklist = %d, want 0 — both markets' master data installed", len(wl))
 	}
 	accs, _ := s.ObjectsByType(ctx, "account")
-	if len(accs) != 39 {
+	if len(accs) != 40 {
 		t.Fatalf("accounts = %d, want both charts", len(accs))
 	}
 	// The capture is gone: the SKR03 is explained by its own market's rule.
@@ -169,8 +170,20 @@ func TestCohabitation(t *testing.T) {
 	if r := invoice("re-b1", "2026-09-23", "de", "DE811111111", "RE 2026-001", "500.00", "95.00", "595.00", "19", "EUR"); r["booked"].(float64) != 1 {
 		t.Fatalf("beta invoice: %v", r)
 	}
-	// Currency no longer routes: Alfa's EUR-denominated domestic invoice
-	// stays Polish — the misrouting of the recorded attempt is dead.
+	// Currency no longer routes — it converts (E3). Alfa's EUR-denominated
+	// domestic invoice stays Polish, and its entry books functional PLN at
+	// the NBP rate the kernel reads from an fx_rate object: 246.00 EUR at
+	// 4.25 is 1045.50 PLN, transaction amounts carried on every line.
+	activate("register-fx-rate", core.RuleSpec{
+		Match: core.Match{EventType: "fx.rate.published"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "fx_rate",
+			Fields: map[string]string{"code": "=$.code", "base": "=$.base",
+				"quote": "=$.quote", "date": "=$.date", "rate": "=$.rate"}}},
+	})
+	post("/api/events", map[string]any{
+		"event_type": "fx.rate.published", "occurred_at": "2026-10-02", "dedup_key": "nbp-1002",
+		"payload": map[string]any{"code": "EUR/PLN/2026-10-02", "base": "EUR",
+			"quote": "PLN", "date": "2026-10-02", "rate": "4.25"}}, nil)
 	if r := invoice("fv-a2", "2026-10-02", "pl", "5250001111", "FV 1/10/2026", "200.00", "46.00", "246.00", "23", "EUR"); r["booked"].(float64) != 1 {
 		t.Fatalf("alfa EUR invoice: %v", r)
 	}
@@ -203,15 +216,16 @@ func TestCohabitation(t *testing.T) {
 		t.Fatalf("ust = %+v", ust.Rows)
 	}
 
-	// One trial balance notion, two companies' ledgers.
+	// One trial balance notion, two companies' ledgers — and the Polish one
+	// is currency-coherent now: PLN plus converted-PLN, never EUR mixed in.
 	var tb struct {
 		Rows [][]string `json:"rows"`
 	}
 	get("/api/views/trial-balance", &tb)
 	want := map[string][3]string{
-		"201":  {"pl-stat", "1476.00", "0.00"},
-		"700":  {"pl-stat", "0.00", "1200.00"},
-		"222":  {"pl-stat", "0.00", "276.00"},
+		"201":  {"pl-stat", "2275.50", "0.00"},    // 1230.00 + 246.00×4.25
+		"700":  {"pl-stat", "0.00", "1850.00"},    // 1000.00 + 200.00×4.25
+		"222":  {"pl-stat", "0.00", "425.50"},     // 230.00 + 46.00×4.25
 		"1400": {"de-stat", "595.00", "0.00"},
 		"8400": {"de-stat", "0.00", "500.00"},
 		"1776": {"de-stat", "0.00", "95.00"},
