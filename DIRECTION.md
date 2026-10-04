@@ -317,13 +317,25 @@ sub-language build.
   plural (`kind: self` more than once), events carry a company ref, packs
   bind per company — one company under the PL pack, one under DE. Proves:
   enterprise structure is refs, not tenancy. Depends on E1.
-- **E3 — currency.** Foreign-currency events post in transaction and
-  functional currency. Depends on the arithmetic sub-language (rate reads
-  through refs; the rounding stance is statutory and therefore pack data).
-  FX rate tables (NBP, ECB) are master-data events — rates arrive as
-  append-only facts, so every conversion is replay-deterministic by
-  construction. Period-end revaluation is a rule; its scheduling ties into
-  M5.
+- **E3 — currency.** Shipped 2026-10-04 (see DECISIONS): the attempt
+  failed as the predicted hollow-explanation contortion (precomputed PLN
+  amounts on the event; the system's own rate table decorative), and the
+  postings sub-language earned the `convert` clause — `{to, date,
+  rounding, rounding_account}`, method vocabulary in kernel code, choice
+  and parameters as rule data, no expression syntax anywhere. Rates are
+  fx_rate master data from append-only events; conversion runs at firing
+  time in integer arithmetic so replay never re-converts; the declared
+  half_up residue books to a declared account as a visible plug line;
+  identity conversion lets one rule explain domestic and foreign
+  documents; a missing rate refuses into the worklist. The rounding
+  stance and account are pl pack data (account 756). State reads arrived
+  as core.Getter, shared by executor and simulator. Still open from the
+  original plan: period-end revaluation as a rule (ties into M5
+  scheduling), and ref-reads in match conditions (E2's market field still
+  waits on them). The original expectation, kept for the record:
+  foreign-currency events post in transaction and functional currency;
+  FX rate tables (NBP, ECB) are master-data events, so every conversion
+  is replay-deterministic by construction.
 - **E4 — intercompany.** Cascade across company refs: entity A's sale
   emits entity B's purchase as a derived event whose provenance crosses
   the boundary. The killer demo: intercompany reconciliation — big ERP's
