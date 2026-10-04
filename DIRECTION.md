@@ -281,10 +281,16 @@ model. Dependencies are clean enough to interleave with the main ladder —
 E1 can run before M5, and E3 is what finally forces the arithmetic
 sub-language build.
 
-- **E1 — parallel books.** Two posting rule-books (PL statutory + group
-  GAAP) over the same `sales_invoice` events: two trial balances,
-  independent period locks, replay reproduces both. Proves: a GAAP is a
-  rule-book; parallel accounting is native. The code says this is not free:
+- **E1 — parallel books.** Shipped 2026-10-04 (see DECISIONS): the
+  data-only attempt failed on independent closes as predicted, `book`
+  earned admission as an entry-level qualifier defaulting to "main",
+  period locks are per (book, month) via intersected single-field
+  lookups, and one generic trial-balance view splits per book. Two
+  posting rule-books (PL statutory + group GAAP) over the same sale
+  events: two trial balances, independent period locks both directions,
+  a mixed event with one closed book refused whole, replay reproducing
+  both ledgers. Proves: a GAAP is a rule-book; parallel accounting is
+  native. The original expectation, kept for the record:
   postings resolve accounts by `code` against one flat population and the
   period lock is keyed by month alone — no book dimension anywhere. So E1
   is a genuine fail-as-data experiment: first attempt it with what exists
