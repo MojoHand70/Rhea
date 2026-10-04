@@ -55,6 +55,47 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-04 — E3 attempt: currency fails as pure data; `convert` earns admission
+
+- **The attempt** (`TestCurrencyAsPureData`): booking a EUR invoice into a
+  PLN ledger with today's vocabulary means the precomputed-amounts
+  contortion DIRECTION's network note predicted — the event carries
+  `gross_pln`/`net_pln`/`vat_pln` computed outside the system. It books,
+  and the explanation is hollow: the system holds EUR/PLN 4.3215 for the
+  invoice date, the event claims amounts computed at 4.50, and the ledger
+  agrees with the claim without a murmur. The rate table is decorative;
+  provenance points at a raw event that carries its own conversion; replay
+  reproduces numbers by copying, not explaining; and the entry has no
+  transaction-currency trace, so nothing can ever tie the PLN posting back
+  to the EUR document, let alone to a rate.
+- **Verdict: conversion must run at firing time in the kernel,
+  parameterized by rule data** — the sub-language precedent (postings,
+  `each`), NOT general expression syntax. The postings template earns an
+  optional `convert` clause: `{to, date, rounding, rounding_account}` —
+  deterministic method vocabulary in code (rate lookup, integer
+  multiply-divide, declared rounding, plug line), choice and parameters as
+  data. The AI composes clauses; it never authors arithmetic.
+- **Rates are master data**: a conventional `fx_rate` object (code "<from>/
+  <to>/<date>", base, quote, date, rate-as-decimal-string), materialized
+  from `fx.rate.published` events by a plain rule — append-only facts, so
+  every conversion is replay-fixed by construction. The composite `code` is
+  carried by the publisher (the resolution-keys-are-one-namespace decision,
+  third use). The statutory D-1 subtlety (NBP's table applies to the next
+  day) is the rate publisher's job: it publishes under application dates —
+  calendars stay out of the kernel.
+- **Rounding is statutory, so it is declared**: per-line `half_up` (the one
+  method until another earns its way in), and when per-line rounding breaks
+  the functional balance, the kernel books the difference to the declared
+  `rounding_account` as an explicit plug line — ledgers stay balanced by
+  invariant, and the rounding residue is visible, not hidden.
+- **The ledger is functional**: with `convert`, line amounts evaluate and
+  balance in transaction currency, then book in functional currency, each
+  posting carrying `tx_amount`/`tx_currency` (posting v3). `to` equal to
+  the transaction currency is the identity conversion — one rule explains
+  domestic and foreign invoices alike, finishing what E2's "currency does
+  not route" started. A missing rate refuses the event into the worklist:
+  unexplainable beats guessed.
+
 ## 2026-10-04 — E2 attempt: two markets in one kernel fail as pure data
 
 - **The attempt** (`TestCohabitation`): both market packs loaded into one
