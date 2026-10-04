@@ -84,7 +84,14 @@ func (x *Executor) evaluate(ctx context.Context, ev core.Event, rules []core.Rul
 	lookup := func(typ, field string, value any) ([]string, error) {
 		return x.Store.FindObjectIDsByField(ctx, typ, field, fmt.Sprintf("%v", value))
 	}
-	nodes, err := x.expandChain(ctx, ev, rules, payload, lookup)
+	get := func(id string) (map[string]any, bool, error) {
+		o, err := x.Store.GetObject(ctx, id)
+		if err != nil {
+			return nil, false, nil // not found; a lookup already vouched for real ids
+		}
+		return o.State, true, nil
+	}
+	nodes, err := x.expandChain(ctx, ev, rules, payload, lookup, get)
 	if err != nil {
 		return false, err
 	}
@@ -105,7 +112,7 @@ func (x *Executor) evaluate(ctx context.Context, ev core.Event, rules []core.Rul
 // plus the chain's earlier generations — the receipt's movement is visible to
 // the valuation rule — never their own siblings. Shared verbatim by the live
 // path and the simulator, so a dry run cannot drift from reality.
-func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []core.Rule, payload any, base core.Lookup) ([]chainNode, error) {
+func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []core.Rule, payload any, base core.Lookup, baseGet core.Getter) ([]chainNode, error) {
 	var nodes []chainNode
 	owner := map[string]string{} // object id → rule that claimed it
 	visible := 0                 // how many nodes earlier generations contributed
@@ -122,6 +129,17 @@ func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []cor
 		}
 		return ids, nil
 	}
+	// State reads see what lookups see: the base world plus the chain's
+	// earlier generations (a rate materialized earlier in this chain is
+	// readable by a later firing).
+	get := func(id string) (map[string]any, bool, error) {
+		for _, n := range nodes[:visible] {
+			if n.mat.ObjectID == id {
+				return n.mat.State, true, nil
+			}
+		}
+		return baseGet(id)
+	}
 	fire := func(ev core.Event, evPayload any, cause int) error {
 		idBase := fmt.Sprintf("%d", root.ID)
 		if cause >= 0 {
@@ -135,7 +153,7 @@ func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []cor
 			if !ok {
 				continue
 			}
-			mats, err := x.expandEffect(ctx, root, idBase, r, evPayload, lookup)
+			mats, err := x.expandEffect(ctx, root, idBase, r, evPayload, lookup, get)
 			if err != nil {
 				return err
 			}
@@ -257,13 +275,13 @@ func (x *Executor) book(ctx context.Context, root core.Event, nodes []chainNode)
 // date always comes from the root, and ids build on idBase — the root event
 // id for root firings, the causing object's id for cascaded ones — which
 // keeps every id reproducible without any sequence state.
-func (x *Executor) expandEffect(ctx context.Context, root core.Event, idBase string, r core.Rule, payload any, lookup core.Lookup) ([]core.MaterializedObject, error) {
+func (x *Executor) expandEffect(ctx context.Context, root core.Event, idBase string, r core.Rule, payload any, lookup core.Lookup, get core.Getter) ([]core.MaterializedObject, error) {
 	if r.Spec.Effect.Postings != nil {
 		postingType, err := x.Store.GetObjectType(ctx, PostingObjectType)
 		if err != nil {
 			return nil, fmt.Errorf("rule %s v%d: %w", r.ID, r.Version, err)
 		}
-		mats, err := ExpandPostings(r.Spec.Effect.Postings, postingType, root, idBase, r.ID, payload, lookup)
+		mats, err := ExpandPostings(r.Spec.Effect.Postings, postingType, root, idBase, r.ID, payload, lookup, get)
 		if err != nil {
 			return nil, fmt.Errorf("rule %s v%d postings: %w", r.ID, r.Version, err)
 		}

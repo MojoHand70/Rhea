@@ -185,9 +185,29 @@ type PostingsTemplate struct {
 	// as parallel rule-books over one log (DECISIONS 2026-10-04, E1). A
 	// literal or template; empty means "main". Declared at entry level, so an
 	// entry cannot straddle books by construction.
-	Book     string        `json:"book,omitempty"`
-	Currency string        `json:"currency"` // template, e.g. "PLN" or "=$.currency"
-	Lines    []PostingLine `json:"lines"`
+	Book     string           `json:"book,omitempty"`
+	Currency string           `json:"currency"` // template, e.g. "PLN" or "=$.currency"
+	Convert  *ConvertTemplate `json:"convert,omitempty"`
+	Lines    []PostingLine    `json:"lines"`
+}
+
+// ConvertTemplate books the entry in a functional currency (DECISIONS
+// 2026-10-04, E3): line amounts evaluate and balance in the transaction
+// currency, then book converted at the fx_rate object for (from, to, date),
+// each posting carrying tx_amount/tx_currency. `to` equal to the transaction
+// currency is the identity conversion — one rule explains domestic and
+// foreign documents alike. Deterministic method vocabulary lives in the
+// kernel; this clause is only the choice and its parameters.
+type ConvertTemplate struct {
+	To   string `json:"to"`   // template: the functional currency
+	Date string `json:"date"` // template: the rate's application date
+	// Rounding is statutory, so the stance is declared, never implied.
+	// "half_up" is the one admitted method; others join by proof.
+	Rounding string `json:"rounding"`
+	// RoundingAccount takes the plug line when per-line rounding breaks the
+	// functional balance — the residue stays visible and the ledger stays
+	// balanced by invariant. Without it, a broken balance refuses the entry.
+	RoundingAccount string `json:"rounding_account,omitempty"`
 }
 
 // PostingLine is one side of value movement: an account code (literal or
@@ -304,6 +324,25 @@ func (p *PostingsTemplate) validate() error {
 	}
 	if _, err := ParseTemplate(p.Currency); err != nil {
 		return fmt.Errorf("postings.currency: %w", err)
+	}
+	if c := p.Convert; c != nil {
+		if c.To == "" || c.Date == "" {
+			return fmt.Errorf("postings.convert needs to and date")
+		}
+		if _, err := ParseTemplate(c.To); err != nil {
+			return fmt.Errorf("postings.convert.to: %w", err)
+		}
+		if _, err := ParseTemplate(c.Date); err != nil {
+			return fmt.Errorf("postings.convert.date: %w", err)
+		}
+		if c.Rounding != "half_up" {
+			return fmt.Errorf("postings.convert.rounding must be declared; %q is not an admitted method", c.Rounding)
+		}
+		if c.RoundingAccount != "" {
+			if _, err := ParseTemplate(c.RoundingAccount); err != nil {
+				return fmt.Errorf("postings.convert.rounding_account: %w", err)
+			}
+		}
 	}
 	if len(p.Lines) < 2 {
 		return fmt.Errorf("a journal entry needs at least two lines")

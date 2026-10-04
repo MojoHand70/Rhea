@@ -132,6 +132,14 @@ func (x *Executor) simulate(ctx context.Context, rules []core.Rule) (SimRun, err
 		return ids, nil
 	}
 
+	get := func(id string) (map[string]any, bool, error) {
+		o, ok := objects[id]
+		if !ok {
+			return nil, false, nil
+		}
+		return o.State, true, nil
+	}
+
 	explained := map[int64]bool{}
 	var errs []string
 	for {
@@ -148,7 +156,7 @@ func (x *Executor) simulate(ctx context.Context, rules []core.Rule) (SimRun, err
 			}
 			// The exact chain expansion live firing runs — cascade included —
 			// with refs resolving against the simulated world.
-			nodes, err := x.expandChain(ctx, ev, rules, payload, lookup)
+			nodes, err := x.expandChain(ctx, ev, rules, payload, lookup, get)
 			if err != nil {
 				errs = append(errs, fmt.Sprintf("event %d: %v", ev.ID, err))
 				continue

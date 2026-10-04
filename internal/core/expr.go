@@ -31,6 +31,11 @@ type Template struct {
 // match; other callers (the period lock) ask only whether any exist.
 type Lookup func(objectType, field string, value any) ([]string, error)
 
+// Getter reads one object's state by id — the kernel's state-read surface
+// for sub-languages whose parameters name objects (the convert clause's
+// fx_rate). ok is false when the object does not exist.
+type Getter func(objectID string) (state map[string]any, ok bool, err error)
+
 // ResolveRef applies ref() semantics to a lookup result: exactly one match.
 func ResolveRef(lookup Lookup, objectType, field string, value any) (string, error) {
 	ids, err := lookup(objectType, field, value)
