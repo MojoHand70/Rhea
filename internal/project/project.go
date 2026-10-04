@@ -26,7 +26,11 @@ func Path() string {
 
 // Rebuild replays the derived events of the log into a fresh `objects` table.
 // State lands as JSON text; analysis SQL reaches into it with DuckDB's JSON
-// functions (json_extract_string etc.).
+// functions (json_extract_string etc.). Beside the immediate provenance
+// (source_event_id, rule), every row carries root_event_id — the raw event
+// its cascade chain started from — so analysis can group both sides of an
+// intercompany position by the one fact that caused them (E5: eliminations
+// match on provenance, not on heuristics).
 func Rebuild(ctx context.Context, s *store.Store, duckPath string) (int, error) {
 	derived, err := s.EventsByKind(ctx, core.KindDerived)
 	if err != nil {
@@ -56,12 +60,23 @@ func Rebuild(ctx context.Context, s *store.Store, duckPath string) (int, error) 
 			source_event_id BIGINT NOT NULL,
 			rule_id         VARCHAR NOT NULL,
 			rule_version    INTEGER NOT NULL,
-			occurred_at     DATE NOT NULL
+			occurred_at     DATE NOT NULL,
+			root_event_id   BIGINT NOT NULL
 		)`); err != nil {
 		return 0, err
 	}
+	// A cause that is itself a derived event chains onward; causes precede
+	// their effects in the log, so one ordered pass resolves every root.
+	root := map[int64]int64{}
+	rootOf := func(cause int64) int64 {
+		if r, ok := root[cause]; ok {
+			return r
+		}
+		return cause // a raw event: the chain's root
+	}
 	n := 0
 	for _, ev := range derived {
+		root[ev.ID] = rootOf(*ev.CauseEventID)
 		if ev.Type != core.EventObjectMaterialized {
 			continue
 		}
@@ -74,9 +89,10 @@ func Rebuild(ctx context.Context, s *store.Store, duckPath string) (int, error) 
 			return 0, err
 		}
 		if _, err := tx.ExecContext(ctx, `
-			INSERT INTO objects VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+			INSERT INTO objects VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			mat.ObjectID, mat.ObjectType, mat.TypeVersion, string(state),
-			*ev.CauseEventID, ev.RuleID, ev.RuleVersion, ev.OccurredAt); err != nil {
+			*ev.CauseEventID, ev.RuleID, ev.RuleVersion, ev.OccurredAt,
+			root[ev.ID]); err != nil {
 			return 0, err
 		}
 		n++
