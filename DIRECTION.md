@@ -181,6 +181,98 @@ One line: *richness grows as data behind the gate we have; grammar grows
 only by proof behind the same gate, one level up — and the log makes the
 grammar append-only whether we like it or not.*
 
+## What "big" means and the rules that keep us eligible (KK, 2026-10-04)
+
+Adopted as positioning; KK's one-year target (2027-10) is for this picture
+to hold end to end. Source: a conversation dissecting what makes S/4,
+Fusion or D365 "big" — enterprise structure model, process breadth on one
+data model, localization depth, encoded edge cases, controls and
+auditability, ecosystem. Its sharpest findings: only SAP owns its statutory
+substance (the rest built localization *plumbing* and outsourced the
+content to partner overlays); edge cases split into *industry* ones
+(encoded once, amortized across thousands of customers) and
+*company-specific* ones (the implementation killers — configuration
+becomes customization in disguise, every upgrade becomes a migration); and
+the structural flaw: regulation and company specifics bolted onto a
+monolith, and the bolts are where ERPs fail. Its closing sentence — "a
+design where statutory rules are first-class, versioned components would
+attack exactly that weakness" — describes Rhea without knowing it.
+
+The rules of eligibility — each one maps an ingredient of "big" to our
+mechanism, and each is already in SPEC or a direction note, which is itself
+the finding:
+
+1. **The kernel never learns a domain** (their process breadth). Their
+   version: every operational event has its accounting consequence,
+   hardcoded over decades. Ours: one language, the consequence as rule
+   cascade with provenance. Fail-as-data first, forever — an
+   invoice-specific branch in the kernel is the first day of a mid-market
+   ERP.
+2. **A market is a data file** (their localization depth — the real moat).
+   Statutory substance and statutory *semantics* (per-line vs per-document
+   VAT rounding, numbering) are pack data behind the adapter contract,
+   never kernel code. The network maintains the substance as consensus
+   rule-shapes behind every subscriber's own gate; worklist residue is a
+   completeness gauge no big ERP can measure about itself.
+3. **One extension mechanism, zero customization layer** (their edge
+   cases). Industry edge cases are open-class data the network learns
+   once; company-specific ones are the same kind of object as pack rules —
+   versioned, simulated, replayed, upgrade-safe because the grammar is
+   append-only by physics. In big ERP, custom is debt; in Rhea, custom is
+   data with the same guarantees as standard. Never a second mechanism.
+4. **The invariant layer is the audit story** (their controls — the one
+   dimension where we are ahead, not chasing). Their audit trail is a
+   feature; ours is the physics: append-only, provenance on every fact,
+   approval as an event, period locks, backfill ruled, auditable by
+   replay. Never traded for convenience.
+5. **The network replaces the labour market's function** (their
+   ecosystem). Buyers of big ERP partly purchase consultants who carry
+   edge-case knowledge in their heads; phase (a) does the implementation
+   interview, consensus rule-shapes carry the ISV knowledge as auditable
+   data, the editorial layer is the new certification. If implementing
+   Rhea ever requires code, the ecosystem reverts to the old labour
+   market.
+6. **AI authors, never executes** (the AiRP claim, below). Containment is
+   what makes the claim auditable; drop it and the brand collapses into
+   every other "AI ERP" press release.
+7. **Enterprise structure arrives as data too** (their structure model —
+   the gap, promoted to work below).
+
+Positioning, two decisions:
+
+- **"New era of ERP" means time-to-depth, not stack age.** The warning the
+  claim must survive: a new architecture alone makes no challenger; the
+  moat is accumulated business semantics, earned over decades. So "they
+  are old" is true in one precise sense: their accumulation mechanism —
+  semantics as code, welded into a monolith — cannot be sped up. Ours —
+  semantics as data, at network speed — is the flywheel, and its rate is
+  the metric. First evidence already on record: Germany as one data file,
+  days after Poland, versus partner-overlay-years.
+- **AiRP — AI Resource Planning.** Not an agent on top of old machinery;
+  the ARC reactor. The reactor powers the suit but is not the suit's
+  hands: AI is what makes a pure-metamodel ERP economically viable for the
+  first time (SPEC §1) — without the AI the language is unaffordable to
+  author (REA died of this), without the language the AI is unauditable.
+  A copilot on SAP can only *operate* existing semantics; AiRP's AI
+  *authors* semantics, and the network makes it collectively wiser. The
+  reactor works because it is contained — kernel sole writer, model output
+  as data, human gate — and the containment is what survives
+  due-diligence.
+
+**The gap, promoted from parked to work**: enterprise structure — multiple
+legal entities, parallel GAAPs, intercompany, multi-currency. It
+reconciles with the endgame line exactly: a GAAP *is* an explanation
+system, so parallel accounting is two rule-books explaining the same event
+log differently — "learns explanations, never facts" applied to accounting
+standards. Intercompany is cascade across company refs; FX and its
+statutory rounding land in the arithmetic sub-language. The named
+falsifiability test, of the M2 kind: express parallel GAAPs as pure data
+over one log, zero kernel changes.
+
+One line: *big is accumulated business semantics — theirs accumulated as
+code over decades, Rhea accumulates them as data at network speed, and the
+seven rules are what keep that claim auditable.*
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
@@ -226,4 +318,8 @@ grammar append-only whether we like it or not.*
   only, no auth (experiment non-goal).
 - **Multi-company is a ref, multi-tenant is infrastructure.** The operating
   company will be a `company` object (`kind: self`) that events reference;
-  tenancy stays out of the experiment.
+  tenancy stays out of the experiment. Promoted (KK, 2026-10-04): enterprise
+  structure is the named gap against big ERP and now has a destination —
+  parallel GAAPs as parallel rule-books explaining one event log,
+  intercompany as cascade across company refs, FX in the arithmetic
+  sub-language. A falsifiability test of the M2 kind: zero kernel changes.
