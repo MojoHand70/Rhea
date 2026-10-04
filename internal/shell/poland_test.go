@@ -37,6 +37,7 @@ func TestM3PolandPack(t *testing.T) {
 	seedFromFile(t, s, "finance_v5.json") // books: posting v2, per-book trial balance
 	seedFromFile(t, s, "finance_v6.json") // sales_invoice v2: the seller is a ref
 	seedFromFile(t, s, "finance_v7.json") // posting v3 (tx trace), fx_rate
+	seedFromFile(t, s, "finance_v8.json") // sales_invoice v3 (intragroup + nip echoes), purchase_invoice
 
 	srv := &shell.Server{
 		Store: s, Exec: &exec.Executor{Store: s},
@@ -155,7 +156,7 @@ func TestM3PolandPack(t *testing.T) {
 	post("/api/events", map[string]any{
 		"event_type": "sales.invoice.issued", "occurred_at": "2026-09-21", "dedup_key": "fv-1",
 		"payload": map[string]any{
-			"number": "FV 1/09/2026", "issue_date": "2026-09-21", "market": "pl",
+			"number": "FV 1/09/2026", "issue_date": "2026-09-21", "market": "pl", "intragroup": "no",
 			"seller_nip": "5250001111", "buyer_nip": "5260001246",
 			"net": "1000.00", "vat": "230.00", "gross": "1230.00",
 			"vat_rate": "23", "currency": "PLN",
@@ -240,7 +241,7 @@ func TestM3PolandPack(t *testing.T) {
 	post("/api/events", map[string]any{
 		"event_type": "sales.invoice.issued", "occurred_at": "2026-09-22", "dedup_key": "fv-bad",
 		"payload": map[string]any{
-			"number": "FV 2/09/2026", "issue_date": "2026-09-22", "market": "pl",
+			"number": "FV 2/09/2026", "issue_date": "2026-09-22", "market": "pl", "intragroup": "no",
 			"seller_nip": "5250001111", "buyer_nip": "5260001246",
 			"net": "1000.00", "vat": "230.00", "gross": "1200.00",
 			"vat_rate": "23", "currency": "PLN",

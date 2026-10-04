@@ -80,6 +80,24 @@ so the next session does not re-derive them.
   same named exit: ref-reads — reading through a ref, or passing a
   chain-provenance-sound id — on the arithmetic destiny list. When that
   arrives, the nip echo fields die with the market flag.
+- **Shipped** (`TestIntercompany`): sales_invoice v3 (finance_v8) echoes
+  `intragroup`/`seller_nip`/`buyer_nip`; pl pack v4 fills them; the mirror
+  rules are group-level data (what a phase-(a) agent drafts for a
+  subsidiary pair): ic-mirror-purchase raises the buyer's
+  `purchase_invoice` from the sales invoice's materialization — supplier,
+  owner and `mirror_of` all proper refs — and ic-mirror-post books it in
+  the buyer's book, E3's convert composing with cascade (Alfa's entry in
+  converted PLN, Beta's in EUR, one event). The killer-demo property is a
+  test assertion: every object on both sides provenance-chains to the
+  same root raw event, so the receivable and the payable cannot disagree
+  — intercompany reconciliation matches by construction; there is nothing
+  to reconcile, only to display. Transfer pricing is just the mirror's
+  templates (here: invoice amounts). Residue, named: the general mirror
+  needs per-pair rules until books compose (E2) and refs re-reference;
+  statutory intercompany VAT treatment (reverse charge, WDT 0%) is pack
+  depth blocked on conditional posting lines (E2 residue); an
+  intercompany reconciliation *view* is display work for the
+  reconciliation notion (SPEC, "later").
 
 ## 2026-10-04 — E3 attempt: currency fails as pure data; `convert` earns admission
 

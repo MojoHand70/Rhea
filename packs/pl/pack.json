@@ -1,6 +1,6 @@
 {
   "pack": "pl",
-  "version": 3,
+  "version": 4,
   "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF — rynek jako dane",
   "requires": [
     "company",
@@ -288,7 +288,10 @@
               "gross": "=$.gross",
               "vat_rate": "=ref(vat_rate, code, $.vat_rate)",
               "currency": "=$.currency",
-              "seller": "=ref(company, vat_id, $.seller_nip)"
+              "seller": "=ref(company, vat_id, $.seller_nip)",
+              "intragroup": "=$.intragroup",
+              "seller_nip": "=$.seller_nip",
+              "buyer_nip": "=$.buyer_nip"
             }
           }
         }

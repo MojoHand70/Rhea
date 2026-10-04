@@ -1,0 +1,166 @@
+{
+    "object_types": [
+        {
+            "name": "sales_invoice",
+            "version": 3,
+            "domain": "finance",
+            "is_document": true,
+            "label_field": "number",
+            "fields": [
+                {
+                    "name": "number",
+                    "type": "string",
+                    "required": true
+                },
+                {
+                    "name": "issue_date",
+                    "type": "date",
+                    "required": true
+                },
+                {
+                    "name": "seller",
+                    "type": "ref<company>",
+                    "required": true
+                },
+                {
+                    "name": "buyer",
+                    "type": "ref<company>",
+                    "required": true
+                },
+                {
+                    "name": "net",
+                    "type": "money",
+                    "required": true
+                },
+                {
+                    "name": "vat",
+                    "type": "money",
+                    "required": true
+                },
+                {
+                    "name": "gross",
+                    "type": "money",
+                    "required": true
+                },
+                {
+                    "name": "vat_rate",
+                    "type": "ref<vat_rate>",
+                    "required": true
+                },
+                {
+                    "name": "currency",
+                    "type": "string",
+                    "required": true
+                },
+                {
+                    "name": "intragroup",
+                    "type": "string",
+                    "required": false
+                },
+                {
+                    "name": "seller_nip",
+                    "type": "string",
+                    "required": false
+                },
+                {
+                    "name": "buyer_nip",
+                    "type": "string",
+                    "required": false
+                }
+            ]
+        },
+        {
+            "name": "purchase_invoice",
+            "version": 1,
+            "domain": "finance",
+            "is_document": true,
+            "label_field": "number",
+            "fields": [
+                {
+                    "name": "number",
+                    "type": "string",
+                    "required": true
+                },
+                {
+                    "name": "invoice_date",
+                    "type": "date",
+                    "required": true
+                },
+                {
+                    "name": "supplier",
+                    "type": "ref<company>",
+                    "required": true
+                },
+                {
+                    "name": "owner",
+                    "type": "ref<company>",
+                    "required": true
+                },
+                {
+                    "name": "mirror_of",
+                    "type": "ref<sales_invoice>",
+                    "required": true
+                },
+                {
+                    "name": "net",
+                    "type": "money",
+                    "required": true
+                },
+                {
+                    "name": "vat",
+                    "type": "money",
+                    "required": true
+                },
+                {
+                    "name": "gross",
+                    "type": "money",
+                    "required": true
+                },
+                {
+                    "name": "currency",
+                    "type": "string",
+                    "required": true
+                }
+            ]
+        }
+    ],
+    "view_defs": [
+        {
+            "view_id": "purchase-invoice-list",
+            "version": 1,
+            "notion": "list",
+            "title": "Purchase invoices",
+            "domain": "finance",
+            "function": "documents",
+            "spec": {
+                "object_type": "purchase_invoice",
+                "columns": [
+                    {
+                        "field": "number",
+                        "label": "Number"
+                    },
+                    {
+                        "field": "invoice_date",
+                        "label": "Date"
+                    },
+                    {
+                        "field": "supplier",
+                        "label": "Supplier"
+                    },
+                    {
+                        "field": "owner",
+                        "label": "Owner"
+                    },
+                    {
+                        "field": "gross",
+                        "label": "Gross"
+                    },
+                    {
+                        "field": "currency",
+                        "label": "Ccy"
+                    }
+                ]
+            }
+        }
+    ]
+}

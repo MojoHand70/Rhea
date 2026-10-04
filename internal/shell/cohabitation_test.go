@@ -42,6 +42,7 @@ func TestCohabitation(t *testing.T) {
 	seedFromFile(t, s, "finance_v5.json") // books: posting v2, per-book trial balance
 	seedFromFile(t, s, "finance_v6.json") // sales_invoice v2: the seller is a ref
 	seedFromFile(t, s, "finance_v7.json") // posting v3 (tx trace), fx_rate
+	seedFromFile(t, s, "finance_v8.json") // sales_invoice v3 (intragroup + nip echoes), purchase_invoice
 
 	x := &exec.Executor{Store: s}
 	srv := &shell.Server{
@@ -102,7 +103,7 @@ func TestCohabitation(t *testing.T) {
 		post("/api/events", map[string]any{
 			"event_type": "sales.invoice.issued", "occurred_at": date, "dedup_key": dedup,
 			"payload": map[string]any{
-				"number": number, "issue_date": date, "market": market,
+				"number": number, "issue_date": date, "market": market, "intragroup": "no",
 				"seller_nip": seller, "buyer_nip": map[string]string{"pl": "5260001246", "de": "DE123456789"}[market],
 				"net": net, "vat": vat, "gross": gross,
 				"vat_rate": rate, "currency": currency,
