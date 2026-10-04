@@ -273,6 +273,53 @@ One line: *big is accumulated business semantics — theirs accumulated as
 code over decades, Rhea accumulates them as data at network speed, and the
 seven rules are what keep that claim auditable.*
 
+## The enterprise-structure ladder (KK, 2026-10-04)
+
+Adopted as the plan for the gap named above: five stages, each an M2-style
+falsifiability test, each proving one ingredient of the big-ERP structure
+model. Dependencies are clean enough to interleave with the main ladder —
+E1 can run before M5, and E3 is what finally forces the arithmetic
+sub-language build.
+
+- **E1 — parallel books.** Two posting rule-books (PL statutory + group
+  GAAP) over the same `sales_invoice` events: two trial balances,
+  independent period locks, replay reproduces both. Proves: a GAAP is a
+  rule-book; parallel accounting is native. The code says this is not free:
+  postings resolve accounts by `code` against one flat population and the
+  period lock is keyed by month alone — no book dimension anywhere. So E1
+  is a genuine fail-as-data experiment: first attempt it with what exists
+  (prefixed codes, per-book lock objects), and let the `book` qualifier
+  *earn* admission into the postings sub-language — invariants balance per
+  entry per book and lock per (book, month), determinism proof, trivially
+  network-clusterable. The first closed-class change since cascade;
+  deserves the `each` discipline — the failed data-only attempt goes to
+  DECISIONS.md before the primitive lands.
+- **E2 — the entity dimension.** `company` objects go plural (`kind: self`
+  more than once), events carry a company ref, packs bind per company:
+  one company under the PL pack, one under DE, one kernel, one log. Also
+  un-parks "multi-market cohabitation in one ledger" (DECISIONS). Proves:
+  enterprise structure is refs, not tenancy. Depends on E1.
+- **E3 — currency.** Foreign-currency events post in transaction and
+  functional currency. Depends on the arithmetic sub-language (rate reads
+  through refs; the rounding stance is statutory and therefore pack data).
+  FX rate tables (NBP, ECB) are master-data events — rates arrive as
+  append-only facts, so every conversion is replay-deterministic by
+  construction. Period-end revaluation is a rule; its scheduling ties into
+  M5.
+- **E4 — intercompany.** Cascade across company refs: entity A's sale
+  emits entity B's purchase as a derived event whose provenance crosses
+  the boundary. The killer demo: intercompany reconciliation — big ERP's
+  monthly nightmare — *matches by construction*, because both sides share
+  a cause event id. Transfer pricing is just the rule that prices the
+  derived event. Depends on E2.
+- **E5 — consolidation.** The group is one more explanation: a
+  consolidation rule-book whose eliminations match on intercompany
+  provenance. Starts life on the analysis side in DuckDB. Depends on E4.
+
+One line: *the enterprise structure model is five proofs — book, entity,
+currency, boundary-crossing cause, group-as-explanation — each pure data
+unless it earns a primitive by the governance rules.*
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
@@ -323,3 +370,4 @@ seven rules are what keep that claim auditable.*
   parallel GAAPs as parallel rule-books explaining one event log,
   intercompany as cascade across company refs, FX in the arithmetic
   sub-language. A falsifiability test of the M2 kind: zero kernel changes.
+  Planned (2026-10-04): the enterprise-structure ladder above, E1–E5.
