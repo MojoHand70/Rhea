@@ -55,6 +55,32 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-04 — E1: parallel books fail as pure data; `book` earns admission
+
+- **The attempt** (`TestParallelBooksAsPureData`): a group-GAAP rule-book
+  beside the statutory one, over the same `sale.recorded` events, the group
+  CoA carried as accounts with prefixed codes. Posting *works* — multi-rule
+  firing books both entries from one event — but the book is first-class
+  nowhere: identity lives in account-code prefixes, exactly the rule-shape
+  contortion DIRECTION's network note warns about, and a trial balance can
+  only split books by joining codes back.
+- **The fail: independent period closes are inexpressible.** `period_lock`
+  is month-only and the kernel check is global: closing the statutory
+  September locks the group book too, and the lock object cannot even say
+  which book it means. Atomic multi-rule firing makes it total — one locked
+  book refuses the event for every book.
+- **Verdict: `book` earns admission into the postings sub-language** — the
+  first closed-class change since cascade, judged by the vocabulary-
+  governance rules: fail-as-data (this entry), invariant (book is declared
+  at entry level so an entry cannot straddle books by construction; the
+  lock invariant becomes per (book, month)), determinism (lock effects bake
+  into the log at firing time; replay untouched), network test (one small
+  field on two conventional types).
+- **Scope held back deliberately**: accounts stay one population with
+  globally unique codes — group CoAs have their own code schemes in
+  practice, so book-scoped account resolution waits for a real collision
+  to demand it (its own fail-as-data, when it comes).
+
 ## 2026-10-03 — M4: the second market proved the pack boundary
 
 - **Germany is one data file** (`packs/de`): SKR03 chart, 19/7/0 rates,
