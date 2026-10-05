@@ -415,6 +415,15 @@ design experts can restyle later without touching behavior**.
   screens via NOTIFY/SSE; readable field-level simulation diffs; omnibox +
   activities-as-data. Polish is whatever makes the mechanism visible;
   nothing invoice-specific, ever.
+- **Shipped 2026-10-05** (see DECISIONS): tokens, then the typed view API +
+  derived default views. Columns declare `{field, label, type}`, cells cross
+  as `{v, id?}` in canonical encoding, provenance is data, the shell formats
+  money per browser locale — Polish and English eyes now literally see the
+  same response differently, M4's lesson landing in the renderer. Objects
+  have their visualization by derivation (period_lock got its first screen
+  without anyone authoring one), and the analysis specs lost every `printf`:
+  SQL emits data, columns say what it means. Next on the ladder: the
+  provenance walk.
 
 One line: *the design language is tokens plus a closed set of notion
 primitives — the generic shell makes beauty a data change, so experts can
