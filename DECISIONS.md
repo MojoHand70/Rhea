@@ -55,6 +55,48 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-05 — cases attempt: raising carries, closing fails as pure data
+
+The next falsifiability test (DIRECTION: express Alpha's case model as pure
+data) — the attempt, run with the language as it stood, kept as executable
+evidence in `internal/exec/case_test.go`.
+
+- **The original expectation, kept for the record**: raising would carry
+  (cascade from any materialization), the subject would strain into the
+  union-ref contortion, resolving verbs were already shipped (contextual
+  activities), and the attempt would fail at "closes itself when the world
+  moves on" — forcing the amendment that DIRECTION 2026-10-03 already
+  recorded as a destination ("status is a projection, never an update").
+- **What carried**: a complaint event books the document, a cascade rule
+  raises the case from the document's own materialization — raised by the
+  system from events, never typed in, by construction (objects only exist
+  through rules); provenance walks the work item back to the root fact.
+  The resolving verb is a contextual activity with a `ref<case>` input,
+  shipped with activities-as-data.
+- **The recorded contortions**: subject as `(subject_type, subject_id)`
+  strings — `ref<T>` names one target and a case's subject is any object;
+  exit at union refs (SPEC §7, parked). Due dates cannot be computed
+  ("+14 days" is inexpressible); exit at the arithmetic sub-language.
+  "Open cases only" is a list-level filter ListSpec does not have; the
+  analysis notion carries it in SQL until a list filter earns its place.
+- **Where it failed — two facts, sharper than predicted**:
+  1. *Identity physics forbids even touching the case.* Ids are
+     cause-qualified, so a closing rule mints `case-<new event>` — a
+     duplicate, both open. No rule form can name an existing object; the
+     conflict guard never even fires.
+  2. *The closure marker is the hollow-explanation contortion* (E3's
+     shape): a `case_closure` object records the truth while the case's
+     own status field lies ("open", forever), and reality retreats into an
+     anti-join on the read side. A state field that can never tell the
+     truth is not explained state — invariant 5 refuses the shape.
+- **The exit**: the amendment — a rule effect that moves an existing
+  object's declared lifecycle along declared transitions, as a derived
+  event with provenance, replayed like everything else. Earns admission by
+  the four rules: this entry is the fail-as-data proof; the invariant is
+  kernel-validated transitions declared on the ObjectType; the determinism
+  proof and the network test (a tiny declarative `amend` clause) come with
+  the primitive.
+
 ## 2026-10-05 — activities as data: the doors are declared
 
 - **The shape**: `Activity` = name, lifecycle, domain, description, spec
