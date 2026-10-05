@@ -73,6 +73,13 @@ so the next session does not re-derive them.
   strings.** The language has `ref<type>` but a settlement may point at a
   sales_invoice, purchase_invoice or tax_declaration; whether `ref<a|b>`
   (union refs) earns admission is parked as SPEC §7 material.
+- **The language explains itself natively: `GET /api/types` + a `language`
+  system function beside worklist and rules.** Each type carries its
+  explanation — producing rules (with consumed event types), views (derived
+  ones marked), ref edges both directions, instance count. Not a ViewDef:
+  definitions are not objects, and views render objects. Why: a system that
+  learns by explanation must be able to explain its own vocabulary; "what
+  does Rhea recognize?" was answerable only by grepping seed files.
 
 ## 2026-10-05 — the typed view API and derived default views
 

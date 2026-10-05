@@ -1,6 +1,6 @@
 /* Rhea shell. Renders view notions generically: the client knows list/detail/
-   analysis plus the system functions (worklist, rules). It knows nothing about
-   any particular object type. */
+   analysis plus the system functions (worklist, rules, language). It knows
+   nothing about any particular object type. */
 "use strict";
 
 const $ = (sel, el = document) => el.querySelector(sel);
@@ -66,6 +66,8 @@ function selectDomain(domain) {
       menu.append(el("div", { class: "menu-item", onclick: () => openWorklist() }, "Inbox"));
     } else if (fn.function === "rules") {
       menu.append(el("div", { class: "menu-item", onclick: () => openRules() }, "All rules"));
+    } else if (fn.function === "language") {
+      menu.append(el("div", { class: "menu-item", onclick: () => openLanguage() }, "Object types"));
     } else {
       for (const v of (fn.views || [])) {
         if (v.notion === "detail") continue; // details open from lists
@@ -342,6 +344,97 @@ function openRules() {
         el("th", {}, "rule"), el("th", { class: "num" }, "ver"), el("th", {}, "status"),
         el("th", {}, "author"), el("th", {}, "description"), el("th", {}, ""))),
       tbody));
+    return out;
+  });
+}
+
+/* --- system function: language --------------------------------------------
+   The language explaining itself: every object type the kernel recognizes,
+   with what produces it, what shows it, and what it relates to. The catalog
+   is how a system that learns by explanation explains its own vocabulary. */
+
+function openLanguage() {
+  openTab("language", "Language", async () => {
+    const types = await api("/api/types");
+    if (!types.length) return [el("h1", {}, "Language"), el("p", { class: "hint" }, "No object types yet.")];
+    const cols = ["type", "domain", "kind", "fields", "produced by", "views", "instances"];
+    const tbody = el("tbody", {});
+    for (const t of types) {
+      tbody.append(el("tr", { class: "clickable", onclick: () => openType(t.name) },
+        el("td", {}, t.name),
+        el("td", {}, t.domain),
+        el("td", {}, t.is_document ? "document" : "master data"),
+        el("td", { class: "num" }, String(t.fields.length)),
+        el("td", { class: "num" }, String(t.produced_by.length)),
+        el("td", { class: "num" }, String(t.views.length)),
+        el("td", { class: "num" }, String(t.instances))));
+    }
+    return [
+      el("h1", {}, "Language — object types"),
+      el("p", { class: "hint" },
+        "Every type the kernel recognizes. A type with no producing rule is vocabulary waiting for rules."),
+      el("table", {},
+        el("thead", {}, el("tr", {}, ...cols.map((c, i) =>
+          el("th", i >= 3 ? { class: "num" } : {}, c)))),
+        tbody),
+    ];
+  });
+}
+
+function openType(name) {
+  openTab(`type:${name}`, name, async () => {
+    const types = await api("/api/types");
+    const t = types.find(x => x.name === name);
+    if (!t) return [el("p", { class: "hint" }, `Type ${name} not found.`)];
+
+    const out = [el("h1", {}, `${t.name} v${t.version}`),
+      el("p", { class: "hint" },
+        `${t.is_document ? "document" : "master data"} · domain ${t.domain}` +
+        (t.label_field ? ` · labeled by ${t.label_field}` : "") +
+        ` · ${t.instances} instance${t.instances === 1 ? "" : "s"}`)];
+
+    out.push(el("div", { class: "section" }, el("h3", {}, "Fields"),
+      el("table", {},
+        el("thead", {}, el("tr", {}, el("th", {}, "field"), el("th", {}, "type"),
+          el("th", {}, "required"), el("th", {}, "values"))),
+        el("tbody", {}, ...t.fields.map(f =>
+          el("tr", {}, el("td", {}, f.name), el("td", {}, f.type),
+            el("td", {}, f.required ? "yes" : ""), el("td", {}, (f.values || []).join(", "))))))));
+
+    const produced = el("div", { class: "section" }, el("h3", {}, "Produced by"));
+    if (!t.produced_by.length) {
+      produced.append(el("p", { class: "hint" },
+        "No rule produces this type yet — vocabulary waiting for rules."));
+    } else {
+      for (const r of t.produced_by) {
+        produced.append(el("p", {},
+          el("strong", {}, r.event_type || "(any event)"), ` → ${r.rule_id} v${r.version} `,
+          el("span", { class: "hint" }, `(${r.status}) ${r.description || ""}`)));
+      }
+    }
+    out.push(produced);
+
+    out.push(el("div", { class: "section" }, el("h3", {}, "Views"),
+      ...(t.views.length
+        ? t.views.map(v => el("p", {},
+            el("a", { href: "#", onclick: (e) => { e.preventDefault(); openView(v.view_id, v.title); } }, v.title),
+            el("span", { class: "hint" }, ` ${v.notion}${v.derived ? ", derived from the type" : ""}`)))
+        : [el("p", { class: "hint" }, "No views — which cannot happen: list and detail derive from the type.")])));
+
+    const rel = el("div", { class: "section" }, el("h3", {}, "Relations"));
+    for (const e of t.references) {
+      rel.append(el("p", {}, `${e.field} → `,
+        el("a", { href: "#", onclick: (ev) => { ev.preventDefault(); openType(e.to_type); } }, e.to_type)));
+    }
+    for (const e of t.referenced_by) {
+      rel.append(el("p", {},
+        el("a", { href: "#", onclick: (ev) => { ev.preventDefault(); openType(e.from_type); } }, e.from_type),
+        `.${e.field} → ${t.name}`));
+    }
+    if (!t.references.length && !t.referenced_by.length) {
+      rel.append(el("p", { class: "hint" }, "Stands alone — no ref fields in either direction."));
+    }
+    out.push(rel);
     return out;
   });
 }

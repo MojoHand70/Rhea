@@ -31,6 +31,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/nav", s.handleNav)
 	mux.HandleFunc("GET /api/views/{id}", s.handleView)
 	mux.HandleFunc("GET /api/worklist", s.handleWorklist)
+	mux.HandleFunc("GET /api/types", s.handleTypes)
 	mux.HandleFunc("GET /api/rules", s.handleRules)
 	mux.HandleFunc("POST /api/rules/draft", s.handleDraft)
 	mux.HandleFunc("POST /api/rules/{id}/approve", s.handleApprove)
@@ -134,7 +135,8 @@ func (s *Server) handleNav(w http.ResponseWriter, r *http.Request) {
 	// System functions: rendered by the shell natively, present in every domain.
 	for i := range domains {
 		domains[i].Functions = append(domains[i].Functions,
-			navFunction{Function: "worklist"}, navFunction{Function: "rules"})
+			navFunction{Function: "worklist"}, navFunction{Function: "rules"},
+			navFunction{Function: "language"})
 	}
 	writeJSON(w, 200, domains)
 }
