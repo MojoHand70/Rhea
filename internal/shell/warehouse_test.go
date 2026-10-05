@@ -168,27 +168,54 @@ func TestM2WarehouseWithoutKernelChanges(t *testing.T) {
 	// Views resolve cross-domain refs: the receipt names its supplier from
 	// the finance domain and goods from the warehouse domain, as labels.
 	var list struct {
-		Rows [][]string `json:"rows"`
+		Rows [][]cell `json:"rows"`
 	}
 	get("/api/views/goods-receipt-list", &list)
 	if len(list.Rows) != 1 {
 		t.Fatalf("receipt list = %+v", list.Rows)
 	}
-	row := list.Rows[0]
+	row := cellVals(list.Rows)[0]
 	if row[1] != "Omikron GmbH" || row[2] != "Widget" || row[3] != "Magazyn główny" || row[4] != "25" {
 		t.Fatalf("receipt row = %v", row)
 	}
 
 	// The analysis side aggregates stock on hand: 25 in − 8 out = 17.
 	var stock struct {
-		Rows [][]string `json:"rows"`
+		Rows [][]cell `json:"rows"`
 	}
 	get("/api/views/stock-on-hand", &stock)
 	if len(stock.Rows) != 1 {
 		t.Fatalf("stock = %+v", stock.Rows)
 	}
-	if r := stock.Rows[0]; r[0] != "WID-1" || r[2] != "MAIN" || r[3] != "17" {
+	if r := cellVals(stock.Rows)[0]; r[0] != "WID-1" || r[2] != "MAIN" || r[3] != "17" {
 		t.Fatalf("stock row = %v", r)
+	}
+
+	// stock_movement has a stored list but never had a stored detail: the
+	// shell derives one from the type, and the list points at it.
+	var mlist struct {
+		DetailViewID string `json:"detail_view_id"`
+	}
+	get("/api/views/movement-list", &mlist)
+	if mlist.DetailViewID != "derived:detail:stock_movement" {
+		t.Fatalf("movement detail view = %q", mlist.DetailViewID)
+	}
+	var mdetail struct {
+		Sections []struct {
+			Fields []struct {
+				Field string `json:"field"`
+				Type  string `json:"type"`
+				V     string `json:"v"`
+				ID    string `json:"id"`
+			} `json:"fields"`
+		} `json:"sections"`
+	}
+	get("/api/views/derived:detail:stock_movement?object_id="+movements[0].ID, &mdetail)
+	if len(mdetail.Sections) != 1 {
+		t.Fatalf("derived detail = %+v", mdetail)
+	}
+	if f := mdetail.Sections[0].Fields[0]; f.Field != "item" || f.Type != "ref<item>" || f.V != "Widget" || f.ID == "" {
+		t.Fatalf("derived detail item = %+v", f)
 	}
 
 	// Determinism holds across domains.

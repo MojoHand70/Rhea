@@ -65,6 +65,7 @@ tr.clickable:hover td { background: var(--surface-raised); }
 .kv { display: grid; grid-template-columns: var(--size-kv-label) 1fr;
       row-gap: var(--space-1); }
 .kv .k { color: var(--text-muted); }
+.num-inline { font-variant-numeric: tabular-nums; }
 .provenance { margin-top: var(--space-4); color: var(--text-muted);
               font-size: var(--text-sm); font-style: italic; }
 

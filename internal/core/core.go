@@ -385,6 +385,11 @@ type ListSpec struct {
 type ColumnSpec struct {
 	Field string `json:"field"`
 	Label string `json:"label"`
+	// Type declares the column's field type for renderers (money, int, date,
+	// string, enum, ref<...>). List and detail views derive types from the
+	// ObjectType and ignore this; analysis columns have no ObjectType, so the
+	// view declares them. Empty means undeclared: renderers get a bare string.
+	Type string `json:"type,omitempty"`
 }
 
 // DetailSpec: spec of a `detail` notion.

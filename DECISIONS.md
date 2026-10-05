@@ -55,6 +55,30 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-05 — the typed view API and derived default views
+
+- **The view API carries semantics; renderers format.** Columns declare
+  `{field, label, type}`; cells cross as `{v, id?}` with `v` in the canonical
+  boundary encoding — money as the "1234.56" decimal string (invariant 6),
+  never locale-formatted — and a ref cell carries the referenced object id
+  next to its resolved label. Detail provenance crosses as data `(event_id,
+  rule_id, rule_version)`; the renderer phrases it. The web shell formats
+  money per browser locale (BigInt string surgery, no floats): Polish and
+  English eyes see the same response differently, which is the replaceable-
+  interpreter contract doing its job.
+- **Money renders bare; currency stays a sibling column.** A money field does
+  not name its currency field; binding them on FieldDef is a later language
+  change if a view ever needs the pairing.
+- **Default views are derived from the ObjectType** (version 0, ids
+  `derived:list:<type>` / `derived:detail:<type>`), grouped in the submenu as
+  "documents" or "master data" by `is_document`. A stored list or detail for
+  the type switches the derived one off: ViewDefs are the exceptions
+  (localization, role, emphasis), never boilerplate. period_lock and
+  stock_movement's detail got screens today without anyone authoring one.
+- Analysis columns gain an optional declared `type`; a declared money column
+  arrives from DuckDB as BIGINT minor units and crosses as the decimal
+  string. Undeclared columns stay bare strings for the renderer.
+
 ## 2026-10-05 — design tokens: the aesthetic contract is a file
 
 - **`web/tokens.css` is the shell's whole design language**: two layers of CSS

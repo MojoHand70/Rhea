@@ -293,7 +293,7 @@ func TestIntercompany(t *testing.T) {
 	// One trial balance, the group position visible: Alfa's receivable in
 	// PLN, Beta's payable in EUR, both from the one event.
 	var tb struct {
-		Rows [][]string `json:"rows"`
+		Rows [][]cell `json:"rows"`
 	}
 	get("/api/views/trial-balance", &tb)
 	want := map[string][3]string{
@@ -308,7 +308,7 @@ func TestIntercompany(t *testing.T) {
 		"1776": {"de-stat", "0.00", "38.00"},
 	}
 	seen := 0
-	for _, r := range tb.Rows {
+	for _, r := range cellVals(tb.Rows) {
 		if w, ok := want[r[1]]; ok {
 			if r[0] != w[0] || r[3] != w[1] || r[4] != w[2] {
 				t.Fatalf("account %s: %v, want %v", r[1], r, w)
@@ -331,13 +331,13 @@ func TestIntercompany(t *testing.T) {
 		"payload": map[string]any{"code": "EUR/PLN/2026-10-31", "base": "EUR",
 			"quote": "PLN", "date": "2026-10-31", "rate": "4.10"}}, nil)
 	var ic struct {
-		Rows [][]string `json:"rows"`
+		Rows [][]cell `json:"rows"`
 	}
 	get("/api/views/intercompany-positions", &ic)
 	if len(ic.Rows) != 1 {
 		t.Fatalf("positions = %+v", ic.Rows)
 	}
-	if r := ic.Rows[0]; r[0] != fmt.Sprint(root) || r[1] != "1230.00" || r[2] != "1230.00" || r[3] != "0.00" {
+	if r := cellVals(ic.Rows)[0]; r[0] != fmt.Sprint(root) || r[1] != "1230.00" || r[2] != "1230.00" || r[3] != "0.00" {
 		t.Fatalf("position row = %v (root %d)", r, root)
 	}
 
@@ -347,7 +347,7 @@ func TestIntercompany(t *testing.T) {
 	// office survives — and the translation residue (the IC entry booked at
 	// 4.30, translated at 4.10) is a visible CTA line, not a hidden leak.
 	var gtb struct {
-		Rows [][]string `json:"rows"`
+		Rows [][]cell `json:"rows"`
 	}
 	get("/api/views/group-trial-balance", &gtb)
 	wantGroup := [][]string{
@@ -360,8 +360,8 @@ func TestIntercompany(t *testing.T) {
 		{"8400", "Erlöse 19% USt", "0.00", "200.00", "-200.00"},
 		{"CTA", "Translation difference", "11.22", "0.00", "11.22"},
 	}
-	if !reflect.DeepEqual(gtb.Rows, wantGroup) {
-		t.Fatalf("group trial balance:\n got %v\nwant %v", gtb.Rows, wantGroup)
+	if !reflect.DeepEqual(cellVals(gtb.Rows), wantGroup) {
+		t.Fatalf("group trial balance:\n got %v\nwant %v", cellVals(gtb.Rows), wantGroup)
 	}
 
 	// One replay, two entities, identical state — the intercompany chain

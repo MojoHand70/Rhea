@@ -151,48 +151,59 @@ func TestM0DemoStory(t *testing.T) {
 		t.Fatalf("worklist after approve: %d", len(wl.Events))
 	}
 
-	// 5. List view shows both documents with formatted money.
+	// 5. List view shows both documents; money crosses typed and canonical.
 	var list struct {
-		Columns      []string   `json:"columns"`
-		Rows         [][]string `json:"rows"`
-		ObjectIDs    []string   `json:"object_ids"`
-		DetailViewID string     `json:"detail_view_id"`
+		Columns      []column `json:"columns"`
+		Rows         [][]cell `json:"rows"`
+		ObjectIDs    []string `json:"object_ids"`
+		DetailViewID string   `json:"detail_view_id"`
 	}
 	get("/api/views/invoice-list", &list)
 	if len(list.Rows) != 2 || list.DetailViewID != "invoice-detail" {
 		t.Fatalf("list = %+v", list)
 	}
-	if list.Rows[0][0] != "ACME Sp. z o.o." || list.Rows[0][3] != "350.50" {
-		t.Fatalf("list row 0 = %v", list.Rows[0])
+	if list.Columns[3].Type != "money" {
+		t.Fatalf("total column not typed money: %+v", list.Columns)
+	}
+	rows := cellVals(list.Rows)
+	if rows[0][0] != "ACME Sp. z o.o." || rows[0][3] != "350.50" {
+		t.Fatalf("list row 0 = %v", rows[0])
 	}
 
-	// 6. Detail view explains the object by its rule.
+	// 6. Detail view explains the object by its rule, provenance as data.
 	var detail struct {
-		Provenance string `json:"provenance"`
-		Sections   []struct {
-			Title  string
-			Fields []struct{ Label, Value string }
+		Provenance struct {
+			EventID     int64  `json:"event_id"`
+			RuleID      string `json:"rule_id"`
+			RuleVersion int    `json:"rule_version"`
+		} `json:"provenance"`
+		Sections []struct {
+			Title  string `json:"title"`
+			Fields []struct {
+				Label string `json:"label"`
+				Type  string `json:"type"`
+				V     string `json:"v"`
+			} `json:"fields"`
 		} `json:"sections"`
 	}
 	get("/api/views/invoice-detail?object_id="+list.ObjectIDs[0], &detail)
-	if !strings.Contains(detail.Provenance, "book-pln-invoice") {
-		t.Fatalf("provenance = %q", detail.Provenance)
+	if detail.Provenance.RuleID != "book-pln-invoice" || detail.Provenance.EventID == 0 {
+		t.Fatalf("provenance = %+v", detail.Provenance)
 	}
-	if detail.Sections[1].Fields[0].Value != "350.50" {
+	if detail.Sections[1].Fields[0].V != "350.50" {
 		t.Fatalf("detail total = %+v", detail.Sections[1])
 	}
 
 	// 7. Analysis view aggregates from the DuckDB read side.
 	var analysis struct {
-		Columns []string   `json:"columns"`
-		Rows    [][]string `json:"rows"`
+		Rows [][]cell `json:"rows"`
 	}
 	get("/api/views/invoice-by-customer", &analysis)
 	if len(analysis.Rows) != 2 {
 		t.Fatalf("analysis = %+v", analysis)
 	}
-	if analysis.Rows[0][0] != "Beta Industries GmbH" || analysis.Rows[0][2] != "1200.00" {
-		t.Fatalf("analysis row 0 = %v", analysis.Rows[0])
+	if arows := cellVals(analysis.Rows); arows[0][0] != "Beta Industries GmbH" || arows[0][2] != "1200.00" {
+		t.Fatalf("analysis row 0 = %v", arows[0])
 	}
 
 	// 8. Determinism: replay reproduces the object cache.
@@ -207,6 +218,116 @@ func TestM0DemoStory(t *testing.T) {
 	if string(bj) != string(aj) {
 		t.Fatalf("replay diverged")
 	}
+}
+
+// TestDerivedDefaultViews: an ObjectType without stored views still has a
+// serviceable list and detail, derived from the type itself (DIRECTION
+// 2026-10-05). Stored ViewDefs are the exceptions, never a prerequisite for
+// seeing objects; period_lock has never had a view and never needed one.
+func TestDerivedDefaultViews(t *testing.T) {
+	s := storetest.New(t)
+	seedFromFile(t, s, "finance.json")
+	seedFromFile(t, s, "finance_v3.json") // period_lock arrives with no views
+
+	srv := &shell.Server{Store: s, Exec: &exec.Executor{Store: s},
+		DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb")}
+	ts := httptest.NewServer(srv.Handler())
+	defer ts.Close()
+
+	get := func(path string, out any) {
+		t.Helper()
+		res, err := ts.Client().Get(ts.URL + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+		if res.StatusCode != 200 {
+			var e map[string]string
+			json.NewDecoder(res.Body).Decode(&e)
+			t.Fatalf("GET %s: %d %s", path, res.StatusCode, e["error"])
+		}
+		if err := json.NewDecoder(res.Body).Decode(out); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// The derived list is navigable, grouped as master data, and no derived
+	// view shadows a type that has stored views.
+	var nav []struct {
+		Domain    string `json:"domain"`
+		Functions []struct {
+			Function string `json:"function"`
+			Views    []struct {
+				ViewID string `json:"view_id"`
+				Title  string `json:"title"`
+			} `json:"views"`
+		} `json:"functions"`
+	}
+	get("/api/nav", &nav)
+	found := ""
+	for _, d := range nav {
+		for _, fn := range d.Functions {
+			for _, v := range fn.Views {
+				switch v.ViewID {
+				case "derived:list:period_lock":
+					found = fn.Function
+					if v.Title != "Period lock" {
+						t.Fatalf("derived title = %q", v.Title)
+					}
+				case "derived:list:invoice", "derived:list:account":
+					t.Fatalf("derived view shadows a stored one: %s", v.ViewID)
+				}
+			}
+		}
+	}
+	if found != "master data" {
+		t.Fatalf("derived period_lock list grouped as %q, want master data", found)
+	}
+
+	// It serves like any stored view: version 0, typed columns from the
+	// ObjectType, and a derived detail to click through to.
+	var list struct {
+		View struct {
+			Version int `json:"version"`
+		} `json:"view"`
+		Columns      []column `json:"columns"`
+		Rows         [][]cell `json:"rows"`
+		DetailViewID string   `json:"detail_view_id"`
+	}
+	get("/api/views/derived:list:period_lock", &list)
+	if list.View.Version != 0 || list.DetailViewID != "derived:detail:period_lock" {
+		t.Fatalf("derived list = %+v", list)
+	}
+	if len(list.Columns) != 1 || list.Columns[0].Field != "month" || list.Columns[0].Type != "string" {
+		t.Fatalf("derived columns = %+v", list.Columns)
+	}
+}
+
+// column and cell mirror the typed view API: columns declare semantics
+// ({field, label, type}), cells carry canonical values ({v}) plus the
+// referenced object id ({id}) on refs. Formatting is the renderer's job.
+type column struct {
+	Field string `json:"field"`
+	Label string `json:"label"`
+	Type  string `json:"type"`
+}
+
+type cell struct {
+	V  string `json:"v"`
+	ID string `json:"id"`
+}
+
+// cellVals flattens typed rows to their canonical values, which is what most
+// assertions care about.
+func cellVals(rows [][]cell) [][]string {
+	out := make([][]string, len(rows))
+	for i, r := range rows {
+		out[i] = make([]string, len(r))
+		for j, c := range r {
+			out[i][j] = c.V
+		}
+	}
+	return out
 }
 
 // seedFromFile loads a testdata/seed file the same way `rhea load` does.
@@ -417,35 +538,44 @@ func TestMasterDataRefStory(t *testing.T) {
 		t.Fatalf("worklist not empty after fixpoint: %d", len(wl.Events))
 	}
 
-	// 5. Views resolve refs to labels: the list shows the company name.
+	// 5. Views resolve refs to labels and carry the referenced id alongside:
+	// the list shows the company name, the cell knows the company object.
 	var list struct {
-		Rows      [][]string `json:"rows"`
-		ObjectIDs []string   `json:"object_ids"`
+		Rows      [][]cell `json:"rows"`
+		ObjectIDs []string `json:"object_ids"`
 	}
 	get("/api/views/invoice-list", &list)
-	if len(list.Rows) != 2 || list.Rows[0][0] != "ACME Sp. z o.o." {
+	if len(list.Rows) != 2 || list.Rows[0][0].V != "ACME Sp. z o.o." {
 		t.Fatalf("list rows = %v", list.Rows)
+	}
+	if !strings.HasPrefix(list.Rows[0][0].ID, "company-") {
+		t.Fatalf("ref cell id = %q, want the company object id", list.Rows[0][0].ID)
 	}
 	var detail struct {
 		Sections []struct {
-			Title  string
-			Fields []struct{ Label, Value string }
+			Title  string `json:"title"`
+			Fields []struct {
+				Label string `json:"label"`
+				V     string `json:"v"`
+				ID    string `json:"id"`
+			} `json:"fields"`
 		} `json:"sections"`
 	}
 	get("/api/views/invoice-detail?object_id="+list.ObjectIDs[0], &detail)
-	if detail.Sections[0].Fields[0].Value != "ACME Sp. z o.o." {
+	if f := detail.Sections[0].Fields[0]; f.V != "ACME Sp. z o.o." || !strings.HasPrefix(f.ID, "company-") {
 		t.Fatalf("detail customer = %+v", detail.Sections[0])
 	}
 
 	// 6. The analysis view joins invoices to companies on the ref.
 	var analysis struct {
-		Rows [][]string `json:"rows"`
+		Rows [][]cell `json:"rows"`
 	}
 	get("/api/views/invoice-by-customer", &analysis)
-	if len(analysis.Rows) != 2 ||
-		analysis.Rows[0][0] != "Beta Industries GmbH" || analysis.Rows[0][2] != "1200.00" ||
-		analysis.Rows[1][0] != "ACME Sp. z o.o." || analysis.Rows[1][2] != "350.50" {
-		t.Fatalf("analysis rows = %v", analysis.Rows)
+	arows := cellVals(analysis.Rows)
+	if len(arows) != 2 ||
+		arows[0][0] != "Beta Industries GmbH" || arows[0][2] != "1200.00" ||
+		arows[1][0] != "ACME Sp. z o.o." || arows[1][2] != "350.50" {
+		t.Fatalf("analysis rows = %v", arows)
 	}
 
 	// 7. Determinism: refs were resolved at fire time and baked into derived

@@ -138,7 +138,7 @@ func TestParallelBooksTrialBalance(t *testing.T) {
 	// One generic analysis view, two ledgers: the trial balance splits per
 	// book, each book balanced on its own chart of accounts.
 	var tb struct {
-		Rows [][]string `json:"rows"`
+		Rows [][]cell `json:"rows"`
 	}
 	get("/api/views/trial-balance", &tb)
 	want := [][]string{
@@ -147,7 +147,7 @@ func TestParallelBooksTrialBalance(t *testing.T) {
 		{"pl-stat", "201", "Rozrachunki z odbiorcami", "100.00", "0.00", "100.00"},
 		{"pl-stat", "700", "Sprzedaż produktów", "0.00", "100.00", "-100.00"},
 	}
-	if !reflect.DeepEqual(tb.Rows, want) {
-		t.Fatalf("trial balance:\n got %v\nwant %v", tb.Rows, want)
+	if !reflect.DeepEqual(cellVals(tb.Rows), want) {
+		t.Fatalf("trial balance:\n got %v\nwant %v", cellVals(tb.Rows), want)
 	}
 }

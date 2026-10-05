@@ -112,16 +112,51 @@ async function refreshActive() {
   catch (e) { c.replaceChildren(el("p", { class: "hint" }, "Error: " + e.message)); }
 }
 
-/* --- notion renderers ----------------------------------------------------- */
+/* --- typed values ---------------------------------------------------------
+   The API carries semantics, the renderer decides formatting (the typed view
+   API, DIRECTION 2026-10-05): columns declare {field, label, type}; cells are
+   {v, id?} with v in canonical encoding (money as "1234.56" minor-exact
+   decimal strings). This renderer formats for the browser's locale — Polish
+   eyes see 1 234,56, English eyes 1,234.56, from the same response. */
+
+const decimalSep = (() => {
+  try { return new Intl.NumberFormat().formatToParts(1.1).find(p => p.type === "decimal").value; }
+  catch { return "."; }
+})();
+
+function fmtMoney(v) { // "-1234.56" canonical → locale-grouped; BigInt keeps it float-free
+  if (!v) return "";
+  const neg = v.startsWith("-");
+  const [whole, frac = "00"] = (neg ? v.slice(1) : v).split(".");
+  try { return (neg ? "-" : "") + new Intl.NumberFormat().format(BigInt(whole)) + decimalSep + frac; }
+  catch { return v; }
+}
+
+const numericType = (t) => t === "money" || t === "int";
+
+/* Formats one typed cell into DOM content. A ref shows its label and carries
+   the referenced object id in the tooltip (the provenance walk will make it
+   a link). Untyped columns (analysis without declarations) render as-is. */
+function cellContent(cell, type) {
+  const v = cell?.v ?? "";
+  if (type === "money") return fmtMoney(v);
+  if (cell?.id && v !== cell.id) return el("span", { title: cell.id }, v);
+  return v;
+}
 
 function dataTable(columns, rows, onRowClick) {
-  const numeric = columns.map((_, i) => rows.every(r => /^-?\d+(\.\d+)?$/.test(r[i] ?? "")));
+  // Alignment is type-driven; for undeclared columns, fall back to sniffing —
+  // a renderer heuristic, which is the one place heuristics belong.
+  const numeric = columns.map((c, i) =>
+    numericType(c.type) || (!c.type && rows.length > 0 && rows.every(r => /^-?\d+(\.\d+)?$/.test(r[i]?.v ?? ""))));
+  const numCls = (i) => numeric[i] ? "num" : "";
   return el("table", {},
     el("thead", {}, el("tr", {}, ...columns.map((c, i) =>
-      el("th", { class: numeric[i] ? "num" : "" }, c)))),
+      el("th", { class: numCls(i) }, c.label)))),
     el("tbody", {}, ...rows.map((r, ri) =>
       el("tr", onRowClick ? { class: "clickable", onclick: () => onRowClick(ri) } : {},
-        ...r.map((v, i) => el("td", { class: numeric[i] ? "num" : "" }, v ?? ""))))));
+        ...r.map((cell, i) => el("td", { class: numCls(i) },
+          cellContent(cell, columns[i].type)))))));
 }
 
 function openView(viewId, title, objectId) {
@@ -155,11 +190,14 @@ function renderDetail(d) {
   const out = [el("h1", {}, `${d.view.title} — ${d.object.object_id}`)];
   for (const s of d.sections) {
     out.push(el("div", { class: "section" },
-      el("h3", {}, s.Title),
-      el("div", { class: "kv" }, ...s.Fields.flatMap(f =>
-        [el("div", { class: "k" }, f.Label), el("div", {}, f.Value)]))));
+      el("h3", {}, s.title),
+      el("div", { class: "kv" }, ...s.fields.flatMap(f =>
+        [el("div", { class: "k" }, f.label),
+         el("div", f.type === "money" ? { class: "num-inline" } : {}, cellContent(f, f.type))]))));
   }
-  out.push(el("p", { class: "provenance" }, "Explained by: " + d.provenance));
+  const p = d.provenance;
+  out.push(el("p", { class: "provenance" },
+    `Explained by: event ${p.event_id} via rule ${p.rule_id} v${p.rule_version}`));
   return out;
 }
 

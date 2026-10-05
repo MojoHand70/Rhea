@@ -204,23 +204,25 @@ func TestCohabitation(t *testing.T) {
 	// The statutory registers split by the seller's country: each market's
 	// register sees only its company's invoices.
 	var reg, ust struct {
-		Rows [][]string `json:"rows"`
+		Rows [][]cell `json:"rows"`
 	}
 	get("/api/views/rejestr-vat-sprzedazy", &reg)
-	if len(reg.Rows) != 2 ||
-		reg.Rows[0][0] != "2026-09" || reg.Rows[0][1] != "23" || reg.Rows[0][4] != "1230.00" ||
-		reg.Rows[1][0] != "2026-10" || reg.Rows[1][4] != "246.00" {
-		t.Fatalf("rejestr = %+v", reg.Rows)
+	regRows := cellVals(reg.Rows)
+	if len(regRows) != 2 ||
+		regRows[0][0] != "2026-09" || regRows[0][1] != "23" || regRows[0][4] != "1230.00" ||
+		regRows[1][0] != "2026-10" || regRows[1][4] != "246.00" {
+		t.Fatalf("rejestr = %+v", regRows)
 	}
 	get("/api/views/ust-je-monat", &ust)
-	if len(ust.Rows) != 1 || ust.Rows[0][0] != "2026-09" || ust.Rows[0][1] != "19" || ust.Rows[0][4] != "595.00" {
-		t.Fatalf("ust = %+v", ust.Rows)
+	ustRows := cellVals(ust.Rows)
+	if len(ustRows) != 1 || ustRows[0][0] != "2026-09" || ustRows[0][1] != "19" || ustRows[0][4] != "595.00" {
+		t.Fatalf("ust = %+v", ustRows)
 	}
 
 	// One trial balance notion, two companies' ledgers — and the Polish one
 	// is currency-coherent now: PLN plus converted-PLN, never EUR mixed in.
 	var tb struct {
-		Rows [][]string `json:"rows"`
+		Rows [][]cell `json:"rows"`
 	}
 	get("/api/views/trial-balance", &tb)
 	want := map[string][3]string{
@@ -232,7 +234,7 @@ func TestCohabitation(t *testing.T) {
 		"1776": {"de-stat", "0.00", "95.00"},
 	}
 	seen := 0
-	for _, r := range tb.Rows {
+	for _, r := range cellVals(tb.Rows) {
 		if w, ok := want[r[1]]; ok {
 			if r[0] != w[0] || r[3] != w[1] || r[4] != w[2] {
 				t.Fatalf("account %s: %v, want %v", r[1], r, w)

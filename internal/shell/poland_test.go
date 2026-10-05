@@ -168,24 +168,24 @@ func TestM3PolandPack(t *testing.T) {
 
 	// The document renders with resolved labels; money formats from minor units.
 	var list struct {
-		Rows [][]string `json:"rows"`
+		Rows [][]cell `json:"rows"`
 	}
 	get("/api/views/sales-invoice-list", &list)
 	if len(list.Rows) != 1 {
 		t.Fatalf("invoice list = %+v", list.Rows)
 	}
-	if r := list.Rows[0]; r[0] != "FV 1/09/2026" || r[2] != "Nabywca S.A." || r[3] != "1000.00" || r[5] != "1230.00" {
+	if r := cellVals(list.Rows)[0]; r[0] != "FV 1/09/2026" || r[2] != "Nabywca S.A." || r[3] != "1000.00" || r[5] != "1230.00" {
 		t.Fatalf("invoice row = %v", r)
 	}
 
 	// The trial balance carries the entry on the Polish accounts.
 	var tb struct {
-		Rows [][]string `json:"rows"`
+		Rows [][]cell `json:"rows"`
 	}
 	get("/api/views/trial-balance", &tb)
 	want := map[string][2]string{"201": {"1230.00", "0.00"}, "700": {"0.00", "1000.00"}, "222": {"0.00", "230.00"}}
 	seen := 0
-	for _, r := range tb.Rows {
+	for _, r := range cellVals(tb.Rows) {
 		if w, ok := want[r[1]]; ok {
 			if r[0] != "pl-stat" || r[3] != w[0] || r[4] != w[1] {
 				t.Fatalf("account %s: book %s debit %s credit %s, want pl-stat %v", r[1], r[0], r[3], r[4], w)
@@ -199,13 +199,13 @@ func TestM3PolandPack(t *testing.T) {
 
 	// The VAT register aggregates by month and rate.
 	var reg struct {
-		Rows [][]string `json:"rows"`
+		Rows [][]cell `json:"rows"`
 	}
 	get("/api/views/rejestr-vat-sprzedazy", &reg)
 	if len(reg.Rows) != 1 {
 		t.Fatalf("rejestr = %+v", reg.Rows)
 	}
-	if r := reg.Rows[0]; r[0] != "2026-09" || r[1] != "23" || r[2] != "1000.00" || r[3] != "230.00" || r[4] != "1230.00" {
+	if r := cellVals(reg.Rows)[0]; r[0] != "2026-09" || r[1] != "23" || r[2] != "1000.00" || r[3] != "230.00" || r[4] != "1230.00" {
 		t.Fatalf("rejestr row = %v", r)
 	}
 
@@ -222,13 +222,13 @@ func TestM3PolandPack(t *testing.T) {
 		t.Fatalf("adapter run: %+v", run)
 	}
 	var subs struct {
-		Rows [][]string `json:"rows"`
+		Rows [][]cell `json:"rows"`
 	}
 	get("/api/views/ksef-submissions", &subs)
 	if len(subs.Rows) != 1 {
 		t.Fatalf("submissions = %+v", subs.Rows)
 	}
-	if r := subs.Rows[0]; r[0] != "FV 1/09/2026" || len(r[1]) == 0 || len(r[2]) == 0 {
+	if r := cellVals(subs.Rows)[0]; r[0] != "FV 1/09/2026" || len(r[1]) == 0 || len(r[2]) == 0 {
 		t.Fatalf("submission row = %v", r)
 	}
 	run, err = adapter.Run(ctx, s, srv.Exec, ksef)

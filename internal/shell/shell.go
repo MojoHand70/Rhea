@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"rhea/internal/agent"
@@ -61,10 +62,49 @@ type navDomain struct {
 	Functions []navFunction `json:"functions"`
 }
 
-// handleNav builds the activity bar and submenus from the stored view
+// effectiveViewDefs is what the shell navigates and serves: the stored view
+// definitions plus, for every object type missing a list or detail, the view
+// derived from the type itself (core.DerivedListView/DerivedDetailView).
+// Stored views are the exceptions; derivation is the default.
+func (s *Server) effectiveViewDefs(ctx context.Context) ([]core.ViewDef, error) {
+	vds, err := s.Store.LatestViewDefs(ctx)
+	if err != nil {
+		return nil, err
+	}
+	types, err := s.Store.ListObjectTypes(ctx)
+	if err != nil {
+		return nil, err
+	}
+	hasList, hasDetail := map[string]bool{}, map[string]bool{}
+	for _, v := range vds {
+		switch v.Notion {
+		case "list":
+			var sp core.ListSpec
+			if json.Unmarshal(v.Spec, &sp) == nil {
+				hasList[sp.ObjectType] = true
+			}
+		case "detail":
+			var sp core.DetailSpec
+			if json.Unmarshal(v.Spec, &sp) == nil {
+				hasDetail[sp.ObjectType] = true
+			}
+		}
+	}
+	for _, t := range types {
+		if !hasList[t.Name] {
+			vds = append(vds, core.DerivedListView(t))
+		}
+		if !hasDetail[t.Name] {
+			vds = append(vds, core.DerivedDetailView(t))
+		}
+	}
+	return vds, nil
+}
+
+// handleNav builds the activity bar and submenus from the effective view
 // definitions, then appends the system functions every domain carries.
 func (s *Server) handleNav(w http.ResponseWriter, r *http.Request) {
-	vds, err := s.Store.LatestViewDefs(r.Context())
+	vds, err := s.effectiveViewDefs(r.Context())
 	if err != nil {
 		writeErr(w, 500, err)
 		return
@@ -105,7 +145,7 @@ func (s *Server) handleNav(w http.ResponseWriter, r *http.Request) {
 // notion so the client stays a dumb renderer.
 func (s *Server) handleView(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	vds, err := s.Store.LatestViewDefs(ctx)
+	vds, err := s.effectiveViewDefs(ctx)
 	if err != nil {
 		writeErr(w, 500, err)
 		return
@@ -133,19 +173,51 @@ func (s *Server) handleView(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// displayValue formats one state value; a ref field renders as the referenced
-// object's label_field so humans see "ACME Sp. z o.o.", not "company-7". A
-// ref that does not resolve (old type versions hold plain strings) falls back
-// to the raw value.
-func (s *Server) displayValue(ctx context.Context, v any, fd core.FieldDef) string {
+// The typed view API (DIRECTION 2026-10-05): the contract carries semantics,
+// renderers decide formatting. Columns declare a field and its type; cells
+// carry the canonical boundary encoding (money as "1234.56" decimal strings,
+// invariant 6), and a ref cell carries the referenced object's id next to its
+// label so any renderer can both show it and follow it.
+
+type columnOut struct {
+	Field string `json:"field"`
+	Label string `json:"label"`
+	Type  string `json:"type,omitempty"` // "" = undeclared: render as a bare string
+}
+
+type cellOut struct {
+	V  string `json:"v"`            // canonical value, never locale-formatted
+	ID string `json:"id,omitempty"` // refs only: the referenced object id
+}
+
+// typedCell encodes one state value. A ref resolves to the referenced
+// object's label_field so humans see "ACME Sp. z o.o.", not "company-7"; a
+// ref that does not resolve (old type versions hold plain strings) falls
+// back to the raw value, and the id rides along either way.
+func (s *Server) typedCell(ctx context.Context, v any, fd core.FieldDef) cellOut {
+	if v == nil {
+		return cellOut{}
+	}
 	if _, isRef := core.RefTarget(fd.Type); isRef {
 		if id, ok := v.(string); ok && id != "" {
+			c := cellOut{V: id, ID: id}
 			if label := s.refLabel(ctx, id); label != "" {
-				return label
+				c.V = label
 			}
+			return c
 		}
 	}
-	return display(v, fd.Type)
+	if fd.Type == "money" {
+		// Money arrives from state JSON as float64 minor units (exact for
+		// int64 magnitudes that fit 2^53) and leaves as a decimal string.
+		switch n := v.(type) {
+		case float64:
+			return cellOut{V: core.FormatMoney(int64(n))}
+		case int64:
+			return cellOut{V: core.FormatMoney(n)}
+		}
+	}
+	return cellOut{V: fmt.Sprintf("%v", v)}
 }
 
 func (s *Server) refLabel(ctx context.Context, objectID string) string {
@@ -159,23 +231,6 @@ func (s *Server) refLabel(ctx context.Context, objectID string) string {
 	}
 	label, _ := o.State[ot.LabelField].(string)
 	return label
-}
-
-// display formats a state value for humans, by field type. Money arrives from
-// JSON as float64 minor units (exact for int64 magnitudes that fit 2^53).
-func display(v any, fieldType string) string {
-	if v == nil {
-		return ""
-	}
-	if fieldType == "money" {
-		switch n := v.(type) {
-		case float64:
-			return core.FormatMoney(int64(n))
-		case int64:
-			return core.FormatMoney(n)
-		}
-	}
-	return fmt.Sprintf("%v", v)
 }
 
 func (s *Server) serveList(ctx context.Context, w http.ResponseWriter, vd *core.ViewDef) {
@@ -194,24 +249,27 @@ func (s *Server) serveList(ctx context.Context, w http.ResponseWriter, vd *core.
 		writeErr(w, 500, err)
 		return
 	}
-	cols := make([]string, len(spec.Columns))
+	cols := make([]columnOut, len(spec.Columns))
+	fds := make([]core.FieldDef, len(spec.Columns))
 	for i, c := range spec.Columns {
-		cols[i] = c.Label
+		fd, _ := objType.Field(c.Field)
+		fds[i] = fd
+		cols[i] = columnOut{Field: c.Field, Label: c.Label, Type: fd.Type}
 	}
-	rows := make([][]string, 0, len(objs))
+	rows := make([][]cellOut, 0, len(objs))
 	ids := make([]string, 0, len(objs))
 	for _, o := range objs {
-		row := make([]string, len(spec.Columns))
+		row := make([]cellOut, len(spec.Columns))
 		for i, c := range spec.Columns {
-			fd, _ := objType.Field(c.Field)
-			row[i] = s.displayValue(ctx, o.State[c.Field], fd)
+			row[i] = s.typedCell(ctx, o.State[c.Field], fds[i])
 		}
 		rows = append(rows, row)
 		ids = append(ids, o.ID)
 	}
-	// Row click opens the detail view for the same object type, if one exists.
+	// Row click opens the detail view for the same object type; with derived
+	// defaults in the effective set, every type has one.
 	detailViewID := ""
-	if vds, err := s.Store.LatestViewDefs(ctx); err == nil {
+	if vds, err := s.effectiveViewDefs(ctx); err == nil {
 		for _, v := range vds {
 			if v.Notion != "detail" {
 				continue
@@ -247,23 +305,32 @@ func (s *Server) serveDetail(ctx context.Context, w http.ResponseWriter, vd *cor
 		writeErr(w, 500, err)
 		return
 	}
-	type fieldOut struct{ Label, Value string }
+	type fieldOut struct {
+		Field string `json:"field"`
+		Label string `json:"label"`
+		Type  string `json:"type,omitempty"`
+		V     string `json:"v"`
+		ID    string `json:"id,omitempty"`
+	}
 	type sectionOut struct {
-		Title  string
-		Fields []fieldOut
+		Title  string     `json:"title"`
+		Fields []fieldOut `json:"fields"`
 	}
 	sections := make([]sectionOut, 0, len(spec.Sections))
 	for _, sec := range spec.Sections {
 		so := sectionOut{Title: sec.Title}
 		for _, f := range sec.Fields {
 			fd, _ := objType.Field(f)
-			so.Fields = append(so.Fields, fieldOut{Label: f, Value: s.displayValue(ctx, o.State[f], fd)})
+			c := s.typedCell(ctx, o.State[f], fd)
+			so.Fields = append(so.Fields, fieldOut{Field: f, Label: f, Type: fd.Type, V: c.V, ID: c.ID})
 		}
 		sections = append(sections, so)
 	}
+	// Provenance crosses as data (invariant 5); the renderer phrases it.
 	writeJSON(w, 200, map[string]any{
 		"view": vd, "object": o, "sections": sections,
-		"provenance": fmt.Sprintf("event %d via rule %s v%d", o.SourceEventID, o.RuleID, o.RuleVersion),
+		"provenance": map[string]any{"event_id": o.SourceEventID,
+			"rule_id": o.RuleID, "rule_version": o.RuleVersion},
 	})
 }
 
@@ -284,7 +351,37 @@ func (s *Server) serveAnalysis(ctx context.Context, w http.ResponseWriter, vd *c
 		writeErr(w, 500, err)
 		return
 	}
-	writeJSON(w, 200, map[string]any{"view": vd, "columns": cols, "rows": rows})
+	// Columns pair up with the spec's declarations by position; the SQL name
+	// is the fallback. A declared money column arrives from DuckDB as minor
+	// units (BIGINT, invariant 6) and crosses as the decimal string.
+	outCols := make([]columnOut, len(cols))
+	for i, c := range cols {
+		outCols[i] = columnOut{Field: c, Label: c}
+		if i < len(spec.Columns) {
+			sc := spec.Columns[i]
+			if sc.Field != "" {
+				outCols[i].Field = sc.Field
+			}
+			if sc.Label != "" {
+				outCols[i].Label = sc.Label
+			}
+			outCols[i].Type = sc.Type
+		}
+	}
+	outRows := make([][]cellOut, len(rows))
+	for i, r := range rows {
+		outRows[i] = make([]cellOut, len(r))
+		for j, v := range r {
+			if outCols[j].Type == "money" && v != "" {
+				if minor, err := strconv.ParseInt(v, 10, 64); err == nil {
+					outRows[i][j] = cellOut{V: core.FormatMoney(minor)}
+					continue
+				}
+			}
+			outRows[i][j] = cellOut{V: v}
+		}
+	}
+	writeJSON(w, 200, map[string]any{"view": vd, "columns": outCols, "rows": outRows})
 }
 
 // --- worklist, rules, actions ---------------------------------------------

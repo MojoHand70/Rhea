@@ -143,23 +143,23 @@ func TestM4GermanyPack(t *testing.T) {
 	}
 
 	var list struct {
-		Rows [][]string `json:"rows"`
+		Rows [][]cell `json:"rows"`
 	}
 	get("/api/views/rechnungen-list", &list)
 	if len(list.Rows) != 1 {
 		t.Fatalf("rechnungen = %+v", list.Rows)
 	}
-	if r := list.Rows[0]; r[0] != "RE 2026-001" || r[2] != "Käufer GmbH" || r[5] != "595.00" {
+	if r := cellVals(list.Rows)[0]; r[0] != "RE 2026-001" || r[2] != "Käufer GmbH" || r[5] != "595.00" {
 		t.Fatalf("rechnung row = %v", r)
 	}
 
 	var tb struct {
-		Rows [][]string `json:"rows"`
+		Rows [][]cell `json:"rows"`
 	}
 	get("/api/views/trial-balance", &tb)
 	want := map[string][2]string{"1400": {"595.00", "0.00"}, "8400": {"0.00", "500.00"}, "1776": {"0.00", "95.00"}}
 	seen := 0
-	for _, r := range tb.Rows {
+	for _, r := range cellVals(tb.Rows) {
 		if w, ok := want[r[1]]; ok {
 			if r[0] != "de-stat" || r[3] != w[0] || r[4] != w[1] {
 				t.Fatalf("account %s: book %s debit %s credit %s, want de-stat %v", r[1], r[0], r[3], r[4], w)
@@ -172,13 +172,13 @@ func TestM4GermanyPack(t *testing.T) {
 	}
 
 	var ust struct {
-		Rows [][]string `json:"rows"`
+		Rows [][]cell `json:"rows"`
 	}
 	get("/api/views/ust-je-monat", &ust)
 	if len(ust.Rows) != 1 {
 		t.Fatalf("ust = %+v", ust.Rows)
 	}
-	if r := ust.Rows[0]; r[0] != "2026-09" || r[1] != "19" || r[2] != "500.00" || r[3] != "95.00" || r[4] != "595.00" {
+	if r := cellVals(ust.Rows)[0]; r[0] != "2026-09" || r[1] != "19" || r[2] != "500.00" || r[3] != "95.00" || r[4] != "595.00" {
 		t.Fatalf("ust row = %v", r)
 	}
 
