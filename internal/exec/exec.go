@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"rhea/internal/core"
 	"rhea/internal/store"
@@ -266,6 +267,18 @@ func (x *Executor) book(ctx context.Context, root core.Event, nodes []chainNode)
 			return err
 		}
 	}
+	// The single writer is the single announcer: one notice per booked chain,
+	// naming the touched types, delivered only if this transaction commits.
+	touched, seen := []string{}, map[string]bool{}
+	for _, n := range nodes {
+		if !seen[n.mat.ObjectType] {
+			seen[n.mat.ObjectType] = true
+			touched = append(touched, n.mat.ObjectType)
+		}
+	}
+	if err := store.NotifyProjection(ctx, tx, strings.Join(touched, ",")); err != nil {
+		return err
+	}
 	return tx.Commit(ctx)
 }
 
@@ -406,6 +419,10 @@ func (x *Executor) Replay(ctx context.Context) ([]core.Object, error) {
 			return nil, err
 		}
 		out = append(out, o)
+	}
+	// A replay rewrites the whole cache; every live screen should look again.
+	if err := store.NotifyProjection(ctx, tx, "replay"); err != nil {
+		return nil, err
 	}
 	return out, tx.Commit(ctx)
 }

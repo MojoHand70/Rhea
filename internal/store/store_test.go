@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"rhea/internal/core"
 	"rhea/internal/store"
@@ -188,5 +189,42 @@ func TestDraftDoesNotSuspendActive(t *testing.T) {
 	active, _ = s.ActiveRules(ctx)
 	if len(active) != 0 {
 		t.Fatalf("superseded rule still active: %+v", active)
+	}
+}
+
+// TestProjectionNotices: the announce channel honors transaction boundaries —
+// a notice sent inside a transaction reaches listeners only on commit.
+func TestProjectionNotices(t *testing.T) {
+	s := testStore(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	notices, err := s.ProjectionNotices(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := s.Pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback(ctx)
+	if err := store.NotifyProjection(ctx, tx, "invoice,posting"); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case p := <-notices:
+		t.Fatalf("notice %q arrived before commit", p)
+	case <-time.After(150 * time.Millisecond):
+	}
+	if err := tx.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case p := <-notices:
+		if p != "invoice,posting" {
+			t.Fatalf("notice = %q", p)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("no notice after commit")
 	}
 }

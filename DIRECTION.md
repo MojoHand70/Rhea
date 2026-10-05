@@ -432,6 +432,13 @@ design experts can restyle later without touching behavior**.
   on screen now, not just in a test. Refs became doors (`list → ref → detail
   → walk` closes the loop). Next: live screens via NOTIFY/SSE, then readable
   simulation diffs.
+- **Shipped 2026-10-05, live screens** (see DECISIONS): the executor
+  announces every committed booking from inside the transaction, one SSE
+  stream per browser tab carries the notices, and live tabs — views, the
+  Language catalog, the walk — re-render in place. Tabs holding human state
+  stay manual. Submit an event in one pane and watch the invoice, its
+  postings and the trial balance appear unrefreshed. Next: readable
+  field-level simulation diffs, then omnibox + activities-as-data.
 
 One line: *the design language is tokens plus a closed set of notion
 primitives — the generic shell makes beauty a data change, so experts can

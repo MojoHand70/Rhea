@@ -43,6 +43,7 @@ async function boot() {
   NAV = await api("/api/nav");
   renderActivityBar();
   if (NAV.length) selectDomain(NAV[0].domain);
+  startLive();
 }
 
 function renderActivityBar() {
@@ -89,10 +90,11 @@ function selectDomain(domain) {
 
 /* --- tabs ---------------------------------------------------------------- */
 
-function openTab(id, title, render) {
+function openTab(id, title, render, live = false) {
   let t = tabs.find(x => x.id === id);
   if (!t) { t = { id, title, render }; tabs.push(t); }
   t.render = render;
+  t.live = live; // live tabs re-render when a projection notice arrives
   activeTab = t;
   renderTabBar();
   refreshActive();
@@ -196,6 +198,21 @@ function openView(viewId, title, objectId) {
       case "analysis": return renderAnalysis(data);
       default: return [el("p", { class: "hint" }, `Notion ${data.view.notion} not renderable.`)];
     }
+  }, true); // view tabs are live: projections re-render them in place
+}
+
+/* --- live screens -----------------------------------------------------------
+   The executor is the single writer, so it is the single announcer: one SSE
+   stream per browser tab, one notice per committed projection write. A notice
+   is a signal, never data — live tabs re-read through the API. Tabs holding
+   human state (worklist drafts, simulation results) stay manual. */
+
+function startLive() {
+  const es = new EventSource("/api/live");
+  let timer;
+  es.addEventListener("projection", () => {
+    clearTimeout(timer); // bursts collapse into one re-render
+    timer = setTimeout(() => { if (activeTab?.live) refreshActive(); }, 200);
   });
 }
 
@@ -284,7 +301,7 @@ function openExplain(q) {
         "The highlighted chain leads to what you asked about; every hop names the rule version that explains it."),
       render(d.tree),
     ];
-  });
+  }, true); // chains grow when rules fire; the walk stays current
 }
 
 function renderAnalysis(d) {
@@ -462,7 +479,7 @@ function openLanguage() {
           el("th", i >= 3 ? { class: "num" } : {}, c)))),
         tbody),
     ];
-  });
+  }, true); // instance counts move with the projections
 }
 
 function openType(name) {
@@ -524,7 +541,7 @@ function openType(name) {
     }
     out.push(rel);
     return out;
-  });
+  }, true);
 }
 
 boot().catch(e => toast(e.message, true));

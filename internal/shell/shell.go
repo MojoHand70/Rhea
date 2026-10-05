@@ -33,6 +33,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/worklist", s.handleWorklist)
 	mux.HandleFunc("GET /api/types", s.handleTypes)
 	mux.HandleFunc("GET /api/explain", s.handleExplain)
+	mux.HandleFunc("GET /api/live", s.handleLive)
 	mux.HandleFunc("GET /api/rules", s.handleRules)
 	mux.HandleFunc("POST /api/rules/draft", s.handleDraft)
 	mux.HandleFunc("POST /api/rules/{id}/approve", s.handleApprove)
@@ -392,6 +393,46 @@ func (s *Server) serveAnalysis(ctx context.Context, w http.ResponseWriter, vd *c
 		}
 	}
 	writeJSON(w, 200, map[string]any{"view": vd, "columns": outCols, "rows": outRows})
+}
+
+// --- live screens -----------------------------------------------------------
+
+// handleLive streams projection notices as server-sent events: one stream per
+// browser tab, one "projection" event per committed write, payload naming the
+// touched object types. Nobody refreshes (DIRECTION: Alpha's live screens).
+// The stream is a signal, never data — clients re-read through the API.
+func (s *Server) handleLive(w http.ResponseWriter, r *http.Request) {
+	fl, ok := w.(http.Flusher)
+	if !ok {
+		writeErr(w, 500, fmt.Errorf("streaming unsupported"))
+		return
+	}
+	notices, err := s.Store.ProjectionNotices(r.Context())
+	if err != nil {
+		writeErr(w, 500, err)
+		return
+	}
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.WriteHeader(200)
+	fl.Flush()
+	ping := time.NewTicker(25 * time.Second)
+	defer ping.Stop()
+	for {
+		select {
+		case p, ok := <-notices:
+			if !ok {
+				return
+			}
+			fmt.Fprintf(w, "event: projection\ndata: %s\n\n", p)
+			fl.Flush()
+		case <-ping.C:
+			fmt.Fprint(w, ": ping\n\n") // keeps idle streams alive
+			fl.Flush()
+		case <-r.Context().Done():
+			return
+		}
+	}
 }
 
 // --- worklist, rules, actions ---------------------------------------------

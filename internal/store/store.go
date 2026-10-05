@@ -179,6 +179,54 @@ func (s *Store) UnmatchedRawEvents(ctx context.Context) ([]core.Event, error) {
 	return scanEvents(rows)
 }
 
+// --- live notices -----------------------------------------------------------
+
+// The executor is the single writer of the object cache, so it is the single
+// announcer (DIRECTION: Alpha's live screens). A notice is a signal, never
+// data: its payload names the touched object types, and listeners re-read
+// through the ordinary API.
+
+const projectionChannel = "rhea_projection"
+
+// NotifyProjection announces a projection write from inside its transaction;
+// Postgres delivers it only if the transaction commits, so a rolled-back
+// write never announces itself.
+func NotifyProjection(ctx context.Context, q Querier, payload string) error {
+	_, err := q.Exec(ctx, `SELECT pg_notify($1, $2)`, projectionChannel, payload)
+	return err
+}
+
+// ProjectionNotices listens for projection announcements, delivering each
+// payload on the returned channel until ctx ends. It holds one pooled
+// connection for the duration. A slow consumer drops notices rather than
+// blocking the listener — a notice only ever means "look again".
+func (s *Store) ProjectionNotices(ctx context.Context) (<-chan string, error) {
+	conn, err := s.Pool.Acquire(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := conn.Exec(ctx, `LISTEN `+projectionChannel); err != nil {
+		conn.Release()
+		return nil, err
+	}
+	ch := make(chan string, 16)
+	go func() {
+		defer conn.Release()
+		defer close(ch)
+		for {
+			n, err := conn.Conn().WaitForNotification(ctx)
+			if err != nil {
+				return // ctx ended or the connection broke; SSE clients reconnect
+			}
+			select {
+			case ch <- n.Payload:
+			default:
+			}
+		}
+	}()
+	return ch, nil
+}
+
 // --- rules ----------------------------------------------------------------
 
 // InsertRuleVersion appends the next version row for rule.ID and returns it.

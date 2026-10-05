@@ -81,6 +81,25 @@ so the next session does not re-derive them.
   learns by explanation must be able to explain its own vocabulary; "what
   does Rhea recognize?" was answerable only by grepping seed files.
 
+## 2026-10-05 — live screens: the single writer is the single announcer
+
+- **One notice per committed booking** (Alpha's lesson, DIRECTION): the
+  executor sends `pg_notify` inside the booking transaction — Postgres
+  delivers it only on commit, so a rolled-back write never announces itself
+  (a test proves the boundary). The payload names the touched object types;
+  a notice is a signal, never data — listeners re-read through the ordinary
+  API. Replay announces once, as "replay".
+- **`GET /api/live` is one SSE stream per browser tab**, fed by a LISTEN
+  connection from the pool, with a ping comment every 25s. The client
+  re-renders the active tab when a notice lands (bursts debounced to one
+  re-render).
+- **Live is a property of the tab, not the shell**: view tabs (list, detail,
+  analysis), the Language catalog and the provenance walk re-render in
+  place; tabs holding human state — worklist drafts, simulation results —
+  stay manual, because a re-render must never eat what a human is typing.
+  Row-level patching is deliberately skipped: re-rendering a tab is enough
+  at experiment scale, and the signal protocol would not change.
+
 ## 2026-10-05 — the provenance walk: invariant 5 as an interaction
 
 - **`GET /api/explain?object=<id>` (or `?event=<id>`)** answers "why does this
