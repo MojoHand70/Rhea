@@ -362,6 +362,28 @@ func (s *Store) ObjectsByType(ctx context.Context, typ string) ([]core.Object, e
 	return scanObjects(rows)
 }
 
+// CountObjectsByType returns instance counts for every type present in the
+// cache, in one query — the Language catalog asks about all types at once,
+// and counting must not mean loading every object.
+func (s *Store) CountObjectsByType(ctx context.Context) (map[string]int, error) {
+	rows, err := s.Pool.Query(ctx,
+		`SELECT object_type, COUNT(*) FROM object GROUP BY object_type`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]int{}
+	for rows.Next() {
+		var typ string
+		var n int
+		if err := rows.Scan(&typ, &n); err != nil {
+			return nil, err
+		}
+		out[typ] = n
+	}
+	return out, rows.Err()
+}
+
 func (s *Store) AllObjects(ctx context.Context) ([]core.Object, error) {
 	rows, err := s.Pool.Query(ctx, `SELECT `+objectCols+` FROM object ORDER BY object_id`)
 	if err != nil {

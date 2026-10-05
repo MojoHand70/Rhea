@@ -82,6 +82,10 @@ func (s *Server) explainTypes(ctx context.Context) ([]typeExplanation, error) {
 	if err != nil {
 		return nil, err
 	}
+	counts, err := s.Store.CountObjectsByType(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	// Every ref field across the vocabulary, once, from both ends.
 	var edges []typeEdge
@@ -122,11 +126,7 @@ func (s *Server) explainTypes(ctx context.Context) ([]typeExplanation, error) {
 				ex.ReferencedBy = append(ex.ReferencedBy, e)
 			}
 		}
-		objs, err := s.Store.ObjectsByType(ctx, t.Name)
-		if err != nil {
-			return nil, err
-		}
-		ex.Instances = len(objs)
+		ex.Instances = counts[t.Name]
 		out = append(out, ex)
 	}
 	return out, nil

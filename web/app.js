@@ -61,20 +61,28 @@ function selectDomain(domain) {
   const menu = $("#submenu");
   menu.replaceChildren(el("h2", {}, domain));
   for (const fn of d.functions) {
-    menu.append(el("h2", {}, fn.function));
     if (fn.function === "worklist") {
-      menu.append(el("div", { class: "menu-item", onclick: () => openWorklist() }, "Inbox"));
+      menu.append(el("h2", {}, fn.function),
+        el("div", { class: "menu-item", onclick: () => openWorklist() }, "Inbox"));
     } else if (fn.function === "rules") {
-      menu.append(el("div", { class: "menu-item", onclick: () => openRules() }, "All rules"));
+      menu.append(el("h2", {}, fn.function),
+        el("div", { class: "menu-item", onclick: () => openRules() }, "All rules"));
     } else if (fn.function === "language") {
-      menu.append(el("div", { class: "menu-item", onclick: () => openLanguage() }, "Object types"));
+      menu.append(el("h2", {}, fn.function),
+        el("div", { class: "menu-item", onclick: () => openLanguage() }, "Object types"));
     } else {
+      // View groups fold (native disclosure): a pack can land a dozen types
+      // as derived lists under one function, and the submenu must stay
+      // walkable. Derived entries arrive alphabetical from the store.
+      const group = el("details", { class: "menu-group", open: "" },
+        el("summary", {}, fn.function));
       for (const v of (fn.views || [])) {
         if (v.notion === "detail") continue; // details open from lists
-        menu.append(el("div", {
+        group.append(el("div", {
           class: "menu-item", onclick: () => openView(v.view_id, v.title),
         }, v.title, el("span", { class: "notion" }, v.notion)));
       }
+      menu.append(group);
     }
   }
 }
