@@ -48,7 +48,19 @@ const (
 	// delta — status is a projection, never an update (DECISIONS 2026-10-05,
 	// the amendment). Its payload is an AmendedObject.
 	EventObjectAmended = "object.amended"
+
+	// Time passing is a fact in the log (SPEC M5): the clock adapter appends
+	// these, rules match them, and replay reproduces when the system knew
+	// time had passed. Rules never read the wall clock.
+	EventDayOpened   = "time.day_opened"   // payload {date}
+	EventMonthOpened = "time.month_opened" // payload {month, date}
 )
+
+// TimeEventType reports whether an event is time passing. Not reserved —
+// rules match time like any fact — but infrastructure: a day no rule reacts
+// to is normal, so the worklist and the simulator's unexplained count leave
+// the time.* namespace out, while the processing path still fires on it.
+func TimeEventType(t string) bool { return strings.HasPrefix(t, "time.") }
 
 // MaterializedObject is the payload of an object.materialized event and the
 // unit from which all object projections (Postgres cache, DuckDB) are built.

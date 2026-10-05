@@ -30,7 +30,7 @@ func (x *Executor) ProcessPending(ctx context.Context) (int, []error) {
 	}
 	var booked int
 	for {
-		events, err := x.Store.UnmatchedRawEvents(ctx)
+		events, err := x.Store.PendingEvents(ctx)
 		if err != nil {
 			return booked, []error{err}
 		}

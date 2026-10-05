@@ -67,17 +67,43 @@ func (x *Executor) SimulateRule(ctx context.Context, ruleID string) (SimDiff, er
 		return cand[i].ID < cand[j].ID
 	})
 
-	base, err := x.simulate(ctx, active)
+	base, err := x.simulate(ctx, active, nil)
 	if err != nil {
 		return SimDiff{}, err
 	}
-	after, err := x.simulate(ctx, cand)
+	after, err := x.simulate(ctx, cand, nil)
 	if err != nil {
 		return SimDiff{}, err
 	}
+	diff := diffRuns(base, after)
+	diff.RuleID, diff.Version = r.ID, r.Version
+	return diff, nil
+}
 
+// SimulateEvents dry-runs hypothetical raw events on top of the whole log,
+// under the active rules — the catch-up gate's dry run (DIRECTION: steady
+// state is automatic, bursts need a human). Read-only; the hypothetical
+// events carry synthetic ids, so hypothetical object ids are indicative,
+// not the ids a real catch-up will mint.
+func (x *Executor) SimulateEvents(ctx context.Context, extra []core.Event) (SimDiff, error) {
+	active, err := x.Store.ActiveRules(ctx)
+	if err != nil {
+		return SimDiff{}, err
+	}
+	base, err := x.simulate(ctx, active, nil)
+	if err != nil {
+		return SimDiff{}, err
+	}
+	after, err := x.simulate(ctx, active, extra)
+	if err != nil {
+		return SimDiff{}, err
+	}
+	return diffRuns(base, after), nil
+}
+
+// diffRuns compares two simulated worlds object by object.
+func diffRuns(base, after SimRun) SimDiff {
 	diff := SimDiff{
-		RuleID: r.ID, Version: r.Version,
 		UnexplainedBefore: base.Unexplained, UnexplainedAfter: after.Unexplained,
 		Errors: after.Errors,
 	}
@@ -104,18 +130,20 @@ func (x *Executor) SimulateRule(ctx context.Context, ruleID string) (SimDiff, er
 			diff.Removed = append(diff.Removed, o)
 		}
 	}
-	return diff, nil
+	return diff
 }
 
 // simulate replays every raw business event through the given rules, in
 // event order with the same fixpoint behavior as ProcessPending, building
 // objects in memory only. Already-explained events are replayed too: the
-// result is the complete would-be world under this rule set.
-func (x *Executor) simulate(ctx context.Context, rules []core.Rule) (SimRun, error) {
+// result is the complete would-be world under this rule set. Extra events,
+// if any, are appended after the log — the hypothetical future.
+func (x *Executor) simulate(ctx context.Context, rules []core.Rule, extra []core.Event) (SimRun, error) {
 	events, err := x.Store.EventsByKind(ctx, core.KindRaw)
 	if err != nil {
 		return SimRun{}, err
 	}
+	events = append(events, extra...)
 
 	objects := map[string]core.Object{}
 	var order []string
@@ -206,7 +234,9 @@ func (x *Executor) simulate(ctx context.Context, rules []core.Rule) (SimRun, err
 		run.Objects = append(run.Objects, objects[id])
 	}
 	for _, ev := range events {
-		if !explained[ev.ID] && !core.ReservedEventType(ev.Type) {
+		// Time events fire rules but never count as unexplained: an
+		// uneventful day is normal, not residue.
+		if !explained[ev.ID] && !core.ReservedEventType(ev.Type) && !core.TimeEventType(ev.Type) {
 			run.Unexplained = append(run.Unexplained, ev.ID)
 		}
 	}

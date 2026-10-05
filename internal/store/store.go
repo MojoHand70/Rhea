@@ -24,6 +24,9 @@ var schemaSQL string
 //go:embed queries/unmatched.sql
 var unmatchedSQL string
 
+//go:embed queries/pending.sql
+var pendingSQL string
+
 //go:embed queries/latest_rules.sql
 var latestRulesSQL string
 
@@ -200,6 +203,41 @@ func (s *Store) UnmatchedRawEvents(ctx context.Context) ([]core.Event, error) {
 		return nil, err
 	}
 	return scanEvents(rows)
+}
+
+// PendingEvents is the executor's set: raw events no rule has acted on,
+// time events included — the worklist is the human view of the same
+// question minus the uneventful days.
+func (s *Store) PendingEvents(ctx context.Context) ([]core.Event, error) {
+	rows, err := s.Pool.Query(ctx, pendingSQL)
+	if err != nil {
+		return nil, err
+	}
+	return scanEvents(rows)
+}
+
+// LatestEventOfType returns the newest event of one type, or ok=false when
+// none exists — how the clock finds the last opened day.
+func (s *Store) LatestEventOfType(ctx context.Context, eventType string) (core.Event, bool, error) {
+	rows, err := s.Pool.Query(ctx,
+		`SELECT `+eventCols+` FROM event WHERE event_type = $1 ORDER BY event_id DESC LIMIT 1`,
+		eventType)
+	if err != nil {
+		return core.Event{}, false, err
+	}
+	evs, err := scanEvents(rows)
+	if err != nil || len(evs) == 0 {
+		return core.Event{}, false, err
+	}
+	return evs[0], true, nil
+}
+
+// MaxEventID returns the highest event id — the base for the synthetic ids
+// a dry run gives hypothetical events.
+func (s *Store) MaxEventID(ctx context.Context) (int64, error) {
+	var id int64
+	err := s.Pool.QueryRow(ctx, `SELECT COALESCE(MAX(event_id), 0) FROM event`).Scan(&id)
+	return id, err
 }
 
 // AmendmentsOf returns the object.amended events that moved one object, in
