@@ -427,34 +427,3 @@ func (x *Executor) Replay(ctx context.Context) ([]core.Object, error) {
 	return out, tx.Commit(ctx)
 }
 
-// ApproveRule records a human approval: the approval itself becomes a raw
-// event in the log, the rule gets a new active version row, and the pending
-// worklist is re-evaluated under the enlarged rule set. Failures from that
-// re-evaluation are worklist conditions, not approval failures — they come
-// back as data, separate from the hard error.
-func (x *Executor) ApproveRule(ctx context.Context, ruleID, approvedBy, businessDate string) (core.Rule, int, []error, error) {
-	r, err := x.Store.GetRule(ctx, ruleID)
-	if err != nil {
-		return core.Rule{}, 0, nil, err
-	}
-	if r.Status != core.StatusDraft {
-		return core.Rule{}, 0, nil, fmt.Errorf("rule %s is %s, only drafts can be approved", ruleID, r.Status)
-	}
-	approval, _ := json.Marshal(map[string]any{
-		"rule_id": r.ID, "approved_version": r.Version + 1, "approved_by": approvedBy,
-	})
-	if _, err := x.Store.AppendEvent(ctx, core.Event{
-		Kind: core.KindRaw, Type: "rule.approved", OccurredAt: businessDate,
-		Payload: approval, DedupKey: fmt.Sprintf("approve/%s/%d", r.ID, r.Version+1),
-		Actor: approvedBy,
-	}); err != nil {
-		return core.Rule{}, 0, nil, err
-	}
-	r.Status = core.StatusActive
-	r, err = x.Store.InsertRuleVersion(ctx, r)
-	if err != nil {
-		return core.Rule{}, 0, nil, err
-	}
-	booked, errs := x.ProcessPending(ctx)
-	return r, booked, errs, nil
-}

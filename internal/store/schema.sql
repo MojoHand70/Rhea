@@ -15,12 +15,20 @@ CREATE TABLE IF NOT EXISTS event (
     -- who caused the event: cli:<user>, shell:<user>, agent:<model>, kernel.
     -- NULL means recorded before actors existed — honestly unknown.
     actor          TEXT,
+    -- which declared door emitted the event: the provenance symmetry
+    -- (DIRECTION 2026-10-05) — derived events carry (rule_id, rule_version),
+    -- raw events through an activity carry (activity_name, activity_version).
+    -- NULL: an adapter, a pack load, or history from before doors existed.
+    activity_name    TEXT,
+    activity_version INT,
     -- a derived event always knows what caused it and which rule fired
     CHECK (kind = 'raw' OR (cause_event_id IS NOT NULL AND rule_id IS NOT NULL))
 );
 
--- Idempotent migration for databases created before the actor column.
+-- Idempotent migrations for databases created before these columns.
 ALTER TABLE event ADD COLUMN IF NOT EXISTS actor TEXT;
+ALTER TABLE event ADD COLUMN IF NOT EXISTS activity_name TEXT;
+ALTER TABLE event ADD COLUMN IF NOT EXISTS activity_version INT;
 
 CREATE TABLE IF NOT EXISTS rule (
     rule_id        TEXT NOT NULL,
@@ -40,6 +48,21 @@ CREATE TABLE IF NOT EXISTS object_type (
     version    INT NOT NULL,
     spec       JSONB NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (name, version)
+);
+
+-- Declared verbs (SPEC §2 Activity): versioned like rules, same lifecycle,
+-- same gate. `active` means offered and triggerable — activities are never
+-- consulted during replay, so superseding one touches no history.
+CREATE TABLE IF NOT EXISTS activity (
+    name        TEXT NOT NULL,
+    version     INT NOT NULL,
+    status      TEXT NOT NULL CHECK (status IN ('draft','approved','active','superseded')),
+    domain      TEXT NOT NULL,
+    description TEXT NOT NULL,
+    spec        JSONB NOT NULL,
+    created_by  TEXT NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (name, version)
 );
 
@@ -78,7 +101,7 @@ $$ LANGUAGE plpgsql;
 DO $$
 DECLARE t TEXT;
 BEGIN
-    FOREACH t IN ARRAY ARRAY['event','rule','object_type','view_def'] LOOP
+    FOREACH t IN ARRAY ARRAY['event','rule','object_type','view_def','activity'] LOOP
         IF NOT EXISTS (
             SELECT 1 FROM pg_trigger WHERE tgname = t || '_append_only'
         ) THEN

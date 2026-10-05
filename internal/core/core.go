@@ -26,6 +26,13 @@ type Event struct {
 	// Actor is who caused the event: "cli:<user>", "shell:<user>",
 	// "agent:<model>", "kernel". Empty on events from before actors existed.
 	Actor string `json:"actor,omitempty"`
+	// ActivityName/ActivityVersion stamp the declared door a raw event came
+	// through — the provenance symmetry to (RuleID, RuleVersion) on derived
+	// events: every event names its door. Empty on adapter and pack events
+	// (their door is the actor and the dedup key) and on history from before
+	// doors existed.
+	ActivityName    string `json:"activity_name,omitempty"`
+	ActivityVersion int    `json:"activity_version,omitempty"`
 }
 
 const (

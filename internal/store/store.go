@@ -56,10 +56,13 @@ func Open(ctx context.Context, dsn string) (*Store, error) {
 
 func (s *Store) Close() { s.Pool.Close() }
 
-// Init creates the schema. Idempotent.
+// Init creates the schema and seeds the builtin activities, each activation
+// recorded as an event — the gate's own birth is in the log. Idempotent.
 func (s *Store) Init(ctx context.Context) error {
-	_, err := s.Pool.Exec(ctx, schemaSQL)
-	return err
+	if _, err := s.Pool.Exec(ctx, schemaSQL); err != nil {
+		return err
+	}
+	return s.seedBuiltinActivities(ctx)
 }
 
 // IsDuplicate reports a unique-constraint violation — how append-only tables
@@ -87,6 +90,12 @@ func AppendEvent(ctx context.Context, q Querier, ev core.Event) (int64, error) {
 	if ev.Kind == core.KindRaw && ev.Type == core.EventObjectMaterialized {
 		return 0, fmt.Errorf("event type %q is reserved for the kernel", ev.Type)
 	}
+	// The system-verb namespaces belong to declared doors: a raw rule.* or
+	// activity.* event without an activity stamp would claim a system act
+	// (an approval, a request) that no declared verb performed.
+	if ev.Kind == core.KindRaw && core.ReservedEventType(ev.Type) && ev.ActivityName == "" {
+		return 0, fmt.Errorf("event type %q is a system verb — it enters only through its declared activity", ev.Type)
+	}
 	var dedup *string
 	if ev.DedupKey != "" {
 		dedup = &ev.DedupKey
@@ -100,12 +109,17 @@ func AppendEvent(ctx context.Context, q Querier, ev core.Event) (int64, error) {
 	if ev.Actor != "" {
 		actor = &ev.Actor
 	}
+	var actName *string
+	var actVersion *int
+	if ev.ActivityName != "" {
+		actName, actVersion = &ev.ActivityName, &ev.ActivityVersion
+	}
 	var id int64
 	err := q.QueryRow(ctx, `
-		INSERT INTO event (kind, event_type, occurred_at, payload, cause_event_id, rule_id, rule_version, dedup_key, actor)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO event (kind, event_type, occurred_at, payload, cause_event_id, rule_id, rule_version, dedup_key, actor, activity_name, activity_version)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING event_id`,
-		ev.Kind, ev.Type, ev.OccurredAt, ev.Payload, ev.CauseEventID, ruleID, ruleVersion, dedup, actor,
+		ev.Kind, ev.Type, ev.OccurredAt, ev.Payload, ev.CauseEventID, ruleID, ruleVersion, dedup, actor, actName, actVersion,
 	).Scan(&id)
 	return id, err
 }
@@ -123,8 +137,11 @@ func scanEvents(rows pgx.Rows) ([]core.Event, error) {
 		var ruleVersion *int
 		var dedup *string
 		var actor *string
+		var actName *string
+		var actVersion *int
 		if err := rows.Scan(&ev.ID, &ev.Kind, &ev.Type, &ev.OccurredAt, &ev.RecordedAt,
-			&ev.Payload, &ev.CauseEventID, &ruleID, &ruleVersion, &dedup, &actor); err != nil {
+			&ev.Payload, &ev.CauseEventID, &ruleID, &ruleVersion, &dedup, &actor,
+			&actName, &actVersion); err != nil {
 			return nil, err
 		}
 		if ruleID != nil {
@@ -136,13 +153,19 @@ func scanEvents(rows pgx.Rows) ([]core.Event, error) {
 		if actor != nil {
 			ev.Actor = *actor
 		}
+		if actName != nil {
+			ev.ActivityName = *actName
+			if actVersion != nil {
+				ev.ActivityVersion = *actVersion
+			}
+		}
 		out = append(out, ev)
 	}
 	return out, rows.Err()
 }
 
 const eventCols = `event_id, kind, event_type, to_char(occurred_at,'YYYY-MM-DD'), recorded_at,
-	payload, cause_event_id, rule_id, rule_version, dedup_key, actor`
+	payload, cause_event_id, rule_id, rule_version, dedup_key, actor, activity_name, activity_version`
 
 func (s *Store) EventsByKind(ctx context.Context, kind string) ([]core.Event, error) {
 	rows, err := s.Pool.Query(ctx,
@@ -231,12 +254,14 @@ func (s *Store) ProjectionNotices(ctx context.Context) (<-chan string, error) {
 
 // InsertRuleVersion appends the next version row for rule.ID and returns it.
 // Any change to a rule — including a status transition — goes through here.
-func (s *Store) InsertRuleVersion(ctx context.Context, r core.Rule) (core.Rule, error) {
+// Package-level so a door's reaction can write the approval event and the
+// version flip in one transaction.
+func InsertRuleVersion(ctx context.Context, q Querier, r core.Rule) (core.Rule, error) {
 	spec, err := json.Marshal(r.Spec)
 	if err != nil {
 		return r, err
 	}
-	err = s.Pool.QueryRow(ctx, `
+	err = q.QueryRow(ctx, `
 		INSERT INTO rule (rule_id, version, status, priority, effective_from, created_by, description, spec)
 		VALUES ($1, COALESCE((SELECT MAX(version) FROM rule WHERE rule_id = $1), 0) + 1,
 		        $2, $3, $4, $5, $6, $7)
@@ -244,6 +269,10 @@ func (s *Store) InsertRuleVersion(ctx context.Context, r core.Rule) (core.Rule, 
 		r.ID, r.Status, r.Priority, r.EffectiveFrom, r.CreatedBy, r.Description, spec,
 	).Scan(&r.Version, &r.CreatedAt)
 	return r, err
+}
+
+func (s *Store) InsertRuleVersion(ctx context.Context, r core.Rule) (core.Rule, error) {
+	return InsertRuleVersion(ctx, s.Pool, r)
 }
 
 func scanRules(rows pgx.Rows) ([]core.Rule, error) {

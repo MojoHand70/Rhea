@@ -30,6 +30,7 @@ type Manifest struct {
 	ObjectTypes []core.ObjectType `json:"object_types,omitempty"`
 	ViewDefs    []core.ViewDef    `json:"view_defs,omitempty"`
 	Rules       []Rule            `json:"rules,omitempty"`
+	Activities  []Activity        `json:"activities,omitempty"`
 	Events      []Event           `json:"events,omitempty"`
 }
 
@@ -41,6 +42,15 @@ type Rule struct {
 	EffectiveFrom string        `json:"effective_from"`
 	Description   string        `json:"description"`
 	Spec          core.RuleSpec `json:"spec"`
+}
+
+// Activity is a pack-shipped verb. Like a rule it always lands as a draft:
+// what humans can do is approved by humans, never installed.
+type Activity struct {
+	Name        string            `json:"name"`
+	Domain      string            `json:"domain"`
+	Description string            `json:"description"`
+	Spec        core.ActivitySpec `json:"spec"`
 }
 
 // Event is pack-shipped master data (a chart of accounts, VAT rates) as raw
@@ -55,12 +65,13 @@ type Event struct {
 
 // Summary says what a load did; Skipped counts everything already present.
 type Summary struct {
-	Pack    string `json:"pack"`
-	Types   int    `json:"types"`
-	Views   int    `json:"views"`
-	Rules   int    `json:"rules"`
-	Events  int    `json:"events"`
-	Skipped int    `json:"skipped"`
+	Pack       string `json:"pack"`
+	Types      int    `json:"types"`
+	Views      int    `json:"views"`
+	Rules      int    `json:"rules"`
+	Activities int    `json:"activities"`
+	Events     int    `json:"events"`
+	Skipped    int    `json:"skipped"`
 }
 
 // Load reads a pack file and loads it into a running kernel. The actor is
@@ -132,6 +143,20 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 			return sum, fmt.Errorf("rule %s: %w", r.RuleID, err)
 		}
 		sum.Rules++
+	}
+
+	for _, a := range m.Activities {
+		if _, err := s.GetActivity(ctx, a.Name); err == nil {
+			sum.Skipped++ // the name is known; its versions are not a pack's to touch
+			continue
+		}
+		if _, err := s.InsertActivityVersion(ctx, core.Activity{
+			Name: a.Name, Status: core.StatusDraft, Domain: a.Domain,
+			Description: a.Description, Spec: a.Spec, CreatedBy: "pack:" + m.Pack,
+		}); err != nil {
+			return sum, fmt.Errorf("activity %s: %w", a.Name, err)
+		}
+		sum.Activities++
 	}
 
 	for _, ev := range m.Events {

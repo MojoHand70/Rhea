@@ -506,9 +506,20 @@ func (s *Server) handleDraft(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 404, err)
 		return
 	}
+	// The ask goes through the draft_rule door first: the request is in the
+	// log as rule.draft_requested before any model answers. Drafting itself
+	// cannot be a kernel reaction — reactions are deterministic, the agent is
+	// not — so the shell consumes the request here, as the agent's runner;
+	// true agent-as-user (its own worklist) is phase (a).
+	if _, err := s.Exec.TriggerActivity(ctx, "draft_rule", map[string]any{
+		"intent": req.Intent, "sample_event_id": req.SampleEventID, "object_type": req.ObjectType,
+	}, "shell", ""); err != nil {
+		writeErr(w, 400, err)
+		return
+	}
 	draft, err := s.Agent.DraftRule(ctx, req.Intent, *sample, objType)
 	if err != nil {
-		writeErr(w, 502, err)
+		writeErr(w, 502, err) // the request event stays — the log is honest about unanswered asks
 		return
 	}
 	rule, err := s.Store.InsertRuleVersion(ctx, core.Rule{
@@ -563,13 +574,15 @@ func (s *Server) handleSimulate(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, out)
 }
 
+// handleSubmit is the submit_event door over HTTP: the open door, declared
+// as data like every other verb, so the event carries its activity stamp.
 func (s *Server) handleSubmit(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		EventType  string          `json:"event_type"`
-		OccurredAt string          `json:"occurred_at"`
-		Payload    json.RawMessage `json:"payload"`
-		DedupKey   string          `json:"dedup_key"`
-		Actor      string          `json:"actor"`
+		EventType  string         `json:"event_type"`
+		OccurredAt string         `json:"occurred_at"`
+		Payload    map[string]any `json:"payload"`
+		DedupKey   string         `json:"dedup_key"`
+		Actor      string         `json:"actor"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeErr(w, 400, err)
@@ -578,18 +591,16 @@ func (s *Server) handleSubmit(w http.ResponseWriter, r *http.Request) {
 	if req.Actor == "" {
 		req.Actor = "shell" // single-user experiment; identity arrives with auth, never
 	}
-	id, err := s.Store.AppendEvent(r.Context(), core.Event{
-		Kind: core.KindRaw, Type: req.EventType, OccurredAt: req.OccurredAt,
-		Payload: req.Payload, DedupKey: req.DedupKey, Actor: req.Actor,
-	})
+	t, err := s.Exec.TriggerActivity(r.Context(), "submit_event", map[string]any{
+		"event_type": req.EventType, "occurred_at": req.OccurredAt, "payload": req.Payload,
+	}, req.Actor, req.DedupKey)
 	if err != nil {
 		writeErr(w, 400, err)
 		return
 	}
-	booked, errs := s.Exec.ProcessPending(r.Context())
-	resp := map[string]any{"event_id": id, "booked": booked}
-	if len(errs) > 0 {
-		resp["errors"] = fmt.Sprintf("%v", errs)
+	resp := map[string]any{"event_id": t.EventID, "booked": t.Booked}
+	if len(t.Errors) > 0 {
+		resp["errors"] = fmt.Sprintf("%v", t.Errors)
 	}
 	writeJSON(w, 200, resp)
 }

@@ -55,6 +55,62 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-05 — activities as data: the doors are declared
+
+- **The shape**: `Activity` = name, lifecycle, domain, description, spec
+  {inputs: FieldDefs, emits, who}. Versioned append-only rows (`activity`
+  joins the invariant-1 trigger family); the rule lifecycle, where `active`
+  means *offered and triggerable*, never *executes in replay* — activities
+  are not in the determinism path, superseding one touches no history.
+- **The schema belongs to the verb, not the event**: inputs validate at
+  trigger time, before the event exists; the emitted event is schemaless in
+  the log and a test asserts an event through the door is payload-identical
+  to the same fact appended free-form. Money inputs validate via ParseMoney
+  but cross as the canonical decimal string — the payload is boundary data.
+- **The door stamp**: raw events gain `(activity_name, activity_version)` —
+  the provenance symmetry to `(rule_id, rule_version)` on derived events.
+  Adapter and pack events stay honestly unstamped: their door is the actor
+  and the dedup key.
+- **Retrofit findings** (predictions in DIRECTION 2026-10-05, outcomes here):
+  - `approve_rule` carried as predicted: the old handler already appended
+    `rule.approved` first, so the retrofit only moved the version flip into
+    a kernel *reaction* keyed on the event type — and into the trigger's
+    transaction, making approval event + version row atomic, which they
+    never were before. `rule_id` stays a string input (FieldDef refs point
+    at ObjectTypes); exit named at ref-to-definition.
+  - `submit_event` carried via the passthrough form: one `json` input whose
+    value IS the payload, everything else envelope-consumed ("a passthrough
+    activity has nothing else to say about the payload"). The open door is
+    now versioned, auditable data — and it refuses kernel namespaces.
+  - `draft_rule`: the *declaration* carried; the fulfillment could not be a
+    reaction, because reactions are deterministic kernel code and the agent
+    is not. The ask is now recorded (`rule.draft_requested` — drafting
+    finally leaves a trace in the log); the shell consumes the request
+    synchronously as the agent's runner; true agent-as-user waits for phase
+    (a). The boundary drew itself sharper: the kernel reacts to events, it
+    never converses.
+  - `approve_activity`: the gate applied to the gate, no second governance
+    mechanism. Bootstrap: init seeds the builtins v1 active, each activation
+    an `activity.approved` event stamped `approve_activity` v1 — the
+    self-referential fixed point, recorded honestly (actor `kernel`,
+    approved_by `init`).
+- **Forgery guards at both layers**: declared activities cannot emit into
+  `rule.*`/`activity.*` (the store refuses); a raw event in those namespaces
+  without a door stamp is refused at append; the passthrough refuses them as
+  resolved types. The system-verb namespaces are spoken only by their doors.
+- **System verbs exclude symmetrically** (`core.ReservedEventType`):
+  `activity.*` joins `rule.*` in the worklist query and the simulator's
+  unexplained count.
+- **Ref inputs are vouched**: the named object must exist and be the
+  declared type — the shape cases will lean on (a case's resolving verbs
+  take a ref to the case). `list<ref>` waits for reconciliation's partial
+  matches to demand it.
+- **Packs ship activities as drafts** — status is not a pack's to set;
+  approving them is the installation, same as rules.
+- Found on the way: list rows order by `object_id` as text, so two-digit
+  event ids reordered a test's expectation; the test now finds its row. Id
+  ordering stays a non-goal.
+
 ## 2026-10-05 — the market corpus: evidence becomes vocabulary
 
 - **Market knowledge arriving as evidence (screens of production systems,

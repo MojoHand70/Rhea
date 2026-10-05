@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
-	"strings"
 
 	"rhea/internal/core"
 )
@@ -146,7 +145,9 @@ func (x *Executor) simulate(ctx context.Context, rules []core.Rule) (SimRun, err
 		pass := 0
 		errs = errs[:0]
 		for _, ev := range events {
-			if explained[ev.ID] || strings.HasPrefix(ev.Type, "rule.") {
+			// System verbs (rule.*, activity.*) are not business events: the
+			// kernel speaks them, no rule explains them — same as the worklist.
+			if explained[ev.ID] || core.ReservedEventType(ev.Type) {
 				continue
 			}
 			var payload any
@@ -189,7 +190,7 @@ func (x *Executor) simulate(ctx context.Context, rules []core.Rule) (SimRun, err
 		run.Objects = append(run.Objects, objects[id])
 	}
 	for _, ev := range events {
-		if !explained[ev.ID] && !strings.HasPrefix(ev.Type, "rule.") {
+		if !explained[ev.ID] && !core.ReservedEventType(ev.Type) {
 			run.Unexplained = append(run.Unexplained, ev.ID)
 		}
 	}

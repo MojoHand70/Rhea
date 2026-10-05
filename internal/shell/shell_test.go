@@ -612,14 +612,22 @@ func TestMasterDataRefStory(t *testing.T) {
 		ObjectIDs []string `json:"object_ids"`
 	}
 	get("/api/views/invoice-list", &list)
-	if len(list.Rows) != 2 || list.Rows[0][0].V != "ACME Sp. z o.o." {
+	// Rows order by object_id as text, which shifts with event ids — find
+	// the ACME invoice instead of assuming a position.
+	acme := -1
+	for i, row := range list.Rows {
+		if row[0].V == "ACME Sp. z o.o." {
+			acme = i
+		}
+	}
+	if len(list.Rows) != 2 || acme < 0 {
 		t.Fatalf("list rows = %v", list.Rows)
 	}
-	if !strings.HasPrefix(list.Rows[0][0].ID, "company-") {
-		t.Fatalf("ref cell id = %q, want the company object id", list.Rows[0][0].ID)
+	if !strings.HasPrefix(list.Rows[acme][0].ID, "company-") {
+		t.Fatalf("ref cell id = %q, want the company object id", list.Rows[acme][0].ID)
 	}
-	if list.Rows[0][0].Detail != "company-detail" {
-		t.Fatalf("ref cell detail = %q, want the company detail view", list.Rows[0][0].Detail)
+	if list.Rows[acme][0].Detail != "company-detail" {
+		t.Fatalf("ref cell detail = %q, want the company detail view", list.Rows[acme][0].Detail)
 	}
 	var detail struct {
 		Sections []struct {
@@ -631,7 +639,7 @@ func TestMasterDataRefStory(t *testing.T) {
 			} `json:"fields"`
 		} `json:"sections"`
 	}
-	get("/api/views/invoice-detail?object_id="+list.ObjectIDs[0], &detail)
+	get("/api/views/invoice-detail?object_id="+list.ObjectIDs[acme], &detail)
 	if f := detail.Sections[0].Fields[0]; f.V != "ACME Sp. z o.o." || !strings.HasPrefix(f.ID, "company-") {
 		t.Fatalf("detail customer = %+v", detail.Sections[0])
 	}

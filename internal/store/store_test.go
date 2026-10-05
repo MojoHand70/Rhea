@@ -91,6 +91,14 @@ func TestAppendOnlyInvariant(t *testing.T) {
 	if _, err := s.Pool.Exec(ctx, `UPDATE rule SET status = 'active'`); err == nil {
 		t.Fatal("UPDATE on rule succeeded — invariant 1 broken")
 	}
+	// The activity table joins the append-only family: a status transition is
+	// a new version row, never an edit. Seeded builtins give us rows to poke.
+	if _, err := s.Pool.Exec(ctx, `UPDATE activity SET status = 'superseded'`); err == nil {
+		t.Fatal("UPDATE on activity succeeded — invariant 1 broken")
+	}
+	if _, err := s.Pool.Exec(ctx, `DELETE FROM activity`); err == nil {
+		t.Fatal("DELETE on activity succeeded — invariant 1 broken")
+	}
 }
 
 func TestRuleVersioning(t *testing.T) {
