@@ -134,6 +134,16 @@ tr.diff-changed .k { color: var(--warn); }
          max-width: 420px; box-shadow: var(--shadow-overlay); }
 #toast.error { border-color: var(--danger); }
 
+/* scheduling: the time axis, days in order, overdue reads as overdue */
+.sched-day { margin-bottom: var(--space-4); max-width: var(--measure-form); }
+.sched-day h3 { font-size: var(--text-sm); text-transform: uppercase;
+                letter-spacing: var(--tracking-wide); color: var(--text-muted);
+                margin: 0 0 var(--space-1); }
+.sched-day.sched-past h3 { color: var(--warn); }
+.sched-day.sched-today h3 { color: var(--accent); }
+.sched-item { display: flex; gap: var(--space-2); align-items: center;
+              padding: var(--space-1) 0; }
+
 /* omnibox: the two vocabularies in one line — views to see, verbs to run */
 #omnibox { position: fixed; inset: 0; background: var(--scrim);
            display: flex; justify-content: center; align-items: flex-start; }

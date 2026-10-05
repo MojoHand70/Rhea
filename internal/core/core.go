@@ -562,3 +562,12 @@ type AnalysisSpec struct {
 	SQL     string       `json:"sql"`
 	Columns []ColumnSpec `json:"columns"`
 }
+
+// SchedulingSpec: spec of a `scheduling` notion (SPEC M5) — time-axis
+// placement of objects: which type, and which date field places each one.
+// Label and status derive from the ObjectType (label_field, lifecycle), the
+// way derived views do: the axis is the view's only opinion.
+type SchedulingSpec struct {
+	ObjectType string `json:"object_type"`
+	DateField  string `json:"date_field"`
+}

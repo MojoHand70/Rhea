@@ -72,6 +72,9 @@ function selectDomain(domain) {
       menu.append(el("h2", {}, fn.function),
         el("div", { class: "menu-item", onclick: () => openLanguage() }, "Object types"),
         el("div", { class: "menu-item", onclick: () => openVerbs() }, "Verbs"));
+    } else if (fn.function === "time") {
+      menu.append(el("h2", {}, fn.function),
+        el("div", { class: "menu-item", onclick: () => openTime() }, "Clock"));
     } else {
       // View groups fold (native disclosure): a pack can land a dozen types
       // as derived lists under one function, and the submenu must stay
@@ -197,6 +200,7 @@ function openView(viewId, title, objectId) {
       case "list": return renderList(data);
       case "detail": return renderDetail(data);
       case "analysis": return renderAnalysis(data);
+      case "scheduling": return renderScheduling(data);
       default: return [el("p", { class: "hint" }, `Notion ${data.view.notion} not renderable.`)];
     }
   }, true); // view tabs are live: projections re-render them in place
@@ -731,6 +735,99 @@ function openVerbForm(name, prefill = {}) {
   });
 }
 
+/* --- system function: time --------------------------------------------------
+   Where the system stands against the calendar, and the burst gate
+   (DIRECTION: steady state is automatic, bursts need a human). One pending
+   day opens on a click; a gap shows its days, dry-runs through the same
+   diff renderer as rule approval, and opens only on an explicit catch-up. */
+
+function openTime() {
+  openTab("time", "Clock", async () => {
+    const st = await api("/api/time");
+    const out = [el("h1", {}, "Clock"),
+      el("p", { class: "hint" },
+        `Today ${st.today}` + (st.last_opened ? ` · last opened day ${st.last_opened}` : " · no day opened yet") +
+        ". Time passes as events; rules never read the wall clock.")];
+    const pending = st.pending || [];
+    if (pending.length === 0) {
+      out.push(el("p", {}, "Time is current."));
+      return out;
+    }
+    if (pending.length === 1) {
+      const b = el("button", { class: "primary", onclick: async () => {
+        b.disabled = true;
+        try {
+          const res = await api("/api/time/advance", { method: "POST" });
+          toast(`Opened ${res.opened.join(", ")}; fired ${res.fired}, booked ${res.booked}.` +
+            (res.errors ? ` Worklist: ${res.errors.join("; ")}` : ""));
+          refreshActive();
+        } catch (e) { toast(e.message, true); b.disabled = false; }
+      } }, `Open ${pending[0]}`);
+      out.push(el("div", { class: "row" }, b));
+      return out;
+    }
+    // The gate: a burst of unopened days waits for a deliberate human act.
+    const simBox = el("div", {});
+    const dry = el("button", { onclick: async () => {
+      dry.disabled = true; dry.textContent = "Simulating…";
+      try {
+        const res = await api("/api/time/simulate", {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: "{}",
+        });
+        simBox.replaceChildren(renderSimDiff(res.diff));
+      } catch (e) { toast(e.message, true); }
+      dry.disabled = false; dry.textContent = "Dry-run the catch-up";
+    } }, "Dry-run the catch-up");
+    const go = el("button", { class: "primary", onclick: async () => {
+      go.disabled = true;
+      try {
+        const res = await api("/api/time/catchup", {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: "{}",
+        });
+        toast(`Opened ${res.opened.length} day(s); fired ${res.fired}, booked ${res.booked}.` +
+          (res.errors ? ` Worklist: ${res.errors.join("; ")}` : ""));
+        refreshActive();
+      } catch (e) { toast(e.message, true); go.disabled = false; }
+    } }, `Open ${pending.length} days`);
+    out.push(el("div", { class: "draft-form" },
+      el("strong", {}, `${pending.length} days unopened: ${pending[0]} … ${pending[pending.length - 1]}.`),
+      el("p", { class: "hint" },
+        "Steady state is automatic; a burst needs you. Dry-run what opening them fires, then open deliberately."),
+      el("div", { class: "row" }, dry, " ", go), simBox));
+    return out;
+  });
+}
+
+/* The scheduling notion (SPEC §2, the founding table's last entry):
+   time-axis placement of objects. Days in order, each object a door to its
+   detail; past days of still-open work read as what they are — overdue. */
+function renderScheduling(d) {
+  const out = [el("h1", {}, d.view.title)];
+  if (!d.days.length && !(d.undated || []).length) {
+    out.push(el("p", { class: "hint" }, "Nothing placed in time yet."));
+    return out;
+  }
+  const item = (it) => el("div", { class: "sched-item" },
+    it.detail
+      ? el("a", { href: "#", title: it.object_id, onclick: (e) => {
+          e.preventDefault(); openView(it.detail, "Detail", it.object_id);
+        } }, it.label)
+      : it.label,
+    it.status ? el("span", { class: "chip" }, it.status) : "");
+  for (const day of d.days) {
+    const cls = "sched-day" + (day.date < d.today ? " sched-past" : "") +
+      (day.date === d.today ? " sched-today" : "");
+    out.push(el("div", { class: cls },
+      el("h3", {}, day.date + (day.date === d.today ? " — today" : "")),
+      ...day.items.map(item)));
+  }
+  if ((d.undated || []).length) {
+    out.push(el("div", { class: "sched-day" },
+      el("h3", {}, "undated"), ...d.undated.map(item)));
+  }
+  return out;
+}
+
 /* --- omnibox ----------------------------------------------------------------
    ⌘K: jump to any view by name, or run any offered verb — "›" marks verbs,
    and a leading ">" filters to them (Alpha's shell convention). The omnibox
@@ -751,7 +848,8 @@ function omniEntries(acts) {
     { kind: "view", label: "Worklist", hint: "system", run: openWorklist },
     { kind: "view", label: "Rules", hint: "system", run: openRules },
     { kind: "view", label: "Language", hint: "system", run: openLanguage },
-    { kind: "view", label: "Verbs", hint: "system", run: openVerbs });
+    { kind: "view", label: "Verbs", hint: "system", run: openVerbs },
+    { kind: "view", label: "Clock", hint: "system", run: openTime });
   for (const a of acts) {
     if (!a.offered) continue;
     entries.push({ kind: "verb", label: verbLabel(a.name), hint: a.spec.emits,

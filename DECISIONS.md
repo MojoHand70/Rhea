@@ -55,6 +55,70 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-05 — M5: time is in the log, and the commitment stayed data
+
+The founding ladder's last milestone. The closed class earned nothing —
+the strongest outcome: time, schedules and the gated switch all landed as
+an adapter, conventional vocabulary, and rules.
+
+- **The original expectation, kept for the record**: the rules-only
+  attempt (previous entry) would fail on due-set fan-out and cadence
+  arithmetic — it did, plus one surprise (a quiet day is a rule error:
+  the encoding could not even say "usually, nothing happens"); REA's
+  commitment was expected to become unavoidable — it arrived and stayed
+  pure data; date comparisons or ref-reads in match were expected to be
+  forced — they were not, because the adapter carries the scan.
+- **Time passes as facts**: `time.day_opened` / `time.month_opened`
+  (months open with their first opened day), appended by the clock —
+  an adapter with its own runner, because a day's consequences decide
+  the next day's due set, so opening interleaves with processing. Rules
+  never read the wall clock; `Clock.Now` is the system's one wall-clock
+  read, injectable, so even the tests own time.
+- **Calendars are the clock's knowledge** (the adapter contract carrying
+  what templates must not): the due scan over `task_schedule` objects —
+  conventional vocabulary, like posting and account; the kernel does not
+  know it — and the cadence arithmetic, monthly/yearly clamped to month
+  ends (a schedule on the 31st runs Nov 30). `schedule.fired` carries
+  the occurrence and the baked advanced `next_run`; ordinary rules raise
+  the work (cases, composing with the cases test) and amend the schedule
+  — determinism by construction, nothing re-computed at replay.
+- **The commitment verdict**: a schedule — an event that should happen —
+  is an object with a lifecycle plus the clock plus two rules. Negative
+  proof; no primitive. Plans at production depth (capacity, MRP) are
+  pack-and-rules depth on the same mechanism, to be falsified when a
+  production domain arrives.
+- **The switch, as constrained** (DIRECTION): per behavior — supersede
+  the rule; per schedule — pause/resume by amendment (active ⇄ paused,
+  declared transitions); globally — stop the clock, and the log shows
+  the gap honestly. **Re-entry is gated**: RunClock opens at most one
+  pending day (steady state); a burst gates, SimulateCatchUp dry-runs
+  the opening through the same diff renderer as rule approval (the
+  dry run stands in for the advance rule itself, labeled), and only an
+  explicit CatchUp opens the days — in order, each day processed before
+  the next day's scan. Missed occurrences fire late, one cadence step
+  per opened day, never silently skipped — the gate is what warned the
+  human about the burst.
+- **Quiet days are not questions**: the worklist hides `time.*`; the
+  executor's set (new `pending.sql`) keeps it, so time fires rules and
+  failed firings retry as data. Quiet days re-scan forever — accepted,
+  performance is an explicit non-goal. Simulation exempts time from the
+  unexplained count the same way. An unexplained `schedule.fired` is
+  real residue and stays in the worklist.
+- **`time.*` is not reserved**: a forged day through the open door is
+  possible and visible (actor column, dedup keys are the clock's); the
+  namespace gets reserved to adapter doors if that honesty ever proves
+  insufficient.
+- **The scheduling notion shipped** — the founding table's last entry:
+  spec is `{object_type, date_field}`, label and status derive from the
+  ObjectType like derived views; the shell renders days in order, past
+  and today marked; `view_def`'s CHECK re-learned the notion list by
+  idempotent migration. The Time surface (Clock tab) is a native system
+  function beside worklist/rules/language.
+- Named exits that stay named: condition-over-state-×-time ("invoice
+  unpaid N days") still waits on ref-reads or date compares in match —
+  M5 did not force them; "until fully depreciated" waits on the
+  arithmetic sub-language; list filters still belong to analysis views.
+
 ## 2026-10-05 — cases are pure data: the falsifiability test passed
 
 Alpha's case model expressed as object types, rules and activities — the

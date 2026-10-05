@@ -47,7 +47,8 @@ type Clock struct {
 	Now func() time.Time
 }
 
-func (c Clock) today() string {
+// TodayUTC is the one wall-clock read: the clock's day, as a business date.
+func (c Clock) TodayUTC() string {
 	now := c.Now
 	if now == nil {
 		now = time.Now
@@ -76,7 +77,7 @@ type ClockResult struct {
 // ClockState reads where time stands. A log that never opened a day starts
 // today — the genesis day is the day the clock first runs.
 func ClockState(ctx context.Context, s *store.Store, c Clock) (ClockStatus, error) {
-	st := ClockStatus{Today: c.today()}
+	st := ClockStatus{Today: c.TodayUTC()}
 	last, ok, err := s.LatestEventOfType(ctx, core.EventDayOpened)
 	if err != nil {
 		return st, err

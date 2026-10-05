@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"time"
 
+	"rhea/internal/adapter"
 	"rhea/internal/agent"
 	"rhea/internal/core"
 	"rhea/internal/exec"
@@ -24,6 +25,9 @@ type Server struct {
 	Exec     *exec.Executor
 	Agent    *agent.Agent
 	DuckPath string
+	// Clock serves the Time surface; the zero value reads the wall clock,
+	// tests inject their own day.
+	Clock adapter.Clock
 }
 
 func (s *Server) Handler() http.Handler {
@@ -41,6 +45,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/activities", s.handleActivities)
 	mux.HandleFunc("POST /api/activities/{name}/trigger", s.handleTrigger)
 	mux.HandleFunc("POST /api/activities/{name}/approve", s.handleApproveActivity)
+	mux.HandleFunc("GET /api/time", s.handleTime)
+	mux.HandleFunc("POST /api/time/advance", s.handleTimeAdvance)
+	mux.HandleFunc("POST /api/time/catchup", s.handleTimeCatchUp)
+	mux.HandleFunc("POST /api/time/simulate", s.handleTimeSimulate)
 	mux.HandleFunc("POST /api/events", s.handleSubmit)
 	mux.Handle("GET /", http.FileServerFS(web.FS))
 	return mux
@@ -141,7 +149,7 @@ func (s *Server) handleNav(w http.ResponseWriter, r *http.Request) {
 	for i := range domains {
 		domains[i].Functions = append(domains[i].Functions,
 			navFunction{Function: "worklist"}, navFunction{Function: "rules"},
-			navFunction{Function: "language"})
+			navFunction{Function: "language"}, navFunction{Function: "time"})
 	}
 	writeJSON(w, 200, domains)
 }
@@ -175,6 +183,8 @@ func (s *Server) handleView(w http.ResponseWriter, r *http.Request) {
 		s.serveDetail(ctx, w, vd, r.URL.Query().Get("object_id"))
 	case "analysis":
 		s.serveAnalysis(ctx, w, vd)
+	case "scheduling":
+		s.serveScheduling(ctx, w, vd)
 	default:
 		writeErr(w, 400, fmt.Errorf("notion %q not renderable", vd.Notion))
 	}

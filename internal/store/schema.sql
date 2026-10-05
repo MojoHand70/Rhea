@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS activity (
 CREATE TABLE IF NOT EXISTS view_def (
     view_id    TEXT NOT NULL,
     version    INT NOT NULL,
-    notion     TEXT NOT NULL CHECK (notion IN ('list','detail','action','analysis')),
+    notion     TEXT NOT NULL CHECK (notion IN ('list','detail','action','analysis','scheduling')),
     title      TEXT NOT NULL,
     domain     TEXT NOT NULL,
     function   TEXT NOT NULL,
@@ -77,6 +77,12 @@ CREATE TABLE IF NOT EXISTS view_def (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (view_id, version)
 );
+
+-- Idempotent migration: databases created before the scheduling notion
+-- (SPEC M5) re-learn the CHECK with the full notion library.
+ALTER TABLE view_def DROP CONSTRAINT IF EXISTS view_def_notion_check;
+ALTER TABLE view_def ADD CONSTRAINT view_def_notion_check
+    CHECK (notion IN ('list','detail','action','analysis','scheduling'));
 
 -- Projection cache. Rebuildable from the event log at any time.
 CREATE TABLE IF NOT EXISTS object (

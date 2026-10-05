@@ -163,7 +163,11 @@ open class (nouns: daily).
   a design (SPEC §7) — read against it, our one untested concept is the
   **commitment**: events that *should* happen (orders, reservations,
   budgets, production plans). Expect it to become unavoidable at M5, where
-  plans are commitments on a time axis. Empirical: the network — worklist
+  plans are commitments on a time axis. **Tested at M5 (2026-10-05, see
+  DECISIONS): the commitment stayed pure data — a schedule is an object
+  with a lifecycle plus the clock adapter plus two rules; the closed class
+  earned nothing. Production-depth plans will re-falsify on the same
+  mechanism when that domain arrives.** Empirical: the network — worklist
   residue at scale is a completeness measurement, and **rule-shape
   contortions** (thousands of businesses independently using the same
   awkward encoding, as we carried precomputed values before deciding on
@@ -618,7 +622,10 @@ records the gate's own birth, and the door stamp landed day one.
   gate everything passes, a deliberate act with a dry-run, sibling to
   ruled backfill. Trust comes from the same physics: every automated
   firing provenance-chains to its time event, and a misfiring schedule
-  fails as data into the worklist, never silently.
+  fails as data into the worklist, never silently. **Shipped 2026-10-05**
+  (see DECISIONS, M5): all three switches live, re-entry gated exactly as
+  stated — RunClock opens one day, a burst gates, the dry-run reads like
+  a rule approval, CatchUp is the deliberate act.
 - **Multi-company is a ref, multi-tenant is infrastructure.** The operating
   company will be a `company` object (`kind: self`) that events reference;
   tenancy stays out of the experiment. Promoted (KK, 2026-10-04): enterprise
