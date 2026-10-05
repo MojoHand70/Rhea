@@ -377,6 +377,49 @@ One line: *the enterprise structure model is five proofs — book, entity,
 currency, boundary-crossing cause, group-as-explanation — each pure data
 unless it earns a primitive by the governance rules.*
 
+## Humans buy with eyes: the design language (KK, 2026-10-05)
+
+Adopted as direction. Rillet, Light, Pigment, Airtable win deals on
+beautiful, consistent UI; concept-first positioning does not exempt the
+demo from this — the demo is how the concept is seen. We are not designers,
+so the requirement is not beauty now but a **foundation that external
+design experts can restyle later without touching behavior**.
+
+- **The mechanism is the thesis, one level down.** The replaceable-
+  interpreter contract already separates what can be seen from how it is
+  shown; the design language is the same split inside the web interpreter:
+  a **token layer** (color, type scale, spacing, radii, elevation, density,
+  layout sizes — CSS custom properties, the lingua franca design tooling
+  exports) and a **closed set of surface primitives** (shell chrome:
+  activity bar, submenu, tabs, toast; notion surfaces: data table, kv
+  detail, status chip, provenance line, forms, diff). Presentation is data.
+- **The generic shell is a design-system multiplier.** Because the shell
+  renders notions generically, the primitive set is closed and small:
+  styling it once styles every screen that will ever exist, including
+  ViewDefs the AI drafts in phase (a). A bespoke-screens app needs a design
+  system as discipline; Rhea gets it by construction.
+- **Rules**: no color or size literal outside `tokens.css`; tokens come in
+  two layers (primitive palette → semantic aliases) so a rebrand is a
+  palette swap and a redesign is an alias remap; no framework, no build
+  step (vanilla custom properties are exactly what designers' token tools
+  emit); semantic class names per primitive. The light color scheme ships
+  as a pure semantic remap — the first "external restyle" is us, proving
+  the layer works.
+- **Hiring a designer later** means handing over `tokens.css` and the
+  primitive inventory (documented in its header), not the app.
+- **Visual order of work** (2026-10-05 conversation): token foundation
+  first; then typed view API + derived default views — the *semantic* half
+  of the design language (money, refs, statuses know what they are; the
+  renderer decides how they look); then the provenance walk ("why?" on
+  every fact — the signature interaction no other ERP can offer); live
+  screens via NOTIFY/SSE; readable field-level simulation diffs; omnibox +
+  activities-as-data. Polish is whatever makes the mechanism visible;
+  nothing invoice-specific, ever.
+
+One line: *the design language is tokens plus a closed set of notion
+primitives — the generic shell makes beauty a data change, so experts can
+restyle without touching behavior.*
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
