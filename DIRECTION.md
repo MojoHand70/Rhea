@@ -119,7 +119,13 @@ itself — is an interpreter of the same two vocabularies.
 - **Cases need no kernel** — with cascade, lifecycle amendments and `each`,
   a case is a conventional object type plus rules, like `posting` and
   `period_lock` before it. That is the next falsifiability test in waiting:
-  express Alpha's case model as pure data.
+  express Alpha's case model as pure data. **Passed 2026-10-05** (see
+  DECISIONS): the attempt failed exactly at "closes itself" — identity
+  physics forbids touching an existing object, and the closure marker left
+  the status lying — which admitted the amendment (`effect.amend`, consent
+  via declared lifecycles, transitions validated like balance); on top of
+  it the whole model is types + rules + activities, rendered with zero
+  case-specific screens.
 - Rough order of work: derived default views (kills ViewDef boilerplate),
   typed view API (the replaceability contract), Activities as data (the
   verbs — also what the agent needs to know what can be done), cases as

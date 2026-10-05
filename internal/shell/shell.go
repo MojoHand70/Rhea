@@ -349,12 +349,31 @@ func (s *Server) serveDetail(ctx context.Context, w http.ResponseWriter, vd *cor
 	}
 	// Provenance crosses as data (invariant 5); the renderer phrases it.
 	// Activities ride along: the verbs whose ref inputs name this type — a
-	// detail view offers what can be done to what it shows.
+	// detail view offers what can be done to what it shows. Amendments are
+	// the second half of the explanation: the materialization says why the
+	// object exists, each amendment why it is what it is now.
+	amendEvents, err := s.Store.AmendmentsOf(ctx, objectID)
+	if err != nil {
+		writeErr(w, 500, err)
+		return
+	}
+	amendments := []map[string]any{}
+	for _, ev := range amendEvents {
+		var am core.AmendedObject
+		if json.Unmarshal(ev.Payload, &am) != nil {
+			continue
+		}
+		amendments = append(amendments, map[string]any{
+			"event_id": ev.ID, "rule_id": ev.RuleID, "rule_version": ev.RuleVersion,
+			"occurred_at": ev.OccurredAt, "set": am.Set,
+		})
+	}
 	writeJSON(w, 200, map[string]any{
 		"view": vd, "object": o, "sections": sections,
 		"provenance": map[string]any{"event_id": o.SourceEventID,
 			"rule_id": o.RuleID, "rule_version": o.RuleVersion},
 		"activities": s.verbsForType(ctx, o.Type),
+		"amendments": amendments,
 	})
 }
 

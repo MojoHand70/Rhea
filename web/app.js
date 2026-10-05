@@ -253,6 +253,13 @@ function renderDetail(d) {
   out.push(el("p", { class: "provenance" },
     `Explained by: event ${p.event_id} via rule ${p.rule_id} v${p.rule_version} — `,
     explainLink({ object: d.object.object_id }, "walk the explanation")));
+  // Amendments: why the object is what it is now, one provenanced move each.
+  for (const a of (d.amendments || [])) {
+    const delta = Object.entries(a.set).map(([k, v]) => `${k} → ${v}`).join(", ");
+    out.push(el("p", { class: "provenance" },
+      `Amended ${a.occurred_at}: ${delta} via rule ${a.rule_id} v${a.rule_version} — `,
+      explainLink({ event: a.event_id }, "why")));
+  }
   return out;
 }
 
@@ -294,6 +301,18 @@ function openExplain(q) {
               } }, text)
             : text,
           el("span", { class: "hint" }, ` ${o.object_type}`)));
+      }
+      if (n.amend) {
+        const a = n.amend;
+        const text = a.label || a.object_id;
+        const delta = Object.entries(a.set).map(([k, v]) => `${k} → ${v}`).join(", ");
+        head.append(el("div", { class: "explain-line" }, "amended ",
+          a.detail_view_id
+            ? el("a", { href: "#", title: a.object_id, onclick: (e) => {
+                e.preventDefault(); openView(a.detail_view_id, "Detail", a.object_id);
+              } }, text)
+            : text,
+          el("span", { class: "hint" }, ` ${a.object_type}: ${delta}`)));
       }
       if (n.payload) {
         head.append(el("details", {}, el("summary", {}, "the fact"),

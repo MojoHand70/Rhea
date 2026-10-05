@@ -41,9 +41,17 @@ type explainNode struct {
 	RuleDesc        string `json:"rule_description,omitempty"`
 	// Object is what this event materialized, when it did.
 	Object *explainObject `json:"object,omitempty"`
+	// Amend is what this event moved, when it is an amendment: the object
+	// and the baked delta — the walk answers "why is it what it is now".
+	Amend *explainAmend `json:"amend,omitempty"`
 	// Payload rides only on the raw root: the fact everything explains.
 	Payload  json.RawMessage `json:"payload,omitempty"`
 	Children []*explainNode  `json:"children"`
+}
+
+type explainAmend struct {
+	explainObject
+	Set map[string]any `json:"set"`
 }
 
 // chainIndex is the derived log, indexed for walking both directions.
@@ -186,6 +194,20 @@ func (s *Server) buildExplainTree(ctx context.Context, ix *chainIndex, root core
 				}
 			}
 			n.Object = obj
+		}
+		if ev.Type == core.EventObjectAmended {
+			var am core.AmendedObject
+			if json.Unmarshal(ev.Payload, &am) == nil {
+				ea := &explainAmend{explainObject: explainObject{
+					ObjectID: am.ObjectID, ObjectType: am.ObjectType,
+					DetailViewID: detailFor[am.ObjectType]}, Set: am.Set}
+				if o, err := s.Store.GetObject(ctx, am.ObjectID); err == nil {
+					if t, ok := typeByName[o.Type]; ok && t.LabelField != "" {
+						ea.Label, _ = o.State[t.LabelField].(string)
+					}
+				}
+				n.Amend = ea
+			}
 		}
 		for _, c := range ix.children[ev.ID] {
 			n.Children = append(n.Children, build(c))

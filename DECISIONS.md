@@ -55,6 +55,39 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-05 — cases are pure data: the falsifiability test passed
+
+Alpha's case model expressed as object types, rules and activities — the
+whole story in `internal/shell/cases_test.go`, over HTTP, with zero
+case-specific screens and no kernel change beyond the amendment admitted
+below.
+
+- **The expression**: `case` is a conventional type (kind, subject as the
+  recorded union-ref contortion, title, status with a declared lifecycle,
+  due_date); a cascade rule raises it from the subject's materialization —
+  raised by the system, never typed in, by construction; `resolve_case` is
+  an activity with a `ref<case>` input, offered inline on the generic
+  detail by the surfacing convention; a resolution rule amends the case
+  through `=$.case` (the id the door vouched); and "closes itself when the
+  world moves on" is one more amend rule matching the world's event,
+  resolving the case by `=ref(case, subject_id, …)` — human resolution and
+  world-moved-on resolution are the same mechanism.
+- **"An empty list means the day's work is done"** is an analysis view
+  (`WHERE status = 'open'`) — a property of the event log, not a screen.
+  ListSpec still has no filters; the read side carries the question until
+  a list filter earns its place.
+- **The detail and the walk explain the whole life** (invariant 5 both
+  halves): the materialization says why the case exists, each amendment —
+  listed on the detail with its rule version and delta, shown in the walk
+  as "amended <case>: status → resolved" — says why it is what it is now.
+- **What the shell needed: nothing case-shaped.** Derived views render the
+  case, contextual verbs offer the resolution, the omnibox runs it. The
+  generic machinery shipped for activities was sufficient — which is
+  itself the thesis holding.
+- Deferred with named exits: due dates computed from terms wait on the
+  arithmetic sub-language; time-raised cases ("unpaid N days") wait on M5
+  time events; list-inline verbs are renderer polish, not language.
+
 ## 2026-10-05 — the amendment earns admission: status is a projection
 
 The third closed-class change (after `book` and `convert`), admitted by all

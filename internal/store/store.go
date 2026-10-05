@@ -202,6 +202,21 @@ func (s *Store) UnmatchedRawEvents(ctx context.Context) ([]core.Event, error) {
 	return scanEvents(rows)
 }
 
+// AmendmentsOf returns the object.amended events that moved one object, in
+// log order — the second half of its explanation (invariant 5): the
+// materialization says why it exists, the amendments say why it is what it
+// is now.
+func (s *Store) AmendmentsOf(ctx context.Context, objectID string) ([]core.Event, error) {
+	rows, err := s.Pool.Query(ctx,
+		`SELECT `+eventCols+` FROM event
+		 WHERE event_type = $1 AND payload->>'object_id' = $2 ORDER BY event_id`,
+		core.EventObjectAmended, objectID)
+	if err != nil {
+		return nil, err
+	}
+	return scanEvents(rows)
+}
+
 // --- live notices -----------------------------------------------------------
 
 // The executor is the single writer of the object cache, so it is the single
