@@ -107,6 +107,16 @@ pre { background: var(--surface); border: 1px solid var(--border);
 details { margin: var(--space-1) 0; }
 summary { cursor: pointer; color: var(--text-muted); }
 
+/* the provenance walk: a tree of events, the asked-about chain highlighted */
+.explain-node { margin: var(--space-2) 0; max-width: var(--measure-table); }
+.explain-children { margin: var(--space-1) 0 0 var(--space-2);
+                    padding-left: var(--space-4); border-left: 1px solid var(--border); }
+.explain-head { padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm); }
+.explain-head.on-path { background: var(--surface); box-shadow: inset 2px 0 0 var(--accent); }
+.explain-head.asked { border: 1px solid var(--accent); }
+.explain-event { font-weight: var(--weight-semibold); }
+.explain-line { font-size: var(--text-sm); margin-top: 2px; }
+
 #toast { position: fixed; bottom: var(--space-4); right: var(--space-4);
          background: var(--surface-raised); border: 1px solid var(--accent);
          border-radius: var(--radius-md); padding: var(--space-2) var(--space-4);

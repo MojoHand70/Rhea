@@ -51,7 +51,7 @@
                     {
                         "field": "root_event",
                         "label": "Root event",
-                        "type": "string"
+                        "type": "event"
                     },
                     {
                         "field": "receivable",

@@ -424,6 +424,14 @@ design experts can restyle later without touching behavior**.
   without anyone authoring one), and the analysis specs lost every `printf`:
   SQL emits data, columns say what it means. Next on the ladder: the
   provenance walk.
+- **Shipped 2026-10-05, the provenance walk** (see DECISIONS): any object,
+  any detail, any event-typed analysis cell opens the chain — the root raw
+  fact and its whole consequence tree, every hop naming the exact rule
+  version, every object a door to its detail, the asked-about chain
+  highlighted. Both sides of an intercompany position walk to the same root
+  on screen now, not just in a test. Refs became doors (`list → ref → detail
+  → walk` closes the loop). Next: live screens via NOTIFY/SSE, then readable
+  simulation diffs.
 
 One line: *the design language is tokens plus a closed set of notion
 primitives — the generic shell makes beauty a data change, so experts can

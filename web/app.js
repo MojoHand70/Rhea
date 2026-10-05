@@ -144,16 +144,30 @@ function fmtMoney(v) { // "-1234.56" canonical → locale-grouped; BigInt keeps 
 
 const numericType = (t) => t === "money" || t === "int";
 
-/* Formats one typed cell into DOM content. A ref shows its label and carries
-   the referenced object id in the tooltip (the provenance walk will make it
-   a link); an enum renders as a chip, so state reads as state. Untyped
-   columns (analysis without declarations) render as-is. */
+/* Formats one typed cell into DOM content. A ref shows its label and is a
+   door: it opens the referenced object's detail view (every type has one,
+   derived if not stored). An enum renders as a chip, so state reads as
+   state; an event-typed cell opens the provenance walk. Untyped columns
+   (analysis without declarations) render as-is. */
 function cellContent(cell, type) {
   const v = cell?.v ?? "";
   if (type === "money") return fmtMoney(v);
   if (type === "enum") return v ? el("span", { class: "chip" }, v) : "";
+  if (type === "event") return v ? explainLink({ event: v }, v) : "";
+  if (cell?.id && cell?.detail) {
+    return el("a", { href: "#", title: cell.id, onclick: (e) => {
+      e.preventDefault(); e.stopPropagation();
+      openView(cell.detail, "Detail", cell.id);
+    } }, v);
+  }
   if (cell?.id && v !== cell.id) return el("span", { title: cell.id }, v);
   return v;
+}
+
+function explainLink(q, text) {
+  return el("a", { href: "#", onclick: (e) => {
+    e.preventDefault(); e.stopPropagation(); openExplain(q);
+  } }, text);
 }
 
 function dataTable(columns, rows, onRowClick) {
@@ -209,8 +223,68 @@ function renderDetail(d) {
   }
   const p = d.provenance;
   out.push(el("p", { class: "provenance" },
-    `Explained by: event ${p.event_id} via rule ${p.rule_id} v${p.rule_version}`));
+    `Explained by: event ${p.event_id} via rule ${p.rule_id} v${p.rule_version} — `,
+    explainLink({ object: d.object.object_id }, "walk the explanation")));
   return out;
+}
+
+/* --- system surface: the provenance walk -----------------------------------
+   Invariant 5 as an interaction: any object or event opens the full story of
+   its chain's root raw event — every consequence it caused, each hop naming
+   the exact rule version that explains it, each object a door to its detail.
+   Both sides of an intercompany position walk to the same root. */
+
+function openExplain(q) {
+  const key = q.object ? `explain:o:${q.object}` : `explain:e:${q.event}`;
+  const title = q.object ? `Why ${q.object}` : `Why event #${q.event}`;
+  openTab(key, title, async () => {
+    const qs = q.object ? `object=${encodeURIComponent(q.object)}`
+                        : `event=${encodeURIComponent(q.event)}`;
+    const d = await api(`/api/explain?${qs}`);
+    const onPath = new Set(d.path);
+    const asked = d.path[d.path.length - 1];
+
+    const render = (n) => {
+      const cls = "explain-head" + (onPath.has(n.event_id) ? " on-path" : "") +
+        (n.event_id === asked ? " asked" : "");
+      const head = el("div", { class: cls },
+        el("span", { class: "explain-event" }, `#${n.event_id} ${n.event_type}`),
+        el("span", { class: "hint" }, ` ${n.occurred_at}${n.actor ? " · " + n.actor : ""}`));
+      if (n.rule_id) {
+        head.append(el("div", { class: "explain-line" },
+          `via rule ${n.rule_id} v${n.rule_version}`,
+          n.rule_description ? el("span", { class: "hint" }, ` — ${n.rule_description}`) : ""));
+      }
+      if (n.object) {
+        const o = n.object;
+        const text = o.label || o.object_id;
+        head.append(el("div", { class: "explain-line" }, "materialized ",
+          o.detail_view_id
+            ? el("a", { href: "#", title: o.object_id, onclick: (e) => {
+                e.preventDefault(); openView(o.detail_view_id, "Detail", o.object_id);
+              } }, text)
+            : text,
+          el("span", { class: "hint" }, ` ${o.object_type}`)));
+      }
+      if (n.payload) {
+        head.append(el("details", {}, el("summary", {}, "the fact"),
+          el("pre", {}, JSON.stringify(n.payload, null, 2))));
+      }
+      const node = el("div", { class: "explain-node" }, head);
+      if (n.children.length) {
+        node.append(el("div", { class: "explain-children" }, ...n.children.map(render)));
+      }
+      return node;
+    };
+
+    return [
+      el("h1", {}, title),
+      el("p", { class: "hint" },
+        `Everything below follows from event #${d.root_event_id}. ` +
+        "The highlighted chain leads to what you asked about; every hop names the rule version that explains it."),
+      render(d.tree),
+    ];
+  });
 }
 
 function renderAnalysis(d) {

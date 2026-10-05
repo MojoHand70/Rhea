@@ -153,6 +153,23 @@ func (s *Store) EventsByKind(ctx context.Context, kind string) ([]core.Event, er
 	return scanEvents(rows)
 }
 
+// GetEvent returns one event by id.
+func (s *Store) GetEvent(ctx context.Context, id int64) (core.Event, error) {
+	rows, err := s.Pool.Query(ctx,
+		`SELECT `+eventCols+` FROM event WHERE event_id = $1`, id)
+	if err != nil {
+		return core.Event{}, err
+	}
+	evs, err := scanEvents(rows)
+	if err != nil {
+		return core.Event{}, err
+	}
+	if len(evs) == 0 {
+		return core.Event{}, fmt.Errorf("event %d not found", id)
+	}
+	return evs[0], nil
+}
+
 // UnmatchedRawEvents is the worklist: raw events no rule has acted on yet.
 func (s *Store) UnmatchedRawEvents(ctx context.Context) ([]core.Event, error) {
 	rows, err := s.Pool.Query(ctx, unmatchedSQL)
@@ -231,6 +248,33 @@ func (s *Store) GetRule(ctx context.Context, id string) (core.Rule, error) {
 		}
 	}
 	return core.Rule{}, fmt.Errorf("rule %q not found", id)
+}
+
+// RuleKey names one exact rule version — the unit provenance speaks in.
+type RuleKey struct {
+	ID      string
+	Version int
+}
+
+// RuleDescriptions returns the description of every rule version ever stored,
+// superseded ones included: the provenance walk explains history, and history
+// names exact versions.
+func (s *Store) RuleDescriptions(ctx context.Context) (map[RuleKey]string, error) {
+	rows, err := s.Pool.Query(ctx, `SELECT rule_id, version, description FROM rule`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[RuleKey]string{}
+	for rows.Next() {
+		var k RuleKey
+		var desc string
+		if err := rows.Scan(&k.ID, &k.Version, &desc); err != nil {
+			return nil, err
+		}
+		out[k] = desc
+	}
+	return out, rows.Err()
 }
 
 // --- object types ---------------------------------------------------------

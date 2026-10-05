@@ -81,6 +81,28 @@ so the next session does not re-derive them.
   learns by explanation must be able to explain its own vocabulary; "what
   does Rhea recognize?" was answerable only by grepping seed files.
 
+## 2026-10-05 — the provenance walk: invariant 5 as an interaction
+
+- **`GET /api/explain?object=<id>` (or `?event=<id>`)** answers "why does this
+  exist?" with the whole story: the chain's root raw event and its full
+  consequence tree — every derived event, each hop naming its **exact** rule
+  version (descriptions come from all rule versions, superseded included:
+  provenance explains history). The raw root alone carries its payload — the
+  fact everything else explains. Each materialized object in the tree carries
+  its label and detail view id, so the walk is made of doors, not dead ends.
+  Like worklist and rules, this is a native shell surface: it renders the
+  invariant layer, not a ViewDef.
+- **Ref cells became doors too**: a ref cell now carries `detail` — the view
+  that opens the referenced object — which derived defaults guarantee exists
+  for every type. List → ref → detail → walk is a closed loop.
+- **Analysis columns may declare type `event`**: the cell renders as a link
+  into the walk. intercompany-positions declares its root_event column so —
+  the reconciliation screen with nothing to reconcile now opens the proof on
+  click, which is the E4/E5 demo as an interaction instead of a test log.
+- Store grew `GetEvent`, `RuleDescriptions` (keyed by exact version) — both
+  one-query reads; the walk indexes the derived log per request, the same
+  scale stance as the analysis rebuild.
+
 ## 2026-10-05 — the typed view API and derived default views
 
 - **The view API carries semantics; renderers format.** Columns declare

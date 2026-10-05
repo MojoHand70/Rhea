@@ -364,6 +364,36 @@ func TestIntercompany(t *testing.T) {
 		t.Fatalf("group trial balance:\n got %v\nwant %v", cellVals(gtb.Rows), wantGroup)
 	}
 
+	// The provenance walk: ask about the Beta-side purchase invoice and the
+	// answer is the whole story from the one root event — the Alfa invoice,
+	// the mirrored document, and every posting of both books, each hop naming
+	// its rule version. Nothing to reconcile, only to display.
+	purchases, err := s.ObjectsByType(ctx, "purchase_invoice")
+	if err != nil || len(purchases) != 1 {
+		t.Fatalf("purchase invoices: %v %v", purchases, err)
+	}
+	var walk walkOut
+	get("/api/explain?object="+purchases[0].ID, &walk)
+	if walk.RootEventID != root || len(walk.Path) != 3 || walk.Path[0] != root {
+		t.Fatalf("walk root %d path %v, want root %d and 3 hops", walk.RootEventID, walk.Path, root)
+	}
+	walkSeen := map[string]int{}
+	var collect func(n walkNode)
+	collect = func(n walkNode) {
+		if n.Object != nil {
+			walkSeen[n.Object.ObjectType]++
+		}
+		for _, c := range n.Children {
+			collect(c)
+		}
+	}
+	collect(walk.Tree)
+	// Both documents and both sides' entries (three lines each) hang off the
+	// one root; the fixture's other documents stay out of this chain.
+	if walkSeen["sales_invoice"] != 1 || walkSeen["purchase_invoice"] != 1 || walkSeen["posting"] != 6 {
+		t.Fatalf("walk objects = %v", walkSeen)
+	}
+
 	// One replay, two entities, identical state — the intercompany chain
 	// reproduces like everything else.
 	before, _ := s.AllObjects(ctx)

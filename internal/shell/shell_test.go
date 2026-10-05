@@ -194,6 +194,22 @@ func TestM0DemoStory(t *testing.T) {
 		t.Fatalf("detail total = %+v", detail.Sections[1])
 	}
 
+	// 6b. The provenance walk: the object's whole story from the raw fact —
+	// the root carries the payload, the hop names the rule, the object is a
+	// door back to its detail.
+	var walk walkOut
+	get("/api/explain?object="+list.ObjectIDs[0], &walk)
+	if len(walk.Path) != 2 || walk.Path[0] != walk.RootEventID {
+		t.Fatalf("walk path = %v, root %d", walk.Path, walk.RootEventID)
+	}
+	if walk.Tree.Kind != "raw" || len(walk.Tree.Payload) == 0 || len(walk.Tree.Children) != 1 {
+		t.Fatalf("walk tree = %+v", walk.Tree)
+	}
+	if c := walk.Tree.Children[0]; c.RuleID != "book-pln-invoice" || c.Object == nil ||
+		c.Object.ObjectID != list.ObjectIDs[0] || c.Object.DetailViewID != "invoice-detail" {
+		t.Fatalf("walk child = %+v", walk.Tree.Children[0])
+	}
+
 	// 7. Analysis view aggregates from the DuckDB read side.
 	var analysis struct {
 		Rows [][]cell `json:"rows"`
@@ -313,8 +329,30 @@ type column struct {
 }
 
 type cell struct {
-	V  string `json:"v"`
-	ID string `json:"id"`
+	V      string `json:"v"`
+	ID     string `json:"id"`
+	Detail string `json:"detail"`
+}
+
+// walkNode mirrors the provenance walk's tree: events annotated with the
+// rule version that fired and the object it materialized.
+type walkNode struct {
+	EventID int64           `json:"event_id"`
+	Kind    string          `json:"kind"`
+	RuleID  string          `json:"rule_id"`
+	Payload json.RawMessage `json:"payload"`
+	Object  *struct {
+		ObjectID     string `json:"object_id"`
+		ObjectType   string `json:"object_type"`
+		DetailViewID string `json:"detail_view_id"`
+	} `json:"object"`
+	Children []walkNode `json:"children"`
+}
+
+type walkOut struct {
+	RootEventID int64    `json:"root_event_id"`
+	Path        []int64  `json:"path"`
+	Tree        walkNode `json:"tree"`
 }
 
 // cellVals flattens typed rows to their canonical values, which is what most
@@ -550,6 +588,9 @@ func TestMasterDataRefStory(t *testing.T) {
 	}
 	if !strings.HasPrefix(list.Rows[0][0].ID, "company-") {
 		t.Fatalf("ref cell id = %q, want the company object id", list.Rows[0][0].ID)
+	}
+	if list.Rows[0][0].Detail != "company-detail" {
+		t.Fatalf("ref cell detail = %q, want the company detail view", list.Rows[0][0].Detail)
 	}
 	var detail struct {
 		Sections []struct {

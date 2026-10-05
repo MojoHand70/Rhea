@@ -32,6 +32,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/views/{id}", s.handleView)
 	mux.HandleFunc("GET /api/worklist", s.handleWorklist)
 	mux.HandleFunc("GET /api/types", s.handleTypes)
+	mux.HandleFunc("GET /api/explain", s.handleExplain)
 	mux.HandleFunc("GET /api/rules", s.handleRules)
 	mux.HandleFunc("POST /api/rules/draft", s.handleDraft)
 	mux.HandleFunc("POST /api/rules/{id}/approve", s.handleApprove)
@@ -190,22 +191,27 @@ type columnOut struct {
 type cellOut struct {
 	V  string `json:"v"`            // canonical value, never locale-formatted
 	ID string `json:"id,omitempty"` // refs only: the referenced object id
+	// Detail is the view that opens the referenced object — with derived
+	// defaults, every type has one, so every ref is a door.
+	Detail string `json:"detail,omitempty"`
 }
 
 // typedCell encodes one state value. A ref resolves to the referenced
 // object's label_field so humans see "ACME Sp. z o.o.", not "company-7"; a
 // ref that does not resolve (old type versions hold plain strings) falls
 // back to the raw value, and the id rides along either way.
-func (s *Server) typedCell(ctx context.Context, v any, fd core.FieldDef) cellOut {
+func (s *Server) typedCell(ctx context.Context, v any, fd core.FieldDef, detailFor map[string]string) cellOut {
 	if v == nil {
 		return cellOut{}
 	}
 	if _, isRef := core.RefTarget(fd.Type); isRef {
 		if id, ok := v.(string); ok && id != "" {
 			c := cellOut{V: id, ID: id}
-			if label := s.refLabel(ctx, id); label != "" {
+			label, typ := s.refInfo(ctx, id)
+			if label != "" {
 				c.V = label
 			}
+			c.Detail = detailFor[typ]
 			return c
 		}
 	}
@@ -222,17 +228,18 @@ func (s *Server) typedCell(ctx context.Context, v any, fd core.FieldDef) cellOut
 	return cellOut{V: fmt.Sprintf("%v", v)}
 }
 
-func (s *Server) refLabel(ctx context.Context, objectID string) string {
+// refInfo resolves a referenced object to its label and type.
+func (s *Server) refInfo(ctx context.Context, objectID string) (label, typ string) {
 	o, err := s.Store.GetObject(ctx, objectID)
 	if err != nil {
-		return ""
+		return "", ""
 	}
 	ot, err := s.Store.GetObjectType(ctx, o.Type)
 	if err != nil || ot.LabelField == "" {
-		return ""
+		return "", o.Type
 	}
-	label, _ := o.State[ot.LabelField].(string)
-	return label
+	label, _ = o.State[ot.LabelField].(string)
+	return label, o.Type
 }
 
 func (s *Server) serveList(ctx context.Context, w http.ResponseWriter, vd *core.ViewDef) {
@@ -251,6 +258,14 @@ func (s *Server) serveList(ctx context.Context, w http.ResponseWriter, vd *core.
 		writeErr(w, 500, err)
 		return
 	}
+	vds, err := s.effectiveViewDefs(ctx)
+	if err != nil {
+		writeErr(w, 500, err)
+		return
+	}
+	// With derived defaults in the effective set, every type has a detail:
+	// one for this list's rows to open, one behind every ref cell.
+	detailFor := detailViewByType(vds)
 	cols := make([]columnOut, len(spec.Columns))
 	fds := make([]core.FieldDef, len(spec.Columns))
 	for i, c := range spec.Columns {
@@ -263,28 +278,13 @@ func (s *Server) serveList(ctx context.Context, w http.ResponseWriter, vd *core.
 	for _, o := range objs {
 		row := make([]cellOut, len(spec.Columns))
 		for i, c := range spec.Columns {
-			row[i] = s.typedCell(ctx, o.State[c.Field], fds[i])
+			row[i] = s.typedCell(ctx, o.State[c.Field], fds[i], detailFor)
 		}
 		rows = append(rows, row)
 		ids = append(ids, o.ID)
 	}
-	// Row click opens the detail view for the same object type; with derived
-	// defaults in the effective set, every type has one.
-	detailViewID := ""
-	if vds, err := s.effectiveViewDefs(ctx); err == nil {
-		for _, v := range vds {
-			if v.Notion != "detail" {
-				continue
-			}
-			var ds core.DetailSpec
-			if json.Unmarshal(v.Spec, &ds) == nil && ds.ObjectType == spec.ObjectType {
-				detailViewID = v.ID
-				break
-			}
-		}
-	}
 	writeJSON(w, 200, map[string]any{"view": vd, "columns": cols, "rows": rows,
-		"object_ids": ids, "detail_view_id": detailViewID})
+		"object_ids": ids, "detail_view_id": detailFor[spec.ObjectType]})
 }
 
 func (s *Server) serveDetail(ctx context.Context, w http.ResponseWriter, vd *core.ViewDef, objectID string) {
@@ -308,23 +308,31 @@ func (s *Server) serveDetail(ctx context.Context, w http.ResponseWriter, vd *cor
 		return
 	}
 	type fieldOut struct {
-		Field string `json:"field"`
-		Label string `json:"label"`
-		Type  string `json:"type,omitempty"`
-		V     string `json:"v"`
-		ID    string `json:"id,omitempty"`
+		Field  string `json:"field"`
+		Label  string `json:"label"`
+		Type   string `json:"type,omitempty"`
+		V      string `json:"v"`
+		ID     string `json:"id,omitempty"`
+		Detail string `json:"detail,omitempty"`
 	}
 	type sectionOut struct {
 		Title  string     `json:"title"`
 		Fields []fieldOut `json:"fields"`
 	}
+	vds, err := s.effectiveViewDefs(ctx)
+	if err != nil {
+		writeErr(w, 500, err)
+		return
+	}
+	detailFor := detailViewByType(vds)
 	sections := make([]sectionOut, 0, len(spec.Sections))
 	for _, sec := range spec.Sections {
 		so := sectionOut{Title: sec.Title}
 		for _, f := range sec.Fields {
 			fd, _ := objType.Field(f)
-			c := s.typedCell(ctx, o.State[f], fd)
-			so.Fields = append(so.Fields, fieldOut{Field: f, Label: f, Type: fd.Type, V: c.V, ID: c.ID})
+			c := s.typedCell(ctx, o.State[f], fd, detailFor)
+			so.Fields = append(so.Fields, fieldOut{Field: f, Label: f, Type: fd.Type,
+				V: c.V, ID: c.ID, Detail: c.Detail})
 		}
 		sections = append(sections, so)
 	}
