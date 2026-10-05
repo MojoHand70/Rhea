@@ -89,7 +89,7 @@ func TestM3PolandPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 1 || sum.Views != 5 || sum.Rules != 5 || sum.Events != 31 || sum.Skipped != 0 {
+	if sum.Types != 14 || sum.Views != 5 || sum.Rules != 5 || sum.Events != 31 || sum.Skipped != 0 {
 		t.Fatalf("first load: %+v", sum)
 	}
 	// Idempotent: a reload changes nothing.
@@ -97,7 +97,7 @@ func TestM3PolandPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Events != 0 || sum.Skipped != 42 {
+	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Events != 0 || sum.Skipped != 55 {
 		t.Fatalf("reload: %+v", sum)
 	}
 

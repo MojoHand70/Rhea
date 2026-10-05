@@ -1,7 +1,7 @@
 {
   "pack": "pl",
-  "version": 5,
-  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF — rynek jako dane",
+  "version": 6,
+  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane",
   "requires": [
     "company",
     "account",
@@ -37,6 +37,656 @@
           "name": "date",
           "type": "date",
           "required": true
+        }
+      ]
+    },
+    {
+      "name": "contractor",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "name",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "nip",
+          "type": "string"
+        },
+        {
+          "name": "regon",
+          "type": "string"
+        },
+        {
+          "name": "address",
+          "type": "string"
+        },
+        {
+          "name": "country",
+          "type": "string"
+        },
+        {
+          "name": "payment_term_days",
+          "type": "int"
+        },
+        {
+          "name": "cash_method",
+          "type": "enum",
+          "values": [
+            "yes",
+            "no"
+          ]
+        },
+        {
+          "name": "very_important",
+          "type": "enum",
+          "values": [
+            "yes",
+            "no"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "bank_account",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "name",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "number",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "bank",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "bank_operation",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "title",
+      "fields": [
+        {
+          "name": "account",
+          "type": "ref<bank_account>",
+          "required": true
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "title",
+          "type": "string"
+        },
+        {
+          "name": "counterparty",
+          "type": "string"
+        },
+        {
+          "name": "contractor",
+          "type": "ref<contractor>"
+        },
+        {
+          "name": "kind",
+          "type": "enum",
+          "values": [
+            "transfer",
+            "card",
+            "fee",
+            "other"
+          ]
+        },
+        {
+          "name": "settlement_status",
+          "type": "enum",
+          "values": [
+            "unsettled",
+            "settled",
+            "private"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "settlement",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "fields": [
+        {
+          "name": "operation",
+          "type": "ref<bank_operation>",
+          "required": true
+        },
+        {
+          "name": "document_type",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "document_id",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "task",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "title",
+      "fields": [
+        {
+          "name": "title",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "open",
+            "done",
+            "rejected",
+            "cancelled",
+            "blocked"
+          ]
+        },
+        {
+          "name": "due_date",
+          "type": "date"
+        },
+        {
+          "name": "priority",
+          "type": "enum",
+          "values": [
+            "problem",
+            "critical",
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        {
+          "name": "category",
+          "type": "enum",
+          "values": [
+            "month_close",
+            "taxes",
+            "invoices",
+            "contractor_payments",
+            "accounting",
+            "reminders",
+            "agent",
+            "other"
+          ]
+        },
+        {
+          "name": "requester",
+          "type": "string"
+        },
+        {
+          "name": "assignee",
+          "type": "string"
+        },
+        {
+          "name": "description",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "task_schedule",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "name",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "cadence",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "weekly",
+            "monthly",
+            "yearly",
+            "other"
+          ]
+        },
+        {
+          "name": "next_run",
+          "type": "date"
+        },
+        {
+          "name": "last_run",
+          "type": "date"
+        },
+        {
+          "name": "active",
+          "type": "enum",
+          "values": [
+            "yes",
+            "no"
+          ]
+        },
+        {
+          "name": "requester",
+          "type": "string"
+        },
+        {
+          "name": "assignee",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "recurring_invoice_template",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "name",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "template_invoice",
+          "type": "ref<sales_invoice>"
+        },
+        {
+          "name": "day_of_month",
+          "type": "int"
+        },
+        {
+          "name": "issue_from",
+          "type": "date"
+        },
+        {
+          "name": "issue_to",
+          "type": "date"
+        },
+        {
+          "name": "next_issue",
+          "type": "date"
+        },
+        {
+          "name": "active",
+          "type": "enum",
+          "values": [
+            "yes",
+            "no"
+          ]
+        },
+        {
+          "name": "send_to_ksef",
+          "type": "enum",
+          "values": [
+            "yes",
+            "no"
+          ]
+        },
+        {
+          "name": "send_email",
+          "type": "enum",
+          "values": [
+            "yes",
+            "no"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "fixed_asset",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "name",
+      "fields": [
+        {
+          "name": "number",
+          "type": "string"
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "description",
+          "type": "string"
+        },
+        {
+          "name": "kst",
+          "type": "string"
+        },
+        {
+          "name": "initial_value",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "accepted_date",
+          "type": "date"
+        },
+        {
+          "name": "amortization_type",
+          "type": "enum",
+          "values": [
+            "linear",
+            "degressive",
+            "one_off",
+            "none"
+          ]
+        },
+        {
+          "name": "rate",
+          "type": "string"
+        },
+        {
+          "name": "coefficient",
+          "type": "string"
+        },
+        {
+          "name": "purchase_date",
+          "type": "date"
+        },
+        {
+          "name": "prior_tax_depreciation",
+          "type": "money"
+        },
+        {
+          "name": "prior_balance_depreciation",
+          "type": "money"
+        },
+        {
+          "name": "liquidation_date",
+          "type": "date"
+        },
+        {
+          "name": "liquidation_reason",
+          "type": "string"
+        },
+        {
+          "name": "sale_date",
+          "type": "date"
+        }
+      ]
+    },
+    {
+      "name": "vehicle",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "registration",
+      "fields": [
+        {
+          "name": "registration",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "description",
+          "type": "string"
+        },
+        {
+          "name": "kind",
+          "type": "enum",
+          "values": [
+            "car",
+            "truck",
+            "motorcycle",
+            "other"
+          ]
+        },
+        {
+          "name": "engine_capacity",
+          "type": "int"
+        },
+        {
+          "name": "ownership",
+          "type": "enum",
+          "values": [
+            "own",
+            "leasing",
+            "rental",
+            "private"
+          ]
+        },
+        {
+          "name": "active",
+          "type": "enum",
+          "values": [
+            "yes",
+            "no"
+          ]
+        },
+        {
+          "name": "default",
+          "type": "enum",
+          "values": [
+            "yes",
+            "no"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "mileage_entry",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "fields": [
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "vehicle",
+          "type": "ref<vehicle>",
+          "required": true
+        },
+        {
+          "name": "route_start",
+          "type": "string"
+        },
+        {
+          "name": "route_end",
+          "type": "string"
+        },
+        {
+          "name": "km",
+          "type": "int",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "lease_contract",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "number",
+      "fields": [
+        {
+          "name": "number",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "kind",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "operational",
+            "financial",
+            "rental"
+          ]
+        },
+        {
+          "name": "start",
+          "type": "date"
+        },
+        {
+          "name": "end",
+          "type": "date"
+        },
+        {
+          "name": "description",
+          "type": "string"
+        },
+        {
+          "name": "net",
+          "type": "money"
+        },
+        {
+          "name": "vat",
+          "type": "money"
+        },
+        {
+          "name": "gross",
+          "type": "money"
+        },
+        {
+          "name": "vat_deduction_limit",
+          "type": "money"
+        },
+        {
+          "name": "vat_deducted",
+          "type": "money"
+        }
+      ]
+    },
+    {
+      "name": "tax_declaration",
+      "version": 1,
+      "domain": "finance",
+      "is_document": true,
+      "label_field": "period",
+      "fields": [
+        {
+          "name": "kind",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "jpk_v7",
+            "vat7",
+            "pit",
+            "zus_dra",
+            "pcc3",
+            "other"
+          ]
+        },
+        {
+          "name": "period",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "due_date",
+          "type": "date"
+        },
+        {
+          "name": "amount",
+          "type": "money"
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "values": [
+            "draft",
+            "approved",
+            "corrected"
+          ]
+        },
+        {
+          "name": "payment_status",
+          "type": "enum",
+          "values": [
+            "unpaid",
+            "awaiting",
+            "paid",
+            "partial"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "stocktake",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "fields": [
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "comment",
+          "type": "string"
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "values": [
+            "open",
+            "closed"
+          ]
+        },
+        {
+          "name": "value",
+          "type": "money"
         }
       ]
     }
