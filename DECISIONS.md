@@ -55,7 +55,18 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
-## 2026-10-04 — E5: consolidation — the group is one more explanation
+## 2026-10-05 — design tokens: the aesthetic contract is a file
+
+- **`web/tokens.css` is the shell's whole design language**: two layers of CSS
+  custom properties — primitive palette and scales, then semantic aliases —
+  and `app.css` may reference only the semantic layer; no color or size
+  literal outside the token file. Vanilla custom properties, no framework, no
+  build step (SPEC stack holds; it is also the format designers' token tools
+  emit). The light color scheme ships as a pure semantic remap — the standing
+  proof that restyling Rhea means editing one file, never selectors or JS.
+  Why: humans buy with eyes (DIRECTION 2026-10-05); the generic shell makes
+  the styled surface a closed set of primitives, so the foundation for an
+  external designer costs one file now and nothing later.
 
 - **No attempt ceremony this time**: E5 asked nothing of the closed class.
   The one code change is read-side — the DuckDB projection now carries
