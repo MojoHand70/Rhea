@@ -111,13 +111,13 @@
       "domain": "finance",
       "function": "analysis",
       "spec": {
-        "sql": "SELECT code, account, printf('%d.%02d', d // 100, d % 100) AS debit, printf('%d.%02d', c // 100, c % 100) AS credit, printf('%s%d.%02d', CASE WHEN d - c < 0 THEN '-' ELSE '' END, abs(d - c) // 100, abs(d - c) % 100) AS balance FROM (SELECT json_extract_string(a.state,'$.code') AS code, json_extract_string(a.state,'$.name') AS account, COALESCE(SUM(CASE WHEN json_extract_string(p.state,'$.side')='debit' THEN CAST(json_extract(p.state,'$.amount') AS BIGINT) ELSE 0 END),0) AS d, COALESCE(SUM(CASE WHEN json_extract_string(p.state,'$.side')='credit' THEN CAST(json_extract(p.state,'$.amount') AS BIGINT) ELSE 0 END),0) AS c FROM objects p JOIN objects a ON json_extract_string(p.state,'$.account') = a.object_id WHERE p.object_type = 'posting' AND a.object_type = 'account' GROUP BY 1, 2) t ORDER BY code",
+        "sql": "SELECT code, account, d AS debit, c AS credit, d - c AS balance FROM (SELECT json_extract_string(a.state,'$.code') AS code, json_extract_string(a.state,'$.name') AS account, COALESCE(SUM(CASE WHEN json_extract_string(p.state,'$.side')='debit' THEN CAST(json_extract(p.state,'$.amount') AS BIGINT) ELSE 0 END),0) AS d, COALESCE(SUM(CASE WHEN json_extract_string(p.state,'$.side')='credit' THEN CAST(json_extract(p.state,'$.amount') AS BIGINT) ELSE 0 END),0) AS c FROM objects p JOIN objects a ON json_extract_string(p.state,'$.account') = a.object_id WHERE p.object_type = 'posting' AND a.object_type = 'account' GROUP BY 1, 2) t ORDER BY code",
         "columns": [
-          { "field": "code", "label": "Code" },
-          { "field": "account", "label": "Account" },
-          { "field": "debit", "label": "Debit" },
-          { "field": "credit", "label": "Credit" },
-          { "field": "balance", "label": "Balance" }
+          { "field": "code", "label": "Code", "type": "string" },
+          { "field": "account", "label": "Account", "type": "string" },
+          { "field": "debit", "label": "Debit", "type": "money" },
+          { "field": "credit", "label": "Credit", "type": "money" },
+          { "field": "balance", "label": "Balance", "type": "money" }
         ]
       }
     }

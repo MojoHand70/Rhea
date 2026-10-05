@@ -1,6 +1,6 @@
 {
   "pack": "pl",
-  "version": 4,
+  "version": 5,
   "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF — rynek jako dane",
   "requires": [
     "company",
@@ -142,33 +142,38 @@
     },
     {
       "view_id": "rejestr-vat-sprzedazy",
-      "version": 2,
+      "version": 3,
       "notion": "analysis",
       "title": "Rejestr VAT sprzedaży",
       "domain": "finance",
       "function": "vat",
       "spec": {
-        "sql": "SELECT month, rate, printf('%d.%02d', n // 100, n % 100) AS net, printf('%d.%02d', v // 100, v % 100) AS vat, printf('%d.%02d', g // 100, g % 100) AS gross FROM (SELECT substr(json_extract_string(i.state,'$.issue_date'),1,7) AS month, json_extract_string(r.state,'$.code') AS rate, SUM(CAST(json_extract(i.state,'$.net') AS BIGINT)) AS n, SUM(CAST(json_extract(i.state,'$.vat') AS BIGINT)) AS v, SUM(CAST(json_extract(i.state,'$.gross') AS BIGINT)) AS g FROM objects i JOIN objects r ON json_extract_string(i.state,'$.vat_rate') = r.object_id JOIN objects c ON json_extract_string(i.state,'$.seller') = c.object_id WHERE c.object_type = 'company' AND json_extract_string(c.state,'$.country') = 'PL' AND i.object_type = 'sales_invoice' AND r.object_type = 'vat_rate' GROUP BY 1, 2) ORDER BY month, rate",
+        "sql": "SELECT month, rate, n AS net, v AS vat, g AS gross FROM (SELECT substr(json_extract_string(i.state,'$.issue_date'),1,7) AS month, json_extract_string(r.state,'$.code') AS rate, SUM(CAST(json_extract(i.state,'$.net') AS BIGINT)) AS n, SUM(CAST(json_extract(i.state,'$.vat') AS BIGINT)) AS v, SUM(CAST(json_extract(i.state,'$.gross') AS BIGINT)) AS g FROM objects i JOIN objects r ON json_extract_string(i.state,'$.vat_rate') = r.object_id JOIN objects c ON json_extract_string(i.state,'$.seller') = c.object_id WHERE c.object_type = 'company' AND json_extract_string(c.state,'$.country') = 'PL' AND i.object_type = 'sales_invoice' AND r.object_type = 'vat_rate' GROUP BY 1, 2) ORDER BY month, rate",
         "columns": [
           {
             "field": "month",
-            "label": "Miesiąc"
+            "label": "Miesiąc",
+            "type": "string"
           },
           {
             "field": "rate",
-            "label": "Stawka"
+            "label": "Stawka",
+            "type": "string"
           },
           {
             "field": "net",
-            "label": "Netto"
+            "label": "Netto",
+            "type": "money"
           },
           {
             "field": "vat",
-            "label": "VAT"
+            "label": "VAT",
+            "type": "money"
           },
           {
             "field": "gross",
-            "label": "Brutto"
+            "label": "Brutto",
+            "type": "money"
           }
         ]
       }

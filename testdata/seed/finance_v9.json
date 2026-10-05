@@ -8,27 +8,32 @@
             "domain": "finance",
             "function": "analysis",
             "spec": {
-                "sql": "WITH rate AS (SELECT CAST(json_extract_string(state,'$.rate') AS DECIMAL(18,6)) AS r FROM objects WHERE object_type = 'fx_rate' AND json_extract_string(state,'$.base') = 'EUR' AND json_extract_string(state,'$.quote') = 'PLN' ORDER BY json_extract_string(state,'$.date') DESC LIMIT 1), ic AS (SELECT DISTINCT root_event_id FROM objects WHERE object_type = 'purchase_invoice'), p AS (SELECT json_extract_string(a.state,'$.code') AS code, json_extract_string(a.state,'$.name') AS account, json_extract_string(o.state,'$.side') AS side, CASE WHEN json_extract_string(o.state,'$.currency') = 'EUR' THEN CAST(json_extract(o.state,'$.amount') AS BIGINT) ELSE CAST(round(CAST(json_extract(o.state,'$.amount') AS BIGINT) / (SELECT r FROM rate)) AS BIGINT) END AS eur FROM objects o JOIN objects a ON json_extract_string(o.state,'$.account') = a.object_id WHERE o.object_type = 'posting' AND a.object_type = 'account' AND NOT (o.root_event_id IN (SELECT root_event_id FROM ic) AND json_extract_string(a.state,'$.type') <> 'tax')), sums AS (SELECT code, account, COALESCE(SUM(CASE WHEN side = 'debit' THEN eur ELSE 0 END),0) AS d, COALESCE(SUM(CASE WHEN side = 'credit' THEN eur ELSE 0 END),0) AS c FROM p GROUP BY 1, 2), rows_ AS (SELECT code, account, d, c FROM sums UNION ALL SELECT 'CTA', 'Translation difference', CASE WHEN s < 0 THEN -s ELSE 0 END, CASE WHEN s > 0 THEN s ELSE 0 END FROM (SELECT COALESCE(SUM(d),0) - COALESCE(SUM(c),0) AS s FROM sums) t WHERE s <> 0) SELECT code, account, printf('%d.%02d', d // 100, d % 100) AS debit, printf('%d.%02d', c // 100, c % 100) AS credit, printf('%s%d.%02d', CASE WHEN d - c < 0 THEN '-' ELSE '' END, abs(d - c) // 100, abs(d - c) % 100) AS balance FROM rows_ ORDER BY code",
+                "sql": "WITH rate AS (SELECT CAST(json_extract_string(state,'$.rate') AS DECIMAL(18,6)) AS r FROM objects WHERE object_type = 'fx_rate' AND json_extract_string(state,'$.base') = 'EUR' AND json_extract_string(state,'$.quote') = 'PLN' ORDER BY json_extract_string(state,'$.date') DESC LIMIT 1), ic AS (SELECT DISTINCT root_event_id FROM objects WHERE object_type = 'purchase_invoice'), p AS (SELECT json_extract_string(a.state,'$.code') AS code, json_extract_string(a.state,'$.name') AS account, json_extract_string(o.state,'$.side') AS side, CASE WHEN json_extract_string(o.state,'$.currency') = 'EUR' THEN CAST(json_extract(o.state,'$.amount') AS BIGINT) ELSE CAST(round(CAST(json_extract(o.state,'$.amount') AS BIGINT) / (SELECT r FROM rate)) AS BIGINT) END AS eur FROM objects o JOIN objects a ON json_extract_string(o.state,'$.account') = a.object_id WHERE o.object_type = 'posting' AND a.object_type = 'account' AND NOT (o.root_event_id IN (SELECT root_event_id FROM ic) AND json_extract_string(a.state,'$.type') <> 'tax')), sums AS (SELECT code, account, COALESCE(SUM(CASE WHEN side = 'debit' THEN eur ELSE 0 END),0) AS d, COALESCE(SUM(CASE WHEN side = 'credit' THEN eur ELSE 0 END),0) AS c FROM p GROUP BY 1, 2), rows_ AS (SELECT code, account, d, c FROM sums UNION ALL SELECT 'CTA', 'Translation difference', CASE WHEN s < 0 THEN -s ELSE 0 END, CASE WHEN s > 0 THEN s ELSE 0 END FROM (SELECT COALESCE(SUM(d),0) - COALESCE(SUM(c),0) AS s FROM sums) t WHERE s <> 0) SELECT code, account, d AS debit, c AS credit, d - c AS balance FROM rows_ ORDER BY code",
                 "columns": [
                     {
                         "field": "code",
-                        "label": "Code"
+                        "label": "Code",
+                        "type": "string"
                     },
                     {
                         "field": "account",
-                        "label": "Account"
+                        "label": "Account",
+                        "type": "string"
                     },
                     {
                         "field": "debit",
-                        "label": "Debit"
+                        "label": "Debit",
+                        "type": "money"
                     },
                     {
                         "field": "credit",
-                        "label": "Credit"
+                        "label": "Credit",
+                        "type": "money"
                     },
                     {
                         "field": "balance",
-                        "label": "Balance"
+                        "label": "Balance",
+                        "type": "money"
                     }
                 ]
             }
@@ -41,23 +46,27 @@
             "domain": "finance",
             "function": "analysis",
             "spec": {
-                "sql": "SELECT CAST(root AS VARCHAR) AS root_event, printf('%d.%02d', r // 100, r % 100) AS receivable, printf('%d.%02d', pay // 100, pay % 100) AS payable, printf('%d.%02d', abs(r - pay) // 100, abs(r - pay) % 100) AS difference FROM (SELECT o.root_event_id AS root, COALESCE(SUM(CASE WHEN json_extract_string(a.state,'$.type') = 'debtor' THEN COALESCE(CAST(json_extract(o.state,'$.tx_amount') AS BIGINT), CAST(json_extract(o.state,'$.amount') AS BIGINT)) ELSE 0 END),0) AS r, COALESCE(SUM(CASE WHEN json_extract_string(a.state,'$.type') = 'creditor' THEN COALESCE(CAST(json_extract(o.state,'$.tx_amount') AS BIGINT), CAST(json_extract(o.state,'$.amount') AS BIGINT)) ELSE 0 END),0) AS pay FROM objects o JOIN objects a ON json_extract_string(o.state,'$.account') = a.object_id WHERE o.object_type = 'posting' AND a.object_type = 'account' AND o.root_event_id IN (SELECT DISTINCT root_event_id FROM objects WHERE object_type = 'purchase_invoice') GROUP BY 1) t ORDER BY root",
+                "sql": "SELECT CAST(root AS VARCHAR) AS root_event, r AS receivable, pay AS payable, abs(r - pay) AS difference FROM (SELECT o.root_event_id AS root, COALESCE(SUM(CASE WHEN json_extract_string(a.state,'$.type') = 'debtor' THEN COALESCE(CAST(json_extract(o.state,'$.tx_amount') AS BIGINT), CAST(json_extract(o.state,'$.amount') AS BIGINT)) ELSE 0 END),0) AS r, COALESCE(SUM(CASE WHEN json_extract_string(a.state,'$.type') = 'creditor' THEN COALESCE(CAST(json_extract(o.state,'$.tx_amount') AS BIGINT), CAST(json_extract(o.state,'$.amount') AS BIGINT)) ELSE 0 END),0) AS pay FROM objects o JOIN objects a ON json_extract_string(o.state,'$.account') = a.object_id WHERE o.object_type = 'posting' AND a.object_type = 'account' AND o.root_event_id IN (SELECT DISTINCT root_event_id FROM objects WHERE object_type = 'purchase_invoice') GROUP BY 1) t ORDER BY root",
                 "columns": [
                     {
                         "field": "root_event",
-                        "label": "Root event"
+                        "label": "Root event",
+                        "type": "string"
                     },
                     {
                         "field": "receivable",
-                        "label": "Receivable"
+                        "label": "Receivable",
+                        "type": "money"
                     },
                     {
                         "field": "payable",
-                        "label": "Payable"
+                        "label": "Payable",
+                        "type": "money"
                     },
                     {
                         "field": "difference",
-                        "label": "Difference"
+                        "label": "Difference",
+                        "type": "money"
                     }
                 ]
             }

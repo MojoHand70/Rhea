@@ -213,10 +213,10 @@
       "spec": {
         "sql": "SELECT json_extract_string(i.state,'$.sku') AS sku, json_extract_string(i.state,'$.name') AS item, json_extract_string(l.state,'$.code') AS location, SUM(CASE WHEN json_extract_string(m.state,'$.direction') = 'in' THEN CAST(json_extract(m.state,'$.qty') AS BIGINT) ELSE -CAST(json_extract(m.state,'$.qty') AS BIGINT) END) AS on_hand FROM objects m JOIN objects i ON json_extract_string(m.state,'$.item') = i.object_id JOIN objects l ON json_extract_string(m.state,'$.location') = l.object_id WHERE m.object_type = 'stock_movement' AND i.object_type = 'item' AND l.object_type = 'location' GROUP BY 1, 2, 3 ORDER BY 1, 3",
         "columns": [
-          { "field": "sku", "label": "SKU" },
-          { "field": "item", "label": "Item" },
-          { "field": "location", "label": "Location" },
-          { "field": "on_hand", "label": "On hand" }
+          { "field": "sku", "label": "SKU", "type": "string" },
+          { "field": "item", "label": "Item", "type": "string" },
+          { "field": "location", "label": "Location", "type": "string" },
+          { "field": "on_hand", "label": "On hand", "type": "int" }
         ]
       }
     }

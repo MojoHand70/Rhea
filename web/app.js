@@ -270,15 +270,19 @@ function renderSimDiff(d) {
     el("strong", {}, `If approved: ${added.length} object(s) materialize, ` +
       `${changed.length} change, ${removed.length} disappear; ` +
       `unexplained events ${before} → ${after}.`));
+  // The diff endpoint is not typed yet (readable diffs are their own stage);
+  // wrap its plain strings into the shapes dataTable speaks.
+  const cols = (names) => names.map(n => ({ label: n }));
+  const cells = (vals) => vals.map(v => ({ v }));
   const objTable = (title, objs) => {
     if (!objs.length) return;
-    box.append(el("h3", {}, title), dataTable(["object", "rule", "state"],
-      objs.map(o => [o.object_id, `${o.rule_id} v${o.rule_version}`, JSON.stringify(o.state)])));
+    box.append(el("h3", {}, title), dataTable(cols(["object", "rule", "state"]),
+      objs.map(o => cells([o.object_id, `${o.rule_id} v${o.rule_version}`, JSON.stringify(o.state)]))));
   };
   objTable("Would materialize", added);
   if (changed.length) {
-    box.append(el("h3", {}, "Would change"), dataTable(["object", "before", "after"],
-      changed.map(c => [c.after.object_id, JSON.stringify(c.before.state), JSON.stringify(c.after.state)])));
+    box.append(el("h3", {}, "Would change"), dataTable(cols(["object", "before", "after"]),
+      changed.map(c => cells([c.after.object_id, JSON.stringify(c.before.state), JSON.stringify(c.after.state)]))));
   }
   objTable("Would disappear", removed);
   if ((d.errors || []).length) box.append(el("h3", {}, "Simulation errors"), el("pre", {}, d.errors.join("\n")));

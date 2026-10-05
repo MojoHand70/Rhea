@@ -78,6 +78,15 @@ so the next session does not re-derive them.
 - Analysis columns gain an optional declared `type`; a declared money column
   arrives from DuckDB as BIGINT minor units and crosses as the decimal
   string. Undeclared columns stay bare strings for the renderer.
+- **Analysis SQL emits data, not formatting**: every `printf` money wrapper
+  left the analysis specs; the assertions did not change by one character,
+  because the same canonical strings now cross the boundary from the typed
+  contract instead of from SQL — which is the proof the contract holds. Seed
+  fixtures were edited in place with versions untouched (the append-only law
+  binds the database, not testdata; bumping versions across staged seed files
+  would scramble the stages); the changed pack views were bumped (rejestr v3,
+  ust v3; pl pack v5, de pack v3) because packs are the distribution vehicle
+  and version discipline is the point there.
 
 ## 2026-10-05 — design tokens: the aesthetic contract is a file
 
