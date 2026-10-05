@@ -40,10 +40,10 @@ type ActivitySpec struct {
 }
 
 // ReservedEventType reports whether an event type belongs to the kernel: the
-// materialization namespace, and the rule.* / activity.* system-verb
-// namespaces that only declared system activities may speak in.
+// materialization and amendment namespaces, and the rule.* / activity.*
+// system-verb namespaces that only declared system activities may speak in.
 func ReservedEventType(t string) bool {
-	return t == EventObjectMaterialized ||
+	return t == EventObjectMaterialized || t == EventObjectAmended ||
 		strings.HasPrefix(t, "rule.") || strings.HasPrefix(t, "activity.")
 }
 

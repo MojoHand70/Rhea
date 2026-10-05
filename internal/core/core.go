@@ -42,6 +42,12 @@ const (
 	// EventObjectMaterialized is the derived event the executor emits when a
 	// rule fires; its payload is a MaterializedObject.
 	EventObjectMaterialized = "object.materialized"
+
+	// EventObjectAmended is the derived event an amend effect emits: an
+	// existing object's declared lifecycle moving, as a logged, provenanced
+	// delta — status is a projection, never an update (DECISIONS 2026-10-05,
+	// the amendment). Its payload is an AmendedObject.
+	EventObjectAmended = "object.amended"
 )
 
 // MaterializedObject is the payload of an object.materialized event and the
@@ -53,6 +59,17 @@ type MaterializedObject struct {
 	State       map[string]any `json:"state"`
 }
 
+// AmendedObject is the payload of an object.amended event: the delta a rule
+// firing applied to an existing object, values baked at firing time so
+// replay never re-evaluates. The delta is the explanation; the object's
+// current state is the projection of its materialization plus every
+// amendment, in log order.
+type AmendedObject struct {
+	ObjectID   string         `json:"object_id"`
+	ObjectType string         `json:"object_type"`
+	Set        map[string]any `json:"set"`
+}
+
 // ObjectType is a schema as data.
 type ObjectType struct {
 	Name       string     `json:"name"`
@@ -61,6 +78,19 @@ type ObjectType struct {
 	IsDocument bool       `json:"is_document"`
 	LabelField string     `json:"label_field,omitempty"` // field shown when another object references this one
 	Fields     []FieldDef `json:"fields"`
+	// Lifecycle declares that objects of this type have a life: which enum
+	// field carries it and which transitions are legal. Declaring it is the
+	// type's consent to amendment — a rule may amend only types with a
+	// lifecycle, and the kernel validates every move of the lifecycle field
+	// against the declared transitions, the way it validates balance.
+	Lifecycle *LifecycleDef `json:"lifecycle,omitempty"`
+}
+
+// LifecycleDef: the status field and its allowed moves, as data. The initial
+// status at materialization is unconstrained beyond the enum's value set.
+type LifecycleDef struct {
+	Field       string              `json:"field"`
+	Transitions map[string][]string `json:"transitions"` // from → allowed to
 }
 
 type FieldDef struct {
@@ -109,6 +139,28 @@ func (t ObjectType) Validate() error {
 	if t.LabelField != "" {
 		if _, ok := t.Field(t.LabelField); !ok {
 			return fmt.Errorf("label_field %q is not a field of %q", t.LabelField, t.Name)
+		}
+	}
+	if lc := t.Lifecycle; lc != nil {
+		fd, ok := t.Field(lc.Field)
+		if !ok {
+			return fmt.Errorf("lifecycle field %q is not a field of %q", lc.Field, t.Name)
+		}
+		if fd.Type != "enum" {
+			return fmt.Errorf("lifecycle field %q must be an enum", lc.Field)
+		}
+		if len(lc.Transitions) == 0 {
+			return fmt.Errorf("lifecycle of %q declares no transitions", t.Name)
+		}
+		for from, tos := range lc.Transitions {
+			if !slices.Contains(fd.Values, from) {
+				return fmt.Errorf("lifecycle transition from %q: not a value of %q", from, lc.Field)
+			}
+			for _, to := range tos {
+				if !slices.Contains(fd.Values, to) {
+					return fmt.Errorf("lifecycle transition %q→%q: not a value of %q", from, to, lc.Field)
+				}
+			}
 		}
 	}
 	return nil
@@ -174,12 +226,27 @@ type Condition struct {
 	Value any    `json:"value,omitempty"`
 }
 
-// Effect is what a firing rule does: materialize one object, or post one
-// balanced journal entry (the double-entry sub-language, SPEC M1). Exactly
-// one of the two; Object's zero value means absent.
+// Effect is what a firing rule does: materialize one object, post one
+// balanced journal entry (the double-entry sub-language, SPEC M1), or amend
+// an existing object's declared lifecycle (the amendment, DECISIONS
+// 2026-10-05). Exactly one of the three; Object's zero value means absent.
 type Effect struct {
 	Object   ObjectTemplate    `json:"object,omitempty"`
 	Postings *PostingsTemplate `json:"postings,omitempty"`
+	Amend    *AmendTemplate    `json:"amend,omitempty"`
+}
+
+// AmendTemplate moves an existing object: Target resolves the object's id
+// (a =$.path carrying an id the door or a prior resolution vouched, or a
+// =ref() resolution — never a literal), Set maps fields to value templates.
+// The amended type must declare a lifecycle — amendment is consent-based —
+// and a Set touching the lifecycle field must move along a declared
+// transition. An amendment whose target does not exist is a rule error and
+// the event waits in the worklist; nothing half-applies.
+type AmendTemplate struct {
+	Type   string            `json:"type"`
+	Target string            `json:"target"`
+	Set    map[string]string `json:"set"`
 }
 
 // PostingsTemplate expands into the lines of one journal entry, materialized
@@ -244,6 +311,11 @@ func (s RuleSpec) Validate(target *ObjectType) error {
 	if s.Match.EventType == "" {
 		return fmt.Errorf("match.event_type is required")
 	}
+	// Amendments end their branch of the chain: nothing fires on them, so a
+	// rule matching object.amended would be silently dead — refused instead.
+	if s.Match.EventType == EventObjectAmended {
+		return fmt.Errorf("rules cannot match %s — amendments end chains", EventObjectAmended)
+	}
 	for _, c := range s.Match.Where {
 		switch c.Op {
 		case "eq", "ne", "exists", "gt", "lt":
@@ -254,11 +326,24 @@ func (s RuleSpec) Validate(target *ObjectType) error {
 			return fmt.Errorf("condition path %q: %w", c.Path, err)
 		}
 	}
+	effects := 0
+	if s.Effect.Object.Type != "" || len(s.Effect.Object.Fields) > 0 {
+		effects++
+	}
 	if s.Effect.Postings != nil {
-		if s.Effect.Object.Type != "" || len(s.Effect.Object.Fields) > 0 {
-			return fmt.Errorf("effect has both object and postings; a rule does one")
-		}
+		effects++
+	}
+	if s.Effect.Amend != nil {
+		effects++
+	}
+	if effects > 1 {
+		return fmt.Errorf("effect has more than one of object/postings/amend; a rule does one")
+	}
+	if s.Effect.Postings != nil {
 		return s.Effect.Postings.validate()
+	}
+	if s.Effect.Amend != nil {
+		return s.Effect.Amend.validate(target)
 	}
 	if s.Effect.Object.Type == "" {
 		return fmt.Errorf("effect.object.type is required")
@@ -276,30 +361,8 @@ func (s RuleSpec) Validate(target *ObjectType) error {
 		}
 	}
 	for name, tmpl := range s.Effect.Object.Fields {
-		pt, err := ParseTemplate(tmpl)
-		if err != nil {
-			return fmt.Errorf("field %q template: %w", name, err)
-		}
-		if target == nil {
-			continue
-		}
-		fd, ok := target.Field(name)
-		if !ok {
-			return fmt.Errorf("field %q not in object type %q", name, target.Name)
-		}
-		// Ref fields and ref() templates must pair up, with matching targets:
-		// referential integrity is only guaranteed through resolution.
-		refTarget, isRef := RefTarget(fd.Type)
-		switch {
-		case isRef && pt.kind != "ref":
-			return fmt.Errorf("field %q is %s and must use =ref(%s, <field>, $.path)", name, fd.Type, refTarget)
-		case !isRef && pt.kind == "ref":
-			return fmt.Errorf("field %q is %s, not a ref", name, fd.Type)
-		case isRef && pt.refType != refTarget:
-			return fmt.Errorf("field %q is %s but template resolves a %q", name, fd.Type, pt.refType)
-		}
-		if fd.Type == "enum" && pt.kind == "literal" && !slices.Contains(fd.Values, pt.raw) {
-			return fmt.Errorf("field %q: %q is not one of %v", name, pt.raw, fd.Values)
+		if err := checkFieldTemplate(target, name, tmpl); err != nil {
+			return err
 		}
 	}
 	if target != nil {
@@ -312,6 +375,78 @@ func (s RuleSpec) Validate(target *ObjectType) error {
 					return fmt.Errorf("required field %q missing from template", f.Name)
 				}
 			}
+		}
+	}
+	return nil
+}
+
+// checkFieldTemplate validates one field template, against the target type
+// when supplied: ref fields and ref() templates must pair up with matching
+// targets (referential integrity only through resolution), and literal enum
+// values must be in the declared set. Shared by materialization fields and
+// amendment sets.
+func checkFieldTemplate(target *ObjectType, name, tmpl string) error {
+	pt, err := ParseTemplate(tmpl)
+	if err != nil {
+		return fmt.Errorf("field %q template: %w", name, err)
+	}
+	if target == nil {
+		return nil
+	}
+	fd, ok := target.Field(name)
+	if !ok {
+		return fmt.Errorf("field %q not in object type %q", name, target.Name)
+	}
+	refTarget, isRef := RefTarget(fd.Type)
+	switch {
+	case isRef && pt.kind != "ref":
+		return fmt.Errorf("field %q is %s and must use =ref(%s, <field>, $.path)", name, fd.Type, refTarget)
+	case !isRef && pt.kind == "ref":
+		return fmt.Errorf("field %q is %s, not a ref", name, fd.Type)
+	case isRef && pt.refType != refTarget:
+		return fmt.Errorf("field %q is %s but template resolves a %q", name, fd.Type, pt.refType)
+	}
+	if fd.Type == "enum" && pt.kind == "literal" && !slices.Contains(fd.Values, pt.raw) {
+		return fmt.Errorf("field %q: %q is not one of %v", name, pt.raw, fd.Values)
+	}
+	return nil
+}
+
+// validate checks an amend template structurally; the lifecycle transition
+// itself is judged at expansion, where the object's current status is known.
+func (a *AmendTemplate) validate(target *ObjectType) error {
+	if a.Type == "" {
+		return fmt.Errorf("amend.type is required")
+	}
+	pt, err := ParseTemplate(a.Target)
+	if err != nil {
+		return fmt.Errorf("amend.target: %w", err)
+	}
+	switch pt.kind {
+	case "path":
+	case "ref":
+		if pt.refType != a.Type {
+			return fmt.Errorf("amend.target resolves a %q but the amendment is of %q", pt.refType, a.Type)
+		}
+	default:
+		return fmt.Errorf("amend.target wants =$.path or =ref(...), never a literal id")
+	}
+	if len(a.Set) == 0 {
+		return fmt.Errorf("amend.set is empty")
+	}
+	for name, tmpl := range a.Set {
+		if err := checkFieldTemplate(target, name, tmpl); err != nil {
+			return err
+		}
+	}
+	if target != nil {
+		if target.Name != a.Type {
+			return fmt.Errorf("amend targets %q but validated against %q", a.Type, target.Name)
+		}
+		// Amendment is consent-based: only a type that declares its life may
+		// be moved by rules.
+		if target.Lifecycle == nil {
+			return fmt.Errorf("type %q declares no lifecycle — amendment refused", target.Name)
 		}
 	}
 	return nil

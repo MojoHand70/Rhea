@@ -166,6 +166,22 @@ func (x *Executor) simulate(ctx context.Context, rules []core.Rule) (SimRun, err
 				continue
 			}
 			for _, n := range nodes {
+				if n.amend != nil {
+					// The simulated world amends in memory the way the live
+					// path amends the cache; the object exists — expansion
+					// read it through the same overlay.
+					o := objects[n.amend.ObjectID]
+					merged := make(map[string]any, len(o.State)+len(n.amend.Set))
+					for k, v := range o.State {
+						merged[k] = v
+					}
+					for k, v := range n.amend.Set {
+						merged[k] = v
+					}
+					o.State = merged
+					objects[o.ID] = o
+					continue
+				}
 				// Cascaded objects are attributed to the root event here: the
 				// intermediate derived events only get ids when really booked.
 				o := core.Object{

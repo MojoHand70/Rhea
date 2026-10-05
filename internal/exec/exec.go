@@ -53,13 +53,31 @@ func (x *Executor) ProcessPending(ctx context.Context) (int, []error) {
 	}
 }
 
-// chainNode is one would-be materialization in a cascade chain: the object a
-// rule firing produced, and which chain entry's derived event caused it
-// (-1 is the root raw event). Nodes book in chain order.
+// chainNode is one would-be consequence in a cascade chain: a
+// materialization or an amendment, the rule that produced it, and which
+// chain entry's derived event caused it (-1 is the root raw event). Nodes
+// book in chain order. Amendments end their branch: nothing fires on them.
 type chainNode struct {
 	mat   core.MaterializedObject
+	amend *core.AmendedObject
 	rule  core.Rule
 	cause int
+}
+
+// objectID names the object this node touches — the unit the same-id
+// conflict guard speaks about, for both kinds of consequence.
+func (n chainNode) objectID() string {
+	if n.amend != nil {
+		return n.amend.ObjectID
+	}
+	return n.mat.ObjectID
+}
+
+func (n chainNode) objectType() string {
+	if n.amend != nil {
+		return n.amend.ObjectType
+	}
+	return n.mat.ObjectType
 }
 
 // maxCascadeDepth caps chain generations — the loop guard for cascaded rules,
@@ -124,7 +142,7 @@ func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []cor
 		}
 		want := fmt.Sprintf("%v", value)
 		for _, n := range nodes[:visible] {
-			if n.mat.ObjectType == typ && fmt.Sprintf("%v", n.mat.State[field]) == want {
+			if n.amend == nil && n.mat.ObjectType == typ && fmt.Sprintf("%v", n.mat.State[field]) == want {
 				ids = append(ids, n.mat.ObjectID)
 			}
 		}
@@ -132,14 +150,34 @@ func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []cor
 	}
 	// State reads see what lookups see: the base world plus the chain's
 	// earlier generations (a rate materialized earlier in this chain is
-	// readable by a later firing).
+	// readable by a later firing), with earlier amendments merged in.
 	get := func(id string) (map[string]any, bool, error) {
+		var state map[string]any
 		for _, n := range nodes[:visible] {
-			if n.mat.ObjectID == id {
-				return n.mat.State, true, nil
+			if n.amend == nil && n.mat.ObjectID == id {
+				state = n.mat.State
 			}
 		}
-		return baseGet(id)
+		if state == nil {
+			s, ok, err := baseGet(id)
+			if err != nil || !ok {
+				return nil, false, err
+			}
+			state = s
+		}
+		for _, n := range nodes[:visible] {
+			if n.amend != nil && n.amend.ObjectID == id {
+				merged := make(map[string]any, len(state)+len(n.amend.Set))
+				for k, v := range state {
+					merged[k] = v
+				}
+				for k, v := range n.amend.Set {
+					merged[k] = v
+				}
+				state = merged
+			}
+		}
+		return state, true, nil
 	}
 	fire := func(ev core.Event, evPayload any, cause int) error {
 		idBase := fmt.Sprintf("%d", root.ID)
@@ -152,6 +190,18 @@ func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []cor
 				return err
 			}
 			if !ok {
+				continue
+			}
+			if r.Spec.Effect.Amend != nil {
+				am, err := x.expandAmend(ctx, r, evPayload, lookup, get)
+				if err != nil {
+					return err
+				}
+				if prev, clash := owner[am.ObjectID]; clash {
+					return fmt.Errorf("rules %s and %s both touch %s in one chain — conflicting rules need a human", prev, r.ID, am.ObjectID)
+				}
+				owner[am.ObjectID] = r.ID
+				nodes = append(nodes, chainNode{amend: am, rule: r, cause: cause})
 				continue
 			}
 			mats, err := x.expandEffect(ctx, root, idBase, r, evPayload, lookup, get)
@@ -176,11 +226,14 @@ func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []cor
 		if gen > maxCascadeDepth {
 			last := nodes[len(nodes)-1]
 			return nil, fmt.Errorf("cascade exceeded %d generations — rule %s keeps materializing %s",
-				maxCascadeDepth, last.rule.ID, last.mat.ObjectID)
+				maxCascadeDepth, last.rule.ID, last.objectID())
 		}
 		visible = hi
 		for i := lo; i < hi; i++ {
 			n := nodes[i]
+			if n.amend != nil {
+				continue // amendments end their branch: nothing fires on them
+			}
 			derived := core.Event{
 				Kind: core.KindDerived, Type: core.EventObjectMaterialized,
 				OccurredAt: root.OccurredAt, // business date is inherited down the chain
@@ -238,13 +291,37 @@ func (x *Executor) book(ctx context.Context, root core.Event, nodes []chainNode)
 
 	ids := make([]int64, len(nodes))
 	for i, n := range nodes {
-		matPayload, err := json.Marshal(n.mat)
-		if err != nil {
-			return err
-		}
 		cause := root.ID
 		if n.cause >= 0 {
 			cause = ids[n.cause]
+		}
+		if n.amend != nil {
+			amendPayload, err := json.Marshal(n.amend)
+			if err != nil {
+				return err
+			}
+			id, err := store.AppendEvent(ctx, tx, core.Event{
+				Kind:         core.KindDerived,
+				Type:         core.EventObjectAmended,
+				OccurredAt:   root.OccurredAt,
+				Payload:      amendPayload,
+				CauseEventID: &cause,
+				RuleID:       n.rule.ID,
+				RuleVersion:  n.rule.Version,
+				Actor:        "kernel",
+			})
+			if err != nil {
+				return err
+			}
+			ids[i] = id
+			if err := store.AmendObject(ctx, tx, n.amend.ObjectID, n.amend.Set); err != nil {
+				return err
+			}
+			continue
+		}
+		matPayload, err := json.Marshal(n.mat)
+		if err != nil {
+			return err
 		}
 		id, err := store.AppendEvent(ctx, tx, core.Event{
 			Kind:         core.KindDerived,
@@ -271,9 +348,9 @@ func (x *Executor) book(ctx context.Context, root core.Event, nodes []chainNode)
 	// naming the touched types, delivered only if this transaction commits.
 	touched, seen := []string{}, map[string]bool{}
 	for _, n := range nodes {
-		if !seen[n.mat.ObjectType] {
-			seen[n.mat.ObjectType] = true
-			touched = append(touched, n.mat.ObjectType)
+		if !seen[n.objectType()] {
+			seen[n.objectType()] = true
+			touched = append(touched, n.objectType())
 		}
 	}
 	if err := store.NotifyProjection(ctx, tx, strings.Join(touched, ",")); err != nil {
@@ -359,6 +436,78 @@ func (x *Executor) expandEffect(ctx context.Context, root core.Event, idBase str
 	return mats, nil
 }
 
+// expandAmend turns a matched amend rule into the delta it applies: target
+// resolved and vouched (the object exists, and identity is typed by
+// construction — <type>-… — so the id itself is the type check), values
+// baked in the payload's canonical encoding, and the lifecycle law enforced
+// where the kernel knows the current status: a Set touching the declared
+// lifecycle field must move along a declared transition, judged the way
+// balance is judged — at expansion, before anything books.
+func (x *Executor) expandAmend(ctx context.Context, r core.Rule, payload any, lookup core.Lookup, get core.Getter) (*core.AmendedObject, error) {
+	tmpl := r.Spec.Effect.Amend
+	objType, err := x.Store.GetObjectType(ctx, tmpl.Type)
+	if err != nil {
+		return nil, fmt.Errorf("rule %s v%d: %w", r.ID, r.Version, err)
+	}
+	if err := (core.RuleSpec{
+		Match:  core.Match{EventType: "-"},
+		Effect: core.Effect{Amend: tmpl},
+	}).Validate(&objType); err != nil {
+		return nil, fmt.Errorf("rule %s v%d: %w", r.ID, r.Version, err)
+	}
+	t, err := core.ParseTemplate(tmpl.Target)
+	if err != nil {
+		return nil, fmt.Errorf("rule %s v%d target: %w", r.ID, r.Version, err)
+	}
+	v, err := t.Eval(payload, core.FieldDef{}, lookup)
+	if err != nil {
+		return nil, fmt.Errorf("rule %s v%d target: %w", r.ID, r.Version, err)
+	}
+	id, ok := v.(string)
+	if !ok || id == "" {
+		return nil, fmt.Errorf("rule %s v%d target: %v is not an object id", r.ID, r.Version, v)
+	}
+	if !strings.HasPrefix(id, tmpl.Type+"-") {
+		return nil, fmt.Errorf("rule %s v%d: %q is not a %s", r.ID, r.Version, id, tmpl.Type)
+	}
+	cur, found, err := get(id)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return nil, fmt.Errorf("rule %s v%d amend: no %s %q — the event waits for its object", r.ID, r.Version, tmpl.Type, id)
+	}
+	set := make(map[string]any, len(tmpl.Set))
+	for name, raw := range tmpl.Set {
+		fd, _ := objType.Field(name)
+		tp, err := core.ParseTemplate(raw)
+		if err != nil {
+			return nil, fmt.Errorf("rule %s v%d set %q: %w", r.ID, r.Version, name, err)
+		}
+		val, err := tp.Eval(payload, fd, lookup)
+		if err != nil {
+			return nil, fmt.Errorf("rule %s v%d set %q: %w", r.ID, r.Version, name, err)
+		}
+		set[name] = val
+	}
+	lc := objType.Lifecycle // non-nil: amendment is consent-based, Validate enforced it
+	if nv, touched := set[lc.Field]; touched {
+		from, _ := cur[lc.Field].(string)
+		to, _ := nv.(string)
+		allowed := false
+		for _, candidate := range lc.Transitions[from] {
+			if candidate == to {
+				allowed = true
+			}
+		}
+		if !allowed {
+			return nil, fmt.Errorf("rule %s v%d: %s %s→%s is not a declared transition of %s",
+				r.ID, r.Version, lc.Field, from, to, objType.Name)
+		}
+	}
+	return &core.AmendedObject{ObjectID: id, ObjectType: tmpl.Type, Set: set}, nil
+}
+
 // Expand evaluates every field template against the payload, typed by the
 // object type. Missing required fields, evaluation failures or unresolvable
 // refs abort the whole expansion — a half-materialized object never exists.
@@ -403,22 +552,32 @@ func (x *Executor) Replay(ctx context.Context) ([]core.Object, error) {
 	}
 	var out []core.Object
 	for _, ev := range derived {
-		if ev.Type != core.EventObjectMaterialized {
-			continue
+		switch ev.Type {
+		case core.EventObjectMaterialized:
+			var mat core.MaterializedObject
+			if err := json.Unmarshal(ev.Payload, &mat); err != nil {
+				return nil, fmt.Errorf("derived event %d: %w", ev.ID, err)
+			}
+			o := core.Object{
+				ID: mat.ObjectID, Type: mat.ObjectType, TypeVersion: mat.TypeVersion,
+				State: mat.State, SourceEventID: *ev.CauseEventID,
+				RuleID: ev.RuleID, RuleVersion: ev.RuleVersion,
+			}
+			if err := store.InsertObject(ctx, tx, o); err != nil {
+				return nil, err
+			}
+			out = append(out, o)
+		case core.EventObjectAmended:
+			// Amendments re-apply in log order, deltas baked at firing time —
+			// replay never re-evaluates, so determinism is by construction.
+			var am core.AmendedObject
+			if err := json.Unmarshal(ev.Payload, &am); err != nil {
+				return nil, fmt.Errorf("derived event %d: %w", ev.ID, err)
+			}
+			if err := store.AmendObject(ctx, tx, am.ObjectID, am.Set); err != nil {
+				return nil, fmt.Errorf("derived event %d: %w", ev.ID, err)
+			}
 		}
-		var mat core.MaterializedObject
-		if err := json.Unmarshal(ev.Payload, &mat); err != nil {
-			return nil, fmt.Errorf("derived event %d: %w", ev.ID, err)
-		}
-		o := core.Object{
-			ID: mat.ObjectID, Type: mat.ObjectType, TypeVersion: mat.TypeVersion,
-			State: mat.State, SourceEventID: *ev.CauseEventID,
-			RuleID: ev.RuleID, RuleVersion: ev.RuleVersion,
-		}
-		if err := store.InsertObject(ctx, tx, o); err != nil {
-			return nil, err
-		}
-		out = append(out, o)
 	}
 	// A replay rewrites the whole cache; every live screen should look again.
 	if err := store.NotifyProjection(ctx, tx, "replay"); err != nil {

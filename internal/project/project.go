@@ -67,6 +67,9 @@ func Rebuild(ctx context.Context, s *store.Store, duckPath string) (int, error) 
 	}
 	// A cause that is itself a derived event chains onward; causes precede
 	// their effects in the log, so one ordered pass resolves every root.
+	// Rows build in memory first: amendments merge into the state their
+	// materialization produced, in log order, and only the final projection
+	// lands in DuckDB — same replay, different sink.
 	root := map[int64]int64{}
 	rootOf := func(cause int64) int64 {
 		if r, ok := root[cause]; ok {
@@ -74,25 +77,51 @@ func Rebuild(ctx context.Context, s *store.Store, duckPath string) (int, error) 
 		}
 		return cause // a raw event: the chain's root
 	}
-	n := 0
+	type row struct {
+		mat  core.MaterializedObject
+		ev   core.Event
+		root int64
+	}
+	var order []string
+	rows := map[string]*row{}
 	for _, ev := range derived {
 		root[ev.ID] = rootOf(*ev.CauseEventID)
-		if ev.Type != core.EventObjectMaterialized {
-			continue
+		switch ev.Type {
+		case core.EventObjectMaterialized:
+			var mat core.MaterializedObject
+			if err := json.Unmarshal(ev.Payload, &mat); err != nil {
+				return 0, fmt.Errorf("derived event %d: %w", ev.ID, err)
+			}
+			if _, seen := rows[mat.ObjectID]; !seen {
+				order = append(order, mat.ObjectID)
+			}
+			rows[mat.ObjectID] = &row{mat: mat, ev: ev, root: root[ev.ID]}
+		case core.EventObjectAmended:
+			var am core.AmendedObject
+			if err := json.Unmarshal(ev.Payload, &am); err != nil {
+				return 0, fmt.Errorf("derived event %d: %w", ev.ID, err)
+			}
+			r, ok := rows[am.ObjectID]
+			if !ok {
+				return 0, fmt.Errorf("derived event %d amends unknown object %q", ev.ID, am.ObjectID)
+			}
+			for k, v := range am.Set {
+				r.mat.State[k] = v
+			}
 		}
-		var mat core.MaterializedObject
-		if err := json.Unmarshal(ev.Payload, &mat); err != nil {
-			return 0, fmt.Errorf("derived event %d: %w", ev.ID, err)
-		}
-		state, err := json.Marshal(mat.State)
+	}
+	n := 0
+	for _, id := range order {
+		r := rows[id]
+		state, err := json.Marshal(r.mat.State)
 		if err != nil {
 			return 0, err
 		}
 		if _, err := tx.ExecContext(ctx, `
 			INSERT INTO objects VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			mat.ObjectID, mat.ObjectType, mat.TypeVersion, string(state),
-			*ev.CauseEventID, ev.RuleID, ev.RuleVersion, ev.OccurredAt,
-			root[ev.ID]); err != nil {
+			r.mat.ObjectID, r.mat.ObjectType, r.mat.TypeVersion, string(state),
+			*r.ev.CauseEventID, r.ev.RuleID, r.ev.RuleVersion, r.ev.OccurredAt,
+			r.root); err != nil {
 			return 0, err
 		}
 		n++

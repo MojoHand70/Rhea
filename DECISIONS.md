@@ -55,6 +55,52 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-05 — the amendment earns admission: status is a projection
+
+The third closed-class change (after `book` and `convert`), admitted by all
+four governance rules: the cases attempt below is the fail-as-data proof;
+the invariant is consent + declared transitions; the determinism proof and
+the network test land with the shape.
+
+- **The shape**: `effect.amend` = `{type, target, set}` — tiny and
+  declarative (the network test). Target is `=$.path` (an id the door or a
+  prior resolution vouched) or `=ref(...)`, never a literal. Set is field
+  templates, evaluated with the same typed machinery as materialization
+  fields, values baked into the derived event at firing time.
+- **The event**: `object.amended`, kind derived, payload
+  `{object_id, object_type, set}` — the delta IS the explanation, with
+  `(cause_event_id, rule_id, rule_version)` like every derived fact. Raw
+  `object.amended` is refused at append alongside `object.materialized`;
+  both join `ReservedEventType`.
+- **The invariant (no invariant, no primitive)**: amendment is
+  *consent-based* — only a type that declares `lifecycle: {field,
+  transitions}` may be amended, and a Set touching the lifecycle field must
+  move along a declared transition, judged at expansion where the current
+  status is known — the way balance is judged. Initial status at
+  materialization stays unconstrained beyond the enum.
+- **Determinism**: replay re-applies baked deltas in log order (`state ||
+  delta` in the cache; the DuckDB rebuild merges in memory); a test wipes
+  and replays to identical state. Simulation applies amendments in its
+  in-memory world, so the approval gate shows the move field-level
+  (before → after) before it is real.
+- **Amendments end their branch of the chain**: nothing fires on
+  `object.amended`, and a rule matching it is refused at validation rather
+  than dying silently. A cascade-on-amendment joins the language when a
+  domain fails without it, not before.
+- **Ambiguity stays human**: two rules amending one object on one event is
+  a conflict — the event refuses whole, same as same-id materialization.
+  Within a chain, later generations read amended state (the get overlay
+  merges earlier amendments); lookups still see materialized values only.
+- **Fail-as-data all the way down**: an amendment whose target does not
+  exist waits in the worklist and applies on a later pass — the fixpoint
+  settles out-of-order arrivals (resolution before complaint) in one
+  ProcessPending.
+- **Scoped out, named exits**: amendments do not check period locks (the
+  stance lands when a financial domain amends — postings are untouched by
+  this effect); as-of replay with a cutoff is machinery already paid for,
+  built when a question asks it; the agent is not yet taught to draft
+  amend effects (phase (a) vocabulary work).
+
 ## 2026-10-05 — cases attempt: raising carries, closing fails as pure data
 
 The next falsifiability test (DIRECTION: express Alpha's case model as pure

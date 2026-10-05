@@ -84,10 +84,10 @@ type Querier interface {
 // --- events ---------------------------------------------------------------
 
 func AppendEvent(ctx context.Context, q Querier, ev core.Event) (int64, error) {
-	// The materialization namespace is the kernel's own: a raw event spelled
-	// like a derived one could trigger cascade rules without the fact they
-	// claim to report ever having happened.
-	if ev.Kind == core.KindRaw && ev.Type == core.EventObjectMaterialized {
+	// The object.* namespace is the kernel's own: a raw event spelled like a
+	// derived one could trigger cascade rules — or claim an amendment — for
+	// a fact that never happened.
+	if ev.Kind == core.KindRaw && (ev.Type == core.EventObjectMaterialized || ev.Type == core.EventObjectAmended) {
 		return 0, fmt.Errorf("event type %q is reserved for the kernel", ev.Type)
 	}
 	// The system-verb namespaces belong to declared doors: a raw rule.* or
@@ -447,6 +447,25 @@ func InsertObject(ctx context.Context, q Querier, o core.Object) error {
 		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 		o.ID, o.Type, o.TypeVersion, state, o.SourceEventID, o.RuleID, o.RuleVersion)
 	return err
+}
+
+// AmendObject merges an amendment's baked delta into the cached state. The
+// object table is the kernel's rebuildable cache (invariant 7) — this is the
+// executor/replayer applying an object.amended event, never anyone editing.
+func AmendObject(ctx context.Context, q Querier, objectID string, set map[string]any) error {
+	delta, err := json.Marshal(set)
+	if err != nil {
+		return err
+	}
+	tag, err := q.Exec(ctx,
+		`UPDATE object SET state = state || $2::jsonb WHERE object_id = $1`, objectID, delta)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() != 1 {
+		return fmt.Errorf("amendment of %q touched %d objects, want exactly 1", objectID, tag.RowsAffected())
+	}
+	return nil
 }
 
 func (s *Store) WipeObjects(ctx context.Context) error {
