@@ -601,6 +601,24 @@ records the gate's own birth, and the door stamp landed day one.
   policies should be objects and rules like everything else — a good
   falsifiability test of its own, post-M2. Until then: actor attribution
   only, no auth (experiment non-goal).
+- **Scheduling ships with its hand on the switch** (KK, 2026-10-05:
+  thirty years of implementations say scheduling is where automation
+  outruns organic, unorganized reality — leave a space to switch it off).
+  The off switches are mechanisms the language already has, at three
+  granularities, and M5 must preserve them rather than invent a toggle:
+  per behavior, supersede the rule (the lifecycle is the kill switch,
+  with the log answering "who turned it off and why"); per schedule,
+  amend the schedule object's status (active ⇄ paused as declared
+  transitions — the amendment's first operational customer); globally,
+  stop the clock adapter — time stops arriving and the log says so
+  honestly. The constraint this adds to M5: **re-entry is gated. Steady
+  state is automatic, bursts need a human.** After a gap the adapter
+  never floods the missed days in; it proposes them — "N days unopened;
+  opening them fires this" — behind the same simulation-then-approval
+  gate everything passes, a deliberate act with a dry-run, sibling to
+  ruled backfill. Trust comes from the same physics: every automated
+  firing provenance-chains to its time event, and a misfiring schedule
+  fails as data into the worklist, never silently.
 - **Multi-company is a ref, multi-tenant is infrastructure.** The operating
   company will be a `company` object (`kind: self`) that events reference;
   tenancy stays out of the experiment. Promoted (KK, 2026-10-04): enterprise
