@@ -70,7 +70,8 @@ function selectDomain(domain) {
         el("div", { class: "menu-item", onclick: () => openRules() }, "All rules"));
     } else if (fn.function === "language") {
       menu.append(el("h2", {}, fn.function),
-        el("div", { class: "menu-item", onclick: () => openLanguage() }, "Object types"));
+        el("div", { class: "menu-item", onclick: () => openLanguage() }, "Object types"),
+        el("div", { class: "menu-item", onclick: () => openVerbs() }, "Verbs"));
     } else {
       // View groups fold (native disclosure): a pack can land a dozen types
       // as derived lists under one function, and the submenu must stay
@@ -238,6 +239,16 @@ function renderDetail(d) {
         [el("div", { class: "k" }, f.label),
          el("div", f.type === "money" ? { class: "num-inline" } : {}, cellContent(f, f.type))]))));
   }
+  // Contextual verbs: active activities whose ref inputs name this type —
+  // what can be done to what is shown, offered generically (the surfacing
+  // convention cases will lean on).
+  if (d.activities && d.activities.length) {
+    out.push(el("div", { class: "row", style: "margin-top:12px" },
+      ...d.activities.map(a => el("button", {
+        title: a.description,
+        onclick: () => openVerbForm(a.name, { [a.ref_input]: d.object.object_id }),
+      }, verbLabel(a.name)))));
+  }
   const p = d.provenance;
   out.push(el("p", { class: "provenance" },
     `Explained by: event ${p.event_id} via rule ${p.rule_id} v${p.rule_version} — `,
@@ -266,7 +277,8 @@ function openExplain(q) {
         (n.event_id === asked ? " asked" : "");
       const head = el("div", { class: cls },
         el("span", { class: "explain-event" }, `#${n.event_id} ${n.event_type}`),
-        el("span", { class: "hint" }, ` ${n.occurred_at}${n.actor ? " · " + n.actor : ""}`));
+        el("span", { class: "hint" }, ` ${n.occurred_at}${n.actor ? " · " + n.actor : ""}` +
+          (n.activity ? ` · through ${n.activity} v${n.activity_version}` : "")));
       if (n.rule_id) {
         head.append(el("div", { class: "explain-line" },
           `via rule ${n.rule_id} v${n.rule_version}`,
@@ -327,7 +339,8 @@ function openWorklist() {
       out.push(el("div", { class: "draft-form" },
         el("div", { class: "row" },
           el("strong", {}, `#${ev.event_id} ${ev.event_type}`),
-          el("span", { class: "hint" }, ev.occurred_at)),
+          el("span", { class: "hint" }, ev.occurred_at +
+            (ev.activity_name ? ` · through ${ev.activity_name} v${ev.activity_version}` : ""))),
         el("details", {}, el("summary", {}, "payload"),
           el("pre", {}, JSON.stringify(ev.payload, null, 2))),
         draftForm(ev, d.object_types)));
@@ -564,4 +577,210 @@ function openType(name) {
   }, true);
 }
 
+/* --- system function: verbs ------------------------------------------------
+   The second vocabulary: what can be done, next to what can be seen. Every
+   verb is declared data — typed inputs, the event it emits, who may trigger
+   (declared, never enforced) — and the trigger form derives from the
+   declaration the way list and detail derive from the ObjectType. The shell
+   knows how to render an activity; it knows no particular verb. */
+
+const verbLabel = (name) => name.replaceAll("_", " ");
+
+function openVerbs() {
+  openTab("verbs", "Verbs", async () => {
+    const acts = await api("/api/activities");
+    const out = [el("h1", {}, "Language — verbs"),
+      el("p", { class: "hint" },
+        "Every action the system offers is declared data behind the same gate as rules. " +
+        "An event emitted through a verb names its door — provenance on the raw side.")];
+    if (!acts.length) { out.push(el("p", { class: "hint" }, "No verbs yet.")); return out; }
+    const tbody = el("tbody", {});
+    for (const a of acts) {
+      const actions = el("td", {});
+      if (a.offered) {
+        actions.append(el("button", { class: "primary", onclick: () => openVerbForm(a.name) }, "Run"));
+      } else if (a.status === "draft") {
+        const b = el("button", {
+          onclick: async () => {
+            b.disabled = true;
+            try {
+              const res = await api(`/api/activities/${encodeURIComponent(a.name)}/approve`, {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ approved_by: "human" }),
+              });
+              toast(`${a.name} active (v${res.activity.version}).`);
+              refreshActive();
+            } catch (e) { toast(e.message, true); b.disabled = false; }
+          },
+        }, "Approve");
+        actions.append(b);
+      }
+      tbody.append(
+        el("tr", {},
+          el("td", {}, a.name), el("td", { class: "num" }, String(a.version)),
+          el("td", {}, el("span", { class: "status " + a.status }, a.status)),
+          el("td", {}, (a.spec.who || []).join(", ")),
+          el("td", {}, a.spec.emits),
+          el("td", { class: "num" }, String(a.events_emitted)),
+          el("td", {}, a.description), actions),
+        el("tr", {}, el("td", { colspan: "8" },
+          el("details", {}, el("summary", {}, "inputs"),
+            el("pre", {}, JSON.stringify(a.spec.inputs, null, 2))))));
+    }
+    out.push(el("table", {},
+      el("thead", {}, el("tr", {},
+        el("th", {}, "verb"), el("th", { class: "num" }, "ver"), el("th", {}, "status"),
+        el("th", {}, "who"), el("th", {}, "emits"), el("th", { class: "num" }, "events"),
+        el("th", {}, "description"), el("th", {}, ""))),
+      tbody));
+    return out;
+  }, true); // emitted counts move with the log
+}
+
+/* The derived action surface (SPEC §2's action notion): a trigger form built
+   from the verb's declared inputs. Prefill carries context — a detail view's
+   verb arrives with its ref input already naming the object. */
+function openVerbForm(name, prefill = {}) {
+  openTab(`verb:${name}`, verbLabel(name), async () => {
+    const acts = await api("/api/activities");
+    const a = acts.find(x => x.name === name && x.offered);
+    if (!a) return [el("p", { class: "hint" }, `Verb ${name} is not offered.`)];
+
+    const fields = [];
+    const controls = {};
+    for (const f of a.spec.inputs) {
+      let c;
+      if (f.type === "enum") {
+        c = el("select", {}, ...(f.required ? [] : [el("option", { value: "" }, "")]),
+          ...f.values.map(v => el("option", { value: v }, v)));
+      } else if (f.type === "json") {
+        c = el("textarea", { placeholder: '{ "field": "value", … }', spellcheck: "false" });
+      } else if (f.type === "date") {
+        c = el("input", { type: "date" });
+        if (f.name === "occurred_at") c.value = new Date().toISOString().slice(0, 10);
+      } else if (f.type === "int") {
+        c = el("input", { type: "number", step: "1" });
+      } else if (f.type === "money") {
+        c = el("input", { type: "text", placeholder: "0.00" });
+      } else if (f.type.startsWith("ref<")) {
+        c = el("input", { type: "text", placeholder: f.type.slice(4, -1) + " object id" });
+      } else {
+        c = el("input", { type: "text" });
+      }
+      if (prefill[f.name] !== undefined) c.value = prefill[f.name];
+      controls[f.name] = { control: c, def: f };
+      fields.push(el("div", { class: "k" }, f.name + (f.required ? " *" : "")), c);
+    }
+
+    const btn = el("button", {
+      class: "primary",
+      onclick: async () => {
+        const inputs = {};
+        for (const [fname, { control, def }] of Object.entries(controls)) {
+          const raw = control.value.trim();
+          if (raw === "") {
+            if (def.required) { toast(`${fname} is required.`, true); return; }
+            continue;
+          }
+          if (def.type === "int") inputs[fname] = Number(raw);
+          else if (def.type === "json") {
+            try { inputs[fname] = JSON.parse(raw); }
+            catch { toast(`${fname}: not valid JSON.`, true); return; }
+          } else inputs[fname] = raw;
+        }
+        btn.disabled = true; btn.textContent = "Running…";
+        try {
+          const res = await api(`/api/activities/${encodeURIComponent(name)}/trigger`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ inputs }),
+          });
+          toast(`Event #${res.event_id} appended; booked ${res.booked}.` +
+            (res.errors ? ` Worklist: ${res.errors}` : ""));
+        } catch (e) { toast(e.message, true); }
+        btn.disabled = false; btn.textContent = "Run";
+      },
+    }, "Run");
+
+    return [
+      el("h1", {}, verbLabel(a.name)),
+      el("p", { class: "hint" }, a.description +
+        ` — emits ${a.spec.emits}${a.spec.who ? "; who: " + a.spec.who.join(", ") : ""}.`),
+      el("div", { class: "draft-form" },
+        el("div", { class: "kv" }, ...fields),
+        el("div", { class: "row", style: "margin-top:12px" }, btn)),
+    ];
+  });
+}
+
+/* --- omnibox ----------------------------------------------------------------
+   ⌘K: jump to any view by name, or run any offered verb — "›" marks verbs,
+   and a leading ">" filters to them (Alpha's shell convention). The omnibox
+   is the two vocabularies in one line: what can be seen, what can be done. */
+
+function omniEntries(acts) {
+  const entries = [];
+  for (const d of NAV) {
+    for (const fn of d.functions) {
+      for (const v of (fn.views || [])) {
+        if (v.notion === "detail") continue;
+        entries.push({ kind: "view", label: v.title, hint: v.notion,
+          run: () => openView(v.view_id, v.title) });
+      }
+    }
+  }
+  entries.push(
+    { kind: "view", label: "Worklist", hint: "system", run: openWorklist },
+    { kind: "view", label: "Rules", hint: "system", run: openRules },
+    { kind: "view", label: "Language", hint: "system", run: openLanguage },
+    { kind: "view", label: "Verbs", hint: "system", run: openVerbs });
+  for (const a of acts) {
+    if (!a.offered) continue;
+    entries.push({ kind: "verb", label: verbLabel(a.name), hint: a.spec.emits,
+      run: () => openVerbForm(a.name) });
+  }
+  return entries;
+}
+
+function installOmnibox() {
+  const box = $("#omnibox"), input = $("#omnibox-input"), results = $("#omnibox-results");
+  let entries = [];
+  const close = () => { box.hidden = true; input.value = ""; };
+  const open = async () => {
+    box.hidden = false; input.focus();
+    let acts = [];
+    try { acts = await api("/api/activities"); } catch { /* verbs just stay out */ }
+    entries = omniEntries(acts);
+    render();
+  };
+  const matches = () => {
+    let q = input.value.trim().toLowerCase();
+    const verbsOnly = q.startsWith(">");
+    if (verbsOnly) q = q.slice(1).trim();
+    return entries.filter(e =>
+      (!verbsOnly || e.kind === "verb") && e.label.toLowerCase().includes(q)).slice(0, 12);
+  };
+  const render = () => {
+    results.replaceChildren(...matches().map(e =>
+      el("div", { class: "omni-entry", onclick: () => { close(); e.run(); } },
+        el("span", { class: "omni-kind" }, e.kind === "verb" ? "›" : "·"),
+        e.label, el("span", { class: "hint", style: "margin:0 0 0 auto" }, e.hint))));
+  };
+  input.addEventListener("input", render);
+  input.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape") close();
+    if (ev.key === "Enter") {
+      const m = matches();
+      if (m.length) { close(); m[0].run(); }
+    }
+  });
+  box.addEventListener("click", (ev) => { if (ev.target === box) close(); });
+  document.addEventListener("keydown", (ev) => {
+    if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === "k") {
+      ev.preventDefault();
+      box.hidden ? open() : close();
+    }
+  });
+}
+
+installOmnibox();
 boot().catch(e => toast(e.message, true));

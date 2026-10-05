@@ -38,6 +38,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/rules/draft", s.handleDraft)
 	mux.HandleFunc("POST /api/rules/{id}/approve", s.handleApprove)
 	mux.HandleFunc("POST /api/rules/{id}/simulate", s.handleSimulate)
+	mux.HandleFunc("GET /api/activities", s.handleActivities)
+	mux.HandleFunc("POST /api/activities/{name}/trigger", s.handleTrigger)
+	mux.HandleFunc("POST /api/activities/{name}/approve", s.handleApproveActivity)
 	mux.HandleFunc("POST /api/events", s.handleSubmit)
 	mux.Handle("GET /", http.FileServerFS(web.FS))
 	return mux
@@ -345,10 +348,13 @@ func (s *Server) serveDetail(ctx context.Context, w http.ResponseWriter, vd *cor
 		sections = append(sections, so)
 	}
 	// Provenance crosses as data (invariant 5); the renderer phrases it.
+	// Activities ride along: the verbs whose ref inputs name this type — a
+	// detail view offers what can be done to what it shows.
 	writeJSON(w, 200, map[string]any{
 		"view": vd, "object": o, "sections": sections,
 		"provenance": map[string]any{"event_id": o.SourceEventID,
 			"rule_id": o.RuleID, "rule_version": o.RuleVersion},
+		"activities": s.verbsForType(ctx, o.Type),
 	})
 }
 

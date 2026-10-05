@@ -446,6 +446,15 @@ design experts can restyle later without touching behavior**.
   as they are today. The visual ladder's remaining rung: omnibox +
   activities-as-data, which waits on Activities being declared in the
   language (the replaceable-interpreter contract's second vocabulary).
+- **Shipped 2026-10-05, omnibox + activities as data** (see DECISIONS) —
+  the ladder's last rung, and the second vocabulary declared (section
+  below). The shell offers verbs the way it renders notions: a Verbs
+  catalog under Language (status, who, emits, events through each door),
+  trigger forms derived from the declaration the way list/detail derive
+  from the ObjectType, contextual verbs on every detail whose type a ref
+  input names, and ⌘K jumping to any view or running any verb (`>` filters
+  to verbs). The worklist and the provenance walk name each raw event's
+  door — the walk starts one hop earlier than the rules.
 
 One line: *the design language is tokens plus a closed set of notion
 primitives — the generic shell makes beauty a data change, so experts can
@@ -533,6 +542,15 @@ can be done" vocabulary both wait on exactly this.
 One line: *an activity is a declared door — typed at the verb, schemaless
 in the log, stamped on every event it emits — and the open door is itself
 the first declared activity.*
+
+**Shipped 2026-10-05** (see DECISIONS): the retrofit ran over all three
+verbs with the predicted findings — approve_rule's flip became a kernel
+reaction (and turned atomic in passing), submit_event became the declared
+passthrough, draft_rule's declaration carried while its fulfillment
+located the boundary exactly: reactions are deterministic, so the agent
+cannot be one; the ask is recorded as rule.draft_requested and consumed
+outside the kernel. approve_activity closed the governance loop, init
+records the gate's own birth, and the door stamp landed day one.
 
 ## Language decisions with a recorded destination
 

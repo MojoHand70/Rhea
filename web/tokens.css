@@ -74,6 +74,7 @@
   --danger: var(--red-400);
 
   --shadow-overlay: 0 4px 18px rgba(0, 0, 0, .4);
+  --scrim: rgba(0, 0, 0, .45);      /* backdrop behind overlays (omnibox)   */
 
   /* density + layout: a designer's knobs, not layout facts in app.css     */
   --size-activity-bar: 52px;
@@ -95,5 +96,6 @@
     --accent: var(--blue-600);
     --on-accent: var(--white);
     --shadow-overlay: 0 4px 18px rgba(28, 29, 34, .15);
+    --scrim: rgba(28, 29, 34, .25);
   }
 }

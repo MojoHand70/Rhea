@@ -27,14 +27,18 @@ type explainObject struct {
 }
 
 type explainNode struct {
-	EventID     int64  `json:"event_id"`
-	Kind        string `json:"kind"`
-	EventType   string `json:"event_type"`
-	OccurredAt  string `json:"occurred_at"`
-	Actor       string `json:"actor,omitempty"`
-	RuleID      string `json:"rule_id,omitempty"`
-	RuleVersion int    `json:"rule_version,omitempty"`
-	RuleDesc    string `json:"rule_description,omitempty"`
+	EventID    int64  `json:"event_id"`
+	Kind       string `json:"kind"`
+	EventType  string `json:"event_type"`
+	OccurredAt string `json:"occurred_at"`
+	Actor      string `json:"actor,omitempty"`
+	// The door a raw event came through: the walk starts one hop earlier
+	// than the rules — which declared verb created this fact.
+	Activity        string `json:"activity,omitempty"`
+	ActivityVersion int    `json:"activity_version,omitempty"`
+	RuleID          string `json:"rule_id,omitempty"`
+	RuleVersion     int    `json:"rule_version,omitempty"`
+	RuleDesc        string `json:"rule_description,omitempty"`
 	// Object is what this event materialized, when it did.
 	Object *explainObject `json:"object,omitempty"`
 	// Payload rides only on the raw root: the fact everything explains.
@@ -166,6 +170,7 @@ func (s *Server) buildExplainTree(ctx context.Context, ix *chainIndex, root core
 	build = func(ev core.Event) *explainNode {
 		n := &explainNode{EventID: ev.ID, Kind: ev.Kind, EventType: ev.Type,
 			OccurredAt: ev.OccurredAt, Actor: ev.Actor,
+			Activity: ev.ActivityName, ActivityVersion: ev.ActivityVersion,
 			RuleID: ev.RuleID, RuleVersion: ev.RuleVersion,
 			RuleDesc: descs[store.RuleKey{ID: ev.RuleID, Version: ev.RuleVersion}],
 			Children: []*explainNode{}}

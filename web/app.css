@@ -91,9 +91,10 @@ button:hover { border-color: var(--accent); color: var(--accent); }
 button.primary { background: var(--accent); border-color: var(--accent);
                  color: var(--on-accent); }
 button.primary:hover { filter: brightness(1.1); color: var(--on-accent); }
-textarea, select { background: var(--bg); color: var(--text);
+textarea, select, input { background: var(--bg); color: var(--text);
                    border: 1px solid var(--border); border-radius: var(--radius-sm);
-                   padding: var(--row-pad-y) var(--space-2); font: inherit; width: 100%; }
+                   padding: var(--row-pad-y) var(--space-2); font: inherit; width: 100%;
+                   box-sizing: border-box; }
 textarea { min-height: 70px; resize: vertical; }
 .draft-form { background: var(--surface); border: 1px solid var(--border);
               border-radius: var(--radius-md); padding: var(--space-3);
@@ -132,3 +133,20 @@ tr.diff-changed .k { color: var(--warn); }
          border-radius: var(--radius-md); padding: var(--space-2) var(--space-4);
          max-width: 420px; box-shadow: var(--shadow-overlay); }
 #toast.error { border-color: var(--danger); }
+
+/* omnibox: the two vocabularies in one line — views to see, verbs to run */
+#omnibox { position: fixed; inset: 0; background: var(--scrim);
+           display: flex; justify-content: center; align-items: flex-start; }
+#omnibox[hidden] { display: none; }
+#omnibox-panel { margin-top: 12vh; width: min(560px, 90vw);
+                 background: var(--surface); border: 1px solid var(--border);
+                 border-radius: var(--radius-md); box-shadow: var(--shadow-overlay);
+                 overflow: hidden; }
+#omnibox-input { border: none; border-bottom: 1px solid var(--border);
+                 border-radius: 0; background: var(--surface-raised);
+                 padding: var(--space-3); outline: none; }
+#omnibox-results { max-height: 50vh; overflow: auto; }
+.omni-entry { display: flex; gap: var(--space-2); align-items: center;
+              padding: var(--space-2) var(--space-3); cursor: pointer; }
+.omni-entry:hover { background: var(--surface-raised); }
+.omni-kind { color: var(--accent); font-weight: var(--weight-bold); }
