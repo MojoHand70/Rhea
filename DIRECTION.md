@@ -451,6 +451,89 @@ One line: *the design language is tokens plus a closed set of notion
 primitives — the generic shell makes beauty a data change, so experts can
 restyle without touching behavior.*
 
+## Activities as data: the second vocabulary (KK, 2026-10-05)
+
+Adopted as direction, from a design pass over the open questions carried
+in from another conversation. Activity has been one of the six concepts
+since the founding spec (§2: inputs, the raw event it emits, who may
+trigger), so this is **not a closed-class admission** — it materializes a
+declared concept, and the admission ceremony applies to its *shape*, via
+the retrofit test below. The omnibox rung and the phase-(a) agent's "what
+can be done" vocabulary both wait on exactly this.
+
+- **A door, never the door.** SPEC §2 already names `submit_event` as an
+  M0 activity: the free-form submit *is* the universal, degenerate
+  activity, and it can never be removed — fail-as-data requires
+  submitting what nobody declared yet, and the network measures
+  completeness by worklist residue; close the open door and the gauge
+  goes blind. A declared activity is a named, typed specialization
+  emitting a raw event of a declared type. Adapters remain the third
+  door (code behind the contract), never through activities.
+- **The schema belongs to the verb, not the event.** Inputs are
+  `FieldDef`s (no second type vocabulary), validated at trigger time —
+  before the event exists. The emitted event is a raw event like any
+  other: schemaless in the log, still needing a rule to explain it,
+  indistinguishable from a free-form submit of the same type except for
+  the door stamp. ActivityDefs are never consulted during replay; they
+  are not in the determinism path at all. ObjectType schemas govern
+  derived state (kernel-enforced); activity input schemas govern the
+  form a human fills (door-enforced courtesy).
+- **Provenance symmetry is the invariant that earns the keep** (no
+  invariant, no primitive). Derived events carry `(rule_id,
+  rule_version)`; raw events emitted through an activity carry
+  `(activity_id, activity_version)` — every event names its door, from
+  day one (KK, this conversation: retrofitting provenance later is the
+  kind of hole replay never forgives). Invariant 2 becomes literally
+  checkable (`rule.approved`'s door is `approve_rule`, who: human), and
+  the provenance walk starts one hop earlier: which declared verb
+  created this raw fact — a question no other ERP can answer about its
+  raw side.
+- **Rule lifecycle, with one semantic note.** draft → approved → active
+  → superseded, the same gate as everything; for an activity, `active`
+  means *offered and triggerable*, not *executes in replay* —
+  superseding one never touches the events it emitted. `rhea init`
+  seeds the builtins and records their activation events: the gate's
+  own birth is in the log. Phase (a) requires the gate anyway — drafted
+  bundles include activities ("register a complaint" is one).
+- **The retrofit falsifiability test**, run over all three shell verbs
+  (KK, this conversation: `draft_rule` is in), predictions kept for the
+  record. `approve_rule` nearly carries already: the handler appends
+  raw `rule.approved` *first*, then inserts the version row — the
+  retrofit moves the flip into an invariant-layer kernel reaction to
+  the event; the `rule_id` input is a string contortion (FieldDef refs
+  point at ObjectTypes, not definitions), exit named at
+  ref-to-definition. `submit_event` strains honestly — an open
+  event-type input plus a schemaless payload — and the passthrough
+  form is the answer: declaring the open gate as data makes the escape
+  hatch itself versioned and auditable rather than ambient.
+  `draft_rule` is the predicted negative case: SPEC M0 never listed
+  it, it emits no event today, and it is not an event-emitter by
+  nature but a request to another actor. Prediction: the shape refuses
+  it, and the refusal is the finding — either drafting routes to the
+  phase-(a) agent-as-user design, or the test forces
+  `rule.draft_requested` consumed by the agent from its own worklist,
+  and agent-as-user arrives earlier than planned. Either way,
+  DECISIONS.md records which.
+- **What cases will demand of the shape**: ref-typed inputs and
+  `list<ref>` (the reconciliation specimen's partial matches — one
+  operation settles several documents and vice versa), plus the
+  surfacing convention: a shell offers an activity on an object when
+  the activity declares a ref input of that object's type — how "the
+  one or two verbs that resolve it, inline" renders generically. The
+  guard smell is flagged, not designed: "resolving verbs only while the
+  case is open" must reuse the rule predicate vocabulary or stay out
+  (transition validation refuses the emitted event) — never a second
+  condition mechanism.
+- **`who` stays inert**: actor-pattern strings (`human`, `agent:*`),
+  displayed, never a Go enum with semantics, nothing the kernel acts
+  on. Actor attribution on every event is the real mechanism today;
+  when authz-in-the-language runs its own falsifiability test
+  (post-M2), policies-as-objects interpret the same strings.
+
+One line: *an activity is a declared door — typed at the verb, schemaless
+in the log, stamped on every event it emits — and the open door is itself
+the first declared activity.*
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
