@@ -138,10 +138,12 @@ const numericType = (t) => t === "money" || t === "int";
 
 /* Formats one typed cell into DOM content. A ref shows its label and carries
    the referenced object id in the tooltip (the provenance walk will make it
-   a link). Untyped columns (analysis without declarations) render as-is. */
+   a link); an enum renders as a chip, so state reads as state. Untyped
+   columns (analysis without declarations) render as-is. */
 function cellContent(cell, type) {
   const v = cell?.v ?? "";
   if (type === "money") return fmtMoney(v);
+  if (type === "enum") return v ? el("span", { class: "chip" }, v) : "";
   if (cell?.id && v !== cell.id) return el("span", { title: cell.id }, v);
   return v;
 }
@@ -417,8 +419,12 @@ function openType(name) {
     out.push(el("div", { class: "section" }, el("h3", {}, "Views"),
       ...(t.views.length
         ? t.views.map(v => el("p", {},
-            el("a", { href: "#", onclick: (e) => { e.preventDefault(); openView(v.view_id, v.title); } }, v.title),
-            el("span", { class: "hint" }, ` ${v.notion}${v.derived ? ", derived from the type" : ""}`)))
+            // A detail needs an object; it opens from its list, not from here.
+            v.notion === "detail"
+              ? v.title
+              : el("a", { href: "#", onclick: (e) => { e.preventDefault(); openView(v.view_id, v.title); } }, v.title),
+            el("span", { class: "hint" },
+              ` ${v.notion}${v.derived ? ", derived from the type" : ""}${v.notion === "detail" ? " — opens from its list" : ""}`)))
         : [el("p", { class: "hint" }, "No views — which cannot happen: list and detail derive from the type.")])));
 
     const rel = el("div", { class: "section" }, el("h3", {}, "Relations"));

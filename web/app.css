@@ -69,8 +69,14 @@ tr.clickable:hover td { background: var(--surface-raised); }
 .provenance { margin-top: var(--space-4); color: var(--text-muted);
               font-size: var(--text-sm); font-style: italic; }
 
-.status { font-size: var(--text-xs); padding: 2px var(--space-2);
-          border-radius: var(--radius-full); border: 1px solid var(--border); }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* .chip is the generic enum rendering; .status is the rules table's chip
+   with lifecycle colors. One primitive, two uses. */
+.chip, .status { font-size: var(--text-xs); padding: 2px var(--space-2);
+                 border-radius: var(--radius-full); border: 1px solid var(--border);
+                 white-space: nowrap; }
 .status.draft { color: var(--warn); } .status.active { color: var(--ok); }
 .status.approved, .status.superseded { color: var(--text-muted); }
 
