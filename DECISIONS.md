@@ -81,6 +81,23 @@ so the next session does not re-derive them.
   learns by explanation must be able to explain its own vocabulary; "what
   does Rhea recognize?" was answerable only by grepping seed files.
 
+## 2026-10-05 — the simulation diff is field-level and typed
+
+- **What the human reads at the approval gate is now fields, not JSON.** The
+  kernel's SimDiff crosses the boundary through the same cell encoding as
+  every view (money canonical, refs labeled, enums chipped): added and
+  removed objects as field lists, changed objects with before → after per
+  field and the changed ones flagged. The diff also names **the events the
+  rule would newly explain** — the other half of the approval question.
+- **Refs resolve against the hypothetical world first**: an added object may
+  reference another object that only exists if the rule is approved, so the
+  resolver consults the simulated set before the cache (`cellWith`, the one
+  encoding path, parameterized by resolver).
+- **No doors into a world that does not exist**: diff cells carry no detail
+  links, and added objects none either; changed and removed objects link to
+  themselves "as they are today", which is exactly what a reviewer wants to
+  compare against.
+
 ## 2026-10-05 — live screens: the single writer is the single announcer
 
 - **One notice per committed booking** (Alpha's lesson, DIRECTION): the

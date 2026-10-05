@@ -367,28 +367,48 @@ function draftForm(ev, objectTypes) {
 /* The dry run (SPEC M1): what approving this rule would change, from an
    in-memory replay of the whole log. Rendered generically, like everything. */
 function renderSimDiff(d) {
-  const added = d.added || [], changed = d.changed || [], removed = d.removed || [];
-  const before = (d.unexplained_before || []).length, after = (d.unexplained_after || []).length;
   const box = el("div", { class: "draft-form" },
-    el("strong", {}, `If approved: ${added.length} object(s) materialize, ` +
-      `${changed.length} change, ${removed.length} disappear; ` +
-      `unexplained events ${before} → ${after}.`));
-  // The diff endpoint is not typed yet (readable diffs are their own stage);
-  // wrap its plain strings into the shapes dataTable speaks.
-  const cols = (names) => names.map(n => ({ label: n }));
-  const cells = (vals) => vals.map(v => ({ v }));
-  const objTable = (title, objs) => {
-    if (!objs.length) return;
-    box.append(el("h3", {}, title), dataTable(cols(["object", "rule", "state"]),
-      objs.map(o => cells([o.object_id, `${o.rule_id} v${o.rule_version}`, JSON.stringify(o.state)]))));
-  };
-  objTable("Would materialize", added);
-  if (changed.length) {
-    box.append(el("h3", {}, "Would change"), dataTable(cols(["object", "before", "after"]),
-      changed.map(c => cells([c.after.object_id, JSON.stringify(c.before.state), JSON.stringify(c.after.state)]))));
+    el("strong", {}, `If approved: ${d.added.length} object(s) materialize, ` +
+      `${d.changed.length} change, ${d.removed.length} disappear; ` +
+      `unexplained events ${d.unexplained_before} → ${d.unexplained_after}.`));
+  if (d.explains.length) {
+    box.append(el("p", { class: "hint" }, "Would explain: " +
+      d.explains.map(e => `#${e.event_id} ${e.event_type} (${e.occurred_at})`).join(", ")));
   }
-  objTable("Would disappear", removed);
-  if ((d.errors || []).length) box.append(el("h3", {}, "Simulation errors"), el("pre", {}, d.errors.join("\n")));
+  // One field per row; a changed field reads "before → after" with the old
+  // value struck through. Values render through the same typed cells as
+  // every view, so money, refs and enums look like themselves here too.
+  const fieldRows = (o) => el("table", { class: "diff-fields" }, el("tbody", {},
+    ...o.fields.map(f => {
+      const value = el("td", {});
+      if (f.changed) {
+        value.append(el("span", { class: "diff-before" }, cellContent(f.before, f.type)),
+          " → ", cellContent(f.after, f.type));
+      } else {
+        value.append(cellContent(f.after || f.before || {}, f.type));
+      }
+      return el("tr", { class: f.changed ? "diff-changed" : "" },
+        el("td", { class: "k" }, f.field), value);
+    })));
+  const section = (title, objs, cls) => {
+    if (!objs.length) return;
+    box.append(el("h3", {}, title));
+    for (const o of objs) {
+      const head = el("div", { class: "diff-head" },
+        el("strong", {}, o.title || o.object_id),
+        el("span", { class: "hint" }, ` ${o.object_type}`));
+      if (o.detail) {
+        head.append(" ", el("a", { href: "#", onclick: (e) => {
+          e.preventDefault(); openView(o.detail, "Detail", o.object_id);
+        } }, "as it is today"));
+      }
+      box.append(el("div", { class: "diff-obj " + cls }, head, fieldRows(o)));
+    }
+  };
+  section("Would materialize", d.added, "diff-added");
+  section("Would change", d.changed, "diff-altered");
+  section("Would disappear", d.removed, "diff-removed");
+  if (d.errors.length) box.append(el("h3", {}, "Simulation errors"), el("pre", {}, d.errors.join("\n")));
   return box;
 }
 

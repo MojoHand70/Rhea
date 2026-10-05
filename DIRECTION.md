@@ -439,6 +439,13 @@ design experts can restyle later without touching behavior**.
   stay manual. Submit an event in one pane and watch the invoice, its
   postings and the trial balance appear unrefreshed. Next: readable
   field-level simulation diffs, then omnibox + activities-as-data.
+- **Shipped 2026-10-05, readable simulation diffs** (see DECISIONS): the
+  approval gate reads field-level, typed changes — before → after with the
+  old value struck, refs resolved against the hypothetical world, the newly
+  explained events named, changed and removed objects linking to themselves
+  as they are today. The visual ladder's remaining rung: omnibox +
+  activities-as-data, which waits on Activities being declared in the
+  language (the replaceable-interpreter contract's second vocabulary).
 
 One line: *the design language is tokens plus a closed set of notion
 primitives — the generic shell makes beauty a data change, so experts can

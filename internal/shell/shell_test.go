@@ -526,14 +526,43 @@ func TestMasterDataRefStory(t *testing.T) {
 		"object_type":     "invoice",
 	}, &rule)
 
-	// Dry run before approving (SPEC M1): the diff names the invoice that
-	// would book, with its ref resolved against the simulated world.
+	// Dry run before approving (SPEC M1): the diff is field-level and typed —
+	// refs resolved against the simulated world, money canonical, and the
+	// events the rule would newly explain named. Added objects carry no door:
+	// they do not exist yet.
 	var sim struct {
-		Added []core.Object `json:"added"`
+		Added []struct {
+			ObjectType string `json:"object_type"`
+			Detail     string `json:"detail"`
+			Fields     []struct {
+				Field string `json:"field"`
+				Type  string `json:"type"`
+				After *cell  `json:"after"`
+			} `json:"fields"`
+		} `json:"added"`
+		Explains []struct {
+			EventID   int64  `json:"event_id"`
+			EventType string `json:"event_type"`
+		} `json:"explains"`
 	}
 	post("/api/rules/book-pln-invoice/simulate", nil, &sim)
-	if len(sim.Added) != 1 || sim.Added[0].Type != "invoice" {
+	if len(sim.Added) != 1 || sim.Added[0].ObjectType != "invoice" || sim.Added[0].Detail != "" {
 		t.Fatalf("simulate added = %+v", sim.Added)
+	}
+	for _, f := range sim.Added[0].Fields {
+		switch f.Field {
+		case "customer":
+			if f.After.V != "ACME Sp. z o.o." || !strings.HasPrefix(f.After.ID, "company-") {
+				t.Fatalf("diff customer = %+v", f.After)
+			}
+		case "total":
+			if f.Type != "money" || f.After.V != "350.50" {
+				t.Fatalf("diff total = %+v", f)
+			}
+		}
+	}
+	if len(sim.Explains) != 1 || sim.Explains[0].EventType != "invoice.received" {
+		t.Fatalf("simulate explains = %+v", sim.Explains)
 	}
 
 	post("/api/rules/book-pln-invoice/approve", map[string]any{"approved_by": "krzysztof"}, &approved)

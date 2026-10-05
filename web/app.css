@@ -107,6 +107,16 @@ pre { background: var(--surface); border: 1px solid var(--border);
 details { margin: var(--space-1) 0; }
 summary { cursor: pointer; color: var(--text-muted); }
 
+/* the simulation diff: the approval gate reads field-level, typed changes */
+.diff-obj { margin: var(--space-2) 0 var(--space-3); padding-left: var(--space-2); }
+.diff-obj.diff-added { box-shadow: inset 2px 0 0 var(--ok); }
+.diff-obj.diff-altered { box-shadow: inset 2px 0 0 var(--warn); }
+.diff-obj.diff-removed { box-shadow: inset 2px 0 0 var(--danger); }
+.diff-fields td { padding: 2px var(--space-2); border-bottom: none; }
+.diff-fields .k { color: var(--text-muted); width: var(--size-kv-label); }
+tr.diff-changed .k { color: var(--warn); }
+.diff-before { color: var(--text-muted); text-decoration: line-through; }
+
 /* the provenance walk: a tree of events, the asked-about chain highlighted */
 .explain-node { margin: var(--space-2) 0; max-width: var(--measure-table); }
 .explain-children { margin: var(--space-1) 0 0 var(--space-2);

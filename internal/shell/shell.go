@@ -202,13 +202,20 @@ type cellOut struct {
 // ref that does not resolve (old type versions hold plain strings) falls
 // back to the raw value, and the id rides along either way.
 func (s *Server) typedCell(ctx context.Context, v any, fd core.FieldDef, detailFor map[string]string) cellOut {
+	return cellWith(v, fd, func(id string) (string, string) { return s.refInfo(ctx, id) }, detailFor)
+}
+
+// cellWith is the one encoding path for state values, with a caller-chosen
+// ref resolver — the simulation diff resolves refs against the hypothetical
+// world first, every live view against the cache.
+func cellWith(v any, fd core.FieldDef, resolve func(id string) (label, typ string), detailFor map[string]string) cellOut {
 	if v == nil {
 		return cellOut{}
 	}
 	if _, isRef := core.RefTarget(fd.Type); isRef {
 		if id, ok := v.(string); ok && id != "" {
 			c := cellOut{V: id, ID: id}
-			label, typ := s.refInfo(ctx, id)
+			label, typ := resolve(id)
 			if label != "" {
 				c.V = label
 			}
@@ -538,14 +545,22 @@ func (s *Server) handleApprove(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleSimulate dry-runs a rule against the whole log in memory (SPEC M1).
-// Read-only: the human sees the diff before deciding to approve.
+// Read-only: the human sees the diff before deciding to approve — shaped
+// field-level and typed (simdiff.go), because the approval gate is the trust
+// boundary and what the human reads there must be readable.
 func (s *Server) handleSimulate(w http.ResponseWriter, r *http.Request) {
-	diff, err := s.Exec.SimulateRule(r.Context(), r.PathValue("id"))
+	ctx := r.Context()
+	diff, err := s.Exec.SimulateRule(ctx, r.PathValue("id"))
 	if err != nil {
 		writeErr(w, 400, err)
 		return
 	}
-	writeJSON(w, 200, diff)
+	out, err := s.renderSimDiff(ctx, diff)
+	if err != nil {
+		writeErr(w, 500, err)
+		return
+	}
+	writeJSON(w, 200, out)
 }
 
 func (s *Server) handleSubmit(w http.ResponseWriter, r *http.Request) {
