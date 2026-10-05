@@ -829,3 +829,14 @@ evidence in `internal/exec/case_test.go`.
   approver's name on `rule.approved`. NULL on events from before the column
   existed — honestly unknown, never backfilled. Authz stays deferred; this is
   audit, not access control.
+
+## 2026-10-05 — REA/OeBTO ingestion
+
+- **ISO/IEC 15944-4 (OeBTO) cross-checked against the language; recorded in
+  `REA.md`.** The standard is voluntary ontology, not compliance surface; we
+  take vocabulary alignment (events/types/policy level, claims, regulator),
+  park three candidate adoptions (commitment semantics for template/schedule/
+  contract types at M5, duality as a rule-pattern name, regulator vocabulary
+  for adapter docs), and refuse the subtype taxonomy into the kernel. Why:
+  free standard lineage for positioning and agent drafting context; zero
+  kernel impact.
