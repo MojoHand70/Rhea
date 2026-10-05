@@ -55,6 +55,25 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-05 — the market corpus: evidence becomes vocabulary
+
+- **Market knowledge arriving as evidence (screens of production systems,
+  statutory forms) accumulates in `packs/<market>/CORPUS.md`**, one dated
+  evidence session at a time; pack object types, rule intents and notion
+  specimens are distilled from it. Screens are evidence, never design: the
+  corpus takes vocabulary, field semantics and status ladders, not layouts.
+  Why: the agent needs drafting context and the pack needs a provenance trail
+  for where its vocabulary came from; a corpus file is both.
+- **Vocabulary lands in the evidencing market's pack, not the base seed.**
+  `contractor` ships in packs/pl beside the base's `company`; merging them is
+  deferred until a rule needs both unified. Why: the M4 lesson applied to
+  vocabulary — promotion to base is earned by a second market needing it, not
+  anticipated.
+- **A settlement references its document as `document_type` + `document_id`
+  strings.** The language has `ref<type>` but a settlement may point at a
+  sales_invoice, purchase_invoice or tax_declaration; whether `ref<a|b>`
+  (union refs) earns admission is parked as SPEC §7 material.
+
 ## 2026-10-05 — the typed view API and derived default views
 
 - **The view API carries semantics; renderers format.** Columns declare
