@@ -11,6 +11,12 @@ body { margin: 0; background: var(--bg); color: var(--text);
                 border-right: 1px solid var(--border); display: flex;
                 flex-direction: column; align-items: center;
                 padding-top: var(--space-2); gap: var(--space-1); }
+/* the mark: inline SVG riding the semantic tokens; --muted/--glow are the
+   mark's own hooks, bridged here to the shell's vocabulary (aliases, not
+   literals — the colors still live in tokens.css). */
+#logo { width: 36px; height: 36px; flex: none; margin: var(--space-1) 0 var(--space-2);
+        --muted: var(--text-muted); --glow: var(--accent); }
+
 .activity { width: 38px; height: 38px; border-radius: var(--radius-md);
             display: grid; place-items: center; font-weight: var(--weight-bold);
             font-size: 16px; color: var(--text-muted); cursor: pointer;

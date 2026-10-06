@@ -48,7 +48,7 @@ async function boot() {
 
 function renderActivityBar() {
   const bar = $("#activity-bar");
-  bar.replaceChildren(...NAV.map(d =>
+  bar.replaceChildren($("#logo"), ...NAV.map(d =>
     el("div", {
       class: "activity" + (d.domain === activeDomain ? " active" : ""),
       title: d.domain, onclick: () => selectDomain(d.domain),
