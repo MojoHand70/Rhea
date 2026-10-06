@@ -1,7 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Rhea">
-  <!-- Favicon: the kernel and one piece of knowledge, in the glow teal that
-       reads on light and dark tab bars alike. -->
+  <!-- Favicon: the kernel and two pieces of knowledge, in the glow teal that
+       reads on light and dark tab bars alike. Two satellites, not one — a
+       lone square at the top right made the glyph read as the Mars symbol. -->
   <circle cx="14.5" cy="17.5" r="9" fill="none" stroke="#1FB2D8" stroke-width="3"/>
   <line x1="22.1" y1="10.2" x2="23.4" y2="8.9" stroke="#1FB2D8" stroke-width="2"/>
   <rect x="23.2" y="2.8" width="6.4" height="6.4" rx="1.6" fill="#1FB2D8"/>
+  <line x1="22.7" y1="24.1" x2="24.4" y2="25.4" stroke="#1FB2D8" stroke-width="2"/>
+  <rect x="24.6" y="25.1" width="5.5" height="5.5" rx="1.4" fill="#1FB2D8"/>
 </svg>
