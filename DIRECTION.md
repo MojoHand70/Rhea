@@ -562,6 +562,116 @@ cannot be one; the ask is recorded as rule.draft_requested and consumed
 outside the kernel. approve_activity closed the governance loop, init
 records the gate's own birth, and the door stamp landed day one.
 
+## Implementation by interview: the phase-(a) design note (KK, 2026-10-07)
+
+The note "Two phases" above asked for before phase (a) gets built. Its seed
+is KK's, verbatim:
+
+> Implement by Interview — not a configuration, it's corpus acquisition —
+> that gives you something no classic implementation has ever had: a
+> measurable definition of done.
+
+A classic implementation ends when the consultants' budget does. Rhea's
+can end on a number the physics already computes: **worklist residue**. An
+implementation is the client's real events, submitted as facts, being
+explained by approved rules until nothing is left unexplained except what
+was explicitly accepted. "Are we live?" stops being an opinion. The same
+number, across clients, is the network's flywheel rate.
+
+Status: **draft for KK.** Each point is a proposal with the simplest
+option chosen; the open questions at the end are KK's to settle before
+the interview loop is built. The agent work in "Order of work" does not
+wait on them.
+
+- **Evidence first, answers second.** The interview starts by intake, not
+  by questions: the client's last months of documents (KSeF invoices,
+  bank statements, the CoA export) enter as raw events through the open
+  door. They are facts, so they belong in the log. They land in the
+  worklist as fail-as-data, which is exactly the state the interview
+  starts from. Nothing new is needed: this is M0's demo story at corpus
+  scale.
+- **Residue drives the conversation.** The agent clusters the worklist
+  by event shape and asks about the largest unexplained cluster first.
+  Every question has a measurable payoff: the share of the corpus it
+  would explain. The market pack goes first (its drafts, simulated
+  against the corpus, usually explain the bulk); the interview is about
+  the remainder, which is the company-specific edge cases that eligibility
+  rule 3 says are the implementation killers.
+- **The bundle is the unit of approval.** One answer ("we book cash sales
+  from the till daily, by VAT rate") usually needs a type, a rule or
+  three, maybe a view. The agent proposes them together; the simulation
+  diff shows the whole bundle's effect on the corpus; one approval
+  activates the bundle or nothing. Members stay ordinary versioned
+  definitions, each with its own provenance, so the bundle is only the
+  approval's scope, not a new kind of definition.
+- **Accepted residue is explained too.** "Ignore this" must not be a hole
+  in invariant 5. Accepting a residue cluster is a rule like any other: it
+  materializes an `acknowledged` object (event, reason, who decided)
+  through a conventional type. It is pure data, and the residue counter
+  can tell "explained" from "explained as deliberately out of scope".
+- **The conversation is in the log.** Each turn, human and agent alike,
+  is a raw event through a declared activity (`interview.said`). That
+  gives the agent continuity (the host vision's "it never asks twice" and
+  "it doesn't repeat itself"), gives every drafted definition a cause one
+  hop back (the turn that asked for it), and makes every finished
+  interview labeled training data for the network: question, evidence,
+  approved explanation.
+- **The agent stays outside the kernel**, exactly where the activities
+  retrofit located it: it consumes the log (turns, worklist, simulation
+  results) through read-only tools and returns strict JSON drafts the
+  kernel validates. Tool use is reading, never writing; invariant 3 is
+  unchanged. Its runner is the shell, as with `rule.draft_requested`,
+  until agent-as-user gets its own worklist.
+- **Done is a declared state, not a feeling.** Implementation closes when
+  residue on the intake corpus is zero, counting acknowledged events as
+  explained. Ongoing operation inherits the same gauge: new residue is
+  the host's morning question ("2 are strange and need your decision").
+
+**The gap this exposes.** Rules and activities have the draft → active
+lifecycle; `object_type` and `view_def` rows do not. Packs install them
+directly, which was harmless while a human wrote every pack. A bundle
+drafted by the agent cannot bypass the gate, so types and views need the
+same lifecycle (a status column and the same approval reaction). That
+extends invariant 2 to every definition; it adds no new primitive.
+
+**Open questions for KK.**
+
+1. Types and views under the gate: should packs land them as drafts too
+   (consistent, but every pack install becomes an approval), or should
+   pack-shipped types stay auto-active while agent-drafted ones gate?
+   Simplest consistent answer: everything drafts, and pack install is
+   one bundle approval.
+2. Intake into the real log, or into a sandbox log that is discarded if
+   the client walks away? The real log is honest and costs nothing.
+   A sandbox is friendlier for a sales demo.
+3. Partial approval: may a human approve two of a bundle's three rules?
+   Proposed no: reject with a reason, and the agent redrafts. Approval
+   edits are the richest network signal, so they should be redrafts on
+   the record, not silent trims.
+4. The interview protocol itself: Alpha's doc 010 screenplay as is, or
+   reordered around residue (intake → pack → largest cluster → views and
+   activities last)?
+
+**Order of work.**
+
+1. *Teach the agent the whole closed class.* Today it drafts one
+   object-or-postings rule from one event. It should also draft cascade
+   (derived event types), amend, `convert`, `book`, `each`, object types
+   with lifecycles, activities and views, all validated by the existing
+   gates. This does not depend on the open questions.
+2. *An eval harness.* A fixed corpus (raw events plus intents) runs the
+   agent's drafts through simulation and reports explained and residual
+   counts per event type. This makes "the AI authors" a number that can
+   be tracked from release to release, and it is the interview's
+   definition of done in miniature.
+3. *The live full-story demo* with KK: packs, E-ladder, doors, cases,
+   clock.
+4. *The interview loop*: turns as events, residue clustering, bundles
+   under the gate (after the open questions are settled).
+
+One line: *an implementation is a corpus being explained; the interview
+is how, residue is when, and the gate is who.*
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
