@@ -1,4 +1,4 @@
 data/
-rhea
+/rhea
 *.duckdb
 .env
