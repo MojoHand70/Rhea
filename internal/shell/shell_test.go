@@ -407,7 +407,7 @@ func TestMasterDataRefStory(t *testing.T) {
 
 	// Recorded agent: one draft per sample event type, both strictly validated.
 	fixture := &agent.Agent{Complete: func(ctx context.Context, system, user string) (string, error) {
-		if strings.Contains(user, `"company.registered"`) {
+		if strings.Contains(user, `Sample event (type "company.registered"`) {
 			return `{
 				"rule_id": "register-company",
 				"description": "company.registered events become company master data objects.",

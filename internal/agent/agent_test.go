@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"strings"
 	"testing"
 
 	"rhea/internal/agent"
@@ -42,6 +43,24 @@ const fixtureAnswer = "```json\n" + `{
   }
 }` + "\n```"
 
+func caseType() core.ObjectType {
+	return core.ObjectType{
+		Name: "case", Version: 1, Domain: "work",
+		Fields: []core.FieldDef{
+			{Name: "title", Type: "string", Required: true},
+			{Name: "status", Type: "enum", Required: true, Values: []string{"open", "resolved"}},
+			{Name: "resolution", Type: "string"},
+		},
+		Lifecycle: &core.LifecycleDef{Field: "status",
+			Transitions: map[string][]string{"open": {"resolved"}}},
+	}
+}
+
+func ask(intent string) agent.Ask {
+	return agent.Ask{Intent: intent, Sample: sampleEvent(),
+		Types: []core.ObjectType{invoiceType(), caseType()}}
+}
+
 func fixtureAgent(answer string) *agent.Agent {
 	return &agent.Agent{Complete: func(ctx context.Context, system, user string) (string, error) {
 		return answer, nil
@@ -50,7 +69,7 @@ func fixtureAgent(answer string) *agent.Agent {
 
 func TestDraftRuleFixture(t *testing.T) {
 	d, err := fixtureAgent(fixtureAnswer).DraftRule(
-		context.Background(), "book PLN invoices", sampleEvent(), invoiceType())
+		context.Background(), ask("book PLN invoices"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,10 +84,13 @@ func TestDraftRuleRejectsBadOutput(t *testing.T) {
 		`{"rule_id":"x","description":"d","spec":{}}`, // empty spec
 		`{"rule_id":"","description":"d"}`,            // missing id
 		`{"rule_id":"x","description":"d","spec":{"match":{"event_type":"e"},"effect":{"object":{"type":"invoice","fields":{"bogus":"=$.x"}}}}}`, // unknown field
+		`{"rule_id":"x","description":"d","spec":{"match":{"event_type":"e"},"effect":{"object":{"type":"receipt","fields":{"a":"=$.x"}}}}}`,     // undeclared type
+		`{"rule_id":"x","description":"d","spec":{"match":{"event_type":"e"},"effect":{"amend":{"type":"invoice","target":"=$.id","set":{"total":"=$.x"}}}}}`, // no lifecycle, no consent
+		`{"rule_id":"x","description":"d","spec":{"match":{"event_type":"e"},"effect":{"amend":{"type":"case","target":"c-1","set":{"status":"resolved"}}}}}`, // literal target
 	}
 	for i, answer := range bad {
 		if _, err := fixtureAgent(answer).DraftRule(
-			context.Background(), "intent", sampleEvent(), invoiceType()); err == nil {
+			context.Background(), ask("intent")); err == nil {
 			t.Errorf("case %d: bad model output accepted", i)
 		}
 	}
@@ -81,10 +103,48 @@ func TestDraftRuleLive(t *testing.T) {
 		t.Skip("live test disabled (set RHEA_LIVE=1 and ANTHROPIC_API_KEY)")
 	}
 	d, err := agent.New().DraftRule(context.Background(),
-		"Invoices in PLN should become invoice documents; total is the sum of line amounts.",
-		sampleEvent(), invoiceType())
+		ask("Invoices in PLN should become invoice documents; total is the sum of line amounts."))
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Logf("live draft: %+v", d)
+}
+
+// The whole closed class is draftable: cascade off a derived event, an
+// amendment along a declared lifecycle, a converted posting into a book.
+func TestDraftRuleWholeGrammar(t *testing.T) {
+	good := []string{
+		`{"rule_id":"raise-invoice-case","description":"d","spec":{"match":{"event_type":"object.materialized","where":[{"path":"$.object_type","op":"eq","value":"invoice"}]},"effect":{"object":{"type":"case","fields":{"title":"=$.state.customer","status":"open"}}}}}`,
+		`{"rule_id":"resolve-case","description":"d","spec":{"match":{"event_type":"case.resolved"},"effect":{"amend":{"type":"case","target":"=$.case","set":{"status":"resolved","resolution":"=$.resolution"}}}}}`,
+		`{"rule_id":"post-invoice","description":"d","spec":{"match":{"event_type":"invoice.received"},"effect":{"postings":{"book":"group","currency":"=$.currency","convert":{"to":"EUR","date":"=$.issue_date","rounding":"half_up"},"lines":[{"account":"201","debit":"=sum($.lines[*].amount)"},{"account":"702","credit":"=sum($.lines[*].amount)"}]}}}}`,
+	}
+	for i, answer := range good {
+		if _, err := fixtureAgent(answer).DraftRule(context.Background(), ask("intent")); err != nil {
+			t.Errorf("case %d: %v", i, err)
+		}
+	}
+}
+
+// The agent sees the language as it stands: catalog, running rules, master
+// data, the evidence and the human's pointer.
+func TestDraftRuleSeesTheLanguage(t *testing.T) {
+	var seen string
+	a := &agent.Agent{Complete: func(ctx context.Context, system, user string) (string, error) {
+		seen = user
+		return fixtureAnswer, nil
+	}}
+	in := ask("book PLN invoices")
+	in.Hint = "invoice"
+	in.Rules = []core.Rule{{ID: "register-company", Priority: 50, Description: "companies",
+		Spec: core.RuleSpec{Match: core.Match{EventType: "company.created"}}}}
+	in.Reference = map[string][]map[string]any{"company": {{"name": "ACME Sp. z o.o."}}}
+	if _, err := a.DraftRule(context.Background(), in); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`"name":"case"`, `"lifecycle"`, "register-company p50",
+		"ACME Sp. z o.o.", `points at object type "invoice"`, "invoice.received"} {
+		if !strings.Contains(seen, want) {
+			t.Errorf("user message lacks %q", want)
+		}
+	}
 }

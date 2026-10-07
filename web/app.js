@@ -397,7 +397,7 @@ function draftForm(ev, objectTypes) {
   }, "Draft rule");
   return el("div", {}, intent,
     el("div", { class: "row", style: "margin-top:8px" },
-      el("span", { class: "hint", style: "margin:0" }, "materialize as"), typeSel, btn));
+      el("span", { class: "hint", style: "margin:0" }, "starting from"), typeSel, btn));
 }
 
 /* The dry run (SPEC M1): what approving this rule would change, from an

@@ -536,10 +536,11 @@ func (s *Server) handleDraft(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 404, fmt.Errorf("event %d not in worklist", req.SampleEventID))
 		return
 	}
-	objType, err := s.Store.GetObjectType(ctx, req.ObjectType)
-	if err != nil {
-		writeErr(w, 404, err)
-		return
+	if req.ObjectType != "" {
+		if _, err := s.Store.GetObjectType(ctx, req.ObjectType); err != nil {
+			writeErr(w, 404, err)
+			return
+		}
 	}
 	// The ask goes through the draft_rule door first: the request is in the
 	// log as rule.draft_requested before any model answers. Drafting itself
@@ -552,7 +553,12 @@ func (s *Server) handleDraft(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, err)
 		return
 	}
-	draft, err := s.Agent.DraftRule(ctx, req.Intent, *sample, objType)
+	ask, err := DraftAsk(ctx, s.Store, req.Intent, *sample, req.ObjectType)
+	if err != nil {
+		writeErr(w, 500, err)
+		return
+	}
+	draft, err := s.Agent.DraftRule(ctx, ask)
 	if err != nil {
 		writeErr(w, 502, err) // the request event stays — the log is honest about unanswered asks
 		return

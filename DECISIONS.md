@@ -55,6 +55,28 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-07 — the agent drafts against the whole language
+
+- **The agent sees the language as it stands, not one pre-chosen type.**
+  `DraftRule` takes an `Ask`: the full object-type catalog, the active
+  rules, master data for every ref-target type (capped at 30 per type),
+  the sample event and the intent. Choosing the effect and its target
+  type is part of the authoring. The caller (`shell.DraftAsk`) gathers
+  the context; the agent still has no store access (invariant 3).
+- **The prompt teaches the whole rule grammar**: cascade on
+  `object.materialized` (`$.object_type` guard, `$.state.*`,
+  `$.object_id`), amend (lifecycle consent, never a literal target),
+  `book` and `convert`, alongside object/`each`/postings. Validation
+  adds one catalog gate: an object or amend effect must target a
+  declared type. Why: phase (a)'s order of work, step 1. The agent was
+  frozen at M0's grammar while the closed class grew three primitives.
+- **The `draft_rule` door is unchanged; its `object_type` input is now
+  a hint.** Making it optional would need a v2 builtin, and builtins
+  seed v1 only, with no evolution path. The human still points at a
+  type, and the agent may answer with a posting or an amendment
+  instead. Exit named: builtin versioning, which is needed when the
+  interview's own doors (`interview.said`) arrive.
+
 ## 2026-10-05 — M5: time is in the log, and the commitment stayed data
 
 The founding ladder's last milestone. The closed class earned nothing —
