@@ -67,7 +67,8 @@ function selectDomain(domain) {
         el("div", { class: "menu-item", onclick: () => openWorklist() }, "Inbox"));
     } else if (fn.function === "rules") {
       menu.append(el("h2", {}, fn.function),
-        el("div", { class: "menu-item", onclick: () => openRules() }, "All rules"));
+        el("div", { class: "menu-item", onclick: () => openRules() }, "All rules"),
+        el("div", { class: "menu-item", onclick: () => openBundles() }, "Bundles"));
     } else if (fn.function === "language") {
       menu.append(el("h2", {}, fn.function),
         el("div", { class: "menu-item", onclick: () => openLanguage() }, "Object types"),
@@ -505,6 +506,78 @@ function openRules() {
   });
 }
 
+/* Bundles: the scope of one approval. A bundle's drafts — types, rules,
+   verbs, views — activate together or not at all; a rejection carries its
+   reason onto the record and the agent redrafts. Rendered from the members'
+   declarations, generically, like everything. */
+function openBundles() {
+  openTab("bundles", "Bundles", async () => {
+    const bundles = await api("/api/bundles");
+    const out = [el("h1", {}, "Bundles"),
+      el("p", { class: "hint" }, "One approval, many definitions: everything in a bundle activates together, or nothing does.")];
+    if (!bundles.length) { out.push(el("p", { class: "hint" }, "No bundles yet.")); return out; }
+    for (const b of bundles) {
+      const card = el("div", { class: "draft-form" },
+        el("div", { class: "row" },
+          el("strong", {}, b.bundle_id),
+          el("span", { class: "status " + b.status }, b.status),
+          el("span", { class: "hint", style: "margin:0" }, `v${b.version} · ${b.created_by}`)),
+        el("p", {}, b.description));
+      const tbody = el("tbody", {});
+      for (const d of b.definitions) {
+        tbody.append(el("tr", {},
+          el("td", {}, d.kind.replace("_", " ")), el("td", {}, d.name),
+          el("td", { class: "num" }, String(d.version)),
+          el("td", {}, d.summary,
+            el("details", {}, el("summary", {}, "definition"),
+              el("pre", {}, JSON.stringify(d.definition, null, 2))))));
+      }
+      card.append(el("table", {}, el("thead", {}, el("tr", {},
+        el("th", {}, "kind"), el("th", {}, "name"), el("th", { class: "num" }, "ver"),
+        el("th", {}, "what it is"))), tbody));
+      if (b.status === "draft") {
+        const simBox = el("div", {});
+        const sim = el("button", { onclick: async () => {
+          sim.disabled = true; sim.textContent = "Simulating…";
+          try {
+            simBox.replaceChildren(renderSimDiff(await api(
+              `/api/bundles/${encodeURIComponent(b.bundle_id)}/simulate`, { method: "POST" })));
+          } catch (e) { toast(e.message, true); }
+          sim.disabled = false; sim.textContent = "Simulate";
+        } }, "Simulate");
+        const approve = el("button", { class: "primary", onclick: async () => {
+          approve.disabled = true;
+          try {
+            const res = await api(`/api/bundles/${encodeURIComponent(b.bundle_id)}/approve`, {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ approved_by: "human" }),
+            });
+            toast(`${b.bundle_id} active: ${b.members.length} definition(s); booked ${res.booked} pending event(s).` +
+              (res.errors ? ` Still failing: ${res.errors}` : ""));
+            refreshActive();
+          } catch (e) { toast(e.message, true); approve.disabled = false; }
+        } }, "Approve all");
+        const reason = el("input", { placeholder: "Why not? (stays on the record)" });
+        const reject = el("button", { onclick: async () => {
+          if (!reason.value.trim()) { toast("A rejection needs its reason.", true); return; }
+          reject.disabled = true;
+          try {
+            await api(`/api/bundles/${encodeURIComponent(b.bundle_id)}/reject`, {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ reason: reason.value, rejected_by: "human" }),
+            });
+            toast(`${b.bundle_id} rejected.`);
+            refreshActive();
+          } catch (e) { toast(e.message, true); reject.disabled = false; }
+        } }, "Reject");
+        card.append(el("div", { class: "row", style: "margin-top:8px" }, sim, approve, reason, reject), simBox);
+      }
+      out.push(card);
+    }
+    return out;
+  });
+}
+
 /* --- system function: language --------------------------------------------
    The language explaining itself: every object type the kernel recognizes,
    with what produces it, what shows it, and what it relates to. The catalog
@@ -847,6 +920,7 @@ function omniEntries(acts) {
   entries.push(
     { kind: "view", label: "Worklist", hint: "system", run: openWorklist },
     { kind: "view", label: "Rules", hint: "system", run: openRules },
+    { kind: "view", label: "Bundles", hint: "system", run: openBundles },
     { kind: "view", label: "Language", hint: "system", run: openLanguage },
     { kind: "view", label: "Verbs", hint: "system", run: openVerbs },
     { kind: "view", label: "Clock", hint: "system", run: openTime });

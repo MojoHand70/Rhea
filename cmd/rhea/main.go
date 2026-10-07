@@ -1,8 +1,11 @@
 // rhea: CLI for the Rhea kernel.
 //
 //	rhea init                create the schema in Postgres
-//	rhea load FILE           load definitions (object types, view defs) — data, at runtime
-//	rhea pack FILE           load a market pack: definitions + draft rules + master-data events
+//	rhea load FILE           draft definitions (object types, view defs) into one bundle
+//	rhea pack FILE           load a market pack as one draft bundle + master-data events
+//	rhea approve BUNDLE      activate a bundle: every member, or none
+//	rhea reject BUNDLE REASON
+//	                         reject a bundle; the reason stays on the record
 //	rhea ksef                run one pass of the KSeF statutory adapter (fake client)
 //	rhea clock [-catchup] [-through DATE]
 //	                         advance time: steady state opens one day by itself;
@@ -25,6 +28,9 @@ import (
 	"net/http"
 	"os"
 	"os/user"
+	"path/filepath"
+	"strings"
+	"time"
 
 	"rhea/internal/adapter"
 	"rhea/internal/agent"
@@ -61,11 +67,14 @@ func main() {
 		if len(os.Args) < 3 {
 			log.Fatal("usage: rhea load FILE")
 		}
-		n, err := loadDefinitions(ctx, s, os.Args[2])
+		n, bundle, err := loadDefinitions(ctx, s, os.Args[2])
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("loaded %d definitions\n", n)
+		fmt.Printf("drafted %d definitions\n", n)
+		if bundle != "" {
+			fmt.Printf("bundle %s waits for approval — rhea approve %s, or the shell's Bundles tab\n", bundle, bundle)
+		}
 
 	case "pack":
 		if len(os.Args) < 3 {
@@ -75,11 +84,34 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("pack %s: %d types, %d views, %d draft rules, %d draft activities, %d events loaded; %d already present\n",
+		fmt.Printf("pack %s: %d types, %d views, %d rules, %d activities drafted, %d events loaded; %d already present\n",
 			sum.Pack, sum.Types, sum.Views, sum.Rules, sum.Activities, sum.Events, sum.Skipped)
-		if sum.Rules > 0 || sum.Activities > 0 {
-			fmt.Println("rules and activities are drafts — approve them in the shell to bring the pack to life")
+		if sum.Bundle != "" {
+			fmt.Printf("bundle %s waits for approval — approving it installs the pack (rhea approve %s)\n", sum.Bundle, sum.Bundle)
 		}
+
+	case "approve":
+		if len(os.Args) < 3 {
+			log.Fatal("usage: rhea approve BUNDLE")
+		}
+		b, booked, procErrs, err := x.ApproveBundle(ctx, os.Args[2], actor(), today())
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("bundle %s active: %d members; booked %d pending event(s)\n", b.ID, len(b.Members), booked)
+		for _, e := range procErrs {
+			fmt.Println("worklist:", e)
+		}
+
+	case "reject":
+		if len(os.Args) < 4 {
+			log.Fatal("usage: rhea reject BUNDLE REASON")
+		}
+		b, err := x.RejectBundle(ctx, os.Args[2], os.Args[3], actor(), today())
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("bundle %s rejected; its drafts stay on the record, a redraft is a new bundle\n", b.ID)
 
 	case "ksef":
 		// One pass of the Poland pack's statutory adapter, against the fake
@@ -180,34 +212,56 @@ func main() {
 }
 
 // Definitions file: {"object_types": [...], "view_defs": [...]} — the
-// "extend at runtime" path for everything that is not a rule.
-func loadDefinitions(ctx context.Context, s *store.Store, path string) (int, error) {
+// "extend at runtime" path for everything that is not a rule. Definitions
+// land as drafts in one bundle named after the file and its content (KK,
+// 2026-10-08: everything drafts); versions already present are skipped.
+func loadDefinitions(ctx context.Context, s *store.Store, path string) (int, string, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return 0, err
+		return 0, "", err
 	}
 	var defs struct {
 		ObjectTypes []core.ObjectType `json:"object_types"`
 		ViewDefs    []core.ViewDef    `json:"view_defs"`
 	}
 	if err := json.Unmarshal(b, &defs); err != nil {
-		return 0, err
+		return 0, "", err
 	}
-	n := 0
+	var members []core.Member
 	for _, t := range defs.ObjectTypes {
-		if err := s.InsertObjectType(ctx, t); err != nil {
-			return n, fmt.Errorf("object type %s: %w", t.Name, err)
+		if _, _, err := s.GetObjectTypeVersion(ctx, t.Name, t.Version); err == nil {
+			continue
 		}
-		n++
+		if err := store.InsertObjectTypeRow(ctx, s.Pool, t, core.StatusDraft); err != nil {
+			return len(members), "", fmt.Errorf("object type %s: %w", t.Name, err)
+		}
+		members = append(members, core.Member{Kind: core.KindObjectType, Name: t.Name, Version: t.Version})
 	}
 	for _, v := range defs.ViewDefs {
-		if err := s.InsertViewDef(ctx, v); err != nil {
-			return n, fmt.Errorf("view def %s: %w", v.ID, err)
+		if _, _, err := s.GetViewDefVersion(ctx, v.ID, v.Version); err == nil {
+			continue
 		}
-		n++
+		if err := store.InsertViewDefRow(ctx, s.Pool, v, core.StatusDraft); err != nil {
+			return len(members), "", fmt.Errorf("view def %s: %w", v.ID, err)
+		}
+		members = append(members, core.Member{Kind: core.KindViewDef, Name: v.ID, Version: v.Version})
 	}
-	return n, nil
+	if len(members) == 0 {
+		return 0, "", nil
+	}
+	base := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+	bundle, err := s.InsertBundle(ctx, core.Bundle{
+		ID:          fmt.Sprintf("load-%s-%x", base, sha256.Sum256(b))[:len("load-"+base)+9],
+		Description: "Definitions from " + filepath.Base(path),
+		Members:     members, CreatedBy: actor(),
+	})
+	if err != nil {
+		return len(members), "", err
+	}
+	return len(members), bundle.ID, nil
 }
+
+func today() string { return time.Now().Format("2006-01-02") }
 
 // actor identifies who runs this CLI: RHEA_ACTOR, or cli:<os user>.
 func actor() string {

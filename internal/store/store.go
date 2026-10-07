@@ -409,7 +409,17 @@ func (s *Store) RuleDescriptions(ctx context.Context) (map[RuleKey]string, error
 
 // --- object types ---------------------------------------------------------
 
+// InsertObjectType writes an object type straight in as active: the
+// bootstrap and test path, the way tests insert active rules. Every door a
+// person or an agent uses lands types as drafts inside a bundle.
 func (s *Store) InsertObjectType(ctx context.Context, t core.ObjectType) error {
+	return InsertObjectTypeRow(ctx, s.Pool, t, core.StatusActive)
+}
+
+// InsertObjectTypeRow appends one (name, version, status) row. Approval and
+// rejection append rows of an existing version; the version itself is the
+// schema's identity and never moves with the lifecycle.
+func InsertObjectTypeRow(ctx context.Context, q Querier, t core.ObjectType, status string) error {
 	if err := t.Validate(); err != nil {
 		return err
 	}
@@ -417,16 +427,19 @@ func (s *Store) InsertObjectType(ctx context.Context, t core.ObjectType) error {
 	if err != nil {
 		return err
 	}
-	_, err = s.Pool.Exec(ctx,
-		`INSERT INTO object_type (name, version, spec) VALUES ($1, $2, $3)`,
-		t.Name, t.Version, spec)
+	_, err = q.Exec(ctx,
+		`INSERT INTO object_type (name, version, status, spec) VALUES ($1, $2, $3, $4)`,
+		t.Name, t.Version, status, spec)
 	return err
 }
 
+// GetObjectType returns the newest ACTIVE version of a type: what the kernel
+// validates against and the shell renders. A draft version waits its bundle.
 func (s *Store) GetObjectType(ctx context.Context, name string) (core.ObjectType, error) {
 	var spec []byte
-	err := s.Pool.QueryRow(ctx,
-		`SELECT spec FROM object_type WHERE name = $1 ORDER BY version DESC LIMIT 1`,
+	err := s.Pool.QueryRow(ctx, `
+		SELECT spec FROM object_type WHERE name = $1 AND status = 'active'
+		ORDER BY version DESC LIMIT 1`,
 		name).Scan(&spec)
 	if err != nil {
 		return core.ObjectType{}, fmt.Errorf("object type %q: %w", name, err)
@@ -435,10 +448,27 @@ func (s *Store) GetObjectType(ctx context.Context, name string) (core.ObjectType
 	return t, json.Unmarshal(spec, &t)
 }
 
-// ListObjectTypes returns the newest version of every object type.
+// GetObjectTypeVersion returns one version of a type and its lifecycle
+// status: active or superseded once either row exists, draft otherwise.
+func (s *Store) GetObjectTypeVersion(ctx context.Context, name string, version int) (core.ObjectType, string, error) {
+	var spec []byte
+	var status string
+	err := s.Pool.QueryRow(ctx, `
+		SELECT spec, status FROM object_type WHERE name = $1 AND version = $2
+		ORDER BY CASE status WHEN 'draft' THEN 1 ELSE 0 END LIMIT 1`,
+		name, version).Scan(&spec, &status)
+	if err != nil {
+		return core.ObjectType{}, "", fmt.Errorf("object type %s v%d: %w", name, version, err)
+	}
+	var t core.ObjectType
+	return t, status, json.Unmarshal(spec, &t)
+}
+
+// ListObjectTypes returns the newest active version of every object type.
 func (s *Store) ListObjectTypes(ctx context.Context) ([]core.ObjectType, error) {
 	rows, err := s.Pool.Query(ctx, `
-		SELECT DISTINCT ON (name) spec FROM object_type ORDER BY name, version DESC`)
+		SELECT DISTINCT ON (name) spec FROM object_type WHERE status = 'active'
+		ORDER BY name, version DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -460,19 +490,42 @@ func (s *Store) ListObjectTypes(ctx context.Context) ([]core.ObjectType, error) 
 
 // --- view defs ------------------------------------------------------------
 
+// InsertViewDef writes a view straight in as active: the bootstrap and test
+// path, like InsertObjectType.
 func (s *Store) InsertViewDef(ctx context.Context, v core.ViewDef) error {
-	_, err := s.Pool.Exec(ctx, `
-		INSERT INTO view_def (view_id, version, notion, title, domain, function, spec)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		v.ID, v.Version, v.Notion, v.Title, v.Domain, v.Function, v.Spec)
+	return InsertViewDefRow(ctx, s.Pool, v, core.StatusActive)
+}
+
+// InsertViewDefRow appends one (view_id, version, status) row.
+func InsertViewDefRow(ctx context.Context, q Querier, v core.ViewDef, status string) error {
+	_, err := q.Exec(ctx, `
+		INSERT INTO view_def (view_id, version, status, notion, title, domain, function, spec)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+		v.ID, v.Version, status, v.Notion, v.Title, v.Domain, v.Function, v.Spec)
 	return err
 }
 
-// LatestViewDefs returns the newest version of every view definition.
+// GetViewDefVersion returns one version of a view and its lifecycle status,
+// resolved like GetObjectTypeVersion.
+func (s *Store) GetViewDefVersion(ctx context.Context, id string, version int) (core.ViewDef, string, error) {
+	var v core.ViewDef
+	var status string
+	err := s.Pool.QueryRow(ctx, `
+		SELECT view_id, version, notion, title, domain, function, spec, status
+		FROM view_def WHERE view_id = $1 AND version = $2
+		ORDER BY CASE status WHEN 'draft' THEN 1 ELSE 0 END LIMIT 1`,
+		id, version).Scan(&v.ID, &v.Version, &v.Notion, &v.Title, &v.Domain, &v.Function, &v.Spec, &status)
+	if err != nil {
+		return v, "", fmt.Errorf("view %s v%d: %w", id, version, err)
+	}
+	return v, status, nil
+}
+
+// LatestViewDefs returns the newest active version of every view definition.
 func (s *Store) LatestViewDefs(ctx context.Context) ([]core.ViewDef, error) {
 	rows, err := s.Pool.Query(ctx, `
 		SELECT DISTINCT ON (view_id) view_id, version, notion, title, domain, function, spec
-		FROM view_def ORDER BY view_id, version DESC`)
+		FROM view_def WHERE status = 'active' ORDER BY view_id, version DESC`)
 	if err != nil {
 		return nil, err
 	}

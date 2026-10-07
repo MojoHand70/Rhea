@@ -89,7 +89,8 @@ func TestM3PolandPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 14 || sum.Views != 5 || sum.Rules != 5 || sum.Events != 31 || sum.Skipped != 0 {
+	if sum.Types != 14 || sum.Views != 5 || sum.Rules != 5 || sum.Events != 31 || sum.Skipped != 0 ||
+		sum.Bundle != "pack-pl-v6" {
 		t.Fatalf("first load: %+v", sum)
 	}
 	// Idempotent: a reload changes nothing.
@@ -97,7 +98,7 @@ func TestM3PolandPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Events != 0 || sum.Skipped != 55 {
+	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Events != 0 || sum.Skipped != 55 || sum.Bundle != "" {
 		t.Fatalf("reload: %+v", sum)
 	}
 
@@ -107,12 +108,10 @@ func TestM3PolandPack(t *testing.T) {
 		t.Fatalf("worklist = %d, want 31 pack events waiting", len(wl))
 	}
 
-	// Approving the pack's rules IS the installation: the chart of accounts
-	// and the VAT rates materialize from the waiting events.
-	for _, id := range []string{"pl-register-account", "pl-register-vat-rate",
-		"pl-book-sales-invoice", "pl-post-sales-invoice", "pl-record-ksef-submission"} {
-		post("/api/rules/"+id+"/approve", map[string]any{"approved_by": "krzysztof"}, nil)
-	}
+	// Approving the pack's bundle IS the installation: its types, views and
+	// rules activate together, and the chart of accounts and the VAT rates
+	// materialize from the waiting events.
+	post("/api/bundles/pack-pl-v6/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {
 		t.Fatalf("worklist not cleared after approvals: %d", len(wl))
 	}

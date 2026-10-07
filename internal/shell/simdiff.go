@@ -40,8 +40,9 @@ type explainedEvent struct {
 	OccurredAt string `json:"occurred_at"`
 }
 
-// renderSimDiff shapes the kernel's diff for renderers.
-func (s *Server) renderSimDiff(ctx context.Context, diff exec.SimDiff) (map[string]any, error) {
+// renderSimDiff shapes the kernel's diff for renderers. drafts overlays the
+// types a bundle would activate, so its new objects render typed.
+func (s *Server) renderSimDiff(ctx context.Context, diff exec.SimDiff, drafts map[string]core.ObjectType) (map[string]any, error) {
 	types, err := s.Store.ListObjectTypes(ctx)
 	if err != nil {
 		return nil, err
@@ -49,6 +50,9 @@ func (s *Server) renderSimDiff(ctx context.Context, diff exec.SimDiff) (map[stri
 	typeByName := map[string]core.ObjectType{}
 	for _, t := range types {
 		typeByName[t.Name] = t
+	}
+	for name, t := range drafts {
+		typeByName[name] = t
 	}
 	vds, err := s.effectiveViewDefs(ctx)
 	if err != nil {

@@ -84,6 +84,37 @@ ALTER TABLE view_def DROP CONSTRAINT IF EXISTS view_def_notion_check;
 ALTER TABLE view_def ADD CONSTRAINT view_def_notion_check
     CHECK (notion IN ('list','detail','action','analysis','scheduling'));
 
+-- Definitions under the gate (DECISIONS 2026-10-08, the bundle): object
+-- types and views gain the lifecycle rules and activities have. Their version
+-- is the schema's identity (objects record type_version), so approval does
+-- not mint a new version: it appends the `active` row of the same version,
+-- rejection the `superseded` one. Rows from before the gate were installed
+-- live, and are active.
+ALTER TABLE object_type ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
+ALTER TABLE view_def ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
+ALTER TABLE object_type DROP CONSTRAINT IF EXISTS object_type_status_check;
+ALTER TABLE object_type ADD CONSTRAINT object_type_status_check
+    CHECK (status IN ('draft','active','superseded'));
+ALTER TABLE view_def DROP CONSTRAINT IF EXISTS view_def_status_check;
+ALTER TABLE view_def ADD CONSTRAINT view_def_status_check
+    CHECK (status IN ('draft','active','superseded'));
+ALTER TABLE object_type DROP CONSTRAINT IF EXISTS object_type_pkey;
+ALTER TABLE object_type ADD CONSTRAINT object_type_pkey PRIMARY KEY (name, version, status);
+ALTER TABLE view_def DROP CONSTRAINT IF EXISTS view_def_pkey;
+ALTER TABLE view_def ADD CONSTRAINT view_def_pkey PRIMARY KEY (view_id, version, status);
+
+-- The scope of one approval: draft members activated whole or not at all.
+CREATE TABLE IF NOT EXISTS bundle (
+    bundle_id   TEXT NOT NULL,
+    version     INT NOT NULL,
+    status      TEXT NOT NULL CHECK (status IN ('draft','active','superseded')),
+    description TEXT NOT NULL,
+    members     JSONB NOT NULL,
+    created_by  TEXT NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (bundle_id, version)
+);
+
 -- Projection cache. Rebuildable from the event log at any time.
 CREATE TABLE IF NOT EXISTS object (
     object_id       TEXT PRIMARY KEY,
@@ -107,7 +138,7 @@ $$ LANGUAGE plpgsql;
 DO $$
 DECLARE t TEXT;
 BEGIN
-    FOREACH t IN ARRAY ARRAY['event','rule','object_type','view_def','activity'] LOOP
+    FOREACH t IN ARRAY ARRAY['event','rule','object_type','view_def','activity','bundle'] LOOP
         IF NOT EXISTS (
             SELECT 1 FROM pg_trigger WHERE tgname = t || '_append_only'
         ) THEN

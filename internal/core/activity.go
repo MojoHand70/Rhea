@@ -41,10 +41,12 @@ type ActivitySpec struct {
 
 // ReservedEventType reports whether an event type belongs to the kernel: the
 // materialization and amendment namespaces, and the rule.* / activity.*
-// system-verb namespaces that only declared system activities may speak in.
+// / bundle.* system-verb namespaces that only declared system activities may
+// speak in.
 func ReservedEventType(t string) bool {
 	return t == EventObjectMaterialized || t == EventObjectAmended ||
-		strings.HasPrefix(t, "rule.") || strings.HasPrefix(t, "activity.")
+		strings.HasPrefix(t, "rule.") || strings.HasPrefix(t, "activity.") ||
+		strings.HasPrefix(t, "bundle.")
 }
 
 // emitsSource returns the input name a passthrough emits template reads:
@@ -335,6 +337,33 @@ func BuiltinActivities() []Activity {
 					{Name: "occurred_at", Type: "date", Required: true},
 				},
 				Emits: "activity.approved",
+				Who:   []string{"human"},
+			},
+		},
+		{
+			Name: "approve_bundle", Domain: "system",
+			Description: "Activate a bundle: every member draft — rules, activities, object types, views — becomes active in one transaction, or none does. Recorded as bundle.approved; there is no partial approval (reject and redraft instead).",
+			Spec: ActivitySpec{
+				Inputs: []FieldDef{
+					{Name: "bundle_id", Type: "string", Required: true},
+					{Name: "approved_by", Type: "string", Required: true},
+					{Name: "occurred_at", Type: "date", Required: true},
+				},
+				Emits: "bundle.approved",
+				Who:   []string{"human"},
+			},
+		},
+		{
+			Name: "reject_bundle", Domain: "system",
+			Description: "Reject a bundle with a reason: it and its member drafts are superseded, never activated. The reason stays on the record — a human correcting the agent is the richest signal the network gets.",
+			Spec: ActivitySpec{
+				Inputs: []FieldDef{
+					{Name: "bundle_id", Type: "string", Required: true},
+					{Name: "reason", Type: "string", Required: true},
+					{Name: "rejected_by", Type: "string", Required: true},
+					{Name: "occurred_at", Type: "date", Required: true},
+				},
+				Emits: "bundle.rejected",
 				Who:   []string{"human"},
 			},
 		},

@@ -1,10 +1,11 @@
 // Package pack loads market packs (SPEC M3): bundles of object types, views,
 // rules and master-data events that teach a running kernel a market — a data
-// file, not a code fork. A pack installs no behavior: its rules arrive as
-// drafts behind the same human approval gate as everything else, and its
-// events wait in the worklist until those rules are approved — approving the
-// pack's rules in the shell IS the installation. Loading is idempotent:
-// types, views and events already present are skipped, and a rule id the
+// file, not a code fork. A pack installs nothing: its types, views, rules and
+// activities arrive as drafts gathered into one bundle behind the same human
+// approval gate as everything else (KK, 2026-10-08: everything drafts), and
+// its events wait in the worklist until the bundle is approved — approving
+// the pack's bundle IS the installation. Loading is idempotent: definitions
+// and events already present are skipped, and a rule id or activity name the
 // system already knows is left alone.
 package pack
 
@@ -72,7 +73,13 @@ type Summary struct {
 	Activities int    `json:"activities"`
 	Events     int    `json:"events"`
 	Skipped    int    `json:"skipped"`
+	// Bundle is the approval scope holding every draft this load added;
+	// empty when the load added none (a reload).
+	Bundle string `json:"bundle,omitempty"`
 }
+
+// BundleID names a pack version's bundle.
+func BundleID(pack string, version int) string { return fmt.Sprintf("pack-%s-v%d", pack, version) }
 
 // Load reads a pack file and loads it into a running kernel. The actor is
 // whoever runs the load — pack provenance lives in the dedup keys and the
@@ -98,25 +105,30 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 		}
 	}
 
+	var members []core.Member
+	packTypes := map[string]core.ObjectType{}
 	for _, t := range m.ObjectTypes {
-		switch err := s.InsertObjectType(ctx, t); {
-		case err == nil:
-			sum.Types++
-		case store.IsDuplicate(err):
+		packTypes[t.Name] = t
+		if _, _, err := s.GetObjectTypeVersion(ctx, t.Name, t.Version); err == nil {
 			sum.Skipped++
-		default:
+			continue
+		}
+		if err := store.InsertObjectTypeRow(ctx, s.Pool, t, core.StatusDraft); err != nil {
 			return sum, fmt.Errorf("object type %s: %w", t.Name, err)
 		}
+		members = append(members, core.Member{Kind: core.KindObjectType, Name: t.Name, Version: t.Version})
+		sum.Types++
 	}
 	for _, v := range m.ViewDefs {
-		switch err := s.InsertViewDef(ctx, v); {
-		case err == nil:
-			sum.Views++
-		case store.IsDuplicate(err):
+		if _, _, err := s.GetViewDefVersion(ctx, v.ID, v.Version); err == nil {
 			sum.Skipped++
-		default:
+			continue
+		}
+		if err := store.InsertViewDefRow(ctx, s.Pool, v, core.StatusDraft); err != nil {
 			return sum, fmt.Errorf("view def %s: %w", v.ID, err)
 		}
+		members = append(members, core.Member{Kind: core.KindViewDef, Name: v.ID, Version: v.Version})
+		sum.Views++
 	}
 
 	for _, r := range m.Rules {
@@ -125,23 +137,29 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 			continue
 		}
 		var target *core.ObjectType
-		if r.Spec.Effect.Object.Type != "" {
-			t, err := s.GetObjectType(ctx, r.Spec.Effect.Object.Type)
-			if err != nil {
-				return sum, fmt.Errorf("rule %s: %w", r.RuleID, err)
+		if name := r.Spec.Effect.Object.Type; name != "" {
+			// The pack's own draft types first: they activate with the rule.
+			t, ok := packTypes[name]
+			if !ok {
+				var err error
+				if t, err = s.GetObjectType(ctx, name); err != nil {
+					return sum, fmt.Errorf("rule %s: %w", r.RuleID, err)
+				}
 			}
 			target = &t
 		}
 		if err := r.Spec.Validate(target); err != nil {
 			return sum, fmt.Errorf("rule %s: %w", r.RuleID, err)
 		}
-		if _, err := s.InsertRuleVersion(ctx, core.Rule{
+		rule, err := s.InsertRuleVersion(ctx, core.Rule{
 			ID: r.RuleID, Status: core.StatusDraft, Priority: r.Priority,
 			EffectiveFrom: r.EffectiveFrom, CreatedBy: "pack:" + m.Pack,
 			Description: r.Description, Spec: r.Spec,
-		}); err != nil {
+		})
+		if err != nil {
 			return sum, fmt.Errorf("rule %s: %w", r.RuleID, err)
 		}
+		members = append(members, core.Member{Kind: core.KindRule, Name: rule.ID, Version: rule.Version})
 		sum.Rules++
 	}
 
@@ -150,13 +168,26 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 			sum.Skipped++ // the name is known; its versions are not a pack's to touch
 			continue
 		}
-		if _, err := s.InsertActivityVersion(ctx, core.Activity{
+		act, err := s.InsertActivityVersion(ctx, core.Activity{
 			Name: a.Name, Status: core.StatusDraft, Domain: a.Domain,
 			Description: a.Description, Spec: a.Spec, CreatedBy: "pack:" + m.Pack,
-		}); err != nil {
+		})
+		if err != nil {
 			return sum, fmt.Errorf("activity %s: %w", a.Name, err)
 		}
+		members = append(members, core.Member{Kind: core.KindActivity, Name: act.Name, Version: act.Version})
 		sum.Activities++
+	}
+
+	if len(members) > 0 {
+		b, err := s.InsertBundle(ctx, core.Bundle{
+			ID: BundleID(m.Pack, m.Version), CreatedBy: "pack:" + m.Pack, Members: members,
+			Description: fmt.Sprintf("Install pack %s v%d: %s", m.Pack, m.Version, m.Description),
+		})
+		if err != nil {
+			return sum, err
+		}
+		sum.Bundle = b.ID
 	}
 
 	for _, ev := range m.Events {

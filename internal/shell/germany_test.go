@@ -91,10 +91,7 @@ func TestM4GermanyPack(t *testing.T) {
 
 	// Same gate, same installation: approving the rules books the SKR03
 	// chart and the Umsatzsteuer rates out of the worklist.
-	for _, id := range []string{"de-register-account", "de-register-vat-rate",
-		"de-book-sales-invoice", "de-post-sales-invoice"} {
-		post("/api/rules/"+id+"/approve", map[string]any{"approved_by": "krzysztof"}, nil)
-	}
+	post("/api/bundles/pack-de-v3/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	if accs, _ := s.ObjectsByType(ctx, "account"); len(accs) != 14 {
 		t.Fatalf("accounts = %d, want the SKR03 chart", len(accs))
 	}

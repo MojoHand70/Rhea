@@ -120,11 +120,8 @@ func TestCohabitation(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	for _, id := range []string{"pl-register-account", "pl-register-vat-rate",
-		"pl-book-sales-invoice", "pl-post-sales-invoice", "pl-record-ksef-submission",
-		"de-register-account", "de-register-vat-rate",
-		"de-book-sales-invoice", "de-post-sales-invoice"} {
-		post("/api/rules/"+id+"/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	for _, id := range []string{"pack-pl-v6", "pack-de-v3"} {
+		post("/api/bundles/"+id+"/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	}
 	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {
 		t.Fatalf("worklist = %d, want 0 — both markets' master data installed", len(wl))

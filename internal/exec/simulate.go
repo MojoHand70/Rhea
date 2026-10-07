@@ -80,6 +80,60 @@ func (x *Executor) SimulateRule(ctx context.Context, ruleID string) (SimDiff, er
 	return diff, nil
 }
 
+// SimulateBundle dry-runs a bundle as one approval would land it: its draft
+// rules join the active set (replacing active versions of themselves) and its
+// draft types are what those rules validate against. Activities and views
+// change no state, so they do not move the diff. Read-only.
+func (x *Executor) SimulateBundle(ctx context.Context, b core.Bundle) (SimDiff, error) {
+	active, err := x.Store.ActiveRules(ctx)
+	if err != nil {
+		return SimDiff{}, err
+	}
+	drafts := map[string]core.Rule{}
+	for _, m := range b.Members {
+		if m.Kind != core.KindRule {
+			continue
+		}
+		r, err := x.Store.GetRule(ctx, m.Name)
+		if err != nil {
+			return SimDiff{}, err
+		}
+		drafts[r.ID] = r
+	}
+	cand := make([]core.Rule, 0, len(active)+len(drafts))
+	for _, a := range active {
+		if _, replaced := drafts[a.ID]; !replaced {
+			cand = append(cand, a)
+		}
+	}
+	for _, r := range drafts {
+		cand = append(cand, r)
+	}
+	sort.Slice(cand, func(i, j int) bool {
+		if cand[i].Priority != cand[j].Priority {
+			return cand[i].Priority < cand[j].Priority
+		}
+		return cand[i].ID < cand[j].ID
+	})
+	types, err := x.Store.DraftObjectTypes(ctx, b)
+	if err != nil {
+		return SimDiff{}, err
+	}
+	base, err := x.simulate(ctx, active, nil)
+	if err != nil {
+		return SimDiff{}, err
+	}
+	overlay := *x
+	overlay.draftTypes = types
+	after, err := overlay.simulate(ctx, cand, nil)
+	if err != nil {
+		return SimDiff{}, err
+	}
+	diff := diffRuns(base, after)
+	diff.RuleID, diff.Version = b.ID, b.Version
+	return diff, nil
+}
+
 // SimulateEvents dry-runs hypothetical raw events on top of the whole log,
 // under the active rules — the catch-up gate's dry run (DIRECTION: steady
 // state is automatic, bursts need a human). Read-only; the hypothetical

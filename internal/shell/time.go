@@ -76,7 +76,7 @@ func (s *Server) handleTimeSimulate(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 500, err)
 		return
 	}
-	out, err := s.renderSimDiff(ctx, diff)
+	out, err := s.renderSimDiff(ctx, diff, nil)
 	if err != nil {
 		writeErr(w, 500, err)
 		return

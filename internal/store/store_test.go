@@ -99,6 +99,22 @@ func TestAppendOnlyInvariant(t *testing.T) {
 	if _, err := s.Pool.Exec(ctx, `DELETE FROM activity`); err == nil {
 		t.Fatal("DELETE on activity succeeded — invariant 1 broken")
 	}
+	// Bundles and the gated definitions too: approval appends the active row,
+	// it never flips a draft in place.
+	if _, err := s.Pool.Exec(ctx, `INSERT INTO bundle (bundle_id, version, status, description, members, created_by)
+		VALUES ('b', 1, 'draft', 'd', '[]', 'test')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Pool.Exec(ctx, `UPDATE bundle SET status = 'active'`); err == nil {
+		t.Fatal("UPDATE on bundle succeeded — invariant 1 broken")
+	}
+	if _, err := s.Pool.Exec(ctx, `INSERT INTO object_type (name, version, status, spec)
+		VALUES ('t', 1, 'draft', '{}')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Pool.Exec(ctx, `UPDATE object_type SET status = 'active'`); err == nil {
+		t.Fatal("UPDATE on object_type succeeded — invariant 1 broken")
+	}
 }
 
 func TestRuleVersioning(t *testing.T) {

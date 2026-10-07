@@ -663,7 +663,9 @@ extends invariant 2 to every definition; it adds no new primitive.
 3. *The bundle* (inserted 2026-10-08): types and views under the gate,
    one approval activating a set of definitions, a dry run over the set.
    The eval surfaced the forcing case: one event with two consequences
-   cannot be implemented one approval at a time.
+   cannot be implemented one approval at a time. *Shipped 2026-10-08*
+   (see DECISIONS): packs install as one bundle, and the forcing case
+   passes. The agent proposing bundles moves to step 6.
 4. *A harder corpus* (convert, book, amend, `each`, the two-consequence
    case) so the score can tell models and prompts apart.
 5. *The live full-story demo* with KK, showing a bundle come to life.

@@ -55,6 +55,51 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-08 — the bundle: one approval, many definitions
+
+- **Object types and views joined the gate** (KK: everything drafts).
+  Both tables gained `status` (draft | active | superseded; rows from
+  before default to active). Their version is the schema's identity
+  (objects record `type_version`), so approval appends the `active` row
+  of the *same* version instead of minting one. The primary key became
+  (name, version, status). Every reader (`GetObjectType`,
+  `ListObjectTypes`, `LatestViewDefs`) is active-only; a draft type is not
+  language yet. `InsertObjectType`/`InsertViewDef` stay as the
+  active-insert bootstrap and test path, the way tests insert active rules.
+- **`bundle` is a versioned, append-only definition**: an id, a
+  description, and members (kind, name, version) pointing at draft rows
+  of the four vocabularies. It adds the approval's scope and nothing else.
+  Two builtin doors: `approve_bundle` emits `bundle.approved`, and its
+  kernel reaction appends every member's active row plus the bundle's in
+  one transaction, then runs one worklist pass. `reject_bundle` requires
+  a reason and emits `bundle.rejected`. `bundle.*` joined the reserved
+  system-verb namespaces.
+- **No partial approval, enforced at the doors.** `approve_rule` and
+  `approve_activity` refuse any draft that belongs to a bundle. A draft
+  belongs to one bundle for life: it can't join a second, and after a
+  rejection it stays a rejected draft. A redraft is a new version in a
+  new bundle.
+- **Rejection supersedes only the bundle, never its members.** Appending
+  a superseded version of a draft rule would retire the active version it
+  was redrafting (a rule whose latest version is superseded is retired).
+  Membership already locks the drafts, so touching them would gain
+  nothing.
+- **The bundle's dry run overlays its draft types.** `SimulateBundle`
+  runs the active rules plus the bundle's drafts on a private copy of the
+  executor whose type lookup sees the bundle's draft types (the booking
+  executor never does). The diff renderer gets the same overlay.
+- **Packs land as one bundle** (`pack-<name>-v<version>`), and approving
+  it is the installation. `rhea load` drafts into
+  `load-<file>-<content hash>`. New CLI verbs `rhea approve BUNDLE` and
+  `rhea reject BUNDLE REASON`, plus a Bundles tab under rules in the
+  shell (members inline, simulate, approve all, reject with reason). Pack
+  tests now approve bundles. Intercompany activates
+  `pl-record-ksef-submission`, which it used to skip; no behavior change.
+- **The forcing case passes** (`exec/bundle_test.go`): one
+  `goods.received` gets a receipt (whose type arrives in the same bundle)
+  and a stock movement from one approval, both provenanced to the same
+  event. Replay reproduces the state.
+
 ## 2026-10-07 — the eval harness: residue as the agent's score
 
 - **`rhea eval [CORPUS]` measures the agent as an author.** A corpus

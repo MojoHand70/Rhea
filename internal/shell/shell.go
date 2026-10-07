@@ -42,6 +42,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/rules/draft", s.handleDraft)
 	mux.HandleFunc("POST /api/rules/{id}/approve", s.handleApprove)
 	mux.HandleFunc("POST /api/rules/{id}/simulate", s.handleSimulate)
+	mux.HandleFunc("GET /api/bundles", s.handleBundles)
+	mux.HandleFunc("POST /api/bundles/{id}/simulate", s.handleSimulateBundle)
+	mux.HandleFunc("POST /api/bundles/{id}/approve", s.handleApproveBundle)
+	mux.HandleFunc("POST /api/bundles/{id}/reject", s.handleRejectBundle)
 	mux.HandleFunc("GET /api/activities", s.handleActivities)
 	mux.HandleFunc("POST /api/activities/{name}/trigger", s.handleTrigger)
 	mux.HandleFunc("POST /api/activities/{name}/approve", s.handleApproveActivity)
@@ -607,7 +611,7 @@ func (s *Server) handleSimulate(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, err)
 		return
 	}
-	out, err := s.renderSimDiff(ctx, diff)
+	out, err := s.renderSimDiff(ctx, diff, nil)
 	if err != nil {
 		writeErr(w, 500, err)
 		return

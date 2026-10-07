@@ -100,11 +100,8 @@ func TestIntercompany(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	for _, id := range []string{"pl-register-account", "pl-register-vat-rate",
-		"pl-book-sales-invoice", "pl-post-sales-invoice",
-		"de-register-account", "de-register-vat-rate",
-		"de-book-sales-invoice", "de-post-sales-invoice"} {
-		post("/api/rules/"+id+"/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	for _, id := range []string{"pack-pl-v6", "pack-de-v3"} {
+		post("/api/bundles/"+id+"/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	}
 	activate("register-company", core.RuleSpec{
 		Match: core.Match{EventType: "company.registered"},

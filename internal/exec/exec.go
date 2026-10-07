@@ -15,6 +15,19 @@ import (
 
 type Executor struct {
 	Store *store.Store
+	// draftTypes overlays a bundle's draft object types for its dry run:
+	// set only on a simulation's private copy of the executor, never on the
+	// one that books.
+	draftTypes map[string]core.ObjectType
+}
+
+// objectType is the type the executor validates against: the newest active
+// version, or a bundle draft while that bundle is being dry-run.
+func (x *Executor) objectType(ctx context.Context, name string) (core.ObjectType, error) {
+	if t, ok := x.draftTypes[name]; ok {
+		return t, nil
+	}
+	return x.Store.GetObjectType(ctx, name)
 }
 
 // ProcessPending evaluates every unmatched raw event against the active rule
@@ -367,7 +380,7 @@ func (x *Executor) book(ctx context.Context, root core.Event, nodes []chainNode)
 // keeps every id reproducible without any sequence state.
 func (x *Executor) expandEffect(ctx context.Context, root core.Event, idBase string, r core.Rule, payload any, lookup core.Lookup, get core.Getter) ([]core.MaterializedObject, error) {
 	if r.Spec.Effect.Postings != nil {
-		postingType, err := x.Store.GetObjectType(ctx, PostingObjectType)
+		postingType, err := x.objectType(ctx, PostingObjectType)
 		if err != nil {
 			return nil, fmt.Errorf("rule %s v%d: %w", r.ID, r.Version, err)
 		}
@@ -379,7 +392,7 @@ func (x *Executor) expandEffect(ctx context.Context, root core.Event, idBase str
 	}
 
 	tmpl := r.Spec.Effect.Object
-	objType, err := x.Store.GetObjectType(ctx, tmpl.Type)
+	objType, err := x.objectType(ctx, tmpl.Type)
 	if err != nil {
 		return nil, fmt.Errorf("rule %s v%d: %w", r.ID, r.Version, err)
 	}
@@ -445,7 +458,7 @@ func (x *Executor) expandEffect(ctx context.Context, root core.Event, idBase str
 // balance is judged — at expansion, before anything books.
 func (x *Executor) expandAmend(ctx context.Context, r core.Rule, payload any, lookup core.Lookup, get core.Getter) (*core.AmendedObject, error) {
 	tmpl := r.Spec.Effect.Amend
-	objType, err := x.Store.GetObjectType(ctx, tmpl.Type)
+	objType, err := x.objectType(ctx, tmpl.Type)
 	if err != nil {
 		return nil, fmt.Errorf("rule %s v%d: %w", r.ID, r.Version, err)
 	}

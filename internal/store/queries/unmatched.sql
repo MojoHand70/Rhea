@@ -5,10 +5,11 @@ SELECT event_id, kind, event_type, to_char(occurred_at,'YYYY-MM-DD'), recorded_a
        activity_name, activity_version
 FROM event e
 WHERE e.kind = 'raw'
-  -- the rule.* and activity.* namespaces are system verbs (approvals, draft
+  -- the rule.*, activity.* and bundle.* namespaces are system verbs (approvals, draft
   -- requests), not business events waiting for explanation
   AND e.event_type NOT LIKE 'rule.%'
   AND e.event_type NOT LIKE 'activity.%'
+  AND e.event_type NOT LIKE 'bundle.%'
   -- time passing is infrastructure: an uneventful day is not a question
   AND e.event_type NOT LIKE 'time.%'
   AND NOT EXISTS (SELECT 1 FROM event d WHERE d.cause_event_id = e.event_id)
