@@ -1,0 +1,104 @@
+{
+  "name": "m0-story",
+  "seeds": [
+    "../seed/finance.json", "../seed/finance_v2.json", "../seed/finance_v3.json",
+    "../seed/finance_v4.json", "../seed/finance_v5.json", "../seed/finance_v6.json",
+    "../seed/finance_v7.json", "../seed/finance_v8.json", "../seed/finance_v9.json",
+    "../seed/warehouse.json"
+  ],
+  "events": [
+    "../events/account_201.json",
+    "../events/account_702.json",
+    {"event_type": "account.created", "occurred_at": "2026-09-01",
+     "payload": {"code": "100", "name": "Kasa", "type": "asset"}},
+    "../events/company_acme.json",
+    "../events/company_beta.json",
+    "../events/company_gamma.json",
+    "../events/company_omikron.json",
+    "../events/company_zeta.json",
+    "../events/item_widget.json",
+    "../events/location_main.json",
+    "../events/invoice_acme.json",
+    "../events/invoice_beta.json",
+    "../events/invoice_gamma_eur.json",
+    "../events/invoice_delta_acme.json",
+    "../events/invoice_zeta.json",
+    "../events/sale_cash.json",
+    "../events/goods_received_widgets.json",
+    "../events/goods_issued_widgets.json"
+  ],
+  "tasks": [
+    {
+      "intent": "Accounts from our chart of accounts become account master data.",
+      "sample_type": "account.created", "hint": "account",
+      "reference": {"rule_id": "register-account", "description": "account.created becomes an account", "priority": 10,
+        "spec": {"match": {"event_type": "account.created"},
+          "effect": {"object": {"type": "account", "fields": {"code": "=$.code", "name": "=$.name", "type": "=$.type"}}}}}
+    },
+    {
+      "intent": "Registered companies become company master data.",
+      "sample_type": "company.registered", "hint": "company",
+      "reference": {"rule_id": "register-company", "description": "company.registered becomes a company", "priority": 20,
+        "spec": {"match": {"event_type": "company.registered"},
+          "effect": {"object": {"type": "company", "fields": {"name": "=$.name", "kind": "=$.kind", "vat_id": "=$.vat_id", "country": "=$.country"}}}}}
+    },
+    {
+      "intent": "New items in the catalogue become item master data.",
+      "sample_type": "item.created", "hint": "item",
+      "reference": {"rule_id": "register-item", "description": "item.created becomes an item", "priority": 30,
+        "spec": {"match": {"event_type": "item.created"},
+          "effect": {"object": {"type": "item", "fields": {"sku": "=$.sku", "name": "=$.name", "unit": "=$.unit"}}}}}
+    },
+    {
+      "intent": "New warehouse locations become location master data.",
+      "sample_type": "location.created", "hint": "location",
+      "reference": {"rule_id": "register-location", "description": "location.created becomes a location", "priority": 40,
+        "spec": {"match": {"event_type": "location.created"},
+          "effect": {"object": {"type": "location", "fields": {"code": "=$.code", "name": "=$.name"}}}}}
+    },
+    {
+      "intent": "Every invoice, once it becomes a document, is posted to the ledger: debit 201 receivables, credit 702 revenue, the invoice total in the invoice's currency.",
+      "sample_type": "invoice.received", "hint": "posting",
+      "reference": {"rule_id": "post-invoice", "description": "a materialized invoice posts 201/702", "priority": 200,
+        "spec": {"match": {"event_type": "object.materialized", "where": [{"path": "$.object_type", "op": "eq", "value": "invoice"}]},
+          "effect": {"postings": {"currency": "=$.state.currency", "lines": [
+            {"account": "201", "debit": "=$.state.total"}, {"account": "702", "credit": "=$.state.total"}]}}}}
+    },
+    {
+      "intent": "Received invoices become invoice documents for the customer; the total is the sum of the line amounts.",
+      "sample_type": "invoice.received", "hint": "invoice",
+      "reference": {"rule_id": "book-invoice", "description": "invoice.received becomes an invoice", "priority": 100,
+        "spec": {"match": {"event_type": "invoice.received"},
+          "effect": {"object": {"type": "invoice", "fields": {"customer": "=ref(company, name, $.customer)",
+            "issue_date": "=$.issue_date", "currency": "=$.currency", "total": "=sum($.lines[*].amount)"}}}}}
+    },
+    {
+      "intent": "Cash sales are booked straight to the ledger: debit 100 cash, credit 702 revenue, for the sale amount.",
+      "sample_type": "sale.recorded", "hint": "posting",
+      "reference": {"rule_id": "post-cash-sale", "description": "a cash sale posts 100/702", "priority": 110,
+        "spec": {"match": {"event_type": "sale.recorded"},
+          "effect": {"postings": {"currency": "=$.currency", "lines": [
+            {"account": "100", "debit": "=$.amount"}, {"account": "702", "credit": "=$.amount"}]}}}}
+    },
+    {
+      "intent": "Goods received from a supplier become goods receipt documents.",
+      "sample_type": "goods.received", "hint": "goods_receipt",
+      "reference": {"rule_id": "book-goods-receipt", "description": "goods.received becomes a goods receipt", "priority": 120,
+        "spec": {"match": {"event_type": "goods.received"},
+          "effect": {"object": {"type": "goods_receipt", "fields": {"supplier": "=ref(company, name, $.supplier)",
+            "item": "=ref(item, sku, $.item)", "location": "=ref(location, code, $.location)", "qty": "=$.qty", "date": "=$.date"}}}}}
+    },
+    {
+      "intent": "Goods issued from the warehouse become goods issue documents, keeping the reason.",
+      "sample_type": "goods.issued", "hint": "goods_issue",
+      "reference": {"rule_id": "book-goods-issue", "description": "goods.issued becomes a goods issue", "priority": 130,
+        "spec": {"match": {"event_type": "goods.issued"},
+          "effect": {"object": {"type": "goods_issue", "fields": {"item": "=ref(item, sku, $.item)",
+            "location": "=ref(location, code, $.location)", "qty": "=$.qty", "date": "=$.date", "reason": "=$.reason"}}}}}
+    }
+  ],
+  "expect": {
+    "account": 3, "company": 5, "item": 1, "location": 1,
+    "invoice": 5, "posting": 12, "goods_receipt": 1, "goods_issue": 1
+  }
+}

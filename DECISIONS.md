@@ -55,6 +55,37 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-07 — the eval harness: residue as the agent's score
+
+- **`rhea eval [CORPUS]` measures the agent as an author.** A corpus
+  (`testdata/eval/corpus.json`) is an implementation script as data:
+  seeds, intake events, intents with sample types, and the expected
+  object counts. Per task: ask → validate → store draft → dry run →
+  approve if the dry run shows no errors (the human's role played by a
+  policy, actor `eval`). Verdict: residue over the intake plus a state
+  check. It runs on a throwaway database (`store.Throwaway`, now also
+  behind `storetest`) because the system of record is append-only. It
+  lives in a new package `internal/eval` because it orchestrates agent,
+  shell context and executor, which no existing package should import
+  together.
+- **Every corpus carries reference answers, and a test proves them
+  done.** The recorded agent replays the references through the same
+  path. A corpus its own references cannot finish measures nothing.
+- **First live score (claude-sonnet-4-6): 9/9, residue 0 of 18,**
+  including a cascade posting it had not been taught before today. The
+  corpus is the M0 story and too easy to discriminate. A harder corpus
+  (convert, book, amend over lifecycles, `each`) is the next
+  measurement.
+- **Finding: one event, two consequences cannot be implemented one
+  approval at a time.** `goods.received` needs a receipt *and* a stock
+  movement. Approving one rule explains the event, so the second rule
+  only fires on future events (backfill is ruled), and a cascade cannot
+  carry the ref (`ref<item>` will not take `$.state.item`, an id; the
+  ref re-reference exit again). The corpus leaves stock movements out.
+  This is evidence for the bundle as the approval scope (DIRECTION,
+  implementation by interview): approving the two rules together fires
+  both on the pending event.
+
 ## 2026-10-07 — the agent drafts against the whole language
 
 - **The agent sees the language as it stands, not one pre-chosen type.**
