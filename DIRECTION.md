@@ -578,10 +578,8 @@ explained by approved rules until nothing is left unexplained except what
 was explicitly accepted. "Are we live?" stops being an opinion. The same
 number, across clients, is the network's flywheel rate.
 
-Status: **draft for KK.** Each point is a proposal with the simplest
-option chosen; the open questions at the end are KK's to settle before
-the interview loop is built. The agent work in "Order of work" does not
-wait on them.
+Status: **adopted 2026-10-08.** KK settled the four open questions
+below, each on the proposed option.
 
 - **Evidence first, answers second.** The interview starts by intake, not
   by questions: the client's last months of documents (KSeF invoices,
@@ -634,23 +632,19 @@ drafted by the agent cannot bypass the gate, so types and views need the
 same lifecycle (a status column and the same approval reaction). That
 extends invariant 2 to every definition; it adds no new primitive.
 
-**Open questions for KK.**
+**Settled questions (KK, 2026-10-08).**
 
-1. Types and views under the gate: should packs land them as drafts too
-   (consistent, but every pack install becomes an approval), or should
-   pack-shipped types stay auto-active while agent-drafted ones gate?
-   Simplest consistent answer: everything drafts, and pack install is
-   one bundle approval.
-2. Intake into the real log, or into a sandbox log that is discarded if
-   the client walks away? The real log is honest and costs nothing.
-   A sandbox is friendlier for a sales demo.
-3. Partial approval: may a human approve two of a bundle's three rules?
-   Proposed no: reject with a reason, and the agent redrafts. Approval
-   edits are the richest network signal, so they should be redrafts on
-   the record, not silent trims.
-4. The interview protocol itself: Alpha's doc 010 screenplay as is, or
-   reordered around residue (intake → pack → largest cluster → views and
-   activities last)?
+1. *Everything drafts.* Pack-shipped types and views land as drafts like
+   pack rules and activities, and installing a pack is one bundle
+   approval. Invariant 2 covers every definition, with no second path.
+2. *Intake goes into the real log.* The client's documents are facts and
+   start their system of record. No sandbox and no promotion step.
+3. *No partial approval.* A bundle activates whole or not at all. A
+   rejection carries a reason and the agent redrafts, so the correction
+   stays on the record as the richest network signal.
+4. *Residue-first protocol.* Intake → pack baseline → largest unexplained
+   cluster → views and activities last. Alpha's doc 010 supplies the
+   tone and the questions, not the order.
 
 **Order of work.**
 
@@ -664,10 +658,17 @@ extends invariant 2 to every definition; it adds no new primitive.
    counts per event type. This makes "the AI authors" a number that can
    be tracked from release to release, and it is the interview's
    definition of done in miniature.
-3. *The live full-story demo* with KK: packs, E-ladder, doors, cases,
-   clock.
-4. *The interview loop*: turns as events, residue clustering, bundles
-   under the gate (after the open questions are settled).
+   *Shipped 2026-10-07* with step 1 (see DECISIONS): first live score
+   9/9 on the M0 story, too easy to discriminate.
+3. *The bundle* (inserted 2026-10-08): types and views under the gate,
+   one approval activating a set of definitions, a dry run over the set.
+   The eval surfaced the forcing case: one event with two consequences
+   cannot be implemented one approval at a time.
+4. *A harder corpus* (convert, book, amend, `each`, the two-consequence
+   case) so the score can tell models and prompts apart.
+5. *The live full-story demo* with KK, showing a bundle come to life.
+6. *The interview loop*: turns as events, residue clustering, the agent
+   proposing bundles.
 
 One line: *an implementation is a corpus being explained; the interview
 is how, residue is when, and the gate is who.*
