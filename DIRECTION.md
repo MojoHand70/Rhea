@@ -945,6 +945,115 @@ formula language must serve all the common variants: the delivery
 states the value, a price list computes it, or the value comes later
 from the purchase invoice.
 
+## Scale and security are welded, not added (KK, 2026-10-08)
+
+KK's question: how does Rhea carry thousands of companies and millions
+of transactions a day one day, when performance and security are
+explicit non-goals today (SPEC §1)? The answer: the non-goal stands, and
+the welding is elsewhere. Rhea already has the shape that large
+transaction systems converge on — an append-only log, deterministic
+replay, rebuildable projections, one writer — and containment is already
+the security model. What is missing is not work but *refusal*: naming
+the properties that make scale and isolation possible later, and
+declining any feature that spends them. The rules below are of the same
+kind as the seven eligibility rules: each maps an ingredient of scale or
+trust to a mechanism we already have, and says what would break it.
+
+**Scale rules.**
+
+1. **The company is the unit of scale.** Every event, object, rule and
+   view belongs to one company. If the store carries that key on every
+   call, then sharding, per-company databases and per-company replay are
+   deployment choices later, never a redesign. Today the company is a
+   ref inside payloads (E2 made it plural: two `kind: self` companies in
+   one log). This is the one item that is cheap now and expensive later:
+   **promote the company ref from a payload field to a partition key the
+   store knows about**, threaded as an argument rather than a global.
+   The isolation enforcement that rides on it stays out (rule S2).
+2. **The hot path reads a bounded window, never the whole log.** Firing
+   one event may touch that event, the active rules for its type, and
+   the objects it references — `ProcessPending` already works this way.
+   The full scans are honest experiment shortcuts, already recorded as
+   such in DECISIONS: the DuckDB projection rebuilt on every request
+   (→ incremental, from the log tail), `Replay` reading every derived
+   event (→ snapshot plus tail, rule 3), the object cache rebuilt whole
+   (→ the same snapshot). The habit to keep: every full scan gets a
+   DECISIONS line naming its production shape.
+3. **Replay never re-evaluates.** Deltas are baked at firing time, so
+   replay is a pure read of the log — no rule evaluation, no ref
+   resolution, no arithmetic (the formula brief's rule 3 extends this).
+   That is what keeps audit-by-replay affordable at volume. The
+   production shape is a snapshot of the object cache plus replay of the
+   tail; invariant 4 survives it because a snapshot is a cached prefix,
+   and the full replay stays the test that proves the snapshot honest.
+4. **Determinism buys parallelism for free.** Events of different
+   companies, or events sharing no objects, can fire concurrently,
+   because outcome depends only on log order within a company. What
+   protects it: no global mutable state in the executor, no
+   cross-company read at fire time (cross-company is the network's job,
+   explicitly), and identity and sequences per company — object identity
+   is `<type>-<source_event_id>` today, derived from one global log, which
+   is fine until the log is partitioned and must then derive from the
+   company's own order. E4's intercompany cascade is the known exception
+   and crosses companies through refs it resolves at firing, baked
+   before replay — so it serializes at that one point, by design.
+5. **The model is never on the hot path.** The agent runs at authoring
+   time, on worklist residue; a million invoices a day never touch it.
+   Model cost scales with *novelty*, not with volume — the economic
+   claim beneath AiRP, and worth stating as a rule: no rule, formula or
+   adapter may call the model at fire time. Rule matching stays
+   indexable (by event type first), so no rule feature may require
+   evaluating every rule against every event.
+
+**Security rules.**
+
+1. **Interpret, never execute.** Model output is data, the kernel
+   validates it, the gate sits before activation (invariant 3). The first
+   real test of this is the formula session: the arithmetic language
+   must be *total* — no loops, no I/O, bounded cost per evaluation —
+   and run by the kernel's own VM, never an eval. The same holds for
+   every later sub-language: algorithmics are kernel code, never data.
+2. **The partition key is the isolation key.** The company key of scale
+   rule 1 is what row-level security keys on and what every store call
+   carries as the principal's scope. Permissions, when they come, belong
+   on activities ("who may trigger this verb"), which are already
+   declared, versioned and gated — never a second permission system.
+   The parked line "authz belongs in the language" (below) is the same
+   destination.
+3. **Append-only by proof, not by convention.** Today the log is
+   append-only because tests forbid UPDATE and DELETE. A hash chain over
+   the log — each event carrying the hash of its predecessor — turns the
+   audit story into tamper evidence a third party can verify. It touches
+   no language and lands whenever multi-company does.
+4. **The network is the real security surface.** Rule shapes leave the
+   company; facts never do (the network's first slice already strips
+   instance values and floors rare shapes). The welding is a test that
+   asserts no payload value of any event appears in what the network
+   stores; incoming shapes remain untrusted data behind the same gate.
+5. **Adapters are the only outbound side effects.** Credentials, retries
+   and evidence live behind the adapter contract and nowhere else, with
+   evidence recorded as events — the parked SPEC §7 question answered
+   from the security side.
+
+**How it becomes a habit.** Two questions join the definition of done
+for any new area or direction:
+
+- *Partition:* does this still work with a thousand companies in one
+  log, and is there a cross-company read on the hot path?
+- *Containment:* does any new input get executed rather than
+  interpreted, and can any data leave the gate or the company?
+
+A "yes" is allowed; it costs one DECISIONS line naming the production
+shape. What we do not do now, and SPEC is right about it: no sharding,
+no caches, no benchmarks, no auth code. The welding is in the data model
+(the company key), in the two questions, and in protecting three
+properties — bounded reads, baked deltas, one writer.
+
+One line: *scale is the company as the key and replay that never
+thinks; security is a kernel that interprets and a network that learns
+shapes, never facts — both are already here, and the work is to refuse
+what would spend them.*
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
@@ -1020,3 +1129,9 @@ from the purchase invoice.
   intercompany as cascade across company refs, FX in the arithmetic
   sub-language. A falsifiability test of the M2 kind: zero kernel changes.
   Planned (2026-10-04): the enterprise-structure ladder above, E1–E5.
+- **The company key is the partition key** (KK, 2026-10-08, "Scale and
+  security are welded"). The one scale item that is cheap now and
+  expensive later: the company ref promoted from payload field to a key
+  the store carries on every call — isolation and sharding ride on it
+  later, enforced by nothing yet. Alongside: snapshot-plus-tail replay,
+  a hash-chained log, and the network test that no fact ever leaves.
