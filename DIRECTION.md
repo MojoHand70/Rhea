@@ -85,6 +85,49 @@ KK), and becomes wiser by collecting and generalizing *rules*, never data.
 One line: *Rhea never learns facts; it learns explanations — packs are the
 distribution vehicle, the approval gate is the trust boundary.*
 
+### Rhea suggests standards (KK, 2026-10-08)
+
+Asked "how do you book a PZ?", KK answered past the question: those
+questions have no single answer ("it depends", "everyone does it a bit
+differently"), and **the role of Rhea is to suggest standards.** If Rhea
+knows how something is booked, she proposes it, and the client accepts or
+gives their own rule. Over time she learns from thousands of clients, from
+the web, from documents and from scientific work, until she can say:
+*"Listen, 90% of companies in Poland in this industry do it like this."*
+That never obliges the client.
+
+- **Rhea leads, the client decides.** The agent stops asking open
+  questions it could answer. It proposes the standard as a draft, says
+  why, and asks for a yes or the client's own rule. The approval gate is
+  unchanged, and only who speaks first changes. This is the host vision
+  applied to implementation.
+- **Knowledge has many sources, and each is named.** Statute and
+  regulation, accounting standards (UoR, KSR, IFRS), textbooks and
+  research, documents, the web, pack authors, and the network's
+  consensus over approved rules. They differ in kind and in strength, so
+  they are never blended anonymously.
+- **Every suggestion carries its warrant**, as every fact carries its
+  provenance: the source kind, the citation, the scope (market,
+  industry, size) and, for the network, the actual support ("2,140 of
+  2,380 Polish wholesalers"). *A support figure is only ever a count of
+  real approved rules, never estimated or invented.* Before the network
+  exists, the honest warrant is the standard itself ("customary under
+  the Polish accounting act; Poland pack default"). A fabricated "90%"
+  would spend the trust the whole design is built to earn.
+- **The client's own rule wins, and teaches.** An override is an
+  ordinary approved rule for that client. The deviation and its reason
+  ("we value at standard cost") are the richest signal the network gets,
+  and they may become a minority standard of their own once enough
+  clients share them.
+- **The industry is part of the scope.** "In this industry" needs the
+  client's profile (PKD code, size, accounting method) as data the
+  consensus is scoped by. It is collected in the interview like
+  everything else.
+
+One line: *Rhea speaks first with a standard and its warrant; the client
+answers with a yes or their own rule; both are explanations, and the
+network learns from the difference.*
+
 ## The UX is a replaceable interpreter (KK, 2026-10-03)
 
 Alpha's shell (activity bar, submenu, tabs, omnibox, cases) stays the
@@ -893,10 +936,14 @@ rounded), the PZ entry (Wn 330 / Ma 300 at that value, KK to confirm the
 policy), VAT from net × rate with statutory rounding, and due dates
 (date + payment term days, named by the cases test).
 
-**Open before the session** (business questions to KK, recorded
-2026-10-08): where a PZ's value comes from (stated by the delivery,
-computed from a price list, or valued later when the purchase invoice
-arrives), and how a PZ is booked.
+**Not questions for KK** (corrected 2026-10-08, see "Rhea suggests
+standards"): how a PZ is valued and booked has many answers, and Rhea's
+job is to propose the standard with its warrant. The Polish default (PZ
+at purchase price, Wn 330 / Ma 300, settled against the invoice 300 /
+202 with input VAT) arrives as a pack draft any client may replace. The
+formula language must serve all the common variants: the delivery
+states the value, a price list computes it, or the value comes later
+from the purchase invoice.
 
 ## Language decisions with a recorded destination
 
