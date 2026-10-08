@@ -23,7 +23,9 @@
 //	                         prints residue (default testdata/eval/corpus.json).
 //	                         A persona file (testdata/customers/) runs as a
 //	                         simulated customer: -voice N picks a paraphrase,
-//	                         -months N shortens the year
+//	                         -voices runs every saved one, -months N shortens
+//	                         the year. -runs N repeats; the verdict is DONE
+//	                         only when every run in every voice is DONE
 //	rhea sim PERSONA         the simulated customer: what it generates; -corpus FILE
 //	                         writes the compiled corpus, -paraphrase N asks the model
 //	                         to rephrase the interview, -play submits its documents
@@ -296,20 +298,26 @@ func main() {
 
 	case "eval":
 		fs := flag.NewFlagSet("eval", flag.ExitOnError)
-		verbose := fs.Bool("v", false, "print every draft the agent proposed")
-		learn := fs.Bool("network", false, "draw on what Rhea learned, then publish this run's explanations")
+		verbose := fs.Bool("v", false, "print every draft the agent proposed, refused ones included")
+		learn := fs.Bool("network", false, "draw on what Rhea learned, then publish each run's explanations")
 		voice := fs.Int("voice", 0, "persona only: run the k-th paraphrase of the interview (0: as scripted)")
+		voices := fs.Bool("voices", false, "persona only: run the scripted interview and every saved paraphrase")
 		months := fs.Int("months", 0, "persona only: override the persona's months")
+		runs := fs.Int("runs", 1, "repeat each run; the verdict is DONE only when every run is")
 		fs.Parse(os.Args[2:])
 		path := "testdata/eval/corpus.json"
 		if fs.NArg() > 0 {
 			path = fs.Arg(0)
 		}
-		var c eval.Corpus
-		var dir string
+		// Which interviews to run: a corpus is its own one voice; a persona
+		// runs as scripted, as one paraphrase, or as all of them.
+		type interview struct {
+			voice int
+			c     eval.Corpus
+			dir   string
+		}
+		var interviews []interview
 		if sim.IsPersona(path) {
-			// A simulated customer: facts and expected state from the
-			// generator, the interview as scripted or as paraphrased.
 			p, pdir, err := sim.Load(path)
 			if err != nil {
 				log.Fatal(err)
@@ -317,31 +325,40 @@ func main() {
 			if *months > 0 {
 				p.Months = *months
 			}
-			voices, _, err := sim.LoadVoices(path)
+			saved, _, err := sim.LoadVoices(path)
 			if err != nil {
 				log.Fatal(err)
 			}
-			var facts sim.Facts
-			if c, facts, err = sim.Compile(p, &voices, *voice); err != nil {
-				log.Fatal(err)
+			which := []int{*voice}
+			if *voices {
+				which = []int{0}
+				if len(saved.Answers) > 0 {
+					for k := 1; k <= len(saved.Answers[0]); k++ {
+						which = append(which, k)
+					}
+				}
 			}
-			dir = pdir
-			fmt.Print(sim.Summary(p, facts))
+			for _, k := range which {
+				c, facts, err := sim.Compile(p, &saved, k)
+				if err != nil {
+					log.Fatal(err)
+				}
+				if k == which[0] {
+					fmt.Print(sim.Summary(p, facts))
+				}
+				interviews = append(interviews, interview{k, c, pdir})
+			}
 		} else {
-			var err error
-			if c, dir, err = eval.Load(path); err != nil {
+			c, dir, err := eval.Load(path)
+			if err != nil {
 				log.Fatal(err)
 			}
+			interviews = append(interviews, interview{0, c, dir})
 		}
-		// Never the system of record: the run gets its own log, dropped after.
-		tmp, cleanup, err := store.Throwaway(ctx, "rhea_eval")
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer cleanup()
 		var nw *network.Network
 		var k *network.Knowledge
 		if *learn {
+			var err error
 			if nw, err = network.Open(ctx, network.DSN()); err != nil {
 				log.Fatal(err)
 			}
@@ -349,7 +366,7 @@ func main() {
 			// A simulated run draws on simulated runs too; a real corpus
 			// never sees them.
 			learnFrom := nw.Learn
-			if network.Synthetic(c.Name) {
+			if network.Synthetic(interviews[0].c.Name) {
 				learnFrom = nw.LearnIncludingSynthetic
 			}
 			known, err := learnFrom(ctx)
@@ -359,28 +376,50 @@ func main() {
 			k = &known
 			fmt.Printf("drawing on %d installation(s)\n", known.Installations)
 		}
-		rep, err := eval.Run(ctx, tmp, agent.New(), agent.Model(), c, dir, k)
-		if err != nil {
-			log.Fatal(err)
+		verdict := eval.Verdict{Corpus: interviews[0].c.Name}
+		for _, iv := range interviews {
+			for run := 1; run <= *runs; run++ {
+				// Never the system of record: each run gets its own log,
+				// dropped after — a fresh company every time.
+				tmp, cleanup, err := store.Throwaway(ctx, "rhea_eval")
+				if err != nil {
+					log.Fatal(err)
+				}
+				rep, err := eval.Run(ctx, tmp, agent.New(), agent.Model(), iv.c, iv.dir, k)
+				if err != nil {
+					cleanup()
+					log.Fatal(err)
+				}
+				if nw != nil {
+					rules, err := tmp.ActiveRules(ctx)
+					if err != nil {
+						cleanup()
+						log.Fatal(err)
+					}
+					name := fmt.Sprintf("eval-%s-%s", iv.c.Name, time.Now().Format("20060102-150405"))
+					if network.Synthetic(iv.c.Name) { // stays marked: never a real client's figure
+						name = fmt.Sprintf("%s-%s-v%d-r%d", iv.c.Name, time.Now().Format("20060102-150405"), iv.voice, run)
+					}
+					if _, err := nw.Publish(ctx, name, rules); err != nil {
+						cleanup()
+						log.Fatal(err)
+					}
+					fmt.Printf("published as %s\n", name)
+				}
+				cleanup()
+				if len(interviews) > 1 || *runs > 1 {
+					fmt.Printf("--- voice %d, run %d of %d ---\n", iv.voice, run, *runs)
+				}
+				if *verbose {
+					fmt.Print(rep.Verbose())
+				} else {
+					fmt.Print(rep)
+				}
+				verdict.Outcomes = append(verdict.Outcomes, eval.Outcome{Voice: iv.voice, Run: run, Report: rep})
+			}
 		}
-		if nw != nil {
-			rules, err := tmp.ActiveRules(ctx)
-			if err != nil {
-				log.Fatal(err)
-			}
-			name := fmt.Sprintf("eval-%s-%s", c.Name, time.Now().Format("20060102-150405"))
-			if network.Synthetic(c.Name) { // stays marked: never a real client's figure
-				name = fmt.Sprintf("%s-%s", c.Name, time.Now().Format("20060102-150405"))
-			}
-			if _, err := nw.Publish(ctx, name, rules); err != nil {
-				log.Fatal(err)
-			}
-			defer fmt.Printf("published as %s\n", name)
-		}
-		if *verbose {
-			fmt.Print(rep.Verbose())
-		} else {
-			fmt.Print(rep)
+		if len(verdict.Outcomes) > 1 {
+			fmt.Print("\n" + verdict.String())
 		}
 
 	case "sim":

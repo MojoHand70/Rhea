@@ -116,6 +116,60 @@ type Report struct {
 // the state a correct implementation would hold.
 func (r Report) Done() bool { return len(r.Residue) == 0 && len(r.Mismatch) == 0 }
 
+// Outcome is one run of a corpus: which voice said the interview, which
+// repetition, and the report.
+type Outcome struct {
+	Voice  int
+	Run    int
+	Report Report
+}
+
+// Verdict is the all-or-nothing reading of several runs (KK, 2026-10-09:
+// in accounting there is no "passes one time and not the other"). Booking
+// is deterministic by invariant; authoring is where a model varies, and a
+// draft that is right most of the time is a defect, not a percentage. A
+// corpus is done only when every run in every voice is done.
+type Verdict struct {
+	Corpus   string
+	Outcomes []Outcome
+}
+
+func (v Verdict) Done() bool {
+	if len(v.Outcomes) == 0 {
+		return false
+	}
+	for _, o := range v.Outcomes {
+		if !o.Report.Done() {
+			return false
+		}
+	}
+	return true
+}
+
+// String renders one line per run and the verdict.
+func (v Verdict) String() string {
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "%s: %d run(s)\n", v.Corpus, len(v.Outcomes))
+	done := 0
+	for _, o := range v.Outcomes {
+		mark := "✗"
+		if o.Report.Done() {
+			mark, done = "✓", done+1
+		}
+		fmt.Fprintf(&sb, "%s voice %d run %d: residue %d of %d", mark, o.Voice, o.Run, len(o.Report.Residue), o.Report.Intake)
+		if len(o.Report.Mismatch) > 0 {
+			fmt.Fprintf(&sb, "; state: %s", strings.Join(o.Report.Mismatch, "; "))
+		}
+		sb.WriteByte('\n')
+	}
+	if v.Done() {
+		fmt.Fprintf(&sb, "DONE in every run (%d of %d)\n", done, len(v.Outcomes))
+	} else {
+		fmt.Fprintf(&sb, "NOT DONE: %d of %d runs done — an author that passes most of the time is not done\n", done, len(v.Outcomes))
+	}
+	return sb.String()
+}
+
 // Load reads a corpus file.
 func Load(path string) (Corpus, string, error) {
 	b, err := os.ReadFile(path)
@@ -181,6 +235,9 @@ func Run(ctx context.Context, st *store.Store, a *agent.Agent, model string, c C
 		d, err := a.DraftRule(ctx, ask)
 		if err != nil {
 			row.Error = err.Error()
+			if d.RuleID != "" { // refused, but what was proposed is worth reading
+				row.Draft, _ = json.MarshalIndent(d, "       ", "  ")
+			}
 			rep.Rows = append(rep.Rows, row)
 			continue
 		}
@@ -290,6 +347,9 @@ func runBundle(ctx context.Context, st *store.Store, x *exec.Executor, a *agent.
 	}
 	if err != nil {
 		row.Error = err.Error()
+		if bd.BundleID != "" { // refused, but what was proposed is worth reading
+			row.Draft, _ = json.MarshalIndent(bd, "       ", "  ")
+		}
 		return nil
 	}
 	date := ask.Sample.OccurredAt
@@ -404,6 +464,9 @@ func (r Report) render(verbose bool) string {
 		switch {
 		case row.Error != "":
 			fmt.Fprintf(&sb, "       refused: %s\n", row.Error)
+			if verbose && len(row.Draft) > 0 {
+				fmt.Fprintf(&sb, "       %s\n", row.Draft)
+			}
 		default:
 			fmt.Fprintf(&sb, "       %s: explains %d, adds %d", row.RuleID, row.Explains, row.Added)
 			if row.Approved {

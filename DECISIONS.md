@@ -55,6 +55,31 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-09 — the eval's verdict is all or nothing
+
+- **KK: "In accounting there is no such thing as a document that passes
+  one time and not the other."** Right, and the variance never was in
+  booking: a rule version on an event yields the same derived event every
+  time, baked, and replay proves it. The variance is in authoring — the
+  model drafting from a plain-language answer, once, behind the gate. A
+  draft that is right most of the time is a defect to drive to zero, not
+  a statistic to average; my earlier "read the metric over several runs"
+  was wrong in spirit.
+- **The rule:** `rhea eval -runs N` repeats a corpus on fresh companies,
+  `-voices` runs it once per saved paraphrase, and the verdict
+  (`eval.Verdict`) is DONE only when every run in every voice is DONE —
+  "NOT DONE: 2 of 3 runs done — an author that passes most of the time is
+  not done". The growth plan's metric reads against this bar: the share
+  of the story that passes in every run.
+- **What drives authoring variance to zero** is already the design, and
+  each wrong draft sharpens it: the gate gets stricter (today: names,
+  warrants, optional fields); a known question gets the known answer (the
+  network reuses, packs pre-fill); the human approves what remains.
+- **Refused drafts stay readable**: a draft the gate refuses comes back
+  with its error (`agent.DraftRule`, `DraftBundle`) and the eval keeps it
+  on the row, printed under "refused" in verbose mode — an authoring
+  failure can be read without a rerun.
+
 ## 2026-10-09 — first live runs: two simulated customers, DONE
 
 - **Five live runs (claude-sonnet-4-6, one month of each persona), the

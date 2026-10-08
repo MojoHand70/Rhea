@@ -254,11 +254,13 @@ func (a *Agent) DraftRule(ctx context.Context, ask Ask) (Draft, error) {
 	if d.Priority == 0 {
 		d.Priority = 100
 	}
+	// A refused draft comes back with its error: the gate's verdict is
+	// final, but what was proposed is evidence for whoever reads the run.
 	if _, err := targetType(d.Spec, ask.Types); err != nil {
-		return Draft{}, fmt.Errorf("draft failed validation: %w", err)
+		return d, fmt.Errorf("draft failed validation: %w", err)
 	}
 	if err := d.Spec.Check(CatalogOf(ask.Types)); err != nil {
-		return Draft{}, fmt.Errorf("draft failed validation: %w", err)
+		return d, fmt.Errorf("draft failed validation: %w", err)
 	}
 	return d, nil
 }

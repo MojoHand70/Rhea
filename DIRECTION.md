@@ -1173,7 +1173,7 @@ P4 is after the demo.
 | Network | First slice: rule shapes, no facts; live flywheel, 16/19 converged | The closing scene only: a second subscriber, a shape arriving behind the gate, the no-facts-leave test | P2 |
 | Isolation and scale | Direction note; company as payload ref | Company key promoted to a store-level partition key, threaded as an argument. Nothing else: no sharding, no auth, no benchmarks | P3 |
 | Backup and integrity | Nothing | Backup is the event log plus definitions; a test restores from that alone and replay reproduces state. Hash chain when multi-company lands | P3 |
-| Tests and eval | Invariant tests, `rhea eval` corpora; simulated customers (2026-10-09: personas with generated documents and rule-free expected state, the model only paraphrasing the interview) | The whole demo story as one unattended eval run; the share of it passing is the progress metric | P3 |
+| Tests and eval | Invariant tests, `rhea eval` corpora; simulated customers (2026-10-09: personas with generated documents and rule-free expected state, the model only paraphrasing the interview; the verdict over repeated runs and voices is all or nothing) | The whole demo story as one unattended eval run; the share of it passing in every run is the progress metric | P3 |
 | Enterprise structure | E1–E5 shipped | Nothing for the demo; a real group after it | P4 |
 | Notifications | Nothing | An outbound adapter over cases and the worklist (mail or chat), evidence as events | P4 |
 | Agent interface | Nothing | An MCP server as one more interpreter of the two vocabularies: views to read, activities to call, the gate unchanged | P4 |

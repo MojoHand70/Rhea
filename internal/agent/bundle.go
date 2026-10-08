@@ -138,7 +138,7 @@ func (a *Agent) DraftBundle(ctx context.Context, ask Ask) (BundleDraft, error) {
 		return b, ErrAlreadyAnswered
 	}
 	if err := b.Validate(ask.Types); err != nil {
-		return BundleDraft{}, fmt.Errorf("bundle failed validation: %w", err)
+		return b, fmt.Errorf("bundle failed validation: %w", err) // refused, with the evidence
 	}
 	return b, nil
 }

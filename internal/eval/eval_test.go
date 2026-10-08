@@ -104,3 +104,42 @@ func TestPersonaReferenceIsDone(t *testing.T) {
 		})
 	}
 }
+
+// The verdict over several runs is all or nothing: an author that passes
+// most of the time is not done.
+func TestVerdictIsAllOrNothing(t *testing.T) {
+	done := eval.Report{Intake: 3}
+	notDone := eval.Report{Intake: 3, Residue: []string{"x #1"}}
+	v := eval.Verdict{Corpus: "sim:x", Outcomes: []eval.Outcome{{Voice: 0, Run: 1, Report: done}, {Voice: 1, Run: 1, Report: done}}}
+	if !v.Done() {
+		t.Fatal("every run done, verdict not done")
+	}
+	v.Outcomes = append(v.Outcomes, eval.Outcome{Voice: 1, Run: 2, Report: notDone})
+	if v.Done() || !strings.Contains(v.String(), "NOT DONE: 2 of 3 runs done") {
+		t.Fatalf("verdict = %s", v)
+	}
+	if (eval.Verdict{}).Done() {
+		t.Fatal("no runs is not done")
+	}
+}
+
+// A refused draft stays readable: the gate's verdict comes with the
+// evidence, so an authoring failure can be read without rerunning.
+func TestRefusedDraftIsKept(t *testing.T) {
+	c, dir, err := eval.Load("../../testdata/eval/corpus.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Tasks = c.Tasks[:1]
+	s := storetest.New(t)
+	wrong := &agent.Agent{Complete: func(ctx context.Context, system, user string) (string, error) {
+		return `{"rule_id":"x","description":"d","spec":{"match":{"event_type":"account.created"},"effect":{"object":{"type":"ledger_account","fields":{"a":"=$.code"}}}}}`, nil
+	}}
+	rep, err := eval.Run(context.Background(), s, wrong, "wrong", c, dir, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.Rows[0].Error == "" || !strings.Contains(string(rep.Rows[0].Draft), "ledger_account") || !strings.Contains(rep.Verbose(), "ledger_account") {
+		t.Fatalf("refused draft not kept: %+v", rep.Rows[0])
+	}
+}
