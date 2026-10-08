@@ -702,8 +702,9 @@ arrives after the facts.** The eval found it first: an approved
 withdrawal rule that never fires, because the withdrawal was already
 explained another way. There are three variants.
 
-Status: **draft for KK.** Proposals with the simplest option chosen,
-predictions for the attempt, open questions at the end.
+Status: **adopted 2026-10-08.** KK agreed to every proposal; the settled
+questions are at the end, with question 5 revised after KK asked "can we
+add to the past, when the past is closed?".
 
 **1. Late rule: ruled backfill.** The facts are old and the explanation
 is new. DIRECTION fixed the stance on 2026-10-03: backfill is the
@@ -726,11 +727,23 @@ buildable:
   pairs it promotes, and the kernel's reaction fires exactly those.
   Steady state stays automatic, and rewriting the past needs a human,
   the same physics as re-entry after a clock gap.
-- *Dated by the fact, recorded by the understanding.* Backfilled
-  consequences carry the original event's business date, so period
-  locks judge them where they belong and a pair landing in a locked
-  month is refused, per pair, with no exceptions. `recorded_at` keeps
-  the honest answer to "when did we understand this".
+- *The log never closes; periods do.* Backfill does not change what
+  happened. It records today a new understanding of an old fact: a
+  derived event with today's `recorded_at`, caused by the old event.
+  Periods are accounting periods, locked per (book, month), and they
+  govern postings. A month-end close freezes what the books say about
+  September. It does not freeze whether a September complaint's case is
+  resolved.
+- *Dated by the fact while its period is open.* A backfilled
+  consequence carries the original event's business date, so it lands
+  where it belongs.
+- *Never into a closed period; offered forward instead.* A pair that
+  would post into a locked (book, month) is not written there. The dry
+  run proposes it for the first open period, dated on the backfill and
+  linked to its original event: the korekta, or prior-period adjustment,
+  that accounting already practices. The human approves the re-dating
+  explicitly in the same act. The ledger stays closed, and the walk still
+  shows which September fact caused the October entry.
 - *Replay stays boring.* Backfilled derived events are ordinary derived
   events, later in the log. Replay re-projects them in log order, and
   invariant 4 holds by construction.
@@ -790,24 +803,28 @@ as a falsifiability test of the M2 kind:
 5. Replay reproduces identical state throughout, and the walk shows
    every IBAN's provenance.
 
-**Open questions for KK.**
+**Settled questions (KK, 2026-10-08).**
 
-1. Backfill scope: additive only (new rules on old events), with
-   corrections of past derivations left to korekta? Proposed yes.
-   Rewriting derivations would need object identity to supersede
-   itself, a far bigger change.
-2. Backfill trigger: a separate deliberate act after approving the
-   bundle (proposed; the sibling of catch-up), or an option on the
-   approval itself?
-3. Enrichment consent: an explicit field list on the type (proposed),
-   or keep today's rule that any field is amendable once a lifecycle
-   exists? The explicit list tightens existing types: the case type
-   would declare `resolution`.
-4. Old objects under a new type version: stay at their version forever
-   (proposed; honest), or offer an "upgrade" that re-derives them by
-   backfill when the old events carry the new data?
-5. Backfilled consequences dated by the original event (proposed; locks
-   judge them there), or by the backfill's own date?
+1. *Backfill is additive only*: rules fire on past events they never
+   saw. Corrections of past derivations stay the human korekta;
+   rewriting a derivation would need object identity to supersede
+   itself.
+2. *Backfill is a separate deliberate act* after the bundle's approval,
+   the sibling of the clock's catch-up, never an option hidden in the
+   approval.
+3. *Enrichment consent is an explicit field list* on the type
+   (`amendable`). Existing types tighten: the case type declares
+   `resolution`.
+4. *Old objects stay at their type version forever.* New fields reach
+   them only by enrichment or backfill.
+5. *Dating (revised after KK's "can we add to the past, when the past is
+   closed?")*: in an open period, a backfilled consequence is dated at
+   the original event. In a closed period it is never written there; it
+   is offered for the first open period, dated on the backfill and
+   linked to its cause, as an explicit choice in the same approval.
+   Non-financial consequences (cases, statuses, enrichment) are not
+   governed by period locks unless a later decision brings some under
+   them. The amendment's exemption from locks stays a named exit.
 
 Out of scope here and still waiting on its own decision: ref
 re-reference in cascades (DECISIONS 2026-10-08, the model's first reach).
@@ -852,8 +869,9 @@ explanation (backfill), a new fact (enrichment) or a new version
   A backfill firing into a locked period is refused per event, no
   exceptions; the open-period correction (korekta) is the human
   alternative. Nothing retroactive ever happens silently.
-  Made buildable in "Late understanding" above (2026-10-08, draft for
-  KK): additive pairs only, a deliberate act sibling to catch-up.
+  Made buildable in "Late understanding" above (adopted 2026-10-08):
+  additive pairs only, a deliberate act sibling to catch-up, and a pair
+  bound for a closed period offered forward into the first open one.
 - **Conflicts stay human.** Same-object-id claims refuse the event into the
   worklist; semantic double-booking is simulation's job to reveal before
   approval; static conflict detection is parked (SPEC §7).
