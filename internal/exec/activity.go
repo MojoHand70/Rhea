@@ -30,6 +30,9 @@ type Triggered struct {
 	Rule     *core.Rule     // approve_rule: the newly active version
 	Activity *core.Activity // approve_activity: the newly active version
 	Bundle   *core.Bundle   // approve_bundle / reject_bundle: the new version
+	// Backfilled counts the past events approve_backfill explained further.
+	Backfilled int
+	backfill   *BackfillPlan // planned before the append, booked after commit
 }
 
 // TriggerActivity fires a declared verb: input validation, ref existence,
@@ -85,7 +88,11 @@ func (x *Executor) TriggerActivity(ctx context.Context, name string, inputs map[
 		return Triggered{}, err
 	}
 
-	out.Booked, out.Errors = x.ProcessPending(ctx)
+	if out.backfill != nil {
+		out.Backfilled, out.Errors = x.executeBackfill(ctx, out.backfill)
+	}
+	booked, errs := x.ProcessPending(ctx)
+	out.Booked, out.Errors = booked, append(out.Errors, errs...)
 	return out, nil
 }
 
@@ -232,6 +239,29 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 			out.Bundle = &b
 			return err
 		}, nil
+
+	case "backfill.approved":
+		var p struct {
+			ApprovedBy string `json:"approved_by"`
+		}
+		if err := json.Unmarshal(ev.Payload, &p); err != nil {
+			return nil, err
+		}
+		plan, err := x.PlanBackfill(ctx, ev.OccurredAt)
+		if err != nil {
+			return nil, err
+		}
+		if len(plan.Chains) == 0 {
+			return nil, fmt.Errorf("nothing to backfill: every past event is explained as far as the active rules go")
+		}
+		// The approval names exactly what it promotes: every chain, its
+		// rules, and whether it was offered forward out of a closed period.
+		approval, _ := json.Marshal(map[string]any{
+			"approved_by": p.ApprovedBy, "chains": plan.Chains, "refused": plan.Errors,
+		})
+		ev.Payload = approval
+		out.backfill = &plan
+		return nil, nil
 
 	case "bundle.rejected":
 		var p struct {

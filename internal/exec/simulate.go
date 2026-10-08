@@ -239,7 +239,7 @@ func (x *Executor) simulate(ctx context.Context, rules []core.Rule, extra []core
 			}
 			// The exact chain expansion live firing runs — cascade included —
 			// with refs resolving against the simulated world.
-			nodes, err := x.expandChain(ctx, ev, rules, payload, lookup, get)
+			nodes, err := x.expandChain(ctx, ev, rules, payload, lookup, get, nil)
 			if err != nil {
 				errs = append(errs, fmt.Sprintf("event %d: %v", ev.ID, err))
 				continue

@@ -160,11 +160,79 @@ func TestLateUnderstandingAttempt(t *testing.T) {
 		t.Fatalf("approve: booked %d, %v", booked, err)
 	}
 	// The dry run saw three checks; approval can deliver none. The explained
-	// events are never revisited — understanding arrived after the facts and
-	// has no door in. Predicted: the backfill door.
+	// events are never revisited by the live path — understanding arrived
+	// after the facts. Nothing happens silently:
 	if checks, _ := s.ObjectsByType(ctx, "kyc_check"); len(checks) != 0 {
 		t.Fatalf("checks = %d — backfill happened silently", len(checks))
 	}
+
+	// --- the exit: ruled backfill, a deliberate act with a dry run -----------
+	plan, err := x.PlanBackfill(ctx, "2026-10-02")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(plan.Chains) != 3 || len(plan.Diff.Added) != 3 || len(plan.Errors) != 0 {
+		t.Fatalf("plan: %d chains, %d added, errors %v", len(plan.Chains), len(plan.Diff.Added), plan.Errors)
+	}
+	for _, c := range plan.Chains {
+		if c.BookedAt != "2026-09-02" || c.Forwarded != "" || len(c.Rules) != 1 || c.Rules[0] != "kyc-on-open" {
+			t.Fatalf("chain = %+v — dated by the fact, only the missing rule", c)
+		}
+	}
+	before, _ := s.AllObjects(ctx)
+	n, errs, err := x.ApproveBackfill(ctx, "krzysztof", "2026-10-02")
+	if err != nil || n != 3 || len(errs) != 0 {
+		t.Fatalf("backfill: %d, %v, %v", n, errs, err)
+	}
+	checks, _ := s.ObjectsByType(ctx, "kyc_check")
+	if len(checks) != 3 {
+		t.Fatalf("checks = %d", len(checks))
+	}
+	// Additive only: nothing that existed changed, and each check is caused
+	// by its original opening event, dated by it.
+	after, _ := s.AllObjects(ctx)
+	if len(after) != len(before)+3 {
+		t.Fatalf("objects %d → %d", len(before), len(after))
+	}
+	for _, c := range checks {
+		ev, _ := s.GetEvent(ctx, c.SourceEventID)
+		if ev.Type != "bank_account.opened" || ev.OccurredAt != "2026-09-02" {
+			t.Fatalf("check caused by %s on %s", ev.Type, ev.OccurredAt)
+		}
+	}
+	approval, ok, _ := s.LatestEventOfType(ctx, "backfill.approved")
+	if !ok || approval.ActivityName != "approve_backfill" || !strings.Contains(string(approval.Payload), `"kyc-on-open"`) {
+		t.Fatalf("approval = %+v", approval)
+	}
+	// Idempotent by construction: the past is now explained as far as the
+	// rules go, and a second backfill has nothing to promote.
+	if _, _, err := x.ApproveBackfill(ctx, "krzysztof", "2026-10-03"); err == nil || !strings.Contains(err.Error(), "nothing to backfill") {
+		t.Fatalf("second backfill: %v", err)
+	}
+	assertReplayIdentical(t, x)
+}
+
+func assertReplayIdentical(t *testing.T, x *exec.Executor) {
+	t.Helper()
+	ctx := context.Background()
+	before, _ := x.Store.AllObjects(ctx)
+	if _, err := x.Replay(ctx); err != nil {
+		t.Fatal(err)
+	}
+	after, _ := x.Store.AllObjects(ctx)
+	b, _ := json.Marshal(byID(before))
+	a, _ := json.Marshal(byID(after))
+	if string(a) != string(b) {
+		t.Fatalf("replay diverged:\n%s\n%s", b, a)
+	}
+}
+
+func byID(objs []core.Object) map[string]map[string]any {
+	m := map[string]map[string]any{}
+	for _, o := range objs {
+		m[o.ID] = o.State
+	}
+	return m
 }
 
 func stateOf(objs []core.Object, number string) string {

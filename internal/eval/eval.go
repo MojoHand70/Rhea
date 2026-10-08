@@ -82,6 +82,7 @@ type Row struct {
 	Booked      int // events booked by approval
 	ApproveErrs []string
 	Draft       json.RawMessage // what the agent proposed, for the verbose report
+	Backfilled  int             // past events the approval's backfill explained further
 }
 
 // Report is the run's verdict.
@@ -277,6 +278,22 @@ func runBundle(ctx context.Context, st *store.Store, x *exec.Executor, a *agent.
 	for _, e := range procErrs {
 		row.ApproveErrs = append(row.ApproveErrs, e.Error())
 	}
+	// The human's second, deliberate act: when the approved bundle would
+	// explain the past further, the dry run is read and the backfill approved.
+	plan, err := x.PlanBackfill(ctx, date)
+	if err != nil {
+		return err
+	}
+	if len(plan.Chains) > 0 && len(plan.Errors) == 0 {
+		n, errs, err := x.ApproveBackfill(ctx, "eval", date)
+		if err != nil {
+			row.ApproveErrs = append(row.ApproveErrs, "backfill: "+err.Error())
+		}
+		row.Backfilled = n
+		for _, e := range errs {
+			row.ApproveErrs = append(row.ApproveErrs, "backfill: "+e.Error())
+		}
+	}
 	return nil
 }
 
@@ -347,6 +364,9 @@ func (r Report) render(verbose bool) string {
 			fmt.Fprintf(&sb, "       %s: explains %d, adds %d", row.RuleID, row.Explains, row.Added)
 			if row.Approved {
 				fmt.Fprintf(&sb, ", approved, booked %d", row.Booked)
+			}
+			if row.Backfilled > 0 {
+				fmt.Fprintf(&sb, ", backfilled %d", row.Backfilled)
 			}
 			sb.WriteByte('\n')
 			for _, e := range row.SimErrors {

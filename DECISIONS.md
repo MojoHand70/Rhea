@@ -55,6 +55,60 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-08 — ruled backfill: the past explained further, never rewritten
+
+- **`PlanBackfill` and the `approve_backfill` door** (`backfill.approved`,
+  a reserved namespace). Every explained raw event is re-expanded under
+  the active rules. Its existing derivations come from `ChainOf` (a
+  recursive walk over `cause_event_id`, `queries/chain.sql`) and are
+  replayed as booked nodes with their baked state, never re-expanded,
+  because re-judging an old amendment against today's status would
+  refuse a transition that already happened. Only rules that never fired
+  at a given chain point expand. A node carries `booked` (its existing
+  event id), and `book()` skips it and uses it as a cause. Additive by
+  construction (KK, question 1).
+- **A deliberate act after approval** (KK, question 2). The plan is
+  computed before the approval event is appended, the event names every
+  chain (event, rules, forwarded or not, refused), and after commit the
+  chains book, each atomically, before the ordinary worklist pass. A
+  second backfill finds nothing and says so.
+- **The log never closes; periods do** (KK, question 5, revised). A
+  chain whose expansion meets a locked (book, month) (now a typed
+  `PeriodLockedError`) is re-expanded dated on the backfill: offered
+  forward and caused by its original fact. **Forwarding is per chain in
+  v1**: an open book's entry travels forward with its closed sibling,
+  because a chain books atomically. Forwarding per pair is the named
+  refinement.
+- **Time events stay out of backfill**: a late rule on time belongs to
+  the clock's catch-up, behind its own gate.
+- **Agent bundles without a sample apply from the log's first fact**
+  (`EarliestFactDate`), not from today. A rule answering an interview
+  explains the history, and backfill only reaches events on or after a
+  rule's `effective_from`.
+- **Surfaces:** `rhea backfill [-dry]`, `POST /api/backfill/simulate`
+  and `/approve`, and a "The past" panel on the Bundles tab (the dry
+  run, forwarded chains explained, Approve backfill). The eval plays the
+  human's second act: after a clean bundle approval, a clean backfill
+  plan is approved.
+- **Found on the way:** lists ordered by `object_id` as text, so
+  `invoice-10` sorted before `invoice-9`. One more seeded builtin
+  shifted ids and the M0 demo test caught it. Lists now follow the log
+  (`source_event_id`, then id).
+- **Prompt:** the ref limit now names `$.object_id` too. The model
+  reached for ref re-reference a fourth time (case → complaint) and
+  failed task 5 on it.
+- **Live (claude-sonnet-4-6), operations corpus, three runs: DONE, DONE,
+  NOT DONE.** Task 6 now reads "booked 0, backfilled 1": approval
+  changes nothing and the backfill resolves the case. The third run
+  over-materialized (a delivery also became a goods receipt), which is
+  modeling variance, not a language gap.
+- **Tests:** `late_test.go` now ends in its exit (three KYC checks by
+  backfill, caused and dated by their openings, replay identical).
+  `backfill_test.go` covers the closed period offered forward (8
+  postings dated on the backfill, each walking back to its September
+  invoice) and the eval's forcing case (a late amendment reaches the
+  case after an earlier amendment is replayed, not re-judged).
+
 ## 2026-10-08 — enrichment: amendment consent is per field
 
 - **`ObjectType.amendable`** lists the fields rules may set after

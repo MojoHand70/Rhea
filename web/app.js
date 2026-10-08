@@ -548,6 +548,47 @@ function openBundles() {
       askBtn.disabled = false; askBtn.textContent = "Draft bundle";
     } }, "Draft bundle");
     out.push(el("div", { class: "draft-form" }, ask, el("div", { class: "row", style: "margin-top:8px" }, askBtn)));
+    // The past: what the active rules would explain further, as a deliberate
+    // act with a dry run. Additive only; a closed period is never written —
+    // its consequences are offered for today, linked to their original facts.
+    const pastBox = el("div", {});
+    const past = el("button", { onclick: async () => {
+      past.disabled = true; past.textContent = "Reading the past…";
+      try {
+        const p = await api("/api/backfill/simulate", { method: "POST" });
+        const box = el("div", {});
+        if (!p.chains.length) {
+          box.append(el("p", { class: "hint" }, "The past is explained as far as the active rules go."));
+        } else {
+          const forwarded = p.chains.filter(c => c.forwarded);
+          box.append(el("p", {}, `${p.chains.length} past event(s) would be explained further` +
+            (forwarded.length ? `; ${forwarded.length} of them land in a closed period and are offered for ${p.date} instead, linked to their original facts.` : ".")));
+          for (const c of forwarded) {
+            box.append(el("p", { class: "hint" }, `#${c.event_id} ${c.event_type} (${c.occurred_at}): ${c.forwarded}`));
+          }
+          if (p.errors.length) box.append(el("pre", {}, p.errors.join("\n")));
+          box.append(renderSimDiff(p.diff));
+          const go = el("button", { class: "primary", onclick: async () => {
+            go.disabled = true;
+            try {
+              const res = await api("/api/backfill/approve", {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ approved_by: "human" }),
+              });
+              toast(`Backfilled ${res.backfilled} past event(s).` + (res.errors ? ` Failing: ${res.errors}` : ""));
+              refreshActive();
+            } catch (e) { toast(e.message, true); go.disabled = false; }
+          } }, "Approve backfill");
+          box.append(el("div", { class: "row", style: "margin-top:8px" }, go));
+        }
+        pastBox.replaceChildren(box);
+      } catch (e) { toast(e.message, true); }
+      past.disabled = false; past.textContent = "Check the past";
+    } }, "Check the past");
+    out.push(el("div", { class: "draft-form" },
+      el("strong", {}, "The past"),
+      el("p", { class: "hint" }, "Approved rules apply from now on. Here they may also explain what already happened — nothing existing is rewritten."),
+      past, pastBox));
     if (!bundles.length) { out.push(el("p", { class: "hint" }, "No bundles yet.")); return out; }
     for (const b of bundles) {
       const card = el("div", { class: "draft-form" },

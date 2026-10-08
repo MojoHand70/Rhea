@@ -180,9 +180,11 @@ rule posts it, another raises a follow-up case. Amendments end chains: never mat
 "object.amended".
 
 LIMITS of the language as it stands - draft around them:
-- In a cascade rule, a ref<T> field cannot be filled from "$.state.<field>": the state
-  holds an object id, and ref() resolves by a field value. When a second object of one
-  event needs refs, write a second rule matching the same RAW event instead - every rule
+- A ref<T> field can only be filled by "=ref(T, field, $.path)", which resolves by a
+  field VALUE. It can never take an id: not "$.object_id", not "$.state.<ref field>".
+  So in a cascade rule, link to the causing object by copying its label value into a
+  plain string field (e.g. "subject": "=$.state.number"), or write a second rule that
+  matches the same RAW event and resolves the refs from the payload - every rule
   matching an event fires on it, in priority order.
 - An event is explained once: when its rules fire, later rules never revisit it.
   Every consequence of an event must be in place when its explanation activates.

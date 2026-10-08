@@ -75,7 +75,24 @@ type chainNode struct {
 	amend *core.AmendedObject
 	rule  core.Rule
 	cause int
+	// booked is the derived event already in the log for this node: a
+	// prior firing replayed into a backfill chain, never written again.
+	booked int64
 }
+
+// priorFiring is one consequence already in the log, keyed in Prior by the
+// point in a chain it fired at: the root event's id, or the causing object's.
+type priorFiring struct {
+	ruleID  string
+	version int
+	eventID int64
+	mat     *core.MaterializedObject // nil for an amendment
+}
+
+// Prior is a root event's existing derivations, by chain point. A backfill
+// expansion replays them from the log, baked state and all, and expands only
+// the rules that never fired at that point; live firing passes nil.
+type Prior map[string][]priorFiring
 
 // objectID names the object this node touches — the unit the same-id
 // conflict guard speaks about, for both kinds of consequence.
@@ -123,7 +140,7 @@ func (x *Executor) evaluate(ctx context.Context, ev core.Event, rules []core.Rul
 		}
 		return o.State, true, nil
 	}
-	nodes, err := x.expandChain(ctx, ev, rules, payload, lookup, get)
+	nodes, err := x.expandChain(ctx, ev, rules, payload, lookup, get, nil)
 	if err != nil {
 		return false, err
 	}
@@ -144,7 +161,7 @@ func (x *Executor) evaluate(ctx context.Context, ev core.Event, rules []core.Rul
 // plus the chain's earlier generations — the receipt's movement is visible to
 // the valuation rule — never their own siblings. Shared verbatim by the live
 // path and the simulator, so a dry run cannot drift from reality.
-func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []core.Rule, payload any, base core.Lookup, baseGet core.Getter) ([]chainNode, error) {
+func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []core.Rule, payload any, base core.Lookup, baseGet core.Getter, prior Prior) ([]chainNode, error) {
 	var nodes []chainNode
 	owner := map[string]string{} // object id → rule that claimed it
 	visible := 0                 // how many nodes earlier generations contributed
@@ -155,7 +172,9 @@ func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []cor
 		}
 		want := fmt.Sprintf("%v", value)
 		for _, n := range nodes[:visible] {
-			if n.amend == nil && n.mat.ObjectType == typ && fmt.Sprintf("%v", n.mat.State[field]) == want {
+			// A replayed prior node is already in the base world: counting
+			// it twice would make every ref to it ambiguous.
+			if n.amend == nil && n.booked == 0 && n.mat.ObjectType == typ && fmt.Sprintf("%v", n.mat.State[field]) == want {
 				ids = append(ids, n.mat.ObjectID)
 			}
 		}
@@ -197,7 +216,23 @@ func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []cor
 		if cause >= 0 {
 			idBase = nodes[cause].mat.ObjectID
 		}
+		// What already fired here is replayed from the log, never expanded
+		// again: its state is baked, and re-judging an old amendment against
+		// today's status would refuse a transition that already happened.
+		fired := map[string]bool{}
+		for _, p := range prior[idBase] {
+			fired[p.ruleID] = true
+			if p.mat == nil {
+				continue // amendments end their branch: nothing cascades from them
+			}
+			owner[p.mat.ObjectID] = p.ruleID
+			nodes = append(nodes, chainNode{mat: *p.mat, cause: cause, booked: p.eventID,
+				rule: core.Rule{ID: p.ruleID, Version: p.version}})
+		}
 		for _, r := range rules {
+			if fired[r.ID] {
+				continue
+			}
 			ok, err := matchRule(r, ev, evPayload)
 			if err != nil {
 				return err
@@ -304,6 +339,10 @@ func (x *Executor) book(ctx context.Context, root core.Event, nodes []chainNode)
 
 	ids := make([]int64, len(nodes))
 	for i, n := range nodes {
+		if n.booked != 0 {
+			ids[i] = n.booked // already in the log: a cause, never written again
+			continue
+		}
 		cause := root.ID
 		if n.cause >= 0 {
 			cause = ids[n.cause]
@@ -361,6 +400,9 @@ func (x *Executor) book(ctx context.Context, root core.Event, nodes []chainNode)
 	// naming the touched types, delivered only if this transaction commits.
 	touched, seen := []string{}, map[string]bool{}
 	for _, n := range nodes {
+		if n.booked != 0 {
+			continue
+		}
 		if !seen[n.objectType()] {
 			seen[n.objectType()] = true
 			touched = append(touched, n.objectType())

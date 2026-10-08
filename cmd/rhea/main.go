@@ -4,6 +4,8 @@
 //	rhea load FILE           draft definitions (object types, view defs) into one bundle
 //	rhea pack FILE           load a market pack as one draft bundle + master-data events
 //	rhea approve BUNDLE      activate a bundle: every member, or none
+//	rhea backfill [-dry]     let the active rules explain the past further:
+//	                         additive only; closed periods are offered forward
 //	rhea reject BUNDLE REASON
 //	                         reject a bundle; the reason stays on the record
 //	rhea ksef                run one pass of the KSeF statutory adapter (fake client)
@@ -100,6 +102,38 @@ func main() {
 		}
 		fmt.Printf("bundle %s active: %d members; booked %d pending event(s)\n", b.ID, len(b.Members), booked)
 		for _, e := range procErrs {
+			fmt.Println("worklist:", e)
+		}
+
+	case "backfill":
+		fs := flag.NewFlagSet("backfill", flag.ExitOnError)
+		dry := fs.Bool("dry", false, "show what would happen, change nothing")
+		fs.Parse(os.Args[2:])
+		plan, err := x.PlanBackfill(ctx, today())
+		if err != nil {
+			log.Fatal(err)
+		}
+		for _, c := range plan.Chains {
+			fmt.Printf("event %d %s (%s): %s", c.EventID, c.EventType, c.OccurredAt, strings.Join(c.Rules, ", "))
+			if c.Forwarded != "" {
+				fmt.Printf(" — offered forward to %s (%s)", c.BookedAt, c.Forwarded)
+			}
+			fmt.Println()
+		}
+		for _, e := range plan.Errors {
+			fmt.Println("refused:", e)
+		}
+		fmt.Printf("%d past event(s) to explain further: %d object(s) added, %d changed\n",
+			len(plan.Chains), len(plan.Diff.Added), len(plan.Diff.Changed))
+		if *dry || len(plan.Chains) == 0 {
+			return
+		}
+		n, errs, err := x.ApproveBackfill(ctx, actor(), today())
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("backfilled %d past event(s)\n", n)
+		for _, e := range errs {
 			fmt.Println("worklist:", e)
 		}
 

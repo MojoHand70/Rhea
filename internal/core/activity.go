@@ -41,12 +41,12 @@ type ActivitySpec struct {
 
 // ReservedEventType reports whether an event type belongs to the kernel: the
 // materialization and amendment namespaces, and the rule.* / activity.*
-// / bundle.* system-verb namespaces that only declared system activities may
+// / bundle.* / backfill.* system-verb namespaces that only declared system activities may
 // speak in.
 func ReservedEventType(t string) bool {
 	return t == EventObjectMaterialized || t == EventObjectAmended ||
 		strings.HasPrefix(t, "rule.") || strings.HasPrefix(t, "activity.") ||
-		strings.HasPrefix(t, "bundle.")
+		strings.HasPrefix(t, "bundle.") || strings.HasPrefix(t, "backfill.")
 }
 
 // emitsSource returns the input name a passthrough emits template reads:
@@ -364,6 +364,18 @@ func BuiltinActivities() []Activity {
 					{Name: "occurred_at", Type: "date", Required: true},
 				},
 				Emits: "bundle.rejected",
+				Who:   []string{"human"},
+			},
+		},
+		{
+			Name: "approve_backfill", Domain: "system",
+			Description: "Let the active rules explain the past further: every past event gets the consequences approved rules would have given it, and nothing already explained is rewritten. A consequence bound for a closed period is booked on this date instead, linked to its original event. Recorded as backfill.approved, naming every chain.",
+			Spec: ActivitySpec{
+				Inputs: []FieldDef{
+					{Name: "approved_by", Type: "string", Required: true},
+					{Name: "occurred_at", Type: "date", Required: true},
+				},
+				Emits: "backfill.approved",
 				Who:   []string{"human"},
 			},
 		},

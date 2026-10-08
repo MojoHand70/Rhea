@@ -10,9 +10,10 @@ SELECT event_id, kind, event_type, to_char(occurred_at,'YYYY-MM-DD'), recorded_a
        activity_name, activity_version
 FROM event e
 WHERE e.kind = 'raw'
-  -- the rule.*, activity.* and bundle.* namespaces are system verbs, never rule food
+  -- the rule.*, activity.*, bundle.* and backfill.* namespaces are system verbs, never rule food
   AND e.event_type NOT LIKE 'rule.%'
   AND e.event_type NOT LIKE 'activity.%'
   AND e.event_type NOT LIKE 'bundle.%'
+  AND e.event_type NOT LIKE 'backfill.%'
   AND NOT EXISTS (SELECT 1 FROM event d WHERE d.cause_event_id = e.event_id)
 ORDER BY e.event_id

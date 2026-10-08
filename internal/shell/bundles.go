@@ -188,7 +188,16 @@ func (s *Server) handleDraftBundle(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 502, err) // the request event stays — the log is honest about unanswered asks
 		return
 	}
+	// Rules answering an interview explain the history too: without a
+	// sample, they apply from the log's first fact (backfill then reaches
+	// what the live path already passed).
 	effective := sample.OccurredAt
+	if effective == "" {
+		if effective, err = s.Store.EarliestFactDate(ctx); err != nil {
+			writeErr(w, 500, err)
+			return
+		}
+	}
 	if effective == "" {
 		effective = time.Now().Format("2006-01-02")
 	}

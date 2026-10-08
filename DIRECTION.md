@@ -826,8 +826,15 @@ as a falsifiability test of the M2 kind:
    governed by period locks unless a later decision brings some under
    them. The amendment's exemption from locks stays a named exit.
 
+**Shipped 2026-10-08** (see DECISIONS): the attempt failed as predicted
+on enrichment and backfill, and evolution carried. Enrichment earned
+`amendable`. Backfill is a door with a dry run, additive, offered forward
+past closed periods, per chain in v1. The operations corpus reached DONE
+in two of three live runs.
+
 Out of scope here and still waiting on its own decision: ref
-re-reference in cascades (DECISIONS 2026-10-08, the model's first reach).
+re-reference in cascades (DECISIONS 2026-10-08, the model's first reach,
+now four times).
 
 One line: *nothing approved is final; late understanding enters as a new
 explanation (backfill), a new fact (enrichment) or a new version

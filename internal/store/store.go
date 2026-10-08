@@ -33,6 +33,9 @@ var latestRulesSQL string
 //go:embed queries/active_rules.sql
 var activeRulesSQL string
 
+//go:embed queries/chain.sql
+var chainSQL string
+
 type Store struct {
 	Pool *pgxpool.Pool
 }
@@ -173,6 +176,31 @@ const eventCols = `event_id, kind, event_type, to_char(occurred_at,'YYYY-MM-DD')
 func (s *Store) EventsByKind(ctx context.Context, kind string) ([]core.Event, error) {
 	rows, err := s.Pool.Query(ctx,
 		`SELECT `+eventCols+` FROM event WHERE kind = $1 ORDER BY event_id`, kind)
+	if err != nil {
+		return nil, err
+	}
+	return scanEvents(rows)
+}
+
+// EarliestFactDate is the business date of the log's first raw fact: where
+// an interview's rules begin to apply — they explain the client's history,
+// not only its future. Empty when the log holds no facts.
+func (s *Store) EarliestFactDate(ctx context.Context) (string, error) {
+	var d *string
+	err := s.Pool.QueryRow(ctx, `
+		SELECT to_char(MIN(occurred_at),'YYYY-MM-DD') FROM event
+		WHERE kind = 'raw' AND event_type NOT LIKE 'rule.%' AND event_type NOT LIKE 'activity.%'
+		  AND event_type NOT LIKE 'bundle.%' AND event_type NOT LIKE 'backfill.%'
+		  AND event_type NOT LIKE 'time.%'`).Scan(&d)
+	if err != nil || d == nil {
+		return "", err
+	}
+	return *d, nil
+}
+
+// ChainOf returns every derived event rooted at a raw event, in log order.
+func (s *Store) ChainOf(ctx context.Context, rootID int64) ([]core.Event, error) {
+	rows, err := s.Pool.Query(ctx, chainSQL, rootID)
 	if err != nil {
 		return nil, err
 	}
@@ -601,7 +629,7 @@ const objectCols = `object_id, object_type, type_version, state, source_event_id
 
 func (s *Store) ObjectsByType(ctx context.Context, typ string) ([]core.Object, error) {
 	rows, err := s.Pool.Query(ctx,
-		`SELECT `+objectCols+` FROM object WHERE object_type = $1 ORDER BY object_id`, typ)
+		`SELECT `+objectCols+` FROM object WHERE object_type = $1 ORDER BY source_event_id, object_id`, typ)
 	if err != nil {
 		return nil, err
 	}

@@ -76,7 +76,7 @@ func ExpandPostings(p *core.PostingsTemplate, postingType core.ObjectType, ev co
 			return nil, err
 		}
 		if intersects(monthLocks, bookLocks) {
-			return nil, fmt.Errorf("period %s is locked for book %s", month, book)
+			return nil, &PeriodLockedError{Month: month, Book: book}
 		}
 	}
 
@@ -273,6 +273,15 @@ func absInt64(n int64) int64 {
 		return -n
 	}
 	return n
+}
+
+// PeriodLockedError refuses a posting into a closed (book, month). Typed so
+// backfill can offer the chain forward into the first open period instead of
+// failing it (DIRECTION, late understanding: the log never closes, periods do).
+type PeriodLockedError struct{ Month, Book string }
+
+func (e *PeriodLockedError) Error() string {
+	return fmt.Sprintf("period %s is locked for book %s", e.Month, e.Book)
 }
 
 // intersects reports whether two id lists share an element — the lock check
