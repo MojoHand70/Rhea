@@ -55,6 +55,30 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-08 — the PZ as a Polish standard: the pl-warehouse pack
+
+- **`packs/pl/warehouse.json` (`pl-warehouse` v1)**, kept separate from
+  the Poland pack so installations without a warehouse are not forced to
+  take it. It requires the finance and warehouse base types. A delivery
+  becomes a PZ (supplier, the supplier's WZ number, warehouse, date,
+  currency); each delivered item becomes a `pz_line` pointing at its PZ
+  (cascade over `$.root.lines`); each line takes stock in and posts Wn
+  330 Towary / Ma 300 Rozliczenie zakupu at purchase price in book
+  `pl-stat`.
+- **The variant without arithmetic:** the delivery states each line's
+  value. Valued later (by the purchase invoice) and price-list valuation
+  wait for the formula language, and the pack's description says so.
+- **The warrant is practice, cited modestly:** PZ per delivery,
+  valuation at purchase price ("ustawa o rachunkowości, art. 28", cited
+  at the article level, not guessed to the paragraph), and the 330/300
+  pair with the invoice settlement 300, 221 / 202. KK to verify it
+  against practice; any client may replace it.
+- **First test of the pack package** (`internal/pack/pack_test.go`):
+  seeds, then the Poland pack and pl-warehouse, each approved as one
+  bundle with a cited warrant and no support. One delivery gives 1 PZ, 2
+  lines, 2 movements, and Wn 330 / Ma 300 of 370.40 each. Amounts are
+  read as int64 minor units, never floats.
+
 ## 2026-10-08 — the warrant: every suggestion says where it comes from
 
 - **`core.Warrant` on bundles** (a `warrant` JSONB column): basis
