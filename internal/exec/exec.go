@@ -635,11 +635,24 @@ func Expand(tmpl core.ObjectTemplate, objType core.ObjectType, payload any, env 
 // $.doc.state. Formulas read money as money and follow refs through links
 // because of this; every value they compute is baked into the event.
 func (x *Executor) env(ctx context.Context, payload any, lookup core.Lookup, get core.Getter) *core.Env {
+	// The catalog is read once per type per expansion: a formula asks for a
+	// field's type on every read, and a fold over a thousand objects must
+	// not turn that into a thousand store queries. Types do not change
+	// inside one expansion, so the memo is exact.
+	type known struct {
+		t  core.ObjectType
+		ok bool
+	}
+	memo := map[string]known{}
 	return &core.Env{
 		Lookup: lookup,
 		Get:    get,
 		Types: func(name string) (core.ObjectType, bool) {
+			if k, seen := memo[name]; seen {
+				return k.t, k.ok
+			}
 			t, err := x.objectType(ctx, name)
+			memo[name] = known{t, err == nil}
 			return t, err == nil
 		},
 		Typed:         typedPrefixes(payload),
