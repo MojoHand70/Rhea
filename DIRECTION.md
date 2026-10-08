@@ -1054,6 +1054,90 @@ thinks; security is a kernel that interprets and a network that learns
 shapes, never facts — both are already here, and the work is to refuse
 what would spend them.*
 
+## The growth plan: six months to a public demo, twelve to "big" (KK, 2026-10-08)
+
+KK asked how to structure development from here: steady progress on
+every front, or focus. The answer adopted: **the demo story sets the
+depth of every area, and no area gets work the story does not need.**
+What the world can see in six months is one business, one country, end
+to end; what it can see in twelve is the picture the seven eligibility
+rules describe. This note is the plan: areas, priorities, timing, and
+what "done" means for each. It replaces no design; each item still
+starts from its own brief or direction note.
+
+**The story the demo tells** (Poland, one company, one person at the
+screen):
+
+1. The owner describes their business; Rhea proposes the company as
+   data with warrants; the owner approves. (Implementation by interview.)
+2. Real documents arrive: a KSeF invoice, a scanned supplier invoice, a
+   bank statement. Rhea turns each into events and books them, with
+   every number explained. (Intake and calculation.)
+3. The owner sees what needs deciding and how the business stands:
+   worklist, reconciliation, books, briefing. (Views and decisions.)
+4. Month end closes. A rule shape learned elsewhere arrives behind the
+   owner's gate, and the owner approves it. (The network.)
+
+**Priorities.** P1 blocks the story; P2 the story needs but in a thin
+form; P3 is welded now because it is cheap now and expensive later;
+P4 is after the demo.
+
+| Area | Today | Done for the demo | P |
+|---|---|---|---|
+| Calculation | No arithmetic; `convert` only | Formula language per the arithmetic brief: integer/decimal VM, declared rounding, reads through links, baked at firing; PZ value, VAT, due dates as customers | P1 |
+| Intake | JSON raw events via CLI/API; KSeF stub; clock | Design note first ("documents in"), then three real paths: KSeF, bank statement (MT940), scanned PDF. Extraction is interpretation: a proposed raw event with confidence, validated against the schema, low confidence to the worklist | P1 |
+| Views | Generic shell, derived defaults, pl/de eyes, formatted strings in the API | Typed view API (semantics in, formatting in the renderer); one new notion, the **matching grid** (two sides, a pairing verb), with bank reconciliation as its first customer | P2 |
+| Decisions | Worklist, approval, simulation diff, explain, cases as data | The briefing as narrative ViewDef; the walk from any number to its inputs and formula | P2 |
+| Interview | Agent drafts bundles from one sample; eval 9/9 easy, 6/6 operations | Multi-turn conversation producing a coherent company (types, rules, views, activities) as one gated bundle, driven by the phase-(a) note | P2 |
+| Market packs | pl (CoA, VAT, KSeF, warehouse PZ), de proof; warrant on suggestions | Poland deep enough for the story: VAT registers and settlement, bank booking, month-end entries, each as pack drafts with warrants. Germany stays the "one data file" proof | P2 |
+| Network | First slice: rule shapes, no facts; live flywheel, 16/19 converged | The closing scene only: a second subscriber, a shape arriving behind the gate, the no-facts-leave test | P2 |
+| Isolation and scale | Direction note; company as payload ref | Company key promoted to a store-level partition key, threaded as an argument. Nothing else: no sharding, no auth, no benchmarks | P3 |
+| Backup and integrity | Nothing | Backup is the event log plus definitions; a test restores from that alone and replay reproduces state. Hash chain when multi-company lands | P3 |
+| Tests and eval | Invariant tests, `rhea eval` corpora | The whole demo story as one unattended eval run; the share of it passing is the progress metric | P3 |
+| Enterprise structure | E1–E5 shipped | Nothing for the demo; a real group after it | P4 |
+| Notifications | Nothing | An outbound adapter over cases and the worklist (mail or chat), evidence as events | P4 |
+| Agent interface | Nothing | An MCP server as one more interpreter of the two vocabularies: views to read, activities to call, the gate unchanged | P4 |
+| Algorithmic sub-languages | `each`, postings | FIFO valuation, allocation, stock count as kernel method vocabulary parameterised by rules | P4 |
+
+**Timing.** Four phases; the unit of work stays the session, one
+scene of the story at a time, touching whichever area that scene needs.
+
+- **Phase 1, October to November 2026: numbers and intake.** Formula
+  session; company key; intake design note; KSeF and bank statement in;
+  typed view API. Exit: a KSeF invoice and its bank payment flow in,
+  book with correct VAT, and reconcile by rule.
+- **Phase 2, December 2026 to January 2027: seeing and deciding.**
+  Matching grid; scanned PDF behind the gate; interview as a
+  conversation; Polish pack depth; backup-and-restore test; briefing.
+  Exit: a new company can be stood up from an interview and run a
+  month of real documents.
+- **Phase 3, February to March 2027: the story end to end.** Full-story
+  eval unattended; network closing scene with two subscribers; demo
+  rehearsal; marketing site aligned with what runs. Exit: **public demo,
+  April 2027.**
+- **Phase 4, April to September 2027: the big picture.** Germany with
+  real depth; enterprise structure on a real group; notifications; MCP;
+  hash-chained log; permissions on activities; FIFO and allocation.
+  Target: the seven eligibility rules demonstrable end to end,
+  **October 2027.**
+
+**Rules of the plan.**
+
+- An area gets work only when a scene of the story asks for it. "It
+  would be nice" is a P4 line, not a session.
+- Every new area starts with a brief in this file, like arithmetic did,
+  and answers the two welding questions (partition, containment).
+- The views list is counted in notions, not screens: list, document,
+  ledger, matching grid, queue, tree, narrative. Reconciliation,
+  intercompany matching and bank matching are one notion. A screen that
+  knows what an invoice is does not get built.
+- The metric is one number: how much of the demo story the eval runs
+  unattended, end to end.
+
+One line: *the story sets the depth; six months buys one country end to
+end, twelve buys the picture of "big", and everything the story does not
+ask for waits.*
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
