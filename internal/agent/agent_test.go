@@ -84,8 +84,8 @@ func TestDraftRuleRejectsBadOutput(t *testing.T) {
 		"I think you should use a rule here.",         // no JSON
 		`{"rule_id":"x","description":"d","spec":{}}`, // empty spec
 		`{"rule_id":"","description":"d"}`,            // missing id
-		`{"rule_id":"x","description":"d","spec":{"match":{"event_type":"e"},"effect":{"object":{"type":"invoice","fields":{"bogus":"=$.x"}}}}}`, // unknown field
-		`{"rule_id":"x","description":"d","spec":{"match":{"event_type":"e"},"effect":{"object":{"type":"receipt","fields":{"a":"=$.x"}}}}}`,     // undeclared type
+		`{"rule_id":"x","description":"d","spec":{"match":{"event_type":"e"},"effect":{"object":{"type":"invoice","fields":{"bogus":"=$.x"}}}}}`,              // unknown field
+		`{"rule_id":"x","description":"d","spec":{"match":{"event_type":"e"},"effect":{"object":{"type":"receipt","fields":{"a":"=$.x"}}}}}`,                  // undeclared type
 		`{"rule_id":"x","description":"d","spec":{"match":{"event_type":"e"},"effect":{"amend":{"type":"invoice","target":"=$.id","set":{"total":"=$.x"}}}}}`, // no lifecycle, no consent
 		`{"rule_id":"x","description":"d","spec":{"match":{"event_type":"e"},"effect":{"amend":{"type":"case","target":"c-1","set":{"status":"resolved"}}}}}`, // literal target
 	}

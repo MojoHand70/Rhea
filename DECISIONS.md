@@ -55,6 +55,53 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-08 — Rhea learns: the first slice of the network
+
+- **KK: "If it learns, it uses what it learned — otherwise why would it
+  learn?"** Learning is the thesis (DIRECTION, the network). Until now
+  only the per-installation loop existed; this is the first cross-
+  installation slice, built against several local databases standing in
+  for clients.
+- **Explanations leave, facts never do.** `network.ShapeOf` reduces an
+  approved rule to the question it answers (its key: the event, the
+  cascaded type, the kind of consequence and its target or book) and an
+  anonymized answer. It drops the id, description, priority and dates,
+  and replaces every condition value except structural ones
+  (`$.object_type`, `$.market`, `$.currency`) with "?". It keeps the
+  market vocabulary (account codes, book names, enum literals). The
+  fingerprint is a SHA-256 of the canonical JSON. This is a deterministic
+  first cut; DIRECTION says real anonymization is an AI task, and the
+  floor guards the gap.
+- **The network store** is a separate database (`rhea_network`,
+  `RHEA_NETWORK_DSN`) holding append-only `publication` snapshots; an
+  installation's latest snapshot is its current knowledge. The
+  installation is named by `RHEA_INSTALLATION` or the database name.
+- **`Learn` counts:** per question, which answer how many installations
+  give, out of how many answer it at all. **Floor = 2:** a shape held by
+  one installation never surfaces, because one business's pattern may
+  encode its secrets.
+- **Rhea uses what she learned, in three places.** (1) Priors in the
+  agent's ask, following cascades from the residue's event types to the
+  questions about what they create. (2) Verified support: a proposer may
+  claim basis `network`; `StoreBundleDraft` verifies a rule really
+  matches a surfaced answer and writes the counted support, and an
+  unverifiable claim is refused (`ValidateStored`: no network warrant
+  without counted support). (3) "learned: N of M installations" on each
+  rule in the Bundles tab, counted live.
+- **Surfaces:** `rhea publish`, `rhea network` (questions, answers,
+  counts; below-floor answers marked), `rhea serve` connects when the
+  network is reachable and otherwise runs alone, and `rhea eval
+  -network` draws on the network and publishes the run's installation,
+  a measurable flywheel.
+- **Test** (`shell/network_test.go`): four installations publish (three
+  post invoices 201/702, written differently, conditioned on different
+  customers; one posts 201/730). No customer name or description
+  reaches the network. Rhea learns 3 of 4, and the 1-of-4 answer stays
+  below the floor and away from the agent. A fifth installation's agent
+  sees the prior; its network-based proposal is stored with a verified
+  3 of 4; a network claim for 201/730 is refused; the client's own rule
+  (201/700) wins and, once published, the count reads 3 of 5.
+
 ## 2026-10-08 — the PZ as a Polish standard: the pl-warehouse pack
 
 - **`packs/pl/warehouse.json` (`pl-warehouse` v1)**, kept separate from

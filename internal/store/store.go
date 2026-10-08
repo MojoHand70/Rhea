@@ -198,6 +198,17 @@ func (s *Store) EarliestFactDate(ctx context.Context) (string, error) {
 	return *d, nil
 }
 
+// Installation names this kernel in the network: RHEA_INSTALLATION, or the
+// database's own name — one database, one installation, in this experiment.
+func (s *Store) Installation(ctx context.Context) (string, error) {
+	if name := os.Getenv("RHEA_INSTALLATION"); name != "" {
+		return name, nil
+	}
+	var name string
+	err := s.Pool.QueryRow(ctx, `SELECT current_database()`).Scan(&name)
+	return name, err
+}
+
 // ChainOf returns every derived event rooted at a raw event, in log order.
 func (s *Store) ChainOf(ctx context.Context, rootID int64) ([]core.Event, error) {
 	rows, err := s.Pool.Query(ctx, chainSQL, rootID)

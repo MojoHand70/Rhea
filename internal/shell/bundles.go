@@ -9,6 +9,7 @@ import (
 
 	"rhea/internal/agent"
 	"rhea/internal/core"
+	"rhea/internal/network"
 )
 
 // bundleView is a bundle with its members' definitions inlined: the human
@@ -22,9 +23,17 @@ type memberView struct {
 	core.Member
 	Summary    string `json:"summary"`
 	Definition any    `json:"definition"`
+	// Learned: how many installations explain this rule's question exactly
+	// this way — counted now, from the network; nil when Rhea knows nothing
+	// she may say.
+	Learned *core.Support `json:"learned,omitempty"`
 }
 
 func (s *Server) bundleView(ctx context.Context, b core.Bundle) (bundleView, error) {
+	return s.bundleViewWith(ctx, b, s.knowledge(ctx))
+}
+
+func (s *Server) bundleViewWith(ctx context.Context, b core.Bundle, k *network.Knowledge) (bundleView, error) {
 	out := bundleView{Bundle: b}
 	for _, m := range b.Members {
 		mv := memberView{Member: m}
@@ -35,6 +44,11 @@ func (s *Server) bundleView(ctx context.Context, b core.Bundle) (bundleView, err
 				return out, err
 			}
 			mv.Summary, mv.Definition = r.Description, r.Spec
+			if k != nil {
+				if sup, ok := k.SupportFor(r.Spec); ok {
+					mv.Learned = &sup
+				}
+			}
 		case core.KindActivity:
 			a, err := s.Store.GetActivity(ctx, m.Name)
 			if err != nil {
@@ -68,8 +82,9 @@ func (s *Server) handleBundles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	out := []bundleView{}
+	k := s.knowledge(r.Context()) // learned once per listing
 	for _, b := range bundles {
-		bv, err := s.bundleView(r.Context(), b)
+		bv, err := s.bundleViewWith(r.Context(), b, k)
 		if err != nil {
 			writeErr(w, 500, err)
 			return
@@ -178,7 +193,8 @@ func (s *Server) handleDraftBundle(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, err)
 		return
 	}
-	ask, err := DraftAsk(ctx, s.Store, req.Intent, sample, "")
+	k := s.knowledge(ctx)
+	ask, err := DraftAsk(ctx, s.Store, k, req.Intent, sample, "")
 	if err != nil {
 		writeErr(w, 500, err)
 		return
@@ -201,7 +217,7 @@ func (s *Server) handleDraftBundle(w http.ResponseWriter, r *http.Request) {
 	if effective == "" {
 		effective = time.Now().Format("2006-01-02")
 	}
-	b, err := StoreBundleDraft(ctx, s.Store, bd, "agent:"+agent.Model(), effective)
+	b, err := StoreBundleDraft(ctx, s.Store, k, bd, "agent:"+agent.Model(), effective)
 	if err != nil {
 		writeErr(w, 500, err)
 		return

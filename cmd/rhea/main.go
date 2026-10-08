@@ -6,6 +6,9 @@
 //	rhea approve BUNDLE      activate a bundle: every member, or none
 //	rhea backfill [-dry]     let the active rules explain the past further:
 //	                         additive only; closed periods are offered forward
+//	rhea publish             share this installation's explanations with the
+//	                         network: rule shapes, never data
+//	rhea network             what Rhea has learned across installations
 //	rhea reject BUNDLE REASON
 //	                         reject a bundle; the reason stays on the record
 //	rhea ksef                run one pass of the KSeF statutory adapter (fake client)
@@ -31,6 +34,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -39,6 +43,7 @@ import (
 	"rhea/internal/core"
 	"rhea/internal/eval"
 	"rhea/internal/exec"
+	"rhea/internal/network"
 	"rhea/internal/pack"
 	"rhea/internal/project"
 	"rhea/internal/shell"
@@ -137,6 +142,53 @@ func main() {
 			fmt.Println("worklist:", e)
 		}
 
+	case "publish":
+		nw, err := network.Open(ctx, network.DSN())
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer nw.Close()
+		name, err := s.Installation(ctx)
+		if err != nil {
+			log.Fatal(err)
+		}
+		rules, err := s.ActiveRules(ctx)
+		if err != nil {
+			log.Fatal(err)
+		}
+		n, err := nw.Publish(ctx, name, rules)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("%s published %d explanation shape(s) — no business data left this installation\n", name, n)
+
+	case "network":
+		nw, err := network.Open(ctx, network.DSN())
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer nw.Close()
+		k, err := nw.Learn(ctx)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("%d installation(s) have published; an answer is knowledge once %d share it\n", k.Installations, network.Floor)
+		qs := make([]string, 0, len(k.Questions))
+		for q := range k.Questions {
+			qs = append(qs, q)
+		}
+		sort.Strings(qs)
+		for _, q := range qs {
+			fmt.Println(q)
+			for _, a := range k.Questions[q] {
+				mark := "  "
+				if !a.Surface {
+					mark = "· " // below the floor: that client's own business
+				}
+				fmt.Printf("  %s%d of %d  %s\n", mark, a.Count, a.Of, a.Shape.Fingerprint)
+			}
+		}
+
 	case "reject":
 		if len(os.Args) < 4 {
 			log.Fatal("usage: rhea reject BUNDLE REASON")
@@ -205,6 +257,14 @@ func main() {
 		addr := fs.String("addr", ":8070", "listen address")
 		fs.Parse(os.Args[2:])
 		srv := &shell.Server{Store: s, Exec: x, Agent: agent.New(), DuckPath: project.Path()}
+		// Learning is optional: without a network Rhea runs alone.
+		if nw, err := network.Open(ctx, network.DSN()); err == nil {
+			defer nw.Close()
+			srv.Network = nw
+			log.Printf("network: %s", network.DSN())
+		} else {
+			log.Printf("network unavailable, running alone: %v", err)
+		}
 		log.Printf("rhea shell on http://localhost%s (model %s)", *addr, agent.Model())
 		log.Fatal(http.ListenAndServe(*addr, srv.Handler()))
 
@@ -222,6 +282,7 @@ func main() {
 	case "eval":
 		fs := flag.NewFlagSet("eval", flag.ExitOnError)
 		verbose := fs.Bool("v", false, "print every draft the agent proposed")
+		learn := fs.Bool("network", false, "draw on what Rhea learned, then publish this run's explanations")
 		fs.Parse(os.Args[2:])
 		path := "testdata/eval/corpus.json"
 		if fs.NArg() > 0 {
@@ -237,9 +298,34 @@ func main() {
 			log.Fatal(err)
 		}
 		defer cleanup()
-		rep, err := eval.Run(ctx, tmp, agent.New(), agent.Model(), c, dir)
+		var nw *network.Network
+		var k *network.Knowledge
+		if *learn {
+			if nw, err = network.Open(ctx, network.DSN()); err != nil {
+				log.Fatal(err)
+			}
+			defer nw.Close()
+			known, err := nw.Learn(ctx)
+			if err != nil {
+				log.Fatal(err)
+			}
+			k = &known
+			fmt.Printf("drawing on %d installation(s)\n", known.Installations)
+		}
+		rep, err := eval.Run(ctx, tmp, agent.New(), agent.Model(), c, dir, k)
 		if err != nil {
 			log.Fatal(err)
+		}
+		if nw != nil {
+			rules, err := tmp.ActiveRules(ctx)
+			if err != nil {
+				log.Fatal(err)
+			}
+			name := fmt.Sprintf("eval-%s-%s", c.Name, time.Now().Format("20060102-150405"))
+			if _, err := nw.Publish(ctx, name, rules); err != nil {
+				log.Fatal(err)
+			}
+			defer fmt.Printf("published as %s\n", name)
 		}
 		if *verbose {
 			fmt.Print(rep.Verbose())

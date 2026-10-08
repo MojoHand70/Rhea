@@ -18,6 +18,7 @@ import (
 	"rhea/internal/agent"
 	"rhea/internal/core"
 	"rhea/internal/exec"
+	"rhea/internal/network"
 	"rhea/internal/shell"
 	"rhea/internal/store"
 )
@@ -118,7 +119,7 @@ func Load(path string) (Corpus, string, error) {
 // door, then per task ask → validate → store draft → dry run → approve when
 // the dry run shows no errors (the human's role, played by a policy; actor
 // "eval"). The agent sees only what the shell would show it.
-func Run(ctx context.Context, st *store.Store, a *agent.Agent, model string, c Corpus, dir string) (Report, error) {
+func Run(ctx context.Context, st *store.Store, a *agent.Agent, model string, c Corpus, dir string, k *network.Knowledge) (Report, error) {
 	x := &exec.Executor{Store: st}
 	rep := Report{Corpus: c.Name, Model: model, Expect: c.Expect}
 	for _, seed := range c.Seeds {
@@ -152,12 +153,12 @@ func Run(ctx context.Context, st *store.Store, a *agent.Agent, model string, c C
 			}
 			sample = raws[i]
 		}
-		ask, err := shell.DraftAsk(ctx, st, task.Intent, sample, task.Hint)
+		ask, err := shell.DraftAsk(ctx, st, k, task.Intent, sample, task.Hint)
 		if err != nil {
 			return rep, err
 		}
 		if task.Mode == "bundle" {
-			if err := runBundle(ctx, st, x, a, model, ask, &row); err != nil {
+			if err := runBundle(ctx, st, x, a, model, ask, k, &row); err != nil {
 				return rep, err
 			}
 			rep.Rows = append(rep.Rows, row)
@@ -242,7 +243,7 @@ func Run(ctx context.Context, st *store.Store, a *agent.Agent, model string, c C
 
 // runBundle plays one bundle task: draft, land as drafts, dry-run the whole
 // bundle, approve it whole when the dry run is clean.
-func runBundle(ctx context.Context, st *store.Store, x *exec.Executor, a *agent.Agent, model string, ask agent.Ask, row *Row) error {
+func runBundle(ctx context.Context, st *store.Store, x *exec.Executor, a *agent.Agent, model string, ask agent.Ask, k *network.Knowledge, row *Row) error {
 	bd, err := a.DraftBundle(ctx, ask)
 	if err != nil {
 		row.Error = err.Error()
@@ -252,7 +253,7 @@ func runBundle(ctx context.Context, st *store.Store, x *exec.Executor, a *agent.
 	if date == "" {
 		date = "2026-01-01"
 	}
-	b, err := shell.StoreBundleDraft(ctx, st, bd, "agent:"+model, date)
+	b, err := shell.StoreBundleDraft(ctx, st, k, bd, "agent:"+model, date)
 	if err != nil {
 		row.Error = "store bundle: " + err.Error()
 		return nil

@@ -6,6 +6,7 @@ import (
 
 	"rhea/internal/agent"
 	"rhea/internal/core"
+	"rhea/internal/network"
 	"rhea/internal/store"
 )
 
@@ -14,7 +15,24 @@ import (
 // over all of them. Validation already ran (agent.BundleDraft.Validate);
 // versions are the kernel's to assign, and a taken bundle id gets a suffix —
 // a redraft is a new bundle.
-func StoreBundleDraft(ctx context.Context, st *store.Store, bd agent.BundleDraft, createdBy, effectiveFrom string) (core.Bundle, error) {
+func StoreBundleDraft(ctx context.Context, st *store.Store, k *network.Knowledge, bd agent.BundleDraft, createdBy, effectiveFrom string) (core.Bundle, error) {
+	// A proposal resting on the network is verified here, and its support is
+	// counted by Rhea from what she learned — never taken from the proposer.
+	if bd.Warrant != nil && bd.Warrant.Basis == "network" {
+		w := *bd.Warrant
+		if k == nil {
+			return core.Bundle{}, fmt.Errorf("bundle %s claims network knowledge, but no network is connected", bd.BundleID)
+		}
+		for _, d := range bd.Rules {
+			if sup, ok := k.SupportFor(d.Spec); ok && (w.Support == nil || sup.Count > w.Support.Count) {
+				w.Support = &sup
+			}
+		}
+		if w.Support == nil {
+			return core.Bundle{}, fmt.Errorf("bundle %s claims network knowledge, but none of its rules is an answer Rhea has learned", bd.BundleID)
+		}
+		bd.Warrant = &w
+	}
 	var members []core.Member
 	for _, t := range bd.ObjectTypes {
 		v, err := st.NextObjectTypeVersion(ctx, t.Name)

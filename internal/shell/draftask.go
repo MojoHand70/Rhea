@@ -2,10 +2,12 @@ package shell
 
 import (
 	"context"
+	"encoding/json"
 	"slices"
 
 	"rhea/internal/agent"
 	"rhea/internal/core"
+	"rhea/internal/network"
 	"rhea/internal/store"
 )
 
@@ -17,7 +19,7 @@ const referenceCap = 30
 // type catalog, the active rules, and master data for every type some field
 // references (exactly the set a ref() or a posting's account can resolve
 // against). The agent has no store access; this is what it is shown.
-func DraftAsk(ctx context.Context, st *store.Store, intent string, sample core.Event, hint string) (agent.Ask, error) {
+func DraftAsk(ctx context.Context, st *store.Store, k *network.Knowledge, intent string, sample core.Event, hint string) (agent.Ask, error) {
 	types, err := st.ListObjectTypes(ctx)
 	if err != nil {
 		return agent.Ask{}, err
@@ -52,7 +54,28 @@ func DraftAsk(ctx context.Context, st *store.Store, intent string, sample core.E
 		return agent.Ask{}, err
 	}
 	return agent.Ask{Intent: intent, Sample: sample, Types: types, Hint: hint,
-		Rules: rules, Reference: reference, Residue: residue}, nil
+		Rules: rules, Reference: reference, Residue: residue, Priors: priors(k, sample, residue)}, nil
+}
+
+// priors turns what the network learned into the agent's evidence: answers
+// to questions about the events in front of it, with their real counts.
+func priors(k *network.Knowledge, sample core.Event, residue []agent.Cluster) []agent.Prior {
+	if k == nil {
+		return nil
+	}
+	var types []string
+	if sample.Type != "" {
+		types = append(types, sample.Type)
+	}
+	for _, c := range residue {
+		types = append(types, c.EventType)
+	}
+	var out []agent.Prior
+	for _, a := range k.Priors(types) {
+		rule, _ := json.Marshal(a.Shape.Spec)
+		out = append(out, agent.Prior{Question: a.Shape.Key, Count: a.Count, Of: a.Of, Rule: rule})
+	}
+	return out
 }
 
 // Residue clusters the worklist by event type, in first-seen order: the

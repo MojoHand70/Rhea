@@ -52,16 +52,30 @@ type Support struct {
 var WarrantBases = []string{"statute", "standard", "practice", "pack", "model", "client", "network"}
 
 // ValidateProposed checks a warrant as a proposer wrote it: a known basis,
-// and no support figures — those are counted, not claimed.
+// and no support figures — those are counted, not claimed. A proposer may
+// claim the "network" basis; Rhea verifies the claim against what she has
+// learned and counts the support herself before the bundle is stored.
 func (w Warrant) ValidateProposed() error {
 	if !slices.Contains(WarrantBases, w.Basis) {
 		return fmt.Errorf("warrant basis %q is not one of %v", w.Basis, WarrantBases)
 	}
-	if w.Support != nil || w.Basis == "network" {
+	if w.Support != nil {
 		return fmt.Errorf("support figures are counted by Rhea from approved rules, never proposed")
 	}
 	if (w.Basis == "statute" || w.Basis == "standard") && len(w.Citations) == 0 {
 		return fmt.Errorf("a %s warrant needs its citation", w.Basis)
+	}
+	return nil
+}
+
+// ValidateStored checks a warrant as it is stored: a network warrant must
+// carry the support Rhea counted — a claim she could not verify never lands.
+func (w Warrant) ValidateStored() error {
+	if !slices.Contains(WarrantBases, w.Basis) {
+		return fmt.Errorf("warrant basis %q is not one of %v", w.Basis, WarrantBases)
+	}
+	if w.Basis == "network" && w.Support == nil {
+		return fmt.Errorf("a network warrant needs the support Rhea counted")
 	}
 	return nil
 }

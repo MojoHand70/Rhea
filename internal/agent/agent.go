@@ -47,6 +47,18 @@ type Ask struct {
 	// Residue is the worklist as the agent sees it: every unexplained event
 	// type with its count and one sample — what a bundle can answer at once.
 	Residue []Cluster
+	// Priors are what Rhea has learned across installations: for questions
+	// like this one, how many explain it which way — real counts only.
+	Priors []Prior
+}
+
+// Prior is one learned answer: Count of Of installations answer Question
+// with Rule (anonymized: "?" marks values each business fills itself).
+type Prior struct {
+	Question string          `json:"question"`
+	Count    int             `json:"count"`
+	Of       int             `json:"of"`
+	Rule     json.RawMessage `json:"rule"`
 }
 
 // Cluster is one unexplained event shape in the worklist.
@@ -282,6 +294,12 @@ func userMessage(ask Ask) string {
 		sb.WriteString("\nUnexplained events waiting in the worklist (type, count, one sample payload):\n")
 		for _, c := range ask.Residue {
 			fmt.Fprintf(&sb, "- %s ×%d: %s\n", c.EventType, c.Count, c.Sample)
+		}
+	}
+	if len(ask.Priors) > 0 {
+		sb.WriteString("\nWhat Rhea has learned from other installations (question, support, anonymized rule):\n")
+		for _, p := range ask.Priors {
+			fmt.Fprintf(&sb, "- %s: %d of %d installations: %s\n", p.Question, p.Count, p.Of, p.Rule)
 		}
 	}
 	if ask.Sample.Type != "" {

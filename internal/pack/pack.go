@@ -184,6 +184,11 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 
 	if len(members) > 0 {
 		warrant := m.Warrant
+		if warrant != nil {
+			if err := warrant.ValidateProposed(); err != nil {
+				return sum, fmt.Errorf("pack %s warrant: %w", m.Pack, err)
+			}
+		}
 		if warrant == nil {
 			warrant = &core.Warrant{Basis: "pack", Citations: []string{fmt.Sprintf("pack %s v%d", m.Pack, m.Version)}}
 		}

@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"rhea/internal/agent"
 	"rhea/internal/core"
 	"rhea/internal/exec"
+	"rhea/internal/network"
 	"rhea/internal/project"
 	"rhea/internal/store"
 	"rhea/web"
@@ -28,6 +30,23 @@ type Server struct {
 	// Clock serves the Time surface; the zero value reads the wall clock,
 	// tests inject their own day.
 	Clock adapter.Clock
+	// Network is where Rhea learns across installations; nil runs alone.
+	Network *network.Network
+}
+
+// knowledge is what Rhea has learned across installations, or nil when no
+// network is connected (or it cannot be read — learning is never a reason
+// for the shell to fail).
+func (s *Server) knowledge(ctx context.Context) *network.Knowledge {
+	if s.Network == nil {
+		return nil
+	}
+	k, err := s.Network.Learn(ctx)
+	if err != nil {
+		log.Printf("network: %v", err)
+		return nil
+	}
+	return &k
 }
 
 func (s *Server) Handler() http.Handler {
@@ -560,7 +579,7 @@ func (s *Server) handleDraft(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, err)
 		return
 	}
-	ask, err := DraftAsk(ctx, s.Store, req.Intent, *sample, req.ObjectType)
+	ask, err := DraftAsk(ctx, s.Store, s.knowledge(ctx), req.Intent, *sample, req.ObjectType)
 	if err != nil {
 		writeErr(w, 500, err)
 		return

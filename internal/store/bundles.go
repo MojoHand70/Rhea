@@ -22,7 +22,7 @@ func (s *Store) InsertBundle(ctx context.Context, b core.Bundle) (core.Bundle, e
 		return b, err
 	}
 	if b.Warrant != nil {
-		if err := b.Warrant.ValidateProposed(); err != nil {
+		if err := b.Warrant.ValidateStored(); err != nil {
 			return b, fmt.Errorf("bundle %s: %w", b.ID, err)
 		}
 	}

@@ -68,7 +68,6 @@ func TestDraftBundleRefusals(t *testing.T) {
 		"amending without consent":     {`"lifecycle": {"field": "status", "transitions": {"open": ["resolved"]}}`, `"label_field": "status"`},
 		"no warrant":                   {`"warrant": {"basis": "practice", "citations": ["complaint handling as a case with a lifecycle"], "scope": "any market"},`, ``},
 		"support figures claimed":      {`"scope": "any market"}`, `"scope": "any market", "support": {"count": 9, "of": 10, "population": "PL"}}`},
-		"network claimed":              {`"basis": "practice"`, `"basis": "network"`},
 		"standard without citation":    {`"basis": "practice", "citations": ["complaint handling as a case with a lifecycle"]`, `"basis": "standard"`},
 	}
 	for name, edit := range cases {

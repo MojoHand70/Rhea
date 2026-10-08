@@ -613,6 +613,9 @@ function openBundles() {
           el("td", {}, d.kind.replace("_", " ")), el("td", {}, d.name),
           el("td", { class: "num" }, String(d.version)),
           el("td", {}, d.summary,
+            // What Rhea learned: counted now, from the network — never claimed.
+            d.learned ? el("div", { class: "hint" },
+              `learned: ${d.learned.count} of ${d.learned.of} ${d.learned.population} explain it this way`) : "",
             el("details", {}, el("summary", {}, "definition"),
               el("pre", {}, JSON.stringify(d.definition, null, 2))))));
       }

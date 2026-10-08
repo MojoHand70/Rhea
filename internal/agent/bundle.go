@@ -90,7 +90,12 @@ WARRANT - Rhea suggests standards: when the question leaves practice open ("it d
 than leaving it out, and say where it comes from. The client may always replace it.
   "warrant": {"basis": "practice", "citations": ["dokument PZ dla każdej dostawy; Wn 330 / Ma 300"],
               "scope": "PL, trade"}
-Basis: "statute" or "standard" (cite the act or standard), "practice" (customary practice -
+When the request shows what Rhea has learned from other installations, that is your
+strongest evidence: reuse a learned rule (fill its "?" from this client's events) and use
+basis "network" - Rhea verifies the match and adds the real count herself. Deviate when
+this client's events or words call for it, and say so in the description.
+Basis: "network" (a learned rule, as above), "statute" or "standard" (cite the act or
+standard), "practice" (customary practice -
 name it), "pack" (the market pack's default), "model" (your general knowledge, when nothing
 firmer applies), "client" (what the client said). Never state percentages, counts or shares
 of companies: Rhea adds real support figures herself, from what she has learned. Cite only
@@ -208,7 +213,7 @@ func validateView(v core.ViewDef, types []core.ObjectType) error {
 		return fmt.Errorf("view needs view_id, title, domain and function")
 	}
 	var spec struct {
-		ObjectType string            `json:"object_type"`
+		ObjectType string             `json:"object_type"`
 		Columns    []core.ColumnSpec  `json:"columns"`
 		Sections   []core.SectionSpec `json:"sections"`
 	}

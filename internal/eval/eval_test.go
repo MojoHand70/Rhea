@@ -35,7 +35,7 @@ func referenceIsDone(t *testing.T, corpus string) {
 		}
 		return "", fmt.Errorf("no reference for this ask")
 	}}
-	rep, err := eval.Run(context.Background(), s, recorded, "reference", c, dir)
+	rep, err := eval.Run(context.Background(), s, recorded, "reference", c, dir, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +57,7 @@ func TestRefusedDraftIsResidue(t *testing.T) {
 	wrong := &agent.Agent{Complete: func(ctx context.Context, system, user string) (string, error) {
 		return `{"rule_id":"x","description":"d","spec":{"match":{"event_type":"account.created"},"effect":{"object":{"type":"ledger_account","fields":{"a":"=$.code"}}}}}`, nil
 	}}
-	rep, err := eval.Run(context.Background(), s, wrong, "wrong", c, dir)
+	rep, err := eval.Run(context.Background(), s, wrong, "wrong", c, dir, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
