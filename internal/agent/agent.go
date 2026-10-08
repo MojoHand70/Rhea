@@ -314,12 +314,16 @@ func userMessage(ask Ask) string {
 }
 
 // extractJSON tolerates a model that wraps its answer despite instructions:
-// it cuts from the first '{' to the last '}'.
+// it decodes the first complete JSON object in the text, ignoring prose or
+// code fences around it.
 func extractJSON(s string) string {
 	start := strings.IndexByte(s, '{')
-	end := strings.LastIndexByte(s, '}')
-	if start >= 0 && end > start {
-		return s[start : end+1]
+	if start < 0 {
+		return s
 	}
-	return s
+	var v json.RawMessage
+	if err := json.NewDecoder(strings.NewReader(s[start:])).Decode(&v); err != nil {
+		return s[start:] // let the caller report the real parse error
+	}
+	return string(v)
 }

@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -101,10 +102,21 @@ firmer applies), "client" (what the client said). Never state percentages, count
 of companies: Rhea adds real support figures herself, from what she has learned. Cite only
 what you are sure of; a vague true citation beats a precise invented one.
 
+FIRST check the active rules in the request: if they already answer the question (perhaps
+because an earlier answer took up what Rhea had learned), propose nothing - return
+{"bundle_id": "...", "description": "already answered by <rule ids>: <how>"} with no
+definitions. Never propose a second rule doing what an active rule already does.
+
 Explain the events the question is about - the unexplained events in the request show
 what is waiting. One event may need several rules (a document AND a ledger posting AND a
 stock movement); put them all in the bundle - they activate together. Propose only what
 the question needs.`
+
+// ErrAlreadyAnswered is the agent's answer when the active rules already
+// explain what the question asks — often because a learned answer was taken
+// up earlier. Not a failure: there is nothing to approve. The bundle's
+// description says which rules answer it.
+var ErrAlreadyAnswered = errors.New("already answered by the active rules")
 
 // DraftBundle asks the model for a bundle and validates every member against
 // the language: types by the type gate, rules against the catalog overlaid
@@ -118,6 +130,9 @@ func (a *Agent) DraftBundle(ctx context.Context, ask Ask) (BundleDraft, error) {
 	var b BundleDraft
 	if err := json.Unmarshal([]byte(extractJSON(raw)), &b); err != nil {
 		return BundleDraft{}, fmt.Errorf("model returned unparseable JSON: %w", err)
+	}
+	if b.Description != "" && len(b.ObjectTypes)+len(b.Rules)+len(b.ViewDefs)+len(b.Activities) == 0 {
+		return b, ErrAlreadyAnswered
 	}
 	if err := b.Validate(ask.Types); err != nil {
 		return BundleDraft{}, fmt.Errorf("bundle failed validation: %w", err)

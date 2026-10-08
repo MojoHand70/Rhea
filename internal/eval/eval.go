@@ -9,6 +9,7 @@ package eval
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -245,6 +246,11 @@ func Run(ctx context.Context, st *store.Store, a *agent.Agent, model string, c C
 // bundle, approve it whole when the dry run is clean.
 func runBundle(ctx context.Context, st *store.Store, x *exec.Executor, a *agent.Agent, model string, ask agent.Ask, k *network.Knowledge, row *Row) error {
 	bd, err := a.DraftBundle(ctx, ask)
+	if errors.Is(err, agent.ErrAlreadyAnswered) {
+		// Nothing to approve; whether that was right, the state check says.
+		row.RuleID, row.Approved = "already answered: "+bd.Description, true
+		return nil
+	}
 	if err != nil {
 		row.Error = err.Error()
 		return nil

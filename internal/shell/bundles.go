@@ -3,6 +3,7 @@ package shell
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -200,6 +201,10 @@ func (s *Server) handleDraftBundle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	bd, err := s.Agent.DraftBundle(ctx, ask)
+	if errors.Is(err, agent.ErrAlreadyAnswered) {
+		writeJSON(w, 200, map[string]any{"already_answered": true, "description": bd.Description})
+		return
+	}
 	if err != nil {
 		writeErr(w, 502, err) // the request event stays — the log is honest about unanswered asks
 		return

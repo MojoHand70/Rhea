@@ -407,6 +407,7 @@ function draftForm(ev, objectTypes) {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ intent: intent.value, sample_event_id: ev.event_id }),
         });
+        if (b.already_answered) { toast(`Nothing to add: ${b.description}`); return; }
         toast(`Bundle ${b.bundle_id} ready for approval: ${b.members.length} definition(s).`);
         openBundles();
       } catch (e) { toast(e.message, true); }
@@ -542,6 +543,7 @@ function openBundles() {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ intent: ask.value }),
         });
+        if (b.already_answered) { toast(`Nothing to add: ${b.description}`); return; }
         toast(`Bundle ${b.bundle_id} ready for approval: ${b.members.length} definition(s).`);
         refreshActive();
       } catch (e) { toast(e.message, true); }

@@ -55,6 +55,39 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-08 — the flywheel, live: what five runs taught
+
+- **Five live runs of the operations corpus with `rhea eval -network`**
+  (claude-sonnet-4-6), each run publishing as its own installation into
+  `rhea_network`.
+  - Run 1 drew on nothing, run 2 on one installation (below the floor),
+    and run 3 onward on real priors.
+  - **Consensus forms fast:** after three runs, 16 of 19 questions had
+    one answer given identically by every installation (3 of 3; 5 of 5
+    after five runs): master data, invoices into both books, goods flows,
+    complaints and cases, and the withdrawal.
+  - The model is consistent enough that shape fingerprints converge
+    without any semantic normalization.
+- **Learned knowledge is applied at the first opportunity.** With
+  priors, the agent explains residue the network knows about before the
+  question asks for it. By run 5, tasks 5 and 6 answered "already
+  answered by …" because earlier bundles had already taken up the
+  learned complaint handling. The state checks confirm it was right.
+- **This made "already answered" an answer** (`agent.ErrAlreadyAnswered`).
+  An empty bundle with a description naming the answering rules is not a
+  failure. The shell says "Nothing to add", and the eval marks ✓ and
+  leaves judgment to the state check. The prompt now tells the agent to
+  check the active rules first and never propose a second rule doing
+  what one already does. Run 3 had done exactly that and was rightly
+  refused as a conflict.
+- **What the network does not know stays hard.** The PZ was solved in
+  one run only, so it sits below the floor, never surfaces, and failed
+  in four of five runs on reading a field through a link. That gap is
+  scoped into the formula session.
+- **Robustness:** `extractJSON` now decodes the first complete JSON
+  object instead of cutting first-`{` to last-`}`, which a trailing
+  fence with braces broke in run 5.
+
 ## 2026-10-08 — Rhea learns: the first slice of the network
 
 - **KK: "If it learns, it uses what it learned — otherwise why would it

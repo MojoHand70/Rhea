@@ -2,6 +2,7 @@ package agent_test
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
@@ -95,5 +96,15 @@ func TestBundleAskShowsResidue(t *testing.T) {
 	}
 	if !strings.Contains(seen, `complaint.withdrawn ×3: {"number":"C-1"}`) {
 		t.Fatalf("residue missing from the ask:\n%s", seen)
+	}
+}
+
+// "Already answered" is an answer, not a failure: the agent took up a
+// learned rule earlier, and the question finds nothing left to add.
+func TestDraftBundleAlreadyAnswered(t *testing.T) {
+	b, err := fixtureAgent(`{"bundle_id":"withdrawals","description":"already answered by resolve-case-on-withdrawal"}`).
+		DraftBundle(context.Background(), ask("withdrawals resolve cases"))
+	if !errors.Is(err, agent.ErrAlreadyAnswered) || !strings.Contains(b.Description, "resolve-case-on-withdrawal") {
+		t.Fatalf("got %v, %+v", err, b)
 	}
 }

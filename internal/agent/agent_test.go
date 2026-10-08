@@ -149,3 +149,12 @@ func TestDraftRuleSeesTheLanguage(t *testing.T) {
 		}
 	}
 }
+
+// The model sometimes trails its JSON with a fence or a remark containing
+// braces; the first complete object is the answer.
+func TestDraftRuleTrailingNoise(t *testing.T) {
+	noisy := fixtureAnswer + "\n```\nNote: {this} is how I read it."
+	if _, err := fixtureAgent(noisy).DraftRule(context.Background(), ask("book PLN invoices")); err != nil {
+		t.Fatal(err)
+	}
+}
