@@ -68,7 +68,9 @@ that moves; its field must be an enum and the transitions name its values. List 
 legitimately arrive later, a resolution); everything else is fixed at birth.
 To extend an existing type, declare it again with the same name and the new fields:
 it becomes the next version, and existing objects keep the version they were born
-under.
+under. Do the same when an existing type demands a field this client's documents
+cannot fill: declare the type again without it, or with it optional. Use the type
+names the question uses; name a new type exactly as the question names it.
 Rules in the bundle may target the bundle's own new types.
 
 VIEWS - every type already gets a derived list and detail view. Add a view_def only
@@ -94,7 +96,8 @@ than leaving it out, and say where it comes from. The client may always replace 
 When the request shows what Rhea has learned from other installations, that is your
 strongest evidence: reuse a learned rule (fill its "?" from this client's events) and use
 basis "network" - Rhea verifies the match and adds the real count herself. Deviate when
-this client's events or words call for it, and say so in the description.
+this client's events or words call for it, and say so in the description. Without that
+section in the request, Rhea has learned nothing yet: never claim basis "network".
 Basis: "network" (a learned rule, as above), "statute" or "standard" (cite the act or
 standard), "practice" (customary practice -
 name it), "pack" (the market pack's default), "model" (your general knowledge, when nothing

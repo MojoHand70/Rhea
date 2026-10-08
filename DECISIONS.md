@@ -55,6 +55,45 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-09 — first live runs: two simulated customers, DONE
+
+- **Five live runs (claude-sonnet-4-6, one month of each persona), the
+  formula language's live proof.** In every draft the model wrote the
+  arithmetic exactly as the kernel wants it: VAT as `round($.net *
+  ref(vat_rate, code, $.vat_rate).percent / 100, 2, half_up)`, gross as
+  net plus that, the due date as `$.issue_date + $.payment_days`, the PZ
+  line value as qty × price, and the stock count's book quantity as a
+  fold over `objects(stock_movement, …)` filtered by location and date.
+  Not one formula was refused by the typed gate or by the VM. The
+  language is authorable from a plain-language answer, first time.
+- **What failed was vocabulary, three times, each fixed once:**
+  1. The seeded `purchase_invoice` required `mirror_of`, E4's
+     intercompany link, so a plain supplier invoice could not exist; the
+     model tried to resolve it against a sales invoice, then a PZ. The
+     field is optional now (`finance_v8`): a purchase invoice mirrors a
+     group sales invoice only when there is one. The prompt also says a
+     type may be declared again without a field the client's documents
+     cannot fill.
+  2. The model claimed warrant basis `network` with no network connected
+     (Rhea refused: no support could be counted). The prompt now says
+     the basis exists only when the request lists learned answers.
+  3. The model named new types its own way (`pz_document`) and filled
+     an optional ref with an empty string. The owner's answers now name
+     the types, as the operations corpus already did, and the prompt
+     says to leave optional fields out rather than fill them with
+     nothing. The run count: Helios 5/6, 5/6, 5/6, then 6/6; Nordwind
+     6/9, then 9/9 — every count, lifecycle move and computed sum
+     matching the generator's rule-free expectation.
+- **The eval does not print a draft the gate refused** (it is never
+  stored); the refusal message had to say enough. It did. A verbose
+  refused-draft line is cheap and would have saved one run — noted, not
+  done.
+- **Variance is real and the measure is the share of runs** — the same
+  persona passed and failed the same task on different runs before the
+  fixes. The growth plan's metric (share of the story passing unattended)
+  should be read over several runs and several voices, which is what
+  `-voice` is for. Paraphrases not yet generated; next live session.
+
 ## 2026-10-09 — simulated customers: a business as data, ground truth without the model
 
 - **KK (2026-10-08): "Can we simulate customers?" — yes, the third way.**

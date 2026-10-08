@@ -261,7 +261,7 @@
       }
     },
     {
-      "answer": "Every sales invoice we issue becomes a sales invoice document: number, issue date, the seller and the buyer found by NIP, the net amount, the currency and the VAT rate code from the invoice. VAT is the net times the rate's percent divided by 100, rounded half up to the grosz; gross is net plus VAT; the due date is the issue date plus the payment days printed on the invoice; the status starts open and can later move to paid. Each sales invoice is posted in the book pl-stat: debit 201 with the gross, credit 700 with the net, credit 222 with the VAT.",
+      "answer": "Every sales invoice we issue becomes a sales invoice document (the type sales_invoice): number, issue date, the seller and the buyer found by NIP, the net amount, the currency and the VAT rate code from the invoice. VAT is the net times the rate's percent divided by 100, rounded half up to the grosz; gross is net plus VAT; the due date is the issue date plus the payment days printed on the invoice; the status starts open and can later move to paid. Each sales invoice is posted in the book pl-stat: debit 201 with the gross, credit 700 with the net, credit 222 with the VAT.",
       "mode": "bundle",
       "reference": {
         "bundle_id": "sales-invoices",
@@ -421,7 +421,7 @@
       }
     },
     {
-      "answer": "Every delivery gets one PZ document (goods received note) with the supplier, the supplier's delivery document number, the warehouse location, the date and the currency. Each delivered item becomes a line of that PZ pointing at it, with the quantity, the unit price and the value being quantity times the unit price stated on the delivery. Every line moves that item's stock into the delivery's location and is posted in the book pl-stat at its value: debit 330, credit 300.",
+      "answer": "Every delivery gets one PZ document (goods received note; a new type named pz) with the supplier, the supplier's delivery document number, the warehouse location, the date and the currency. Each delivered item becomes a line of that PZ (a new type named pz_line) pointing at it, with the quantity, the unit price and the value being quantity times the unit price stated on the delivery. Every line moves that item's stock into the delivery's location and is posted in the book pl-stat at its value: debit 330, credit 300.",
       "mode": "bundle",
       "reference": {
         "bundle_id": "deliveries",
@@ -619,7 +619,7 @@
       }
     },
     {
-      "answer": "A supplier's invoice becomes a purchase invoice document: number, invoice date, the supplier found by NIP, our own company as the owner, the net amount, the currency and the VAT rate code. VAT is the net times the rate's percent divided by 100, rounded half up to the grosz, and gross is net plus VAT. Each purchase invoice is posted in the book pl-stat: debit 300 with the net, debit 221 with the VAT, credit 202 with the gross.",
+      "answer": "A supplier's invoice becomes a purchase invoice document (the type purchase_invoice): number, invoice date, the supplier found by NIP, our own company as the owner, the net amount, the currency and the VAT rate code. VAT is the net times the rate's percent divided by 100, rounded half up to the grosz, and gross is net plus VAT. Each purchase invoice is posted in the book pl-stat: debit 300 with the net, debit 221 with the VAT, credit 202 with the gross.",
       "mode": "bundle",
       "reference": {
         "bundle_id": "purchase-invoices",
@@ -754,7 +754,7 @@
       }
     },
     {
-      "answer": "Goods issued from the warehouse become goods issue documents (item, location, quantity, date, reason) and every issue moves that item's stock out of its location.",
+      "answer": "Goods issued from the warehouse become goods issue documents (the type goods_issue: item, location, quantity, date, reason) and every issue moves that item's stock out of its location.",
       "mode": "bundle",
       "reference": {
         "bundle_id": "goods-issues",
@@ -1011,7 +1011,7 @@
       }
     },
     {
-      "answer": "A stock count of an item at a location records a stock level: the count date, the counted quantity, the book quantity, which is the sum of that item's stock movements into the location minus those out of it, dated up to and including the count date, and the difference, counted minus book.",
+      "answer": "A stock count of an item at a location records a stock level (a new type named stock_level): the count date, the counted quantity, the book quantity, which is the sum of that item's stock movements into the location minus those out of it, dated up to and including the count date, and the difference, counted minus book.",
       "mode": "bundle",
       "reference": {
         "bundle_id": "stock-counts",

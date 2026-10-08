@@ -178,7 +178,8 @@ A field typed "enum" only accepts one of its declared "values". A field typed
 
 EFFECT 1 - "object": materialize one object of a declared type.
   "effect": {"object": {"type": "invoice", "fields": {"<field>": "<template>", ...}}}
-Every required field of the target type must be present.
+Every required field of the target type must be present. Leave out optional fields
+the event does not carry - never fill a field, least of all a ref, with an empty string.
 For MULTI-LINE events (one object per array element), add "each":
   "effect": {"object": {"type": "stock_movement", "each": "=$.lines[*]", "fields": {
     "item": "=ref(item, sku, $.line.item)", "qty": "=$.line.qty", "date": "=$.doc.date"}}}

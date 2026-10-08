@@ -216,7 +216,7 @@
       }
     },
     {
-      "answer": "Every sales invoice we issue becomes a sales invoice document: number, issue date, the seller and the buyer found by NIP, the net amount, the currency and the VAT rate code from the invoice. VAT is the net times the rate's percent divided by 100, rounded half up to the grosz; gross is net plus VAT; the due date is the issue date plus the payment days printed on the invoice; the status starts open and can later move to paid. Each sales invoice is posted in the book pl-stat: debit 201 with the gross, credit 701 with the net, credit 222 with the VAT.",
+      "answer": "Every sales invoice we issue becomes a sales invoice document (the type sales_invoice): number, issue date, the seller and the buyer found by NIP, the net amount, the currency and the VAT rate code from the invoice. VAT is the net times the rate's percent divided by 100, rounded half up to the grosz; gross is net plus VAT; the due date is the issue date plus the payment days printed on the invoice; the status starts open and can later move to paid. Each sales invoice is posted in the book pl-stat: debit 201 with the gross, credit 701 with the net, credit 222 with the VAT.",
       "mode": "bundle",
       "reference": {
         "bundle_id": "sales-invoices",
@@ -376,7 +376,7 @@
       }
     },
     {
-      "answer": "A supplier's invoice becomes a purchase invoice document: number, invoice date, the supplier found by NIP, our own company as the owner, the net amount, the currency and the VAT rate code. VAT is the net times the rate's percent divided by 100, rounded half up to the grosz, and gross is net plus VAT. Each purchase invoice is posted in the book pl-stat: debit 402 with the net, debit 221 with the VAT, credit 202 with the gross.",
+      "answer": "A supplier's invoice becomes a purchase invoice document (the type purchase_invoice): number, invoice date, the supplier found by NIP, our own company as the owner, the net amount, the currency and the VAT rate code. VAT is the net times the rate's percent divided by 100, rounded half up to the grosz, and gross is net plus VAT. Each purchase invoice is posted in the book pl-stat: debit 402 with the net, debit 221 with the VAT, credit 202 with the gross.",
       "mode": "bundle",
       "reference": {
         "bundle_id": "purchase-invoices",
