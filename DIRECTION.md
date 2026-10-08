@@ -667,7 +667,11 @@ extends invariant 2 to every definition; it adds no new primitive.
    (see DECISIONS): packs install as one bundle, and the forcing case
    passes. The agent proposing bundles moves to step 6.
 4. *A harder corpus* (convert, book, amend, `each`, the two-consequence
-   case) so the score can tell models and prompts apart.
+   case) so the score can tell models and prompts apart. *Shipped
+   2026-10-08* with the agent proposing bundles (see DECISIONS). It does
+   discriminate, and it surfaced two language decisions for KK: ruled
+   backfill (late understanding of an already-explained event) and ref
+   re-reference in cascades.
 5. *The live full-story demo* with KK, showing a bundle come to life.
 6. *The interview loop*: turns as events, residue clustering, the agent
    proposing bundles.

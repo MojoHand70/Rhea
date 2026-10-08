@@ -44,6 +44,16 @@ type Ask struct {
 	// ref() or a posting's account code can resolve against. The caller caps
 	// it; the agent sees samples, never the whole ledger.
 	Reference map[string][]map[string]any
+	// Residue is the worklist as the agent sees it: every unexplained event
+	// type with its count and one sample — what a bundle can answer at once.
+	Residue []Cluster
+}
+
+// Cluster is one unexplained event shape in the worklist.
+type Cluster struct {
+	EventType string          `json:"event_type"`
+	Count     int             `json:"count"`
+	Sample    json.RawMessage `json:"sample"`
 }
 
 // Agent drafts rules. Complete is the single LLM call, injectable for tests.
@@ -91,7 +101,10 @@ Nothing appears in state without a rule. You answer with ONE JSON object and
 nothing else - no prose, no markdown fences.
 
 The JSON shape:
-{
+` + ruleShape + ruleGrammar + `Never invent a type that is not in the catalog.`
+
+// ruleShape is one rule as JSON — alone, or as an element of a bundle's rules.
+const ruleShape = `{
   "rule_id": "kebab-case-slug",
   "description": "one sentence, what the rule does and why",
   "priority": 100,
@@ -104,7 +117,10 @@ The JSON shape:
   }
 }
 
-Use "where" conditions only for constraints the user's intent actually implies.
+`
+
+// ruleGrammar is the rule language: templates, the three effects, cascade.
+const ruleGrammar = `Use "where" conditions only for constraints the user's intent actually implies.
 Priority orders firing among rules matching the same event: lower fires first.
 Pick one not taken by the active rules listed in the request.
 
@@ -161,8 +177,16 @@ This is how one fact grows its consequences: a document materializes, a cascade
 rule posts it, another raises a follow-up case. Amendments end chains: never match
 "object.amended".
 
-Choose the effect the intent asks for. Prefer reusing declared types; never invent
-a type that is not in the catalog.`
+LIMITS of the language as it stands - draft around them:
+- In a cascade rule, a ref<T> field cannot be filled from "$.state.<field>": the state
+  holds an object id, and ref() resolves by a field value. When a second object of one
+  event needs refs, write a second rule matching the same RAW event instead - every rule
+  matching an event fires on it, in priority order.
+- An event is explained once: when its rules fire, later rules never revisit it.
+  Every consequence of an event must be in place when its explanation activates.
+
+Choose the effect the intent asks for. Prefer reusing declared types.
+`
 
 // DraftRule asks the model for a rule and strictly validates the answer
 // against the language before returning it: the spec's own gate, plus the
@@ -241,8 +265,16 @@ func userMessage(ask Ask) string {
 		b, _ := json.Marshal(ask.Reference[n])
 		fmt.Fprintf(&sb, "%s: %s\n", n, b)
 	}
-	fmt.Fprintf(&sb, "\nSample event (type %q, occurred %s, payload):\n%s\n",
-		ask.Sample.Type, ask.Sample.OccurredAt, string(ask.Sample.Payload))
+	if len(ask.Residue) > 0 {
+		sb.WriteString("\nUnexplained events waiting in the worklist (type, count, one sample payload):\n")
+		for _, c := range ask.Residue {
+			fmt.Fprintf(&sb, "- %s ×%d: %s\n", c.EventType, c.Count, c.Sample)
+		}
+	}
+	if ask.Sample.Type != "" {
+		fmt.Fprintf(&sb, "\nSample event (type %q, occurred %s, payload):\n%s\n",
+			ask.Sample.Type, ask.Sample.OccurredAt, string(ask.Sample.Payload))
+	}
 	if ask.Hint != "" {
 		fmt.Fprintf(&sb, "\nThe user points at object type %q.\n", ask.Hint)
 	}

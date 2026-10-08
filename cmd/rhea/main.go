@@ -13,7 +13,7 @@
 //	rhea submit FILE         submit a raw event (dedup by file content hash)
 //	rhea serve [-addr :8070] run the shell
 //	rhea replay              rebuild object cache + DuckDB from the event log
-//	rhea eval [CORPUS]       measure the agent as an author: draft → simulate →
+//	rhea eval [-v] [CORPUS]  measure the agent as an author: draft → simulate →
 //	                         approve over a corpus on a throwaway database;
 //	                         prints residue (default testdata/eval/corpus.json)
 package main
@@ -186,9 +186,12 @@ func main() {
 		fmt.Printf("replayed %d objects (postgres cache), %d rows (duckdb)\n", len(objs), n)
 
 	case "eval":
+		fs := flag.NewFlagSet("eval", flag.ExitOnError)
+		verbose := fs.Bool("v", false, "print every draft the agent proposed")
+		fs.Parse(os.Args[2:])
 		path := "testdata/eval/corpus.json"
-		if len(os.Args) > 2 {
-			path = os.Args[2]
+		if fs.NArg() > 0 {
+			path = fs.Arg(0)
 		}
 		c, dir, err := eval.Load(path)
 		if err != nil {
@@ -204,7 +207,11 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Print(rep)
+		if *verbose {
+			fmt.Print(rep.Verbose())
+		} else {
+			fmt.Print(rep)
+		}
 
 	default:
 		log.Fatalf("unknown command %q", os.Args[1])

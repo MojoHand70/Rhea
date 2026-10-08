@@ -368,6 +368,18 @@ func BuiltinActivities() []Activity {
 			},
 		},
 		{
+			Name: "draft_bundle", Domain: "system",
+			Description: "Ask for a bundle in plain language: the types, rules, verbs and views one answer needs. Recorded as bundle.draft_requested; the agent answers as an actor outside the kernel, and its bundle waits for approval.",
+			Spec: ActivitySpec{
+				Inputs: []FieldDef{
+					{Name: "intent", Type: "string", Required: true},
+					{Name: "sample_event_id", Type: "int"},
+				},
+				Emits: "bundle.draft_requested",
+				Who:   []string{"human"},
+			},
+		},
+		{
 			Name: "draft_rule", Domain: "system",
 			Description: "Ask for a rule in plain language. Records the request as rule.draft_requested; the agent answers as an actor outside the kernel — a reaction must be deterministic, and drafting is not.",
 			Spec: ActivitySpec{

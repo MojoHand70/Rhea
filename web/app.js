@@ -396,9 +396,26 @@ function draftForm(ev, objectTypes) {
       btn.disabled = false; btn.textContent = "Draft rule";
     },
   }, "Draft rule");
+  // The bundle ask: the agent answers with everything the intent needs —
+  // types, rules, views, verbs — and sees the whole worklist, not only this event.
+  const bundleBtn = el("button", {
+    onclick: async () => {
+      if (!intent.value.trim()) { toast("Describe what should happen first.", true); return; }
+      bundleBtn.disabled = true; bundleBtn.textContent = "Asking the agent…";
+      try {
+        const b = await api("/api/bundles/draft", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ intent: intent.value, sample_event_id: ev.event_id }),
+        });
+        toast(`Bundle ${b.bundle_id} ready for approval: ${b.members.length} definition(s).`);
+        openBundles();
+      } catch (e) { toast(e.message, true); }
+      bundleBtn.disabled = false; bundleBtn.textContent = "Draft bundle";
+    },
+  }, "Draft bundle");
   return el("div", {}, intent,
     el("div", { class: "row", style: "margin-top:8px" },
-      el("span", { class: "hint", style: "margin:0" }, "starting from"), typeSel, btn));
+      el("span", { class: "hint", style: "margin:0" }, "starting from"), typeSel, btn, bundleBtn));
 }
 
 /* The dry run (SPEC M1): what approving this rule would change, from an
@@ -515,6 +532,22 @@ function openBundles() {
     const bundles = await api("/api/bundles");
     const out = [el("h1", {}, "Bundles"),
       el("p", { class: "hint" }, "One approval, many definitions: everything in a bundle activates together, or nothing does.")];
+    // Ask without pointing at an event: the agent sees the whole worklist.
+    const ask = el("textarea", { placeholder: "Tell the agent how a part of your business works, e.g. “Goods we receive become receipts and move stock in.”" });
+    const askBtn = el("button", { class: "primary", onclick: async () => {
+      if (!ask.value.trim()) { toast("Describe what should happen first.", true); return; }
+      askBtn.disabled = true; askBtn.textContent = "Asking the agent…";
+      try {
+        const b = await api("/api/bundles/draft", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ intent: ask.value }),
+        });
+        toast(`Bundle ${b.bundle_id} ready for approval: ${b.members.length} definition(s).`);
+        refreshActive();
+      } catch (e) { toast(e.message, true); }
+      askBtn.disabled = false; askBtn.textContent = "Draft bundle";
+    } }, "Draft bundle");
+    out.push(el("div", { class: "draft-form" }, ask, el("div", { class: "row", style: "margin-top:8px" }, askBtn)));
     if (!bundles.length) { out.push(el("p", { class: "hint" }, "No bundles yet.")); return out; }
     for (const b of bundles) {
       const card = el("div", { class: "draft-form" },

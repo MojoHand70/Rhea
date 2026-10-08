@@ -165,3 +165,18 @@ func (s *Store) DraftObjectTypes(ctx context.Context, b core.Bundle) (map[string
 	}
 	return out, nil
 }
+
+// NextObjectTypeVersion is the version a new draft of a type takes: one past
+// every row of any status — a rejected draft keeps its number on the record.
+func (s *Store) NextObjectTypeVersion(ctx context.Context, name string) (int, error) {
+	var v int
+	err := s.Pool.QueryRow(ctx, `SELECT COALESCE(MAX(version), 0) + 1 FROM object_type WHERE name = $1`, name).Scan(&v)
+	return v, err
+}
+
+// NextViewDefVersion is NextObjectTypeVersion for views.
+func (s *Store) NextViewDefVersion(ctx context.Context, id string) (int, error) {
+	var v int
+	err := s.Pool.QueryRow(ctx, `SELECT COALESCE(MAX(version), 0) + 1 FROM view_def WHERE view_id = $1`, id).Scan(&v)
+	return v, err
+}

@@ -37,16 +37,30 @@ type Corpus struct {
 	// Expect is the object count per type after every task — what a correct
 	// implementation of this corpus materializes.
 	Expect map[string]int `json:"expect"`
+	// ExpectWhere counts objects by one field's value: a lifecycle that
+	// moved, a book that was posted to — state a bare count cannot see.
+	ExpectWhere []Where `json:"expect_where,omitempty"`
+}
+
+// Where expects Count objects of Type whose Field equals Value.
+type Where struct {
+	Type  string `json:"type"`
+	Field string `json:"field"`
+	Value string `json:"value"`
+	Count int    `json:"count"`
 }
 
 // Task is one answer a human gives in the interview. The sample is the first
-// raw event of SampleType in the log. Reference is a known-good rule for the
-// same intent: it proves the corpus solvable and answers for the recorded
-// agent in tests; the live agent never sees it.
+// raw event of SampleType in the log (optional for bundles: the agent sees
+// the whole residue). Mode "bundle" asks for a bundle — everything the
+// answer needs, approved whole — instead of one rule. Reference is a
+// known-good answer of the same mode: it proves the corpus solvable and
+// answers for the recorded agent in tests; the live agent never sees it.
 type Task struct {
 	Intent     string          `json:"intent"`
-	SampleType string          `json:"sample_type"`
-	Hint       string          `json:"hint"`
+	Mode       string          `json:"mode,omitempty"` // "" (one rule) | "bundle"
+	SampleType string          `json:"sample_type,omitempty"`
+	Hint       string          `json:"hint,omitempty"`
 	Reference  json.RawMessage `json:"reference"`
 }
 
@@ -59,7 +73,7 @@ type rawEvent struct {
 // Row is one task's outcome.
 type Row struct {
 	Intent      string
-	RuleID      string
+	RuleID      string // the rule, or the bundle with what it proposes
 	Error       string // drafting or validation failed; nothing stored
 	SimErrors   []string
 	Explains    int // raw events the draft would explain
@@ -67,6 +81,7 @@ type Row struct {
 	Approved    bool
 	Booked      int // events booked by approval
 	ApproveErrs []string
+	Draft       json.RawMessage // what the agent proposed, for the verbose report
 }
 
 // Report is the run's verdict.
@@ -128,14 +143,24 @@ func Run(ctx context.Context, st *store.Store, a *agent.Agent, model string, c C
 	}
 	for _, task := range c.Tasks {
 		row := Row{Intent: task.Intent}
-		i := slices.IndexFunc(raws, func(e core.Event) bool { return e.Type == task.SampleType })
-		if i < 0 {
-			return rep, fmt.Errorf("task %q: no %s event in the intake", task.Intent, task.SampleType)
+		var sample core.Event
+		if task.SampleType != "" {
+			i := slices.IndexFunc(raws, func(e core.Event) bool { return e.Type == task.SampleType })
+			if i < 0 {
+				return rep, fmt.Errorf("task %q: no %s event in the intake", task.Intent, task.SampleType)
+			}
+			sample = raws[i]
 		}
-		sample := raws[i]
 		ask, err := shell.DraftAsk(ctx, st, task.Intent, sample, task.Hint)
 		if err != nil {
 			return rep, err
+		}
+		if task.Mode == "bundle" {
+			if err := runBundle(ctx, st, x, a, model, ask, &row); err != nil {
+				return rep, err
+			}
+			rep.Rows = append(rep.Rows, row)
+			continue
 		}
 		d, err := a.DraftRule(ctx, ask)
 		if err != nil {
@@ -144,6 +169,7 @@ func Run(ctx context.Context, st *store.Store, a *agent.Agent, model string, c C
 			continue
 		}
 		row.RuleID = d.RuleID
+		row.Draft, _ = json.MarshalIndent(d, "       ", "  ")
 		if _, err := st.InsertRuleVersion(ctx, core.Rule{
 			ID: d.RuleID, Status: core.StatusDraft, Priority: d.Priority,
 			EffectiveFrom: sample.OccurredAt, CreatedBy: "agent:" + model,
@@ -185,6 +211,21 @@ func Run(ctx context.Context, st *store.Store, a *agent.Agent, model string, c C
 	if rep.Objects, err = st.CountObjectsByType(ctx); err != nil {
 		return rep, err
 	}
+	for _, w := range c.ExpectWhere {
+		objs, err := st.ObjectsByType(ctx, w.Type)
+		if err != nil {
+			return rep, err
+		}
+		n := 0
+		for _, o := range objs {
+			if fmt.Sprint(o.State[w.Field]) == w.Value {
+				n++
+			}
+		}
+		if n != w.Count {
+			rep.Mismatch = append(rep.Mismatch, fmt.Sprintf("%s with %s=%s: %d of %d", w.Type, w.Field, w.Value, n, w.Count))
+		}
+	}
 	types := make([]string, 0, len(c.Expect))
 	for t := range c.Expect {
 		types = append(types, t)
@@ -196,6 +237,47 @@ func Run(ctx context.Context, st *store.Store, a *agent.Agent, model string, c C
 		}
 	}
 	return rep, nil
+}
+
+// runBundle plays one bundle task: draft, land as drafts, dry-run the whole
+// bundle, approve it whole when the dry run is clean.
+func runBundle(ctx context.Context, st *store.Store, x *exec.Executor, a *agent.Agent, model string, ask agent.Ask, row *Row) error {
+	bd, err := a.DraftBundle(ctx, ask)
+	if err != nil {
+		row.Error = err.Error()
+		return nil
+	}
+	date := ask.Sample.OccurredAt
+	if date == "" {
+		date = "2026-01-01"
+	}
+	b, err := shell.StoreBundleDraft(ctx, st, bd, "agent:"+model, date)
+	if err != nil {
+		row.Error = "store bundle: " + err.Error()
+		return nil
+	}
+	row.RuleID = fmt.Sprintf("%s [%s]", b.ID, bd.Summary())
+	row.Draft, _ = json.MarshalIndent(bd, "       ", "  ")
+	diff, err := x.SimulateBundle(ctx, b)
+	if err != nil {
+		return err
+	}
+	row.SimErrors = diff.Errors
+	row.Explains = len(diff.UnexplainedBefore) - len(diff.UnexplainedAfter)
+	row.Added = len(diff.Added)
+	if len(diff.Errors) > 0 {
+		return nil
+	}
+	_, booked, procErrs, err := x.ApproveBundle(ctx, b.ID, "eval", date)
+	if err != nil {
+		row.ApproveErrs = append(row.ApproveErrs, err.Error())
+		return nil
+	}
+	row.Approved, row.Booked = true, booked
+	for _, e := range procErrs {
+		row.ApproveErrs = append(row.ApproveErrs, e.Error())
+	}
+	return nil
 }
 
 func loadSeed(ctx context.Context, st *store.Store, path string) error {
@@ -244,7 +326,12 @@ func readEvent(raw json.RawMessage, dir string) (rawEvent, error) {
 
 // String renders the report for a terminal: one line per task, then the
 // verdict — residue first, it is the number.
-func (r Report) String() string {
+func (r Report) String() string { return r.render(false) }
+
+// Verbose renders the report with every draft the agent proposed.
+func (r Report) Verbose() string { return r.render(true) }
+
+func (r Report) render(verbose bool) string {
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "corpus %s, model %s: %d intake events, %d tasks\n\n", r.Corpus, r.Model, r.Intake, len(r.Rows))
 	for i, row := range r.Rows {
@@ -267,6 +354,9 @@ func (r Report) String() string {
 			}
 			for _, e := range row.ApproveErrs {
 				fmt.Fprintf(&sb, "       worklist: %s\n", e)
+			}
+			if verbose && len(row.Draft) > 0 {
+				fmt.Fprintf(&sb, "       %s\n", row.Draft)
 			}
 		}
 	}

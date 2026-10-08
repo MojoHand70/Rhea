@@ -43,6 +43,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/rules/{id}/approve", s.handleApprove)
 	mux.HandleFunc("POST /api/rules/{id}/simulate", s.handleSimulate)
 	mux.HandleFunc("GET /api/bundles", s.handleBundles)
+	mux.HandleFunc("POST /api/bundles/draft", s.handleDraftBundle)
 	mux.HandleFunc("POST /api/bundles/{id}/simulate", s.handleSimulateBundle)
 	mux.HandleFunc("POST /api/bundles/{id}/approve", s.handleApproveBundle)
 	mux.HandleFunc("POST /api/bundles/{id}/reject", s.handleRejectBundle)

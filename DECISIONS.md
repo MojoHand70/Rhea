@@ -55,6 +55,53 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-08 — the agent proposes bundles; a corpus that discriminates
+
+- **`DraftBundle`**: the agent answers one interview question with a
+  bundle: new object types (with lifecycles), rules, optional list and
+  detail views, and optional verbs. The kernel assigns versions. The
+  validation gate checks types with the type gate, rules against the
+  catalog overlaid with the bundle's own types, views against their
+  type's fields (list and detail only: analysis SQL and scheduling are
+  not agent-authored), and verbs with the activity gate (never a system
+  namespace). `shell.StoreBundleDraft` lands the drafts (a taken bundle
+  id gets a suffix) and is shared by the shell and the eval. Stores run
+  sequentially, not in one transaction: the gate already ran, and a half
+  landing leaves honest orphan drafts.
+- **The agent sees the residue**: `Ask.Residue` clusters the worklist by
+  event type (count plus one sample), the groundwork for the
+  residue-first protocol. A bundle needs no sample event.
+- **`draft_bundle` door** (`bundle.draft_requested`; the sample event is
+  optional), `POST /api/bundles/draft`, a "Draft bundle" button on the
+  worklist form, and a free-standing ask box on the Bundles tab.
+- **The prompt now states the language's limits**: no ref re-reference in
+  cascades (use a second rule on the raw event), and an event is
+  explained once.
+- **The eval learned bundle tasks** (`"mode": "bundle"`) and field-level
+  expectations (`expect_where`), plus `rhea eval -v` to print every
+  draft. New corpus `testdata/eval/operations.json`: six bundle tasks
+  covering master data with FX, invoices into two books with `convert`,
+  goods with stock movements, `each` deliveries, new lifecycle types,
+  and amend on withdrawal. The references prove it done.
+- **Live score (claude-sonnet-4-6), operations corpus.** First run: 4/6,
+  residue 2 of 23 (goods refused on the ref re-reference gap). With the
+  limits in the prompt: 6/6 approved, residue 0 of 23, state NOT DONE:
+  case resolved 0 of 1.
+- **Finding 1: residue zero is not done.** Task 5's bundle explained the
+  withdrawal in its own reasonable way (amending the complaint to
+  `withdrawn`). Task 6's correct rule (resolve the case) was approved
+  over an event already explained, so it never fires, and the dry run
+  says so honestly (explains 0, adds 0). In an interview, understanding
+  arrives in an order the events did not. This is the forcing case for
+  **ruled backfill** (DIRECTION: a simulation diff promoted into the log
+  by a gated activity). Until then, the definition of done is residue
+  zero *and* the human's acceptance of state, which is what
+  `expect_where` stands in for.
+- **Finding 2: the ref re-reference gap is what the model reaches for
+  first.** Cascading a stock movement off a materialized receipt is the
+  natural modeling, and the model drafted it in both unprompted runs.
+  This is the third time the exit has come up (E2, E4, here).
+
 ## 2026-10-08 — the bundle: one approval, many definitions
 
 - **Object types and views joined the gate** (KK: everything drafts).

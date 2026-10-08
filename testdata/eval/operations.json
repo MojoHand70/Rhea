@@ -1,0 +1,164 @@
+{
+  "name": "operations",
+  "seeds": [
+    "../seed/finance.json", "../seed/finance_v2.json", "../seed/finance_v3.json",
+    "../seed/finance_v4.json", "../seed/finance_v5.json", "../seed/finance_v6.json",
+    "../seed/finance_v7.json", "../seed/finance_v8.json", "../seed/finance_v9.json",
+    "../seed/warehouse.json"
+  ],
+  "events": [
+    "../events/account_201.json",
+    "../events/account_702.json",
+    {"event_type": "account.created", "occurred_at": "2026-09-01",
+     "payload": {"code": "756", "name": "Różnice kursowe i zaokrąglenia", "type": "expense"}},
+    "../events/company_acme.json",
+    "../events/company_beta.json",
+    "../events/company_gamma.json",
+    "../events/company_omikron.json",
+    "../events/company_zeta.json",
+    "../events/item_widget.json",
+    {"event_type": "item.created", "occurred_at": "2026-09-01",
+     "payload": {"sku": "GAD-1", "name": "Gadget", "unit": "szt"}},
+    "../events/location_main.json",
+    {"event_type": "fx.rate.published", "occurred_at": "2026-09-20",
+     "payload": {"code": "EUR/PLN/2026-09-20", "base": "EUR", "quote": "PLN", "date": "2026-09-20", "rate": "4.2700"}},
+    "../events/invoice_acme.json",
+    "../events/invoice_beta.json",
+    "../events/invoice_gamma_eur.json",
+    "../events/invoice_delta_acme.json",
+    "../events/invoice_zeta.json",
+    "../events/goods_received_widgets.json",
+    "../events/goods_issued_widgets.json",
+    {"event_type": "delivery.received", "occurred_at": "2026-09-14",
+     "payload": {"supplier": "Omikron GmbH", "location": "MAIN", "date": "2026-09-14",
+                 "lines": [{"item": "WID-1", "qty": 10}, {"item": "GAD-1", "qty": 4}]}},
+    {"event_type": "complaint.registered", "occurred_at": "2026-09-27",
+     "payload": {"number": "R-1", "customer": "ACME Sp. z o.o.", "details": "wrong amount on the invoice"}},
+    {"event_type": "complaint.registered", "occurred_at": "2026-09-28",
+     "payload": {"number": "R-2", "customer": "Zeta Works sp.j.", "details": "late delivery"}},
+    {"event_type": "complaint.withdrawn", "occurred_at": "2026-09-29",
+     "payload": {"number": "R-1"}}
+  ],
+  "tasks": [
+    {
+      "intent": "Our master data: accounts, registered companies, catalogue items, warehouse locations and the exchange rates the bank publishes each become their master-data objects.",
+      "mode": "bundle",
+      "reference": {"bundle_id": "master-data", "description": "Master data events become master-data objects.",
+        "rules": [
+          {"rule_id": "register-account", "description": "accounts", "priority": 10,
+           "spec": {"match": {"event_type": "account.created"},
+             "effect": {"object": {"type": "account", "fields": {"code": "=$.code", "name": "=$.name", "type": "=$.type"}}}}},
+          {"rule_id": "register-company", "description": "companies", "priority": 10,
+           "spec": {"match": {"event_type": "company.registered"},
+             "effect": {"object": {"type": "company", "fields": {"name": "=$.name", "kind": "=$.kind", "vat_id": "=$.vat_id", "country": "=$.country"}}}}},
+          {"rule_id": "register-item", "description": "items", "priority": 10,
+           "spec": {"match": {"event_type": "item.created"},
+             "effect": {"object": {"type": "item", "fields": {"sku": "=$.sku", "name": "=$.name", "unit": "=$.unit"}}}}},
+          {"rule_id": "register-location", "description": "locations", "priority": 10,
+           "spec": {"match": {"event_type": "location.created"},
+             "effect": {"object": {"type": "location", "fields": {"code": "=$.code", "name": "=$.name"}}}}},
+          {"rule_id": "register-fx-rate", "description": "rates", "priority": 10,
+           "spec": {"match": {"event_type": "fx.rate.published"},
+             "effect": {"object": {"type": "fx_rate", "fields": {"code": "=$.code", "base": "=$.base", "quote": "=$.quote", "date": "=$.date", "rate": "=$.rate"}}}}}
+        ]}
+    },
+    {
+      "intent": "Received invoices become invoice documents for the customer, the total being the sum of the line amounts. Every invoice is posted twice: in the main book, debit 201 and credit 702 for the total in the invoice's currency; and in the statutory book 'pl-stat' in PLN, converted at the rate of the issue date, rounding half up with differences to account 756.",
+      "mode": "bundle",
+      "reference": {"bundle_id": "invoices", "description": "Invoices become documents and post to two books.",
+        "rules": [
+          {"rule_id": "book-invoice", "description": "invoice documents", "priority": 100,
+           "spec": {"match": {"event_type": "invoice.received"},
+             "effect": {"object": {"type": "invoice", "fields": {"customer": "=ref(company, name, $.customer)",
+               "issue_date": "=$.issue_date", "currency": "=$.currency", "total": "=sum($.lines[*].amount)"}}}}},
+          {"rule_id": "post-invoice-main", "description": "main book", "priority": 200,
+           "spec": {"match": {"event_type": "object.materialized", "where": [{"path": "$.object_type", "op": "eq", "value": "invoice"}]},
+             "effect": {"postings": {"currency": "=$.state.currency", "lines": [
+               {"account": "201", "debit": "=$.state.total"}, {"account": "702", "credit": "=$.state.total"}]}}}},
+          {"rule_id": "post-invoice-stat", "description": "statutory book", "priority": 210,
+           "spec": {"match": {"event_type": "object.materialized", "where": [{"path": "$.object_type", "op": "eq", "value": "invoice"}]},
+             "effect": {"postings": {"book": "pl-stat", "currency": "=$.state.currency",
+               "convert": {"to": "PLN", "date": "=$.state.issue_date", "rounding": "half_up", "rounding_account": "756"},
+               "lines": [{"account": "201", "debit": "=$.state.total"}, {"account": "702", "credit": "=$.state.total"}]}}}}
+        ]}
+    },
+    {
+      "intent": "Goods received from a supplier become goods receipts and move stock in; goods issued become goods issues and move stock out.",
+      "mode": "bundle",
+      "reference": {"bundle_id": "goods", "description": "Goods documents and their stock movements.",
+        "rules": [
+          {"rule_id": "book-goods-receipt", "description": "receipts", "priority": 100,
+           "spec": {"match": {"event_type": "goods.received"},
+             "effect": {"object": {"type": "goods_receipt", "fields": {"supplier": "=ref(company, name, $.supplier)",
+               "item": "=ref(item, sku, $.item)", "location": "=ref(location, code, $.location)", "qty": "=$.qty", "date": "=$.date"}}}}},
+          {"rule_id": "move-stock-in", "description": "stock in", "priority": 110,
+           "spec": {"match": {"event_type": "goods.received"},
+             "effect": {"object": {"type": "stock_movement", "fields": {"item": "=ref(item, sku, $.item)",
+               "location": "=ref(location, code, $.location)", "direction": "in", "qty": "=$.qty", "date": "=$.date"}}}}},
+          {"rule_id": "book-goods-issue", "description": "issues", "priority": 100,
+           "spec": {"match": {"event_type": "goods.issued"},
+             "effect": {"object": {"type": "goods_issue", "fields": {"item": "=ref(item, sku, $.item)",
+               "location": "=ref(location, code, $.location)", "qty": "=$.qty", "date": "=$.date", "reason": "=$.reason"}}}}},
+          {"rule_id": "move-stock-out", "description": "stock out", "priority": 110,
+           "spec": {"match": {"event_type": "goods.issued"},
+             "effect": {"object": {"type": "stock_movement", "fields": {"item": "=ref(item, sku, $.item)",
+               "location": "=ref(location, code, $.location)", "direction": "out", "qty": "=$.qty", "date": "=$.date"}}}}}
+        ]}
+    },
+    {
+      "intent": "Deliveries list several items; every delivery line moves that item's stock in at the delivery's location.",
+      "mode": "bundle",
+      "reference": {"bundle_id": "deliveries", "description": "Delivery lines move stock in.",
+        "rules": [
+          {"rule_id": "move-delivery-lines", "description": "one movement per line", "priority": 100,
+           "spec": {"match": {"event_type": "delivery.received"},
+             "effect": {"object": {"type": "stock_movement", "each": "=$.lines[*]", "fields": {
+               "item": "=ref(item, sku, $.line.item)", "location": "=ref(location, code, $.doc.location)",
+               "direction": "in", "qty": "=$.line.qty", "date": "=$.doc.date"}}}}}
+        ]}
+    },
+    {
+      "intent": "Customer complaints are registered as complaint documents (number, customer, details). Every complaint opens a follow-up case: a new type named case, whose subject is the complaint number and whose status starts open and can later move to resolved.",
+      "mode": "bundle",
+      "reference": {"bundle_id": "complaints", "description": "Complaints and their follow-up cases.",
+        "object_types": [
+          {"name": "complaint", "domain": "sales", "is_document": true, "label_field": "number",
+           "fields": [{"name": "number", "type": "string", "required": true},
+                      {"name": "customer", "type": "string", "required": true},
+                      {"name": "details", "type": "string", "required": false}]},
+          {"name": "case", "domain": "work", "label_field": "subject",
+           "fields": [{"name": "subject", "type": "string", "required": true},
+                      {"name": "status", "type": "enum", "values": ["open", "resolved"], "required": true}],
+           "lifecycle": {"field": "status", "transitions": {"open": ["resolved"]}}}
+        ],
+        "rules": [
+          {"rule_id": "book-complaint", "description": "complaint documents", "priority": 100,
+           "spec": {"match": {"event_type": "complaint.registered"},
+             "effect": {"object": {"type": "complaint", "fields": {"number": "=$.number", "customer": "=$.customer", "details": "=$.details"}}}}},
+          {"rule_id": "raise-complaint-case", "description": "a case per complaint", "priority": 200,
+           "spec": {"match": {"event_type": "object.materialized", "where": [{"path": "$.object_type", "op": "eq", "value": "complaint"}]},
+             "effect": {"object": {"type": "case", "fields": {"subject": "=$.state.number", "status": "open"}}}}}
+        ]}
+    },
+    {
+      "intent": "When a customer withdraws a complaint, its case is resolved.",
+      "mode": "bundle",
+      "reference": {"bundle_id": "withdrawals", "description": "A withdrawal resolves the complaint's case.",
+        "rules": [
+          {"rule_id": "resolve-on-withdrawal", "description": "withdrawal resolves the case", "priority": 300,
+           "spec": {"match": {"event_type": "complaint.withdrawn"},
+             "effect": {"amend": {"type": "case", "target": "=ref(case, subject, $.number)", "set": {"status": "resolved"}}}}}
+        ]}
+    }
+  ],
+  "expect": {
+    "account": 3, "company": 5, "item": 2, "location": 1, "fx_rate": 1,
+    "invoice": 5, "posting": 20, "goods_receipt": 1, "goods_issue": 1,
+    "stock_movement": 4, "complaint": 2, "case": 2
+  },
+  "expect_where": [
+    {"type": "posting", "field": "book", "value": "pl-stat", "count": 10},
+    {"type": "stock_movement", "field": "direction", "value": "in", "count": 3},
+    {"type": "case", "field": "status", "value": "resolved", "count": 1}
+  ]
+}

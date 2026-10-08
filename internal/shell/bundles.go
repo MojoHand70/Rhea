@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"rhea/internal/agent"
 	"rhea/internal/core"
 )
 
@@ -144,4 +145,62 @@ func (s *Server) handleRejectBundle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, 200, map[string]any{"bundle": b})
+}
+
+// handleDraftBundle is the draft_bundle door over HTTP: the ask is in the log
+// as bundle.draft_requested before any model answers; the shell then runs the
+// agent (its runner, until agent-as-user) and lands the answer as drafts.
+// The sample event is optional — the agent always sees the whole residue.
+func (s *Server) handleDraftBundle(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Intent        string `json:"intent"`
+		SampleEventID int64  `json:"sample_event_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeErr(w, 400, err)
+		return
+	}
+	ctx := r.Context()
+	var sample core.Event
+	if req.SampleEventID != 0 {
+		ev, err := s.Store.GetEvent(ctx, req.SampleEventID)
+		if err != nil {
+			writeErr(w, 404, err)
+			return
+		}
+		sample = ev
+	}
+	inputs := map[string]any{"intent": req.Intent}
+	if req.SampleEventID != 0 {
+		inputs["sample_event_id"] = req.SampleEventID
+	}
+	if _, err := s.Exec.TriggerActivity(ctx, "draft_bundle", inputs, "shell", ""); err != nil {
+		writeErr(w, 400, err)
+		return
+	}
+	ask, err := DraftAsk(ctx, s.Store, req.Intent, sample, "")
+	if err != nil {
+		writeErr(w, 500, err)
+		return
+	}
+	bd, err := s.Agent.DraftBundle(ctx, ask)
+	if err != nil {
+		writeErr(w, 502, err) // the request event stays — the log is honest about unanswered asks
+		return
+	}
+	effective := sample.OccurredAt
+	if effective == "" {
+		effective = time.Now().Format("2006-01-02")
+	}
+	b, err := StoreBundleDraft(ctx, s.Store, bd, "agent:"+agent.Model(), effective)
+	if err != nil {
+		writeErr(w, 500, err)
+		return
+	}
+	bv, err := s.bundleView(ctx, b)
+	if err != nil {
+		writeErr(w, 500, err)
+		return
+	}
+	writeJSON(w, 200, bv)
 }

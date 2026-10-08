@@ -16,7 +16,13 @@ import (
 // whole intake and land the expected state. A corpus whose own references
 // fail would measure nothing.
 func TestCorpusReferenceIsDone(t *testing.T) {
-	c, dir, err := eval.Load("../../testdata/eval/corpus.json")
+	for _, corpus := range []string{"corpus.json", "operations.json"} {
+		t.Run(corpus, func(t *testing.T) { referenceIsDone(t, corpus) })
+	}
+}
+
+func referenceIsDone(t *testing.T, corpus string) {
+	c, dir, err := eval.Load("../../testdata/eval/" + corpus)
 	if err != nil {
 		t.Fatal(err)
 	}
