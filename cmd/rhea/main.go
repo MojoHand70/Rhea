@@ -20,7 +20,14 @@
 //	rhea replay              rebuild object cache + DuckDB from the event log
 //	rhea eval [-v] [CORPUS]  measure the agent as an author: draft → simulate →
 //	                         approve over a corpus on a throwaway database;
-//	                         prints residue (default testdata/eval/corpus.json)
+//	                         prints residue (default testdata/eval/corpus.json).
+//	                         A persona file (testdata/customers/) runs as a
+//	                         simulated customer: -voice N picks a paraphrase,
+//	                         -months N shortens the year
+//	rhea sim PERSONA         the simulated customer: what it generates; -corpus FILE
+//	                         writes the compiled corpus, -paraphrase N asks the model
+//	                         to rephrase the interview, -play submits its documents
+//	                         into THIS installation for a live demo
 package main
 
 import (
@@ -47,6 +54,7 @@ import (
 	"rhea/internal/pack"
 	"rhea/internal/project"
 	"rhea/internal/shell"
+	"rhea/internal/sim"
 	"rhea/internal/store"
 )
 
@@ -163,12 +171,19 @@ func main() {
 		fmt.Printf("%s published %d explanation shape(s) — no business data left this installation\n", name, n)
 
 	case "network":
+		fs := flag.NewFlagSet("network", flag.ExitOnError)
+		synthetic := fs.Bool("synthetic", false, "count simulated customers too (never what a client sees)")
+		fs.Parse(os.Args[2:])
 		nw, err := network.Open(ctx, network.DSN())
 		if err != nil {
 			log.Fatal(err)
 		}
 		defer nw.Close()
-		k, err := nw.Learn(ctx)
+		learn := nw.Learn
+		if *synthetic {
+			learn = nw.LearnIncludingSynthetic
+		}
+		k, err := learn(ctx)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -283,14 +298,40 @@ func main() {
 		fs := flag.NewFlagSet("eval", flag.ExitOnError)
 		verbose := fs.Bool("v", false, "print every draft the agent proposed")
 		learn := fs.Bool("network", false, "draw on what Rhea learned, then publish this run's explanations")
+		voice := fs.Int("voice", 0, "persona only: run the k-th paraphrase of the interview (0: as scripted)")
+		months := fs.Int("months", 0, "persona only: override the persona's months")
 		fs.Parse(os.Args[2:])
 		path := "testdata/eval/corpus.json"
 		if fs.NArg() > 0 {
 			path = fs.Arg(0)
 		}
-		c, dir, err := eval.Load(path)
-		if err != nil {
-			log.Fatal(err)
+		var c eval.Corpus
+		var dir string
+		if sim.IsPersona(path) {
+			// A simulated customer: facts and expected state from the
+			// generator, the interview as scripted or as paraphrased.
+			p, pdir, err := sim.Load(path)
+			if err != nil {
+				log.Fatal(err)
+			}
+			if *months > 0 {
+				p.Months = *months
+			}
+			voices, _, err := sim.LoadVoices(path)
+			if err != nil {
+				log.Fatal(err)
+			}
+			var facts sim.Facts
+			if c, facts, err = sim.Compile(p, &voices, *voice); err != nil {
+				log.Fatal(err)
+			}
+			dir = pdir
+			fmt.Print(sim.Summary(p, facts))
+		} else {
+			var err error
+			if c, dir, err = eval.Load(path); err != nil {
+				log.Fatal(err)
+			}
 		}
 		// Never the system of record: the run gets its own log, dropped after.
 		tmp, cleanup, err := store.Throwaway(ctx, "rhea_eval")
@@ -305,7 +346,13 @@ func main() {
 				log.Fatal(err)
 			}
 			defer nw.Close()
-			known, err := nw.Learn(ctx)
+			// A simulated run draws on simulated runs too; a real corpus
+			// never sees them.
+			learnFrom := nw.Learn
+			if network.Synthetic(c.Name) {
+				learnFrom = nw.LearnIncludingSynthetic
+			}
+			known, err := learnFrom(ctx)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -322,6 +369,9 @@ func main() {
 				log.Fatal(err)
 			}
 			name := fmt.Sprintf("eval-%s-%s", c.Name, time.Now().Format("20060102-150405"))
+			if network.Synthetic(c.Name) { // stays marked: never a real client's figure
+				name = fmt.Sprintf("%s-%s", c.Name, time.Now().Format("20060102-150405"))
+			}
 			if _, err := nw.Publish(ctx, name, rules); err != nil {
 				log.Fatal(err)
 			}
@@ -331,6 +381,79 @@ func main() {
 			fmt.Print(rep.Verbose())
 		} else {
 			fmt.Print(rep)
+		}
+
+	case "sim":
+		fs := flag.NewFlagSet("sim", flag.ExitOnError)
+		months := fs.Int("months", 0, "override the persona's months")
+		paraphrase := fs.Int("paraphrase", 0, "ask the model for N rephrasings of every interview answer and save them beside the persona")
+		voice := fs.Int("voice", 0, "compile with the k-th paraphrase (0: the scripted answers)")
+		out := fs.String("corpus", "", "write the compiled corpus to this file")
+		play := fs.Bool("play", false, "submit the persona's documents into THIS installation through the door, for a live demo")
+		fs.Parse(os.Args[2:])
+		if fs.NArg() != 1 {
+			log.Fatal("usage: rhea sim [-months N] [-paraphrase N] [-voice N] [-corpus FILE] [-play] PERSONA")
+		}
+		path := fs.Arg(0)
+		p, _, err := sim.Load(path)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if *months > 0 {
+			p.Months = *months
+		}
+		if *paraphrase > 0 {
+			a := agent.New()
+			v, err := sim.Paraphrase(ctx, a.Complete, agent.Model(), p, *paraphrase)
+			if err != nil {
+				log.Fatal(err)
+			}
+			if err := sim.SaveVoices(path, v); err != nil {
+				log.Fatal(err)
+			}
+			fmt.Printf("saved %d voices per answer to %s\n", *paraphrase, sim.VoicesPath(path))
+		}
+		voices, _, err := sim.LoadVoices(path)
+		if err != nil {
+			log.Fatal(err)
+		}
+		c, facts, err := sim.Compile(p, &voices, *voice)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Print(sim.Summary(p, facts))
+		if *out != "" {
+			b, err := json.MarshalIndent(c, "", "  ")
+			if err != nil {
+				log.Fatal(err)
+			}
+			if err := os.WriteFile(*out, append(b, '\n'), 0o644); err != nil {
+				log.Fatal(err)
+			}
+			fmt.Printf("corpus written to %s\n", *out)
+		}
+		if *play {
+			// The demo's business: the same facts, through the real door
+			// into the live log, dedup-keyed so playing twice adds nothing.
+			// The interview stays the human's: it is printed as the script.
+			played, waiting := 0, 0
+			for i, ev := range facts.Events {
+				tr, err := x.TriggerActivity(ctx, "submit_event", map[string]any{
+					"event_type": ev.EventType, "occurred_at": ev.OccurredAt, "payload": ev.Payload,
+				}, "sim:"+p.Name, fmt.Sprintf("sim:%s:%d:%d", p.Name, p.Seed, i))
+				if err != nil {
+					if store.IsDuplicate(err) {
+						continue
+					}
+					log.Fatal(err)
+				}
+				played++
+				waiting += len(tr.Errors)
+			}
+			fmt.Printf("played %d document(s) into this installation; the interview script:\n", played)
+			for i, a := range c.Tasks {
+				fmt.Printf("%2d. %s\n", i+1, a.Intent)
+			}
 		}
 
 	default:

@@ -1,0 +1,1092 @@
+{
+  "name": "nordwind",
+  "description": "Nordwind Sp. z o.o. — a Polish trading company: buys goods from suppliers into one warehouse, sells them to Polish customers, keeps statutory books in PLN.",
+  "seeds": [
+    "../seed/finance.json",
+    "../seed/finance_v2.json",
+    "../seed/finance_v3.json",
+    "../seed/finance_v4.json",
+    "../seed/finance_v5.json",
+    "../seed/finance_v6.json",
+    "../seed/finance_v7.json",
+    "../seed/finance_v8.json",
+    "../seed/finance_v9.json",
+    "../seed/warehouse.json"
+  ],
+  "seed": 7,
+  "from": "2026-01",
+  "months": 9,
+  "company": {
+    "name": "Nordwind Sp. z o.o.",
+    "vat_id": "PL5260301234",
+    "country": "PL"
+  },
+  "customers": [
+    {
+      "name": "Kowalski i Wspólnicy sp. z o.o.",
+      "vat_id": "PL5213456789",
+      "country": "PL"
+    },
+    {
+      "name": "Mazowiecka Hurtownia S.A.",
+      "vat_id": "PL7010203040",
+      "country": "PL"
+    },
+    {
+      "name": "Baltic Trade sp. j.",
+      "vat_id": "PL5842233445",
+      "country": "PL"
+    }
+  ],
+  "suppliers": [
+    {
+      "name": "Omikron GmbH",
+      "vat_id": "DE123456789",
+      "country": "DE"
+    },
+    {
+      "name": "Fabryka Metali Zabrze S.A.",
+      "vat_id": "PL6481122334",
+      "country": "PL"
+    }
+  ],
+  "items": [
+    {
+      "sku": "WID-1",
+      "name": "Widget",
+      "unit": "szt",
+      "price": "45.00",
+      "cost": "30.00"
+    },
+    {
+      "sku": "GAD-1",
+      "name": "Gadget",
+      "unit": "szt",
+      "price": "120.00",
+      "cost": "85.50"
+    },
+    {
+      "sku": "BRK-7",
+      "name": "Bracket",
+      "unit": "szt",
+      "price": "12.50",
+      "cost": "7.25"
+    }
+  ],
+  "locations": [
+    {
+      "code": "MAIN",
+      "name": "Magazyn główny"
+    }
+  ],
+  "accounts": [
+    {
+      "code": "201",
+      "name": "Rozrachunki z odbiorcami",
+      "type": "debtor"
+    },
+    {
+      "code": "202",
+      "name": "Rozrachunki z dostawcami",
+      "type": "creditor"
+    },
+    {
+      "code": "221",
+      "name": "VAT naliczony",
+      "type": "tax"
+    },
+    {
+      "code": "222",
+      "name": "VAT należny",
+      "type": "tax"
+    },
+    {
+      "code": "300",
+      "name": "Rozliczenie zakupu",
+      "type": "clearing"
+    },
+    {
+      "code": "330",
+      "name": "Towary",
+      "type": "asset"
+    },
+    {
+      "code": "700",
+      "name": "Sprzedaż towarów",
+      "type": "revenue"
+    }
+  ],
+  "vat_rates": [
+    {
+      "code": "23",
+      "name": "23%",
+      "percent": 23
+    }
+  ],
+  "volume": {
+    "sales_invoices": 8,
+    "deliveries": 3,
+    "purchase_invoices": 3,
+    "issues": 5,
+    "complaints": 1,
+    "paid_share": 70,
+    "payment_days": 14,
+    "stock_counts": [
+      "2026-06-30",
+      "2026-09-30"
+    ]
+  },
+  "postings": {
+    "sales_invoice": 3,
+    "purchase_invoice": 3,
+    "pz_line": 2
+  },
+  "book": "pl-stat",
+  "interview": [
+    {
+      "answer": "Our master data: the chart of accounts, the companies we deal with (ourselves, customers, suppliers), the catalogue items, the warehouse locations and the VAT rates each become their own master-data object.",
+      "mode": "bundle",
+      "reference": {
+        "bundle_id": "master-data",
+        "description": "Master data events become master-data objects.",
+        "rules": [
+          {
+            "rule_id": "register-account",
+            "description": "accounts",
+            "priority": 10,
+            "spec": {
+              "match": {
+                "event_type": "account.created"
+              },
+              "effect": {
+                "object": {
+                  "type": "account",
+                  "fields": {
+                    "code": "=$.code",
+                    "name": "=$.name",
+                    "type": "=$.type"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "rule_id": "register-company",
+            "description": "companies",
+            "priority": 10,
+            "spec": {
+              "match": {
+                "event_type": "company.registered"
+              },
+              "effect": {
+                "object": {
+                  "type": "company",
+                  "fields": {
+                    "name": "=$.name",
+                    "kind": "=$.kind",
+                    "vat_id": "=$.vat_id",
+                    "country": "=$.country"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "rule_id": "register-item",
+            "description": "items",
+            "priority": 10,
+            "spec": {
+              "match": {
+                "event_type": "item.created"
+              },
+              "effect": {
+                "object": {
+                  "type": "item",
+                  "fields": {
+                    "sku": "=$.sku",
+                    "name": "=$.name",
+                    "unit": "=$.unit"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "rule_id": "register-vat-rate",
+            "description": "VAT rates",
+            "priority": 10,
+            "spec": {
+              "match": {
+                "event_type": "vat_rate.defined"
+              },
+              "effect": {
+                "object": {
+                  "type": "vat_rate",
+                  "fields": {
+                    "code": "=$.code",
+                    "name": "=$.name",
+                    "percent": "=$.percent"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "rule_id": "register-location",
+            "description": "locations",
+            "priority": 10,
+            "spec": {
+              "match": {
+                "event_type": "location.created"
+              },
+              "effect": {
+                "object": {
+                  "type": "location",
+                  "fields": {
+                    "code": "=$.code",
+                    "name": "=$.name"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "warrant": {
+          "basis": "practice",
+          "citations": [
+            "master data as records of their own"
+          ],
+          "scope": "any market"
+        }
+      }
+    },
+    {
+      "answer": "Every sales invoice we issue becomes a sales invoice document: number, issue date, the seller and the buyer found by NIP, the net amount, the currency and the VAT rate code from the invoice. VAT is the net times the rate's percent divided by 100, rounded half up to the grosz; gross is net plus VAT; the due date is the issue date plus the payment days printed on the invoice; the status starts open and can later move to paid. Each sales invoice is posted in the book pl-stat: debit 201 with the gross, credit 700 with the net, credit 222 with the VAT.",
+      "mode": "bundle",
+      "reference": {
+        "bundle_id": "sales-invoices",
+        "description": "Sales invoices become documents with computed VAT and post to the statutory book.",
+        "object_types": [
+          {
+            "name": "sales_invoice",
+            "domain": "finance",
+            "is_document": true,
+            "label_field": "number",
+            "fields": [
+              {
+                "name": "number",
+                "type": "string",
+                "required": true
+              },
+              {
+                "name": "issue_date",
+                "type": "date",
+                "required": true
+              },
+              {
+                "name": "due_date",
+                "type": "date",
+                "required": true
+              },
+              {
+                "name": "seller",
+                "type": "ref<company>",
+                "required": true
+              },
+              {
+                "name": "buyer",
+                "type": "ref<company>",
+                "required": true
+              },
+              {
+                "name": "net",
+                "type": "money",
+                "required": true
+              },
+              {
+                "name": "vat",
+                "type": "money",
+                "required": true
+              },
+              {
+                "name": "gross",
+                "type": "money",
+                "required": true
+              },
+              {
+                "name": "vat_rate",
+                "type": "ref<vat_rate>",
+                "required": true
+              },
+              {
+                "name": "currency",
+                "type": "string",
+                "required": true
+              },
+              {
+                "name": "status",
+                "type": "enum",
+                "required": true,
+                "values": [
+                  "open",
+                  "paid"
+                ]
+              }
+            ],
+            "lifecycle": {
+              "field": "status",
+              "transitions": {
+                "open": [
+                  "paid"
+                ]
+              }
+            }
+          }
+        ],
+        "rules": [
+          {
+            "rule_id": "book-sales-invoice",
+            "description": "sales invoice documents with VAT computed and rounded",
+            "priority": 100,
+            "spec": {
+              "match": {
+                "event_type": "sales.invoice.issued"
+              },
+              "effect": {
+                "object": {
+                  "type": "sales_invoice",
+                  "fields": {
+                    "number": "=$.number",
+                    "issue_date": "=$.issue_date",
+                    "due_date": "=$.issue_date + $.payment_days",
+                    "seller": "=ref(company, vat_id, $.seller_nip)",
+                    "buyer": "=ref(company, vat_id, $.buyer_nip)",
+                    "net": "=$.net",
+                    "vat": "=round($.net * ref(vat_rate, code, $.vat_rate).percent / 100, 2, half_up)",
+                    "gross": "=$.net + round($.net * ref(vat_rate, code, $.vat_rate).percent / 100, 2, half_up)",
+                    "vat_rate": "=ref(vat_rate, code, $.vat_rate)",
+                    "currency": "=$.currency",
+                    "status": "open"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "rule_id": "post-sales-invoice",
+            "description": "a sales invoice posts 201 gross / 700 net, 222 VAT",
+            "priority": 200,
+            "spec": {
+              "match": {
+                "event_type": "object.materialized",
+                "where": [
+                  {
+                    "path": "$.object_type",
+                    "op": "eq",
+                    "value": "sales_invoice"
+                  }
+                ]
+              },
+              "effect": {
+                "postings": {
+                  "book": "pl-stat",
+                  "currency": "=$.state.currency",
+                  "lines": [
+                    {
+                      "account": "201",
+                      "debit": "=$.state.gross"
+                    },
+                    {
+                      "account": "700",
+                      "credit": "=$.state.net"
+                    },
+                    {
+                      "account": "222",
+                      "credit": "=$.state.vat"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ],
+        "warrant": {
+          "basis": "statute",
+          "citations": [
+            "ustawa o VAT art. 106e: kwoty podatku zaokrągla się do pełnych groszy",
+            "ewidencja sprzedaży: Wn 201 / Ma 70x, Ma 222"
+          ],
+          "scope": "PL"
+        }
+      }
+    },
+    {
+      "answer": "Every delivery gets one PZ document (goods received note) with the supplier, the supplier's delivery document number, the warehouse location, the date and the currency. Each delivered item becomes a line of that PZ pointing at it, with the quantity, the unit price and the value being quantity times the unit price stated on the delivery. Every line moves that item's stock into the delivery's location and is posted in the book pl-stat at its value: debit 330, credit 300.",
+      "mode": "bundle",
+      "reference": {
+        "bundle_id": "deliveries",
+        "description": "A delivery becomes a PZ with valued lines; each line moves stock in and posts at its value.",
+        "object_types": [
+          {
+            "name": "pz",
+            "domain": "warehouse",
+            "is_document": true,
+            "label_field": "supplier_document",
+            "fields": [
+              {
+                "name": "supplier",
+                "type": "ref<company>",
+                "required": true
+              },
+              {
+                "name": "supplier_document",
+                "type": "string",
+                "required": true
+              },
+              {
+                "name": "location",
+                "type": "ref<location>",
+                "required": true
+              },
+              {
+                "name": "date",
+                "type": "date",
+                "required": true
+              },
+              {
+                "name": "currency",
+                "type": "string",
+                "required": true
+              }
+            ]
+          },
+          {
+            "name": "pz_line",
+            "domain": "warehouse",
+            "fields": [
+              {
+                "name": "document",
+                "type": "ref<pz>",
+                "required": true
+              },
+              {
+                "name": "item",
+                "type": "ref<item>",
+                "required": true
+              },
+              {
+                "name": "qty",
+                "type": "int",
+                "required": true
+              },
+              {
+                "name": "price",
+                "type": "decimal",
+                "required": true
+              },
+              {
+                "name": "value",
+                "type": "money",
+                "required": true
+              }
+            ]
+          }
+        ],
+        "rules": [
+          {
+            "rule_id": "pz-from-delivery",
+            "description": "one PZ per delivery",
+            "priority": 100,
+            "spec": {
+              "match": {
+                "event_type": "delivery.received"
+              },
+              "effect": {
+                "object": {
+                  "type": "pz",
+                  "fields": {
+                    "supplier": "=ref(company, name, $.supplier)",
+                    "supplier_document": "=$.document",
+                    "location": "=ref(location, code, $.location)",
+                    "date": "=$.date",
+                    "currency": "=$.currency"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "rule_id": "pz-lines",
+            "description": "one valued line per delivered item",
+            "priority": 200,
+            "spec": {
+              "match": {
+                "event_type": "object.materialized",
+                "where": [
+                  {
+                    "path": "$.object_type",
+                    "op": "eq",
+                    "value": "pz"
+                  }
+                ]
+              },
+              "effect": {
+                "object": {
+                  "type": "pz_line",
+                  "fields": {
+                    "document": "=$.doc.object_id",
+                    "item": "=ref(item, sku, $.line.item)",
+                    "qty": "=$.line.qty",
+                    "price": "=$.line.price",
+                    "value": "=$.line.qty * $.line.price"
+                  },
+                  "each": "=$.root.lines[*]"
+                }
+              }
+            }
+          },
+          {
+            "rule_id": "pz-line-moves-stock",
+            "description": "each line moves stock in",
+            "priority": 300,
+            "spec": {
+              "match": {
+                "event_type": "object.materialized",
+                "where": [
+                  {
+                    "path": "$.object_type",
+                    "op": "eq",
+                    "value": "pz_line"
+                  }
+                ]
+              },
+              "effect": {
+                "object": {
+                  "type": "stock_movement",
+                  "fields": {
+                    "item": "=$.state.item",
+                    "location": "=ref(location, code, $.root.location)",
+                    "direction": "in",
+                    "qty": "=$.state.qty",
+                    "date": "=$.root.date"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "rule_id": "pz-line-posts",
+            "description": "each line posts Wn 330 / Ma 300 at its value",
+            "priority": 310,
+            "spec": {
+              "match": {
+                "event_type": "object.materialized",
+                "where": [
+                  {
+                    "path": "$.object_type",
+                    "op": "eq",
+                    "value": "pz_line"
+                  }
+                ]
+              },
+              "effect": {
+                "postings": {
+                  "book": "pl-stat",
+                  "currency": "=$.root.currency",
+                  "lines": [
+                    {
+                      "account": "330",
+                      "debit": "=$.state.value"
+                    },
+                    {
+                      "account": "300",
+                      "credit": "=$.state.value"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ],
+        "warrant": {
+          "basis": "practice",
+          "citations": [
+            "PZ (przyjęcie zewnętrzne) dla każdej dostawy",
+            "zapasy w cenie nabycia: Wn 330 / Ma 300 (ustawa o rachunkowości art. 28)"
+          ],
+          "scope": "PL, handel"
+        }
+      }
+    },
+    {
+      "answer": "A supplier's invoice becomes a purchase invoice document: number, invoice date, the supplier found by NIP, our own company as the owner, the net amount, the currency and the VAT rate code. VAT is the net times the rate's percent divided by 100, rounded half up to the grosz, and gross is net plus VAT. Each purchase invoice is posted in the book pl-stat: debit 300 with the net, debit 221 with the VAT, credit 202 with the gross.",
+      "mode": "bundle",
+      "reference": {
+        "bundle_id": "purchase-invoices",
+        "description": "Supplier invoices become purchase invoice documents with computed VAT and post to the statutory book.",
+        "object_types": [
+          {
+            "name": "purchase_invoice",
+            "domain": "finance",
+            "is_document": true,
+            "label_field": "number",
+            "fields": [
+              {
+                "name": "number",
+                "type": "string",
+                "required": true
+              },
+              {
+                "name": "invoice_date",
+                "type": "date",
+                "required": true
+              },
+              {
+                "name": "supplier",
+                "type": "ref<company>",
+                "required": true
+              },
+              {
+                "name": "owner",
+                "type": "ref<company>",
+                "required": true
+              },
+              {
+                "name": "net",
+                "type": "money",
+                "required": true
+              },
+              {
+                "name": "vat",
+                "type": "money",
+                "required": true
+              },
+              {
+                "name": "gross",
+                "type": "money",
+                "required": true
+              },
+              {
+                "name": "vat_rate",
+                "type": "ref<vat_rate>",
+                "required": true
+              },
+              {
+                "name": "currency",
+                "type": "string",
+                "required": true
+              }
+            ]
+          }
+        ],
+        "rules": [
+          {
+            "rule_id": "book-purchase-invoice",
+            "description": "purchase invoice documents with VAT computed and rounded",
+            "priority": 100,
+            "spec": {
+              "match": {
+                "event_type": "purchase.invoice.received"
+              },
+              "effect": {
+                "object": {
+                  "type": "purchase_invoice",
+                  "fields": {
+                    "number": "=$.number",
+                    "invoice_date": "=$.invoice_date",
+                    "supplier": "=ref(company, vat_id, $.supplier_nip)",
+                    "owner": "=ref(company, kind, \"self\")",
+                    "net": "=$.net",
+                    "vat": "=round($.net * ref(vat_rate, code, $.vat_rate).percent / 100, 2, half_up)",
+                    "gross": "=$.net + round($.net * ref(vat_rate, code, $.vat_rate).percent / 100, 2, half_up)",
+                    "vat_rate": "=ref(vat_rate, code, $.vat_rate)",
+                    "currency": "=$.currency"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "rule_id": "post-purchase-invoice",
+            "description": "a purchase invoice posts 300 net, 221 VAT / 202 gross",
+            "priority": 200,
+            "spec": {
+              "match": {
+                "event_type": "object.materialized",
+                "where": [
+                  {
+                    "path": "$.object_type",
+                    "op": "eq",
+                    "value": "purchase_invoice"
+                  }
+                ]
+              },
+              "effect": {
+                "postings": {
+                  "book": "pl-stat",
+                  "currency": "=$.state.currency",
+                  "lines": [
+                    {
+                      "account": "300",
+                      "debit": "=$.state.net"
+                    },
+                    {
+                      "account": "221",
+                      "debit": "=$.state.vat"
+                    },
+                    {
+                      "account": "202",
+                      "credit": "=$.state.gross"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ],
+        "warrant": {
+          "basis": "practice",
+          "citations": [
+            "faktura zakupu: Wn 300, Wn 221 / Ma 202"
+          ],
+          "scope": "PL"
+        }
+      }
+    },
+    {
+      "answer": "Goods issued from the warehouse become goods issue documents (item, location, quantity, date, reason) and every issue moves that item's stock out of its location.",
+      "mode": "bundle",
+      "reference": {
+        "bundle_id": "goods-issues",
+        "description": "Goods issued become goods issue documents and move stock out.",
+        "rules": [
+          {
+            "rule_id": "book-goods-issue",
+            "description": "goods issue documents",
+            "priority": 100,
+            "spec": {
+              "match": {
+                "event_type": "goods.issued"
+              },
+              "effect": {
+                "object": {
+                  "type": "goods_issue",
+                  "fields": {
+                    "item": "=ref(item, sku, $.item)",
+                    "location": "=ref(location, code, $.location)",
+                    "qty": "=$.qty",
+                    "date": "=$.date",
+                    "reason": "=$.reason"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "rule_id": "issue-moves-stock",
+            "description": "an issue moves stock out",
+            "priority": 200,
+            "spec": {
+              "match": {
+                "event_type": "object.materialized",
+                "where": [
+                  {
+                    "path": "$.object_type",
+                    "op": "eq",
+                    "value": "goods_issue"
+                  }
+                ]
+              },
+              "effect": {
+                "object": {
+                  "type": "stock_movement",
+                  "fields": {
+                    "item": "=$.state.item",
+                    "location": "=$.state.location",
+                    "direction": "out",
+                    "qty": "=$.state.qty",
+                    "date": "=$.state.date"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "warrant": {
+          "basis": "practice",
+          "citations": [
+            "WZ (wydanie zewnętrzne): rozchód z magazynu"
+          ],
+          "scope": "PL, handel"
+        }
+      }
+    },
+    {
+      "answer": "A bank statement line whose reference names one of our sales invoice numbers marks that sales invoice as paid.",
+      "mode": "bundle",
+      "reference": {
+        "bundle_id": "bank-payments",
+        "description": "A bank line naming a sales invoice marks it paid.",
+        "rules": [
+          {
+            "rule_id": "pay-sales-invoice",
+            "description": "a bank line settles the invoice it names",
+            "priority": 300,
+            "spec": {
+              "match": {
+                "event_type": "bank.statement.line"
+              },
+              "effect": {
+                "amend": {
+                  "type": "sales_invoice",
+                  "target": "=ref(sales_invoice, number, $.reference)",
+                  "set": {
+                    "status": "paid"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "warrant": {
+          "basis": "practice",
+          "citations": [
+            "rozliczenie należności z wyciągu bankowego po numerze faktury"
+          ],
+          "scope": "any market"
+        }
+      }
+    },
+    {
+      "answer": "Customer complaints are registered as complaint documents (number, customer, details). Every complaint opens a follow-up case: a new type named case, whose subject is the complaint number and whose status starts open and can later move to resolved.",
+      "mode": "bundle",
+      "reference": {
+        "bundle_id": "complaints",
+        "description": "Complaints and their follow-up cases.",
+        "object_types": [
+          {
+            "name": "complaint",
+            "domain": "sales",
+            "is_document": true,
+            "label_field": "number",
+            "fields": [
+              {
+                "name": "number",
+                "type": "string",
+                "required": true
+              },
+              {
+                "name": "customer",
+                "type": "string",
+                "required": true
+              },
+              {
+                "name": "details",
+                "type": "string",
+                "required": false
+              }
+            ]
+          },
+          {
+            "name": "case",
+            "domain": "work",
+            "label_field": "subject",
+            "fields": [
+              {
+                "name": "subject",
+                "type": "string",
+                "required": true
+              },
+              {
+                "name": "status",
+                "type": "enum",
+                "required": true,
+                "values": [
+                  "open",
+                  "resolved"
+                ]
+              }
+            ],
+            "lifecycle": {
+              "field": "status",
+              "transitions": {
+                "open": [
+                  "resolved"
+                ]
+              }
+            }
+          }
+        ],
+        "rules": [
+          {
+            "rule_id": "book-complaint",
+            "description": "complaint documents",
+            "priority": 100,
+            "spec": {
+              "match": {
+                "event_type": "complaint.registered"
+              },
+              "effect": {
+                "object": {
+                  "type": "complaint",
+                  "fields": {
+                    "number": "=$.number",
+                    "customer": "=$.customer",
+                    "details": "=$.details"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "rule_id": "raise-complaint-case",
+            "description": "a case per complaint",
+            "priority": 200,
+            "spec": {
+              "match": {
+                "event_type": "object.materialized",
+                "where": [
+                  {
+                    "path": "$.object_type",
+                    "op": "eq",
+                    "value": "complaint"
+                  }
+                ]
+              },
+              "effect": {
+                "object": {
+                  "type": "case",
+                  "fields": {
+                    "subject": "=$.state.number",
+                    "status": "open"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "warrant": {
+          "basis": "practice",
+          "citations": [
+            "obsługa reklamacji jako sprawa z cyklem życia"
+          ],
+          "scope": "any market"
+        }
+      }
+    },
+    {
+      "answer": "When a customer withdraws a complaint, its case is resolved.",
+      "mode": "bundle",
+      "reference": {
+        "bundle_id": "withdrawals",
+        "description": "A withdrawal resolves the complaint's case.",
+        "rules": [
+          {
+            "rule_id": "resolve-on-withdrawal",
+            "description": "withdrawal resolves the case",
+            "priority": 300,
+            "spec": {
+              "match": {
+                "event_type": "complaint.withdrawn"
+              },
+              "effect": {
+                "amend": {
+                  "type": "case",
+                  "target": "=ref(case, subject, $.number)",
+                  "set": {
+                    "status": "resolved"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "warrant": {
+          "basis": "practice",
+          "citations": [
+            "wycofana reklamacja zamyka jej sprawę"
+          ],
+          "scope": "any market"
+        }
+      }
+    },
+    {
+      "answer": "A stock count of an item at a location records a stock level: the count date, the counted quantity, the book quantity, which is the sum of that item's stock movements into the location minus those out of it, dated up to and including the count date, and the difference, counted minus book.",
+      "mode": "bundle",
+      "reference": {
+        "bundle_id": "stock-counts",
+        "description": "A stock count records the counted and book quantities and their difference.",
+        "object_types": [
+          {
+            "name": "stock_level",
+            "domain": "warehouse",
+            "fields": [
+              {
+                "name": "item",
+                "type": "ref<item>",
+                "required": true
+              },
+              {
+                "name": "location",
+                "type": "ref<location>",
+                "required": true
+              },
+              {
+                "name": "date",
+                "type": "date",
+                "required": true
+              },
+              {
+                "name": "counted",
+                "type": "int",
+                "required": true
+              },
+              {
+                "name": "book",
+                "type": "int",
+                "required": true
+              },
+              {
+                "name": "difference",
+                "type": "int",
+                "required": true
+              }
+            ]
+          }
+        ],
+        "rules": [
+          {
+            "rule_id": "record-stock-count",
+            "description": "book quantity as the sum of movements up to the count date",
+            "priority": 100,
+            "spec": {
+              "match": {
+                "event_type": "stock.counted"
+              },
+              "effect": {
+                "object": {
+                  "type": "stock_level",
+                  "fields": {
+                    "item": "=ref(item, sku, $.item)",
+                    "location": "=ref(location, code, $.location)",
+                    "date": "=$.date",
+                    "counted": "=$.counted",
+                    "book": "=sum(m in objects(stock_movement, item, ref(item, sku, $.item)) where m.location = ref(location, code, $.location) and m.date <= $.date: if(m.direction = \"in\", m.qty, -m.qty))",
+                    "difference": "=$.counted - sum(m in objects(stock_movement, item, ref(item, sku, $.item)) where m.location = ref(location, code, $.location) and m.date <= $.date: if(m.direction = \"in\", m.qty, -m.qty))"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "warrant": {
+          "basis": "statute",
+          "citations": [
+            "inwentaryzacja: stan księgowy na dzień spisu a stan z natury (ustawa o rachunkowości art. 26)"
+          ],
+          "scope": "PL"
+        }
+      }
+    }
+  ]
+}

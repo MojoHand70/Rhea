@@ -1,0 +1,703 @@
+{
+  "name": "helios",
+  "description": "Helios Studio sp. z o.o. — a Polish services company: sells consulting, design and support, buys office and hosting services, no warehouse.",
+  "seeds": [
+    "../seed/finance.json",
+    "../seed/finance_v2.json",
+    "../seed/finance_v3.json",
+    "../seed/finance_v4.json",
+    "../seed/finance_v5.json",
+    "../seed/finance_v6.json",
+    "../seed/finance_v7.json",
+    "../seed/finance_v8.json",
+    "../seed/finance_v9.json",
+    "../seed/warehouse.json"
+  ],
+  "seed": 11,
+  "from": "2026-01",
+  "months": 9,
+  "company": {
+    "name": "Helios Studio sp. z o.o.",
+    "vat_id": "PL7011998877",
+    "country": "PL"
+  },
+  "customers": [
+    {
+      "name": "Agencja Reklamowa Nova sp. z o.o.",
+      "vat_id": "PL5272001122",
+      "country": "PL"
+    },
+    {
+      "name": "Tech Park Gdańsk S.A.",
+      "vat_id": "PL5833344556",
+      "country": "PL"
+    }
+  ],
+  "suppliers": [
+    {
+      "name": "Biuro Plus sp. z o.o.",
+      "vat_id": "PL6762223344",
+      "country": "PL"
+    },
+    {
+      "name": "Hostingowo sp. z o.o.",
+      "vat_id": "PL9542211009",
+      "country": "PL"
+    }
+  ],
+  "items": [
+    {
+      "sku": "CONS-H",
+      "name": "Konsultacja (godzina)",
+      "unit": "godz",
+      "price": "250.00"
+    },
+    {
+      "sku": "DSGN-D",
+      "name": "Projekt graficzny (dzień)",
+      "unit": "dzień",
+      "price": "1600.00"
+    },
+    {
+      "sku": "SUP-M",
+      "name": "Opieka miesięczna",
+      "unit": "mies",
+      "price": "900.00"
+    }
+  ],
+  "accounts": [
+    {
+      "code": "201",
+      "name": "Rozrachunki z odbiorcami",
+      "type": "debtor"
+    },
+    {
+      "code": "202",
+      "name": "Rozrachunki z dostawcami",
+      "type": "creditor"
+    },
+    {
+      "code": "221",
+      "name": "VAT naliczony",
+      "type": "tax"
+    },
+    {
+      "code": "222",
+      "name": "VAT należny",
+      "type": "tax"
+    },
+    {
+      "code": "402",
+      "name": "Usługi obce",
+      "type": "expense"
+    },
+    {
+      "code": "701",
+      "name": "Sprzedaż usług",
+      "type": "revenue"
+    }
+  ],
+  "vat_rates": [
+    {
+      "code": "23",
+      "name": "23%",
+      "percent": 23
+    }
+  ],
+  "volume": {
+    "sales_invoices": 6,
+    "purchase_invoices": 2,
+    "complaints": 1,
+    "paid_share": 80,
+    "payment_days": 14
+  },
+  "postings": {
+    "sales_invoice": 3,
+    "purchase_invoice": 3
+  },
+  "book": "pl-stat",
+  "interview": [
+    {
+      "answer": "Our master data: the chart of accounts, the companies we deal with (ourselves, customers, suppliers), the services we sell as catalogue items, and the VAT rates each become their own master-data object.",
+      "mode": "bundle",
+      "reference": {
+        "bundle_id": "master-data",
+        "description": "Master data events become master-data objects.",
+        "rules": [
+          {
+            "rule_id": "register-account",
+            "description": "accounts",
+            "priority": 10,
+            "spec": {
+              "match": {
+                "event_type": "account.created"
+              },
+              "effect": {
+                "object": {
+                  "type": "account",
+                  "fields": {
+                    "code": "=$.code",
+                    "name": "=$.name",
+                    "type": "=$.type"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "rule_id": "register-company",
+            "description": "companies",
+            "priority": 10,
+            "spec": {
+              "match": {
+                "event_type": "company.registered"
+              },
+              "effect": {
+                "object": {
+                  "type": "company",
+                  "fields": {
+                    "name": "=$.name",
+                    "kind": "=$.kind",
+                    "vat_id": "=$.vat_id",
+                    "country": "=$.country"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "rule_id": "register-item",
+            "description": "items",
+            "priority": 10,
+            "spec": {
+              "match": {
+                "event_type": "item.created"
+              },
+              "effect": {
+                "object": {
+                  "type": "item",
+                  "fields": {
+                    "sku": "=$.sku",
+                    "name": "=$.name",
+                    "unit": "=$.unit"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "rule_id": "register-vat-rate",
+            "description": "VAT rates",
+            "priority": 10,
+            "spec": {
+              "match": {
+                "event_type": "vat_rate.defined"
+              },
+              "effect": {
+                "object": {
+                  "type": "vat_rate",
+                  "fields": {
+                    "code": "=$.code",
+                    "name": "=$.name",
+                    "percent": "=$.percent"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "warrant": {
+          "basis": "practice",
+          "citations": [
+            "master data as records of their own"
+          ],
+          "scope": "any market"
+        }
+      }
+    },
+    {
+      "answer": "Every sales invoice we issue becomes a sales invoice document: number, issue date, the seller and the buyer found by NIP, the net amount, the currency and the VAT rate code from the invoice. VAT is the net times the rate's percent divided by 100, rounded half up to the grosz; gross is net plus VAT; the due date is the issue date plus the payment days printed on the invoice; the status starts open and can later move to paid. Each sales invoice is posted in the book pl-stat: debit 201 with the gross, credit 701 with the net, credit 222 with the VAT.",
+      "mode": "bundle",
+      "reference": {
+        "bundle_id": "sales-invoices",
+        "description": "Sales invoices become documents with computed VAT and post to the statutory book.",
+        "object_types": [
+          {
+            "name": "sales_invoice",
+            "domain": "finance",
+            "is_document": true,
+            "label_field": "number",
+            "fields": [
+              {
+                "name": "number",
+                "type": "string",
+                "required": true
+              },
+              {
+                "name": "issue_date",
+                "type": "date",
+                "required": true
+              },
+              {
+                "name": "due_date",
+                "type": "date",
+                "required": true
+              },
+              {
+                "name": "seller",
+                "type": "ref<company>",
+                "required": true
+              },
+              {
+                "name": "buyer",
+                "type": "ref<company>",
+                "required": true
+              },
+              {
+                "name": "net",
+                "type": "money",
+                "required": true
+              },
+              {
+                "name": "vat",
+                "type": "money",
+                "required": true
+              },
+              {
+                "name": "gross",
+                "type": "money",
+                "required": true
+              },
+              {
+                "name": "vat_rate",
+                "type": "ref<vat_rate>",
+                "required": true
+              },
+              {
+                "name": "currency",
+                "type": "string",
+                "required": true
+              },
+              {
+                "name": "status",
+                "type": "enum",
+                "required": true,
+                "values": [
+                  "open",
+                  "paid"
+                ]
+              }
+            ],
+            "lifecycle": {
+              "field": "status",
+              "transitions": {
+                "open": [
+                  "paid"
+                ]
+              }
+            }
+          }
+        ],
+        "rules": [
+          {
+            "rule_id": "book-sales-invoice",
+            "description": "sales invoice documents with VAT computed and rounded",
+            "priority": 100,
+            "spec": {
+              "match": {
+                "event_type": "sales.invoice.issued"
+              },
+              "effect": {
+                "object": {
+                  "type": "sales_invoice",
+                  "fields": {
+                    "number": "=$.number",
+                    "issue_date": "=$.issue_date",
+                    "due_date": "=$.issue_date + $.payment_days",
+                    "seller": "=ref(company, vat_id, $.seller_nip)",
+                    "buyer": "=ref(company, vat_id, $.buyer_nip)",
+                    "net": "=$.net",
+                    "vat": "=round($.net * ref(vat_rate, code, $.vat_rate).percent / 100, 2, half_up)",
+                    "gross": "=$.net + round($.net * ref(vat_rate, code, $.vat_rate).percent / 100, 2, half_up)",
+                    "vat_rate": "=ref(vat_rate, code, $.vat_rate)",
+                    "currency": "=$.currency",
+                    "status": "open"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "rule_id": "post-sales-invoice",
+            "description": "a sales invoice posts 201 gross / 701 net, 222 VAT",
+            "priority": 200,
+            "spec": {
+              "match": {
+                "event_type": "object.materialized",
+                "where": [
+                  {
+                    "path": "$.object_type",
+                    "op": "eq",
+                    "value": "sales_invoice"
+                  }
+                ]
+              },
+              "effect": {
+                "postings": {
+                  "book": "pl-stat",
+                  "currency": "=$.state.currency",
+                  "lines": [
+                    {
+                      "account": "201",
+                      "debit": "=$.state.gross"
+                    },
+                    {
+                      "account": "701",
+                      "credit": "=$.state.net"
+                    },
+                    {
+                      "account": "222",
+                      "credit": "=$.state.vat"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ],
+        "warrant": {
+          "basis": "statute",
+          "citations": [
+            "ustawa o VAT art. 106e: kwoty podatku zaokrągla się do pełnych groszy",
+            "ewidencja sprzedaży: Wn 201 / Ma 70x, Ma 222"
+          ],
+          "scope": "PL"
+        }
+      }
+    },
+    {
+      "answer": "A supplier's invoice becomes a purchase invoice document: number, invoice date, the supplier found by NIP, our own company as the owner, the net amount, the currency and the VAT rate code. VAT is the net times the rate's percent divided by 100, rounded half up to the grosz, and gross is net plus VAT. Each purchase invoice is posted in the book pl-stat: debit 402 with the net, debit 221 with the VAT, credit 202 with the gross.",
+      "mode": "bundle",
+      "reference": {
+        "bundle_id": "purchase-invoices",
+        "description": "Supplier invoices become purchase invoice documents with computed VAT and post to the statutory book.",
+        "object_types": [
+          {
+            "name": "purchase_invoice",
+            "domain": "finance",
+            "is_document": true,
+            "label_field": "number",
+            "fields": [
+              {
+                "name": "number",
+                "type": "string",
+                "required": true
+              },
+              {
+                "name": "invoice_date",
+                "type": "date",
+                "required": true
+              },
+              {
+                "name": "supplier",
+                "type": "ref<company>",
+                "required": true
+              },
+              {
+                "name": "owner",
+                "type": "ref<company>",
+                "required": true
+              },
+              {
+                "name": "net",
+                "type": "money",
+                "required": true
+              },
+              {
+                "name": "vat",
+                "type": "money",
+                "required": true
+              },
+              {
+                "name": "gross",
+                "type": "money",
+                "required": true
+              },
+              {
+                "name": "vat_rate",
+                "type": "ref<vat_rate>",
+                "required": true
+              },
+              {
+                "name": "currency",
+                "type": "string",
+                "required": true
+              }
+            ]
+          }
+        ],
+        "rules": [
+          {
+            "rule_id": "book-purchase-invoice",
+            "description": "purchase invoice documents with VAT computed and rounded",
+            "priority": 100,
+            "spec": {
+              "match": {
+                "event_type": "purchase.invoice.received"
+              },
+              "effect": {
+                "object": {
+                  "type": "purchase_invoice",
+                  "fields": {
+                    "number": "=$.number",
+                    "invoice_date": "=$.invoice_date",
+                    "supplier": "=ref(company, vat_id, $.supplier_nip)",
+                    "owner": "=ref(company, kind, \"self\")",
+                    "net": "=$.net",
+                    "vat": "=round($.net * ref(vat_rate, code, $.vat_rate).percent / 100, 2, half_up)",
+                    "gross": "=$.net + round($.net * ref(vat_rate, code, $.vat_rate).percent / 100, 2, half_up)",
+                    "vat_rate": "=ref(vat_rate, code, $.vat_rate)",
+                    "currency": "=$.currency"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "rule_id": "post-purchase-invoice",
+            "description": "a purchase invoice posts 402 net, 221 VAT / 202 gross",
+            "priority": 200,
+            "spec": {
+              "match": {
+                "event_type": "object.materialized",
+                "where": [
+                  {
+                    "path": "$.object_type",
+                    "op": "eq",
+                    "value": "purchase_invoice"
+                  }
+                ]
+              },
+              "effect": {
+                "postings": {
+                  "book": "pl-stat",
+                  "currency": "=$.state.currency",
+                  "lines": [
+                    {
+                      "account": "402",
+                      "debit": "=$.state.net"
+                    },
+                    {
+                      "account": "221",
+                      "debit": "=$.state.vat"
+                    },
+                    {
+                      "account": "202",
+                      "credit": "=$.state.gross"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ],
+        "warrant": {
+          "basis": "practice",
+          "citations": [
+            "faktura zakupu: Wn 402, Wn 221 / Ma 202"
+          ],
+          "scope": "PL"
+        }
+      }
+    },
+    {
+      "answer": "A bank statement line whose reference names one of our sales invoice numbers marks that sales invoice as paid.",
+      "mode": "bundle",
+      "reference": {
+        "bundle_id": "bank-payments",
+        "description": "A bank line naming a sales invoice marks it paid.",
+        "rules": [
+          {
+            "rule_id": "pay-sales-invoice",
+            "description": "a bank line settles the invoice it names",
+            "priority": 300,
+            "spec": {
+              "match": {
+                "event_type": "bank.statement.line"
+              },
+              "effect": {
+                "amend": {
+                  "type": "sales_invoice",
+                  "target": "=ref(sales_invoice, number, $.reference)",
+                  "set": {
+                    "status": "paid"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "warrant": {
+          "basis": "practice",
+          "citations": [
+            "rozliczenie należności z wyciągu bankowego po numerze faktury"
+          ],
+          "scope": "any market"
+        }
+      }
+    },
+    {
+      "answer": "Customer complaints are registered as complaint documents (number, customer, details). Every complaint opens a follow-up case: a new type named case, whose subject is the complaint number and whose status starts open and can later move to resolved.",
+      "mode": "bundle",
+      "reference": {
+        "bundle_id": "complaints",
+        "description": "Complaints and their follow-up cases.",
+        "object_types": [
+          {
+            "name": "complaint",
+            "domain": "sales",
+            "is_document": true,
+            "label_field": "number",
+            "fields": [
+              {
+                "name": "number",
+                "type": "string",
+                "required": true
+              },
+              {
+                "name": "customer",
+                "type": "string",
+                "required": true
+              },
+              {
+                "name": "details",
+                "type": "string",
+                "required": false
+              }
+            ]
+          },
+          {
+            "name": "case",
+            "domain": "work",
+            "label_field": "subject",
+            "fields": [
+              {
+                "name": "subject",
+                "type": "string",
+                "required": true
+              },
+              {
+                "name": "status",
+                "type": "enum",
+                "required": true,
+                "values": [
+                  "open",
+                  "resolved"
+                ]
+              }
+            ],
+            "lifecycle": {
+              "field": "status",
+              "transitions": {
+                "open": [
+                  "resolved"
+                ]
+              }
+            }
+          }
+        ],
+        "rules": [
+          {
+            "rule_id": "book-complaint",
+            "description": "complaint documents",
+            "priority": 100,
+            "spec": {
+              "match": {
+                "event_type": "complaint.registered"
+              },
+              "effect": {
+                "object": {
+                  "type": "complaint",
+                  "fields": {
+                    "number": "=$.number",
+                    "customer": "=$.customer",
+                    "details": "=$.details"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "rule_id": "raise-complaint-case",
+            "description": "a case per complaint",
+            "priority": 200,
+            "spec": {
+              "match": {
+                "event_type": "object.materialized",
+                "where": [
+                  {
+                    "path": "$.object_type",
+                    "op": "eq",
+                    "value": "complaint"
+                  }
+                ]
+              },
+              "effect": {
+                "object": {
+                  "type": "case",
+                  "fields": {
+                    "subject": "=$.state.number",
+                    "status": "open"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "warrant": {
+          "basis": "practice",
+          "citations": [
+            "obsługa reklamacji jako sprawa z cyklem życia"
+          ],
+          "scope": "any market"
+        }
+      }
+    },
+    {
+      "answer": "When a customer withdraws a complaint, its case is resolved.",
+      "mode": "bundle",
+      "reference": {
+        "bundle_id": "withdrawals",
+        "description": "A withdrawal resolves the complaint's case.",
+        "rules": [
+          {
+            "rule_id": "resolve-on-withdrawal",
+            "description": "withdrawal resolves the case",
+            "priority": 300,
+            "spec": {
+              "match": {
+                "event_type": "complaint.withdrawn"
+              },
+              "effect": {
+                "amend": {
+                  "type": "case",
+                  "target": "=ref(case, subject, $.number)",
+                  "set": {
+                    "status": "resolved"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "warrant": {
+          "basis": "practice",
+          "citations": [
+            "wycofana reklamacja zamyka jej sprawę"
+          ],
+          "scope": "any market"
+        }
+      }
+    }
+  ]
+}

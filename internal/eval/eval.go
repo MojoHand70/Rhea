@@ -42,6 +42,19 @@ type Corpus struct {
 	// ExpectWhere counts objects by one field's value: a lifecycle that
 	// moved, a book that was posted to — state a bare count cannot see.
 	ExpectWhere []Where `json:"expect_where,omitempty"`
+	// ExpectSum totals one field over every object of a type: the VAT the
+	// documents carry, the stock the counts found — computed values a count
+	// cannot judge. Money totals are decimal strings, int totals plain.
+	ExpectSum []Sum `json:"expect_sum,omitempty"`
+}
+
+// Sum expects the values of Field over all objects of Type to add up to
+// Total, rendered the way the field's type renders: money as a decimal
+// string, int as a whole number.
+type Sum struct {
+	Type  string `json:"type"`
+	Field string `json:"field"`
+	Total string `json:"total"`
 }
 
 // Where expects Count objects of Type whose Field equals Value.
@@ -227,6 +240,30 @@ func Run(ctx context.Context, st *store.Store, a *agent.Agent, model string, c C
 		}
 		if n != w.Count {
 			rep.Mismatch = append(rep.Mismatch, fmt.Sprintf("%s with %s=%s: %d of %d", w.Type, w.Field, w.Value, n, w.Count))
+		}
+	}
+	for _, sm := range c.ExpectSum {
+		objs, err := st.ObjectsByType(ctx, sm.Type)
+		if err != nil {
+			return rep, err
+		}
+		ot, err := st.GetObjectType(ctx, sm.Type)
+		if err != nil {
+			rep.Mismatch = append(rep.Mismatch, fmt.Sprintf("sum of %s.%s: %v", sm.Type, sm.Field, err))
+			continue
+		}
+		fd, _ := ot.Field(sm.Field)
+		var total int64
+		for _, o := range objs {
+			n, _ := o.State[sm.Field].(float64) // JSON numbers; money is minor units
+			total += int64(n)
+		}
+		got := fmt.Sprint(total)
+		if fd.Type == "money" {
+			got = core.FormatMoney(total)
+		}
+		if got != sm.Total {
+			rep.Mismatch = append(rep.Mismatch, fmt.Sprintf("sum of %s.%s: %s of %s", sm.Type, sm.Field, got, sm.Total))
 		}
 	}
 	types := make([]string, 0, len(c.Expect))

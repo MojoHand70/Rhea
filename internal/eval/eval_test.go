@@ -8,6 +8,7 @@ import (
 
 	"rhea/internal/agent"
 	"rhea/internal/eval"
+	"rhea/internal/sim"
 	"rhea/internal/store/storetest"
 )
 
@@ -63,5 +64,43 @@ func TestRefusedDraftIsResidue(t *testing.T) {
 	}
 	if rep.Done() || rep.Rows[0].Error == "" || len(rep.Residue) != rep.Intake {
 		t.Fatalf("wrong answer not reported as residue:\n%s", rep)
+	}
+}
+
+// A simulated customer is solvable the same way: its scripted interview
+// answers, played back as the agent, explain the whole generated intake and
+// land the state the generator computed independently of any rule — counts,
+// lifecycle moves, and the sums of computed values.
+func TestPersonaReferenceIsDone(t *testing.T) {
+	for _, name := range []string{"nordwind", "helios"} {
+		t.Run(name, func(t *testing.T) {
+			p, dir, err := sim.Load("../../testdata/customers/" + name + ".json")
+			if err != nil {
+				t.Fatal(err)
+			}
+			p.Months = 2 // the generator is uniform per month; two keep the test quick
+			c, facts, err := sim.Compile(p, nil, 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Log("\n" + sim.Summary(p, facts))
+			s := storetest.New(t)
+			recorded := &agent.Agent{Complete: func(ctx context.Context, system, user string) (string, error) {
+				for _, task := range c.Tasks {
+					if strings.HasSuffix(strings.TrimSpace(user), "User intent: "+task.Intent) {
+						return string(task.Reference), nil
+					}
+				}
+				return "", fmt.Errorf("no reference for this ask")
+			}}
+			rep, err := eval.Run(context.Background(), s, recorded, "reference", c, dir, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Log("\n" + rep.String())
+			if !rep.Done() {
+				t.Fatalf("persona %s not done:\n%s", name, rep)
+			}
+		})
 	}
 }

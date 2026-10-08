@@ -37,6 +37,14 @@ var latestSQL string
 // knowledge: below it, a shape is one client's own business.
 const Floor = 2
 
+// SyntheticPrefix names a simulated customer's installation. What it
+// publishes is stored marked and never counted for a real client: a hundred
+// simulated businesses agreeing would be an invented statistic.
+const SyntheticPrefix = "sim:"
+
+// Synthetic reports whether an installation name is a simulated customer's.
+func Synthetic(installation string) bool { return strings.HasPrefix(installation, SyntheticPrefix) }
+
 // Network is the shared store of published shapes.
 type Network struct {
 	Pool *pgxpool.Pool
@@ -149,7 +157,8 @@ func (n *Network) Publish(ctx context.Context, installation string, rules []core
 	if err != nil {
 		return 0, err
 	}
-	_, err = n.Pool.Exec(ctx, `INSERT INTO publication (installation, shapes) VALUES ($1, $2)`, installation, b)
+	_, err = n.Pool.Exec(ctx, `INSERT INTO publication (installation, shapes, synthetic) VALUES ($1, $2, $3)`,
+		installation, b, Synthetic(installation))
 	return len(shapes), err
 }
 
@@ -168,9 +177,19 @@ type Knowledge struct {
 	Questions     map[string][]Answer `json:"questions"`
 }
 
-// Learn counts the latest publication of every installation.
-func (n *Network) Learn(ctx context.Context) (Knowledge, error) {
-	rows, err := n.Pool.Query(ctx, latestSQL)
+// Learn counts the latest publication of every real installation — what a
+// client's Rhea draws on. Simulated customers are left out.
+func (n *Network) Learn(ctx context.Context) (Knowledge, error) { return n.learn(ctx, false) }
+
+// LearnIncludingSynthetic also counts simulated customers: the knowledge a
+// simulated run draws on, so the flywheel can be exercised without a real
+// client's figures ever moving.
+func (n *Network) LearnIncludingSynthetic(ctx context.Context) (Knowledge, error) {
+	return n.learn(ctx, true)
+}
+
+func (n *Network) learn(ctx context.Context, synthetic bool) (Knowledge, error) {
+	rows, err := n.Pool.Query(ctx, latestSQL, synthetic)
 	if err != nil {
 		return Knowledge{}, err
 	}

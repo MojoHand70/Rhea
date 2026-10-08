@@ -55,6 +55,58 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-09 — simulated customers: a business as data, ground truth without the model
+
+- **KK (2026-10-08): "Can we simulate customers?" — yes, the third way.**
+  A persona (`testdata/customers/<name>.json`, `internal/sim`) is a
+  business as data: its company, customers and suppliers, catalogue,
+  chart, VAT rates, monthly volumes, booking policy as line counts, and
+  the interview — every answer with its known-good reference bundle. A
+  deterministic generator (seeded PCG) turns it into a year of documents
+  and the state a correct implementation ends in, computed without any
+  rule: counts per type, lifecycle moves (paid invoices, resolved cases),
+  and sums of computed values (VAT, gross, PZ value, book stock). The
+  model's only role is paraphrasing the answers; facts never come from
+  it, and the scripted expected state judges every run.
+- **Two personas from the demo story.** `nordwind` (trading: deliveries
+  → PZ with valued lines, stock in and out, purchase and sales invoices
+  with VAT computed and rounded, bank lines settling invoices, complaints
+  and cases, two stock counts whose book quantity is a fold over the
+  movements up to the count date) and `helios` (services: no warehouse,
+  costs on 402, revenue on 701). Same questions, different answers — the
+  network's closing scene has its two subscribers. Nine months of
+  Nordwind are 262 events; the reference test plays two months of each
+  through the real kernel to DONE.
+- **The corpus gained `expect_sum`**: totals of one field over a type,
+  money as decimal strings — the check a count cannot make on a computed
+  value. `rhea eval` accepts a persona file (`-voice N` picks a
+  paraphrase, `-months N` shortens the year); `rhea sim PERSONA` prints
+  what it generates, `-corpus FILE` writes the compiled corpus,
+  `-paraphrase N` asks the model and saves the voices beside the persona
+  (`<name>.voices.json`, checked token by token: every number, code and
+  status word must survive), `-play` submits the documents into the live
+  installation through the door, dedup-keyed, and prints the interview as
+  the demo's script.
+- **Synthetic installations never count.** Publications from a `sim:`
+  installation are stored marked (`publication.synthetic`); `Learn`
+  leaves them out, `LearnIncludingSynthetic` is what a simulated run
+  draws on, `rhea network -synthetic` shows them. A hundred simulated
+  businesses agreeing would be an invented statistic (DIRECTION, "Rhea
+  suggests standards"); the test asserts a real client's shape never
+  surfaces on their strength. Plain-corpus eval runs still publish as
+  real, as the five flywheel runs did — unchanged, recorded.
+- **Found on the way:** rules take effect with the period, so a
+  persona's master data is dated the first day, not the day before;
+  deliveries land early in the month so stock is never issued before it
+  arrived in date order.
+- **Not run live** (no key this session): the first `rhea eval
+  testdata/customers/nordwind.json` with the model is the formula
+  language's live proof, and `-paraphrase 3` then `-voice 1..3` is the
+  phrasing test. Next for the simulated customer: the generator emitting
+  the documents themselves (a KSeF file, an MT940 line, a scanned PDF)
+  when the intake brief lands, so one persona feeds intake and
+  calculation alike.
+
 ## 2026-10-08 — the formula language: arithmetic as data, explained by its inputs
 
 - **Every `=` template is a formula** (`core/formula.go`, `core/vm.go`):
