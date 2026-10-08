@@ -55,6 +55,28 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-08 — late-understanding attempt: evolution carries, enrichment and backfill fail
+
+- **The attempt is kept as executable evidence** in
+  `internal/exec/late_test.go`, a bank-account story run against the
+  adopted note (DIRECTION, "Late understanding").
+- **Evolution carries as pure data.** `bank_account` v2 adds optional
+  `iban` and `bank_country`, and the three existing accounts keep
+  `type_version` 1. Nothing earned.
+- **Enrichment fails as predicted.** The IBAN arrives as a fact
+  (`bank_account.details_provided`), and the amending rule is refused at
+  expansion ("declares no lifecycle"). The event waits in the worklist.
+  The contortion is recorded too: a lifecycle invented only to buy
+  consent (`state: open`, no transitions) carries the waiting IBAN, and
+  it also validates a rule that rewrites the account *number*, the very
+  identity the IBAN was keyed by. Consent spelled as a status machine is
+  all or nothing. The exit is `amendable`, per field.
+- **Backfill fails as predicted.** A KYC check rule approved after the
+  accounts were opened: its dry run sees three checks, and its approval
+  delivers none. Explained events are never revisited, so understanding
+  that arrives after the facts has no way in. The exit is the backfill
+  door.
+
 ## 2026-10-08 — the agent proposes bundles; a corpus that discriminates
 
 - **`DraftBundle`**: the agent answers one interview question with a
