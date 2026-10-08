@@ -1012,6 +1012,19 @@ rounding and reads through links (the brief above); folds over the
 payload; folds over linked collections with the cap; the first kernel
 method when FIFO arrives in phase 4.
 
+**Shipped 2026-10-08** (see DECISIONS, "the formula language"): the first
+three steps. Every `=` template is a formula compiled by the kernel and
+run by its VM over exact rationals; division lives only under a declared
+`round`; money, int and decimal are kinds the checker and the VM both
+enforce; `$.state.item.std_cost` and `ref(...).field` read through links
+typed by the catalog; folds walk the payload's lists or `objects(T, field,
+value)` under the cap; every computed value is baked into its event with
+the formula and the inputs it read, and the walk shows them. The first
+customers — PZ line value, the PZ entry at standard cost, VAT with
+statutory rounding, the due date, the stock count's book quantity — run
+end to end. The fourth step waits for FIFO; formula → SQL waits for an
+analysis view that needs it.
+
 ## Scale and security are welded, not added (KK, 2026-10-08)
 
 KK's question: how does Rhea carry thousands of companies and millions

@@ -24,6 +24,10 @@ type explainObject struct {
 	ObjectType   string `json:"object_type"`
 	Label        string `json:"label,omitempty"`
 	DetailViewID string `json:"detail_view_id,omitempty"`
+	// Calc explains every computed field: the formula and the inputs it
+	// read, as baked into the derived event at firing — the walk shows the
+	// arithmetic, never recomputes it.
+	Calc map[string]core.Calc `json:"calc,omitempty"`
 }
 
 type explainNode struct {
@@ -187,7 +191,7 @@ func (s *Server) buildExplainTree(ctx context.Context, ix *chainIndex, root core
 		}
 		if mat, ok := ix.mats[ev.ID]; ok {
 			obj := &explainObject{ObjectID: mat.ObjectID, ObjectType: mat.ObjectType,
-				DetailViewID: detailFor[mat.ObjectType]}
+				DetailViewID: detailFor[mat.ObjectType], Calc: mat.Calc}
 			if t, ok := typeByName[mat.ObjectType]; ok && t.LabelField != "" {
 				if lbl, ok := mat.State[t.LabelField].(string); ok {
 					obj.Label = lbl
@@ -200,7 +204,7 @@ func (s *Server) buildExplainTree(ctx context.Context, ix *chainIndex, root core
 			if json.Unmarshal(ev.Payload, &am) == nil {
 				ea := &explainAmend{explainObject: explainObject{
 					ObjectID: am.ObjectID, ObjectType: am.ObjectType,
-					DetailViewID: detailFor[am.ObjectType]}, Set: am.Set}
+					DetailViewID: detailFor[am.ObjectType], Calc: am.Calc}, Set: am.Set}
 				if o, err := s.Store.GetObject(ctx, am.ObjectID); err == nil {
 					if t, ok := typeByName[o.Type]; ok && t.LabelField != "" {
 						ea.Label, _ = o.State[t.LabelField].(string)

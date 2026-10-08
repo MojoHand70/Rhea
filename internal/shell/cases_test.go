@@ -163,7 +163,7 @@ func TestCasesArePureData(t *testing.T) {
 			Fields: map[string]string{
 				"kind": "complaint_followup", "subject_type": "complaint",
 				"subject_id": "=$.object_id", "title": "=$.state.customer",
-				"status": "open", "due_date": "=$.state.registered_on",
+				"status": "open", "due_date": "=$.state.registered_on + 14",
 			}}},
 	})
 	activate("resolve-case", 300, core.RuleSpec{

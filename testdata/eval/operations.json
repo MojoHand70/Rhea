@@ -69,13 +69,16 @@
         "lines": [
           {
             "item": "WID-1",
-            "qty": 10
+            "qty": 10,
+            "price": "12.50"
           },
           {
             "item": "GAD-1",
-            "qty": 4
+            "qty": 4,
+            "price": "7.00"
           }
-        ]
+        ],
+        "currency": "PLN"
       }
     },
     {
@@ -439,7 +442,7 @@
       }
     },
     {
-      "intent": "Every delivery gets one PZ document (goods received note): a new type named pz, recording the supplier, the supplier's delivery document number, the warehouse location and the date. Each delivered item becomes a line of that PZ (a new type named pz_line, pointing at its PZ), and every line moves that item's stock in at the delivery's location.",
+      "intent": "Every delivery gets one PZ document (goods received note): a new type named pz, recording the supplier, the supplier's delivery document number, the warehouse location and the date. Each delivered item becomes a line of that PZ (a new type named pz_line, pointing at its PZ), and every line moves that item's stock in at the delivery's location, with the line value being the quantity times the unit price stated on the delivery.",
       "mode": "bundle",
       "reference": {
         "bundle_id": "deliveries",
@@ -491,6 +494,11 @@
                 "name": "qty",
                 "type": "int",
                 "required": true
+              },
+              {
+                "name": "value",
+                "type": "money",
+                "required": true
               }
             ]
           }
@@ -539,7 +547,8 @@
                   "fields": {
                     "document": "=$.doc.object_id",
                     "item": "=ref(item, sku, $.line.item)",
-                    "qty": "=$.line.qty"
+                    "qty": "=$.line.qty",
+                    "value": "=$.line.qty * $.line.price"
                   }
                 }
               }

@@ -154,6 +154,17 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 		if err := r.Spec.Validate(target); err != nil {
 			return sum, fmt.Errorf("rule %s: %w", r.RuleID, err)
 		}
+		// The typed gate: formulas checked against the pack's own draft
+		// types first, then the kernel's.
+		if err := r.Spec.Check(func(name string) (core.ObjectType, bool) {
+			if t, ok := packTypes[name]; ok {
+				return t, true
+			}
+			t, err := s.GetObjectType(ctx, name)
+			return t, err == nil
+		}); err != nil {
+			return sum, fmt.Errorf("rule %s: %w", r.RuleID, err)
+		}
 		rule, err := s.InsertRuleVersion(ctx, core.Rule{
 			ID: r.RuleID, Status: core.StatusDraft, Priority: r.Priority,
 			EffectiveFrom: r.EffectiveFrom, CreatedBy: "pack:" + m.Pack,

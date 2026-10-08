@@ -274,6 +274,20 @@ function renderDetail(d) {
    the exact rule version that explains it, each object a door to its detail.
    Both sides of an intercompany position walk to the same root. */
 
+/* A computed value explains itself: the formula as the rule wrote it and
+   every input it read, by concrete path — baked into the event at firing,
+   never recomputed here. "the sum of these twelve values", shown. */
+function renderCalc(calc) {
+  if (!calc) return [];
+  return Object.entries(calc).map(([field, c]) => {
+    const inputs = Object.entries(c.inputs || {}).map(([k, v]) =>
+      `${k} = ${Array.isArray(v) ? v.length + " objects" : v}`).join(", ");
+    return el("div", { class: "explain-line explain-calc" },
+      el("span", { class: "explain-formula" }, `${field} ${c.formula}`),
+      inputs ? el("span", { class: "hint" }, ` where ${inputs}`) : "");
+  });
+}
+
 function openExplain(q) {
   const key = q.object ? `explain:o:${q.object}` : `explain:e:${q.event}`;
   const title = q.object ? `Why ${q.object}` : `Why event #${q.event}`;
@@ -306,6 +320,7 @@ function openExplain(q) {
               } }, text)
             : text,
           el("span", { class: "hint" }, ` ${o.object_type}`)));
+        head.append(...renderCalc(o.calc));
       }
       if (n.amend) {
         const a = n.amend;
@@ -318,6 +333,7 @@ function openExplain(q) {
               } }, text)
             : text,
           el("span", { class: "hint" }, ` ${a.object_type}: ${delta}`)));
+        head.append(...renderCalc(a.calc));
       }
       if (n.payload) {
         head.append(el("details", {}, el("summary", {}, "the fact"),

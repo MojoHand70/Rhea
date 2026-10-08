@@ -682,7 +682,7 @@ func (s *Store) AllObjects(ctx context.Context) ([]core.Object, error) {
 // match; the period lock asks only whether any exist.
 func (s *Store) FindObjectIDsByField(ctx context.Context, typ, field, value string) ([]string, error) {
 	rows, err := s.Pool.Query(ctx,
-		`SELECT object_id FROM object WHERE object_type = $1 AND state->>$2 = $3 ORDER BY object_id`,
+		`SELECT object_id FROM object WHERE object_type = $1 AND state->>$2 = $3 ORDER BY source_event_id, object_id`,
 		typ, field, value)
 	if err != nil {
 		return nil, err

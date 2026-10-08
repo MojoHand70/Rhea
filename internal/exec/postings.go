@@ -45,10 +45,11 @@ const FXRateObjectType = "fx_rate"
 // ledger rules may book the same event (a VAT entry beside a revenue entry)
 // and one ledger rule may book each of an event's lines (a valuation entry
 // per movement) without colliding.
-func ExpandPostings(p *core.PostingsTemplate, postingType core.ObjectType, ev core.Event, idBase, ruleID string, payload any, lookup core.Lookup, get core.Getter) ([]core.MaterializedObject, error) {
-	if lookup == nil {
+func ExpandPostings(p *core.PostingsTemplate, postingType core.ObjectType, ev core.Event, idBase, ruleID string, payload any, env *core.Env) ([]core.MaterializedObject, error) {
+	if env == nil || env.Lookup == nil {
 		return nil, fmt.Errorf("postings need object state, none available here")
 	}
+	lookup, get := env.Lookup, env.Get
 
 	if len(ev.OccurredAt) < 7 {
 		return nil, fmt.Errorf("event has no business date")
@@ -56,7 +57,7 @@ func ExpandPostings(p *core.PostingsTemplate, postingType core.ObjectType, ev co
 	book := DefaultBook
 	if p.Book != "" {
 		var err error
-		if book, err = evalString(p.Book, payload); err != nil {
+		if book, err = evalString(p.Book, payload, env); err != nil {
 			return nil, fmt.Errorf("book: %w", err)
 		}
 	}
@@ -80,7 +81,7 @@ func ExpandPostings(p *core.PostingsTemplate, postingType core.ObjectType, ev co
 		}
 	}
 
-	currency, err := evalString(p.Currency, payload)
+	currency, err := evalString(p.Currency, payload, env)
 	if err != nil {
 		return nil, fmt.Errorf("currency: %w", err)
 	}
@@ -92,11 +93,12 @@ func ExpandPostings(p *core.PostingsTemplate, postingType core.ObjectType, ev co
 		accountID string
 		side      string
 		amount    int64
+		calc      *core.Calc
 	}
 	var debits, credits int64
 	lines := make([]txLine, 0, len(p.Lines))
 	for i, l := range p.Lines {
-		code, err := evalString(l.Account, payload)
+		code, err := evalString(l.Account, payload, env)
 		if err != nil {
 			return nil, fmt.Errorf("line %d account: %w", i+1, err)
 		}
@@ -108,7 +110,7 @@ func ExpandPostings(p *core.PostingsTemplate, postingType core.ObjectType, ev co
 		if l.Credit != "" {
 			side, tmpl = "credit", l.Credit
 		}
-		amount, err := evalMoney(tmpl, payload)
+		amount, calc, err := evalMoney(tmpl, payload, env)
 		if err != nil {
 			return nil, fmt.Errorf("line %d amount: %w", i+1, err)
 		}
@@ -120,7 +122,7 @@ func ExpandPostings(p *core.PostingsTemplate, postingType core.ObjectType, ev co
 		} else {
 			credits += amount
 		}
-		lines = append(lines, txLine{accountID, side, amount})
+		lines = append(lines, txLine{accountID, side, amount, calc})
 	}
 	if debits != credits {
 		return nil, fmt.Errorf("entry does not balance: debits %s, credits %s %s",
@@ -133,7 +135,7 @@ func ExpandPostings(p *core.PostingsTemplate, postingType core.ObjectType, ev co
 	bookCurrency, converted := currency, false
 	var mant, div int64
 	if p.Convert != nil {
-		to, err := evalString(p.Convert.To, payload)
+		to, err := evalString(p.Convert.To, payload, env)
 		if err != nil {
 			return nil, fmt.Errorf("convert.to: %w", err)
 		}
@@ -142,7 +144,7 @@ func ExpandPostings(p *core.PostingsTemplate, postingType core.ObjectType, ev co
 			if get == nil {
 				return nil, fmt.Errorf("conversion needs object state, none available here")
 			}
-			date, err := evalString(p.Convert.Date, payload)
+			date, err := evalString(p.Convert.Date, payload, env)
 			if err != nil {
 				return nil, fmt.Errorf("convert.date: %w", err)
 			}
@@ -188,12 +190,22 @@ func ExpandPostings(p *core.PostingsTemplate, postingType core.ObjectType, ev co
 			state["tx_amount"] = tx.amount
 			state["tx_currency"] = currency
 		}
-		return core.MaterializedObject{
+		mat := core.MaterializedObject{
 			ObjectID:    fmt.Sprintf("posting-%s-%s-%d", idBase, ruleID, n),
 			ObjectType:  PostingObjectType,
 			TypeVersion: postingType.Version,
 			State:       state,
 		}
+		// A computed amount carries its explanation: the transaction amount
+		// is what the formula produced; conversion is the kernel's method.
+		if tx != nil && tx.calc != nil {
+			field := "amount"
+			if p.Convert != nil {
+				field = "tx_amount"
+			}
+			mat.Calc = map[string]core.Calc{field: *tx.calc}
+		}
+		return mat
 	}
 	out := make([]core.MaterializedObject, 0, len(lines)+1)
 	var fdebits, fcredits int64
@@ -217,7 +229,7 @@ func ExpandPostings(p *core.PostingsTemplate, postingType core.ObjectType, ev co
 			return nil, fmt.Errorf("rounding broke the balance by %s %s — the rule declares no rounding_account",
 				core.FormatMoney(absInt64(diff)), bookCurrency)
 		}
-		code, err := evalString(p.Convert.RoundingAccount, payload)
+		code, err := evalString(p.Convert.RoundingAccount, payload, env)
 		if err != nil {
 			return nil, fmt.Errorf("convert.rounding_account: %w", err)
 		}
@@ -299,12 +311,12 @@ func intersects(a, b []string) bool {
 	return false
 }
 
-func evalString(tmpl string, payload any) (string, error) {
+func evalString(tmpl string, payload any, env *core.Env) (string, error) {
 	t, err := core.ParseTemplate(tmpl)
 	if err != nil {
 		return "", err
 	}
-	v, err := t.Eval(payload, core.FieldDef{Type: "string"}, nil)
+	v, _, err := t.Evaluate(payload, core.FieldDef{Type: "string"}, env)
 	if err != nil {
 		return "", err
 	}
@@ -315,22 +327,24 @@ func evalString(tmpl string, payload any) (string, error) {
 	return s, nil
 }
 
-// evalMoney accepts a path or sum() template over decimal strings, or a
-// literal decimal string, and yields minor units.
-func evalMoney(tmpl string, payload any) (int64, error) {
+// evalMoney accepts any money template — a path, a formula, or a literal
+// decimal string — and yields minor units, with the formula's explanation
+// when the amount was computed.
+func evalMoney(tmpl string, payload any, env *core.Env) (int64, *core.Calc, error) {
 	t, err := core.ParseTemplate(tmpl)
 	if err != nil {
-		return 0, err
+		return 0, nil, err
 	}
-	v, err := t.Eval(payload, core.FieldDef{Type: "money"}, nil)
+	v, calc, err := t.Evaluate(payload, core.FieldDef{Type: "money"}, env)
 	if err != nil {
-		return 0, err
+		return 0, nil, err
 	}
 	switch n := v.(type) {
 	case int64:
-		return n, nil
+		return n, calc, nil
 	case string: // a literal template reaches us unparsed
-		return core.ParseMoney(n)
+		m, err := core.ParseMoney(n)
+		return m, nil, err
 	}
-	return 0, fmt.Errorf("want a money amount, got %T", v)
+	return 0, nil, fmt.Errorf("want a money amount, got %T", v)
 }

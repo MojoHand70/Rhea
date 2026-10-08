@@ -1,7 +1,7 @@
 {
   "pack": "pl-warehouse",
   "version": 1,
-  "description": "Przyjęcie zewnętrzne (PZ): dostawa staje się dokumentem PZ z pozycjami; każda pozycja przyjmuje towar na magazyn i księguje się Wn 330 / Ma 300 w cenie nabycia. Wariant: dostawa podaje wartości pozycji. Wycena później (fakturą zakupu) i z cennika czekają na język formuł.",
+  "description": "Przyjęcie zewnętrzne (PZ): dostawa staje się dokumentem PZ z pozycjami; każda pozycja przyjmuje towar na magazyn i księguje się Wn 330 / Ma 300 w cenie nabycia. Wariant: dostawa podaje wartości pozycji. Wariant z cennika — wartość pozycji liczona formułą =round($.line.qty * ref(item, sku, $.line.item).std_cost, 2, half_up) (pole std_cost typu decimal na item) — i wycena późniejsza fakturą zakupu (uzupełnienie pola value) to warianty do wyboru przez klienta.",
   "requires": ["company", "account", "posting", "item", "location", "stock_movement"],
   "warrant": {
     "basis": "practice",

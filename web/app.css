@@ -166,3 +166,7 @@ tr.diff-changed .k { color: var(--warn); }
               padding: var(--space-2) var(--space-3); cursor: pointer; }
 .omni-entry:hover { background: var(--surface-raised); }
 .omni-kind { color: var(--accent); font-weight: var(--weight-bold); }
+
+/* the formula walk: computed values show their arithmetic */
+.explain-calc { font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.85em; }
+.explain-formula { color: var(--fg-strong, inherit); }

@@ -187,11 +187,10 @@ func (b *BundleDraft) Validate(catalog []core.ObjectType) error {
 		if d.Priority == 0 {
 			d.Priority = 100
 		}
-		target, err := targetType(d.Spec, overlay)
-		if err != nil {
+		if _, err := targetType(d.Spec, overlay); err != nil {
 			return fmt.Errorf("rule %s: %w", d.RuleID, err)
 		}
-		if err := d.Spec.Validate(target); err != nil {
+		if err := d.Spec.Check(CatalogOf(overlay)); err != nil {
 			return fmt.Errorf("rule %s: %w", d.RuleID, err)
 		}
 	}

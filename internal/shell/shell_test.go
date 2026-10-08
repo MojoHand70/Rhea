@@ -209,6 +209,11 @@ func TestM0DemoStory(t *testing.T) {
 		c.Object.ObjectID != list.ObjectIDs[0] || c.Object.DetailViewID != "invoice-detail" {
 		t.Fatalf("walk child = %+v", walk.Tree.Children[0])
 	}
+	// A computed value explains itself: the formula and the inputs it read,
+	// as baked into the event — the walk never recomputes.
+	if calc := walk.Tree.Children[0].Object.Calc["total"]; calc.Formula != "=sum($.lines[*].amount)" || calc.Inputs["$.lines[0].amount"] == nil {
+		t.Fatalf("walk calc = %+v", walk.Tree.Children[0].Object.Calc)
+	}
 
 	// 7. Analysis view aggregates from the DuckDB read side.
 	var analysis struct {
@@ -342,9 +347,10 @@ type walkNode struct {
 	RuleID  string          `json:"rule_id"`
 	Payload json.RawMessage `json:"payload"`
 	Object  *struct {
-		ObjectID     string `json:"object_id"`
-		ObjectType   string `json:"object_type"`
-		DetailViewID string `json:"detail_view_id"`
+		ObjectID     string               `json:"object_id"`
+		ObjectType   string               `json:"object_type"`
+		DetailViewID string               `json:"detail_view_id"`
+		Calc         map[string]core.Calc `json:"calc"`
 	} `json:"object"`
 	Children []walkNode `json:"children"`
 }

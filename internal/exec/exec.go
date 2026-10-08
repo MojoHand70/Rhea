@@ -15,6 +15,10 @@ import (
 
 type Executor struct {
 	Store *store.Store
+	// MaxCollection caps a formula's linked collection read (objects());
+	// zero means core.DefaultMaxCollection. Tests lower it to see the
+	// refusal; nothing raises it per rule — the cap is the kernel's.
+	MaxCollection int
 	// draftTypes overlays a bundle's draft object types for its dry run:
 	// set only on a simulation's private copy of the executor, never on the
 	// one that books.
@@ -430,7 +434,7 @@ func (x *Executor) expandEffect(ctx context.Context, root core.Event, idBase str
 		if err != nil {
 			return nil, fmt.Errorf("rule %s v%d: %w", r.ID, r.Version, err)
 		}
-		mats, err := ExpandPostings(r.Spec.Effect.Postings, postingType, root, idBase, r.ID, payload, lookup, get)
+		mats, err := ExpandPostings(r.Spec.Effect.Postings, postingType, root, idBase, r.ID, payload, x.env(ctx, payload, lookup, get))
 		if err != nil {
 			return nil, fmt.Errorf("rule %s v%d postings: %w", r.ID, r.Version, err)
 		}
@@ -443,7 +447,7 @@ func (x *Executor) expandEffect(ctx context.Context, root core.Event, idBase str
 		return nil, fmt.Errorf("rule %s v%d: %w", r.ID, r.Version, err)
 	}
 	if tmpl.Each == "" {
-		state, err := Expand(tmpl, objType, payload, lookup, get)
+		state, calc, err := Expand(tmpl, objType, payload, x.env(ctx, payload, lookup, get))
 		if err != nil {
 			return nil, fmt.Errorf("rule %s v%d expand: %w", r.ID, r.Version, err)
 		}
@@ -455,6 +459,7 @@ func (x *Executor) expandEffect(ctx context.Context, root core.Event, idBase str
 			ObjectType:  objType.Name,
 			TypeVersion: objType.Version,
 			State:       state,
+			Calc:        calc,
 		}}, nil
 	}
 
@@ -481,7 +486,7 @@ func (x *Executor) expandEffect(ctx context.Context, root core.Event, idBase str
 	mats := make([]core.MaterializedObject, 0, len(arr))
 	for i, el := range arr {
 		scope := map[string]any{"doc": payload, "line": el, "n": i + 1}
-		state, err := Expand(tmpl, objType, scope, lookup, get)
+		state, calc, err := Expand(tmpl, objType, scope, x.env(ctx, scope, lookup, get))
 		if err != nil {
 			return nil, fmt.Errorf("rule %s v%d line %d: %w", r.ID, r.Version, i+1, err)
 		}
@@ -490,6 +495,7 @@ func (x *Executor) expandEffect(ctx context.Context, root core.Event, idBase str
 			ObjectType:  objType.Name,
 			TypeVersion: objType.Version,
 			State:       state,
+			Calc:        calc,
 		})
 	}
 	return mats, nil
@@ -514,11 +520,12 @@ func (x *Executor) expandAmend(ctx context.Context, r core.Rule, payload any, lo
 	}).Validate(&objType); err != nil {
 		return nil, fmt.Errorf("rule %s v%d: %w", r.ID, r.Version, err)
 	}
+	env := x.env(ctx, payload, lookup, get)
 	t, err := core.ParseTemplate(tmpl.Target)
 	if err != nil {
 		return nil, fmt.Errorf("rule %s v%d target: %w", r.ID, r.Version, err)
 	}
-	v, err := t.Eval(payload, core.FieldDef{}, lookup)
+	v, _, err := t.Evaluate(payload, core.FieldDef{}, env)
 	if err != nil {
 		return nil, fmt.Errorf("rule %s v%d target: %w", r.ID, r.Version, err)
 	}
@@ -537,13 +544,14 @@ func (x *Executor) expandAmend(ctx context.Context, r core.Rule, payload any, lo
 		return nil, fmt.Errorf("rule %s v%d amend: no %s %q — the event waits for its object", r.ID, r.Version, tmpl.Type, id)
 	}
 	set := make(map[string]any, len(tmpl.Set))
+	var calc map[string]core.Calc
 	for name, raw := range tmpl.Set {
 		fd, _ := objType.Field(name)
 		tp, err := core.ParseTemplate(raw)
 		if err != nil {
 			return nil, fmt.Errorf("rule %s v%d set %q: %w", r.ID, r.Version, name, err)
 		}
-		val, err := tp.Eval(payload, fd, lookup)
+		val, c, err := tp.Evaluate(payload, fd, env)
 		if err != nil {
 			return nil, fmt.Errorf("rule %s v%d set %q: %w", r.ID, r.Version, name, err)
 		}
@@ -551,13 +559,19 @@ func (x *Executor) expandAmend(ctx context.Context, r core.Rule, payload any, lo
 			return nil, fmt.Errorf("rule %s v%d set %q: %w", r.ID, r.Version, name, err)
 		}
 		set[name] = val
+		if c != nil {
+			if calc == nil {
+				calc = map[string]core.Calc{}
+			}
+			calc[name] = *c
+		}
 	}
 	// Consent was judged per field by Validate; the lifecycle field, when the
 	// type has one, additionally moves only along a declared transition. An
 	// enrichment-only type (amendable fields, no lifecycle) has no law to apply.
 	lc := objType.Lifecycle
 	if lc == nil {
-		return &core.AmendedObject{ObjectID: id, ObjectType: tmpl.Type, Set: set}, nil
+		return &core.AmendedObject{ObjectID: id, ObjectType: tmpl.Type, Set: set, Calc: calc}, nil
 	}
 	if nv, touched := set[lc.Field]; touched {
 		from, _ := cur[lc.Field].(string)
@@ -573,36 +587,84 @@ func (x *Executor) expandAmend(ctx context.Context, r core.Rule, payload any, lo
 				r.ID, r.Version, lc.Field, from, to, objType.Name)
 		}
 	}
-	return &core.AmendedObject{ObjectID: id, ObjectType: tmpl.Type, Set: set}, nil
+	return &core.AmendedObject{ObjectID: id, ObjectType: tmpl.Type, Set: set, Calc: calc}, nil
 }
 
 // Expand evaluates every field template against the payload, typed by the
 // object type. Missing required fields, evaluation failures or unresolvable
 // refs abort the whole expansion — a half-materialized object never exists.
-func Expand(tmpl core.ObjectTemplate, objType core.ObjectType, payload any, lookup core.Lookup, get core.Getter) (map[string]any, error) {
+// Computed fields return their Calc — formula and inputs — for the derived
+// event to carry; nil when nothing was computed.
+func Expand(tmpl core.ObjectTemplate, objType core.ObjectType, payload any, env *core.Env) (map[string]any, map[string]core.Calc, error) {
 	if err := (core.RuleSpec{
 		Match:  core.Match{EventType: "-"},
 		Effect: core.Effect{Object: tmpl},
 	}).Validate(&objType); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	state := make(map[string]any, len(tmpl.Fields))
+	var calc map[string]core.Calc
 	for name, raw := range tmpl.Fields {
 		fd, _ := objType.Field(name)
 		t, err := core.ParseTemplate(raw)
 		if err != nil {
-			return nil, fmt.Errorf("field %q: %w", name, err)
+			return nil, nil, fmt.Errorf("field %q: %w", name, err)
 		}
-		v, err := t.Eval(payload, fd, lookup)
+		v, c, err := t.Evaluate(payload, fd, env)
 		if err != nil {
-			return nil, fmt.Errorf("field %q: %w", name, err)
+			return nil, nil, fmt.Errorf("field %q: %w", name, err)
 		}
-		if err := vouchRef(fd, t, v, get); err != nil {
-			return nil, fmt.Errorf("field %q: %w", name, err)
+		if err := vouchRef(fd, t, v, env.Get); err != nil {
+			return nil, nil, fmt.Errorf("field %q: %w", name, err)
 		}
 		state[name] = v
+		if c != nil {
+			if calc == nil {
+				calc = map[string]core.Calc{}
+			}
+			calc[name] = *c
+		}
 	}
-	return state, nil
+	return state, calc, nil
+}
+
+// env is the formula environment of one expansion: lookups and reads
+// against the chain-visible world, the catalog that types object fields,
+// and which payload prefixes hold typed object state — a cascade payload
+// {object_type, state} types $.state, an each scope {doc: …} types
+// $.doc.state. Formulas read money as money and follow refs through links
+// because of this; every value they compute is baked into the event.
+func (x *Executor) env(ctx context.Context, payload any, lookup core.Lookup, get core.Getter) *core.Env {
+	return &core.Env{
+		Lookup: lookup,
+		Get:    get,
+		Types: func(name string) (core.ObjectType, bool) {
+			t, err := x.objectType(ctx, name)
+			return t, err == nil
+		},
+		Typed:         typedPrefixes(payload),
+		MaxCollection: x.MaxCollection,
+	}
+}
+
+func typedPrefixes(payload any) map[string]string {
+	m, ok := payload.(map[string]any)
+	if !ok {
+		return nil
+	}
+	if t, ok := m["object_type"].(string); ok {
+		if _, ok := m["state"]; ok {
+			return map[string]string{"$.state": t}
+		}
+	}
+	if doc, ok := m["doc"].(map[string]any); ok {
+		if t, ok := doc["object_type"].(string); ok {
+			if _, ok := doc["state"]; ok {
+				return map[string]string{"$.doc.state": t}
+			}
+		}
+	}
+	return nil
 }
 
 // vouchRef checks an object id a ref field carries by path (KK, 2026-10-08:
@@ -681,4 +743,3 @@ func (x *Executor) Replay(ctx context.Context) ([]core.Object, error) {
 	}
 	return out, tx.Commit(ctx)
 }
-

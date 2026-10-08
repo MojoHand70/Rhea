@@ -55,6 +55,75 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-08 — the formula language: arithmetic as data, explained by its inputs
+
+- **Every `=` template is a formula** (`core/formula.go`, `core/vm.go`):
+  tokenizer, parser, static checker, compiler to a small instruction set,
+  and a stack VM — the sfmt architecture ported, with Rhea's number core.
+  The template kinds the validator knew stay as laws: a `ref<T>` field
+  takes a bare path or a `ref()`, never a literal and never a computed id.
+  Everything else computes. Existing templates mean exactly what they did.
+- **Numbers are exact rationals (`math/big`); money is sticky.** Kinds:
+  int, money, decimal (a new `decimal` field type: rates, unit costs),
+  string, date, bool, list, object, ref. money × int → money, money ÷
+  money → decimal, money × money refused, int ÷ int → decimal. No floats:
+  a non-integral JSON number is refused, decimals travel as strings.
+- **Rounding is declared, never implied.** `/` is admitted only under a
+  `round(x, places, method)` somewhere above it — a static law. A result
+  stored into a money field must fit two places, into an int field a whole
+  number: a three-place unit cost times a quantity refuses the firing into
+  the worklist with "declare round(…, 2, half_up)". Methods: `half_up`
+  (convert's: half away from zero), `half_even`, `down` (toward zero),
+  `up` (away from zero) — others join by proof. Places capped at six.
+- **Reads through links are typed by the catalog.** `$.state.item.std_cost`
+  follows the ref the causing object holds; `ref(item, sku,
+  $.line.item).std_cost` reads after a lookup. The executor names which
+  payload prefixes hold typed state (`$.state` on a cascade, `$.doc.state`
+  inside `each`), so money reads as money and the walk continues through
+  ref fields via the Getter. Untyped raw reads are what they say: a number
+  is a number, a string is a decimal in waiting. A bare `=$.path` copy
+  keeps every coercion it had — minor-unit numbers on money fields
+  included — so nothing existing changed meaning.
+- **Folds, never loops.** `sum/count/min/max/any/all(v in coll [where p]
+  [: e])` and one `fold(v in coll, acc = init: e)`. Collections are the
+  payload's own lists or `objects(T, field, value)`: a keyed read of state
+  in log order (`FindObjectIDsByField` now orders by `source_event_id`),
+  refused above the cap (`core.DefaultMaxCollection` = 1000;
+  `Executor.MaxCollection` lowers it in tests, nothing raises it per rule).
+  A formula declares its reads by writing them (`Formula.Reads()`). No
+  while, no recursion, no assignment; the only backward jump is a fold's,
+  and a step budget guards the mechanism itself.
+- **Every computed value is explained in the log.** `MaterializedObject.Calc`
+  and `AmendedObject.Calc` (and a posting's computed amount) carry, per
+  computed field, the formula as written and every input read by concrete
+  path — `$.lines[2].qty`, `$.state.item` → the id, `$.state.item.std_cost`,
+  `ref(vat_rate, code, 23)` → the id, `objects(stock_movement, item,
+  item-7)` → the ids. Baked at firing, so replay never recomputes (scale
+  rule 3) and the walk — `/api/explain` and the shell — shows "value =
+  formula where inputs". Copies carry no calc.
+- **The typed draft gate.** `RuleSpec.Check(catalog)` runs wherever a
+  catalog exists — the agent's rule and bundle validation, the pack loader
+  — and refuses unknown fields through links, unlawful kinds (money ×
+  money, a declared string in arithmetic, an amount into a date field),
+  undeclared rounding, malformed folds. `Validate(target)` keeps the
+  data-free laws for every other caller.
+- **First customers pass** (`exec/formula_test.go`): the PZ line valued at
+  qty × the delivery's price; the PZ entry Wn 330 / Ma 300 at the item's
+  standard cost read through the line's link, rounded on purpose; VAT as
+  round(net × rate / 100, 2, half_up) with the rate read after a lookup;
+  the due date as issue date + payment days (the strain recorded in the
+  cases tests on 2026-10-05 is gone: `=$.state.registered_on + 14`); the
+  stock count's book quantity as a fold over the item's movements in the
+  location, the cap refusing. Replay identical.
+- **The agent** reads the grammar with examples (PZ, VAT, due date, stock
+  on hand). The operations corpus task 4 now values each PZ line at
+  quantity × the delivery's unit price; the reference passes offline. No
+  live run this session (no key).
+- **Deferred, named:** formula → SQL for DuckDB analysis views (sfmt 074's
+  shape) when an analysis view needs one; kernel methods callable from a
+  formula (`fifo_cost(item, warehouse, qty)`) when FIFO arrives in phase 4;
+  a per-rule cap only if a real collection needs it.
+
 ## 2026-10-08 — the flywheel, live: what five runs taught
 
 - **Five live runs of the operations corpus with `rhea eval -network`**

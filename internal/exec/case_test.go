@@ -115,10 +115,9 @@ func TestCasesRaiseAsPureData(t *testing.T) {
 				"subject_id":   "=$.object_id",
 				"title":        "=$.state.customer",
 				"status":       "open",
-				// No date arithmetic in templates ("+14 days" is impossible):
-				// the due date is the registered date, a recorded strain whose
-				// exit is the arithmetic sub-language (DIRECTION 2026-10-03).
-				"due_date": "=$.state.registered_on",
+				// Fourteen days to answer: date arithmetic is a formula now
+				// (the strain recorded here on 2026-10-05 is gone).
+				"due_date": "=$.state.registered_on + 14",
 			}}},
 	})
 

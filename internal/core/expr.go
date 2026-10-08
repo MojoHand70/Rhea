@@ -2,49 +2,50 @@ package core
 
 import (
 	"fmt"
-	"math"
 	"slices"
 	"strings"
 )
 
-// The template expression language, deliberately tiny (SPEC §2, Rule):
+// Templates (SPEC §2, Rule): every field value in an effect is a template.
 //
 //	literal                  any string not starting with "="
-//	=$.a.b[0].c              value at path in the event payload
-//	=sum($.x[*].y)           money sum over decimal strings at path, in minor units
-//	=ref(type, field, $.p)   object_id of the single object of that type whose
-//	                         field equals the value at path (ref<type> fields)
-//	=ref(t, f, ref(u, g, $.p))  one step through a link: the t whose f holds
-//	                         the id of the u whose g equals the value at path
+//	=<formula>               a formula (formula.go): a path copy, a lookup,
+//	                         or a computation over the payload and the
+//	                         objects it links to
 //
-// A ref<type> field takes either =ref(...) (resolve by a value) or =$.path
-// carrying an object id — the exact object a cascade reacts to ($.object_id)
-// or a ref it holds ($.state.item). Carried ids are vouched at expansion:
-// the right kind (identity is typed, <type>-…) and existing. Never a literal.
+// Four kinds matter to the validator's laws:
 //
-// Paths: $.seg, seg[N], seg[*]. A [*] fans out into a slice of values.
+//	path     =$.a.b[0].c            a bare copy — for a ref field, an object id
+//	                                carried from the event, vouched at expansion
+//	ref      =ref(type, field, v)   a resolution — the id of the single object
+//	                                of that type whose field equals v; v may
+//	                                itself be a ref(), one step through a link
+//	formula  anything else          qty × price, round(net × rate, 2, half_up),
+//	                                $.state.item.std_cost, date + 14, a fold
+//	literal
+//
+// A ref<type> field takes path or ref, never a literal id and never a
+// computed one. Paths: $.seg, seg[N], seg[*]; [*] fans out into a list.
 
 type Template struct {
-	raw      string
-	kind     string // "literal" | "path" | "sum" | "ref"
-	path     []pathSeg
-	refType  string // ref only: target object type
-	refField string // ref only: field matched against the path's value
-	// inner is a nested ref() whose resolved id is the value matched — one
-	// step through a link: the case whose complaint is complaint R-1 is
-	// ref(case, complaint, ref(complaint, number, $.number)).
-	inner *Template
+	raw     string
+	kind    string // "literal" | "path" | "ref" | "formula"
+	f       *Formula
+	path    []pathSeg // path only
+	refType string    // ref only: the resolved type
 }
 
 // Lookup finds objects in current state: the object_ids of every object of
-// the given type whose field equals value (compared as text). The executor
-// supplies it; contexts without state pass nil. ref() demands exactly one
-// match; other callers (the period lock) ask only whether any exist.
+// the given type whose field equals value (compared as text), in log order.
+// The executor supplies it; contexts without state pass nil. ref() demands
+// exactly one match; other callers (the period lock) ask only whether any
+// exist; objects() takes them all, under the cap.
 type Lookup func(objectType, field string, value any) ([]string, error)
 
 // Getter reads one object's state by id — the kernel's state-read surface
-// for sub-languages whose parameters name objects (the convert clause's
-// fx_rate). ok is false when the object does not exist.
+// for formulas reading through links and for sub-languages whose parameters
+// name objects (the convert clause's fx_rate). ok is false when the object
+// does not exist.
 type Getter func(objectID string) (state map[string]any, ok bool, err error)
 
 // ResolveRef applies ref() semantics to a lookup result: exactly one match.
@@ -73,84 +74,41 @@ type pathSeg struct {
 // holds), which the kernel vouches for at expansion.
 func (t Template) CarriesID() bool { return t.kind == "path" }
 
+// Computes reports a formula proper: a value the walk must explain by its
+// inputs, not a copy, a literal or a resolution.
+func (t Template) Computes() bool { return t.kind == "formula" }
+
+// Formula is the compiled formula behind an "=" template; nil for literals.
+func (t Template) Formula() *Formula { return t.f }
+
 func ParseTemplate(s string) (Template, error) {
 	if !strings.HasPrefix(s, "=") {
 		return Template{raw: s, kind: "literal"}, nil
 	}
-	body := strings.TrimSpace(s[1:])
-	if strings.HasPrefix(body, "ref(") && strings.HasSuffix(body, ")") {
-		parts := strings.SplitN(body[4:len(body)-1], ",", 3)
-		if len(parts) != 3 {
-			return Template{}, fmt.Errorf("ref() wants (type, field, $.path)")
-		}
-		typ, field := strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
-		if typ == "" || field == "" {
-			return Template{}, fmt.Errorf("ref() wants (type, field, $.path)")
-		}
-		arg := strings.TrimSpace(parts[2])
-		if strings.HasPrefix(arg, "ref(") {
-			in, err := ParseTemplate("=" + arg)
-			if err != nil {
-				return Template{}, fmt.Errorf("nested %w", err)
-			}
-			return Template{raw: s, kind: "ref", refType: typ, refField: field, inner: &in}, nil
-		}
-		p, err := parsePath(arg)
-		if err != nil {
-			return Template{}, err
-		}
-		return Template{raw: s, kind: "ref", refType: typ, refField: field, path: p}, nil
-	}
-	if strings.HasPrefix(body, "sum(") && strings.HasSuffix(body, ")") {
-		inner := strings.TrimSpace(body[4 : len(body)-1])
-		p, err := parsePath(inner)
-		if err != nil {
-			return Template{}, err
-		}
-		return Template{raw: s, kind: "sum", path: p}, nil
-	}
-	p, err := parsePath(body)
+	f, err := ParseFormula(strings.TrimSpace(s[1:]))
 	if err != nil {
 		return Template{}, err
 	}
-	return Template{raw: s, kind: "path", path: p}, nil
+	t := Template{raw: s, kind: "formula", f: f}
+	switch {
+	case f.prog.copy:
+		t.kind, t.path = "path", f.tree.path
+	case f.prog.refTyp != "":
+		t.kind, t.refType = "ref", f.prog.refTyp
+	}
+	return t, nil
 }
 
+// parsePath parses a bare $.path (conditions, each).
 func parsePath(s string) ([]pathSeg, error) {
-	if !strings.HasPrefix(s, "$.") {
+	toks, err := lex(strings.TrimSpace(s))
+	if err != nil {
+		return nil, err
+	}
+	if len(toks) != 2 || toks[0].kind != tPath {
 		return nil, fmt.Errorf("path must start with $.")
 	}
-	var segs []pathSeg
-	for _, part := range strings.Split(s[2:], ".") {
-		if part == "" {
-			return nil, fmt.Errorf("empty path segment in %q", s)
-		}
-		seg := pathSeg{index: -1}
-		if i := strings.IndexByte(part, '['); i >= 0 {
-			if !strings.HasSuffix(part, "]") {
-				return nil, fmt.Errorf("unterminated index in %q", part)
-			}
-			ix := part[i+1 : len(part)-1]
-			seg.key = part[:i]
-			seg.hasIx = true
-			if ix == "*" {
-				seg.index = -2
-			} else {
-				n := 0
-				if _, err := fmt.Sscanf(ix, "%d", &n); err != nil || n < 0 {
-					return nil, fmt.Errorf("bad index %q in %q", ix, part)
-				}
-				seg.index = n
-			}
-		} else {
-			seg.key = part
-		}
-		if seg.key == "" {
-			return nil, fmt.Errorf("empty key in segment %q", part)
-		}
-		segs = append(segs, seg)
-	}
-	return segs, nil
+	return toks[0].path, nil
 }
 
 // resolve walks payload (decoded JSON) along the path. A [*] segment fans out:
@@ -195,73 +153,46 @@ func resolve(v any, path []pathSeg) (any, error) {
 	return v, nil
 }
 
-// Eval evaluates the template against a decoded payload. The field def guides
-// coercion and checking: "money" expects decimal strings and yields int64
-// minor units, "enum" admits only the declared values, ref fields resolve
-// through lookup into the target's object_id.
+// Eval evaluates the template against a decoded payload with lookups only:
+// the structural contexts (each, targets, strings). Formulas that read state
+// through links or walk collections need Evaluate with a full Env.
 func (t Template) Eval(payload any, fd FieldDef, lookup Lookup) (any, error) {
-	switch t.kind {
-	case "literal":
-		return checked(t.raw, fd)
-	case "ref":
-		if lookup == nil {
-			return nil, fmt.Errorf("ref() needs object state, none available here")
-		}
-		var v any
-		var err error
-		if t.inner != nil {
-			v, err = t.inner.Eval(payload, FieldDef{}, lookup) // the linked object's id
-		} else {
-			v, err = resolve(payload, t.path)
-		}
-		if err != nil {
-			return nil, err
-		}
-		return ResolveRef(lookup, t.refType, t.refField, v)
-	case "path":
-		v, err := resolve(payload, t.path)
-		if err != nil {
-			return nil, err
-		}
-		if fd.Type == "money" {
-			switch n := v.(type) {
-			case string: // the boundary form: a decimal string
-				return ParseMoney(n)
-			case int64: // the internal form: minor units, as derived payloads carry them
-				return n, nil
-			case float64: // minor units after a JSON round trip
-				if n != math.Trunc(n) {
-					return nil, fmt.Errorf("money field wants minor units, got %v", n)
-				}
-				return int64(n), nil
-			}
-			return nil, fmt.Errorf("money field wants a decimal string or minor units, got %T", v)
-		}
-		return checked(v, fd)
-	case "sum":
-		v, err := resolve(payload, t.path)
-		if err != nil {
-			return nil, err
-		}
-		arr, ok := v.([]any)
-		if !ok {
-			return nil, fmt.Errorf("sum() needs an array, got %T", v)
-		}
-		var total int64
-		for _, el := range arr {
-			s, ok := el.(string)
-			if !ok {
-				return nil, fmt.Errorf("sum() needs decimal strings, got %T", el)
-			}
-			m, err := ParseMoney(s)
-			if err != nil {
-				return nil, err
-			}
-			total += m
-		}
-		return total, nil
+	v, _, err := t.Evaluate(payload, fd, &Env{Lookup: lookup})
+	return v, err
+}
+
+// Evaluate evaluates the template against a decoded payload. The field def
+// guides coercion and checking: "money" yields int64 minor units, "int" a
+// whole number, "decimal" a canonical decimal string, "enum" admits only the
+// declared values, ref fields resolve into the target's object_id. A
+// computed value comes with its Calc — the formula and the inputs read —
+// for the derived event to carry; copies and resolutions return nil.
+func (t Template) Evaluate(payload any, fd FieldDef, env *Env) (any, *Calc, error) {
+	if t.kind == "literal" {
+		v, err := checked(t.raw, fd)
+		return v, nil, err
 	}
-	return nil, fmt.Errorf("unknown template kind %q", t.kind)
+	v, inputs, err := t.f.run(payload, env)
+	if err != nil {
+		return nil, nil, err
+	}
+	out, err := toField(v, fd, t.kind == "path")
+	if err != nil {
+		return nil, nil, err
+	}
+	if t.kind != "formula" {
+		return out, nil, nil
+	}
+	return out, &Calc{Formula: t.raw, Inputs: inputs}, nil
+}
+
+// Check runs the typed static check of a formula template against the field
+// it feeds, with a catalog and the typed payload prefixes of its rule.
+func (t Template) Check(types Catalog, typed map[string]string, fd FieldDef) error {
+	if t.kind == "literal" {
+		return nil
+	}
+	return t.f.Check(types, typed, fd)
 }
 
 // checked enforces per-type value constraints that need the field definition.

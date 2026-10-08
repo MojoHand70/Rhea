@@ -69,6 +69,10 @@ type MaterializedObject struct {
 	ObjectType  string         `json:"object_type"`
 	TypeVersion int            `json:"type_version"`
 	State       map[string]any `json:"state"`
+	// Calc explains every computed field: the formula and the inputs it
+	// read, baked at firing so replay never recomputes and the walk can show
+	// the arithmetic (invariant 5 for computed values). Absent on copies.
+	Calc map[string]Calc `json:"calc,omitempty"`
 }
 
 // AmendedObject is the payload of an object.amended event: the delta a rule
@@ -77,9 +81,10 @@ type MaterializedObject struct {
 // current state is the projection of its materialization plus every
 // amendment, in log order.
 type AmendedObject struct {
-	ObjectID   string         `json:"object_id"`
-	ObjectType string         `json:"object_type"`
-	Set        map[string]any `json:"set"`
+	ObjectID   string          `json:"object_id"`
+	ObjectType string          `json:"object_type"`
+	Set        map[string]any  `json:"set"`
+	Calc       map[string]Calc `json:"calc,omitempty"`
 }
 
 // ObjectType is a schema as data.
@@ -118,7 +123,7 @@ type LifecycleDef struct {
 
 type FieldDef struct {
 	Name     string   `json:"name"`
-	Type     string   `json:"type"` // string | int | date | money | enum | ref<type>
+	Type     string   `json:"type"` // string | int | decimal | date | money | enum | ref<type>
 	Required bool     `json:"required"`
 	Values   []string `json:"values,omitempty"` // enum: the allowed value set
 }
@@ -145,7 +150,7 @@ func (t ObjectType) Validate() error {
 	}
 	for _, f := range t.Fields {
 		switch f.Type {
-		case "string", "int", "date", "money":
+		case "string", "int", "decimal", "date", "money":
 		case "enum":
 			if len(f.Values) == 0 {
 				return fmt.Errorf("field %q: enum needs values", f.Name)
@@ -428,11 +433,14 @@ func checkFieldTemplate(target *ObjectType, name, tmpl string) error {
 	refTarget, isRef := RefTarget(fd.Type)
 	switch {
 	case isRef && pt.kind != "ref" && pt.kind != "path":
-		return fmt.Errorf("field %q is %s and must use =ref(%s, <field>, $.path) or a =$.path carrying a %s id", name, fd.Type, refTarget, refTarget)
+		return fmt.Errorf("field %q is %s and must use =ref(%s, <field>, $.path) or a =$.path carrying a %s id — never a literal or a computed id", name, fd.Type, refTarget, refTarget)
 	case !isRef && pt.kind == "ref":
 		return fmt.Errorf("field %q is %s, not a ref", name, fd.Type)
 	case isRef && pt.kind == "ref" && pt.refType != refTarget:
 		return fmt.Errorf("field %q is %s but template resolves a %q", name, fd.Type, pt.refType)
+	}
+	if err := pt.Check(nil, nil, fd); err != nil {
+		return fmt.Errorf("field %q: %w", name, err)
 	}
 	if fd.Type == "enum" && pt.kind == "literal" && !slices.Contains(fd.Values, pt.raw) {
 		return fmt.Errorf("field %q: %q is not one of %v", name, pt.raw, fd.Values)
@@ -592,4 +600,77 @@ type AnalysisSpec struct {
 type SchedulingSpec struct {
 	ObjectType string `json:"object_type"`
 	DateField  string `json:"date_field"`
+}
+
+// Check is the typed draft gate: Validate against the catalog's target type,
+// then every formula checked with the catalog — reads through links name
+// real fields, kinds combine lawfully, results fit their fields. The typed
+// payload prefixes come from the match: a cascade on a materialized type T
+// reads T's state under $.state (and under $.doc.state inside each).
+func (s RuleSpec) Check(types Catalog) error {
+	var target *ObjectType
+	name := s.Effect.Object.Type
+	if s.Effect.Amend != nil {
+		name = s.Effect.Amend.Type
+	}
+	if name != "" {
+		t, ok := types(name)
+		if !ok {
+			return fmt.Errorf("effect targets %q, which is not a declared object type", name)
+		}
+		target = &t
+	}
+	if err := s.Validate(target); err != nil {
+		return err
+	}
+	typed := s.TypedPrefixes()
+	check := func(fields map[string]string) error {
+		for name, raw := range fields {
+			pt, err := ParseTemplate(raw)
+			if err != nil {
+				return err
+			}
+			var fd FieldDef
+			if target != nil {
+				fd, _ = target.Field(name)
+			}
+			if err := pt.Check(types, typed, fd); err != nil {
+				return fmt.Errorf("field %q: %w", name, err)
+			}
+		}
+		return nil
+	}
+	switch {
+	case s.Effect.Postings != nil:
+		for i, l := range s.Effect.Postings.Lines {
+			pt, _ := ParseTemplate(l.Debit + l.Credit)
+			if err := pt.Check(types, typed, FieldDef{Name: "amount", Type: "money"}); err != nil {
+				return fmt.Errorf("line %d amount: %w", i+1, err)
+			}
+		}
+		return nil
+	case s.Effect.Amend != nil:
+		return check(s.Effect.Amend.Set)
+	}
+	return check(s.Effect.Object.Fields)
+}
+
+// TypedPrefixes names the payload prefixes a rule's templates read typed
+// object state under: $.state for a cascade on a materialized type (the
+// where condition names it), $.doc.state inside an each over that cascade.
+func (s RuleSpec) TypedPrefixes() map[string]string {
+	if s.Match.EventType != EventObjectMaterialized {
+		return nil
+	}
+	for _, c := range s.Match.Where {
+		if c.Path == "$.object_type" && c.Op == "eq" {
+			if t, ok := c.Value.(string); ok {
+				if s.Effect.Object.Each != "" {
+					return map[string]string{"$.doc.state": t}
+				}
+				return map[string]string{"$.state": t}
+			}
+		}
+	}
+	return nil
 }

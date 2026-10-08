@@ -139,20 +139,42 @@ Pick one not taken by the active rules listed in the request.
 TEMPLATES - every field value in an effect is a template string:
 - a plain string is a literal
 - "=$.path.to.value" copies a value from the event payload (indexing: $.lines[0].x)
-- "=sum($.lines[*].amount)" sums decimal-string amounts into a money value
+- "=ref(T, field, $.path)" resolves a reference: the id of the single existing object
+  of type T whose field equals the payload value (usually T's label field)
 - "=ref(T, field, ref(U, field2, $.path))" looks up one step through a link: the T whose
   field holds the U found by field2 (the case of complaint R-1:
   "=ref(case, complaint, ref(complaint, number, $.number))")
-- "=ref(T, field, $.path)" resolves a reference: the id of the single existing object
-  of type T whose field equals the payload value (usually T's label field)
-There is no other syntax: no arithmetic, no string building, no conditionals.
-Money fields MUST use "=$.path" to a decimal string or "=sum(...)". Dates are copied
-as strings. A field typed "ref<T>" links to an object of type T, in one of two ways:
-"=ref(T, field, $.path)" looks it up by a field value (the referenced object must exist -
-see the master data in the request), or "=$.path" carries the exact object id - in a
-cascade, "=$.object_id" is the object that caused it and "=$.state.<ref field>" a link
-it holds. The kernel checks a carried id is a T and exists. Never a literal id.
-A field typed "enum" only accepts one of its declared "values".
+- any other "=" template is a FORMULA, computed at firing and baked into the event
+  with its inputs, so every number explains itself:
+  * arithmetic + - * and comparisons = <> < <= > >=, and/or/not, if(c, a, b),
+    abs, min(a, b), max(a, b); numbers are exact, never floats
+  * DIVISION ONLY UNDER round: "=round($.net * 23 / 100, 2, half_up)". Rounding is
+    declared, never implied: round(x, places, method), method one of half_up,
+    half_even, down, up. A money field holds two places: a product that has more
+    (a 3-place unit cost) must be rounded on purpose, or the firing is refused.
+  * reads through links: "$.state.item.std_cost" reads the std_cost of the item the
+    causing object links to; "ref(item, sku, $.line.item).std_cost" reads it after
+    a lookup. Values are read by their declared types (money as money).
+  * dates: "=$.state.registered_on + 14" (days), date - date (days),
+    end_of_month(d), add_months(d, n)
+  * folds over the event's own lines: "=sum(l in $.lines: l.qty * l.price)",
+    count(l in $.lines where l.qty > 0), min/max/any/all(l in $.lines: ...),
+    "=sum($.lines[*].amount)" sums a fanned-out path
+  * folds over linked state, keyed and capped: objects(T, field, value) is the
+    list of T objects whose field equals value (log order, at most 1000):
+    "=sum(m in objects(stock_movement, item, $.state.item) where m.location = $.state.location:
+      if(m.direction = \"in\", m.qty, -m.qty))" is the book quantity of an item in a location
+  * no loops, no variables, no string building. Algorithms (FIFO, allocation) are not
+    formulas: they arrive as kernel methods.
+Money fields take "=$.path" to a decimal string, "=sum(...)" or a formula. Dates are
+copied as strings or computed. A field typed "ref<T>" links to an object of type T, in
+one of two ways: "=ref(T, field, $.path)" looks it up by a field value (the referenced
+object must exist - see the master data in the request), or "=$.path" carries the exact
+object id - in a cascade, "=$.object_id" is the object that caused it and
+"=$.state.<ref field>" a link it holds. The kernel checks a carried id is a T and
+exists. Never a literal id, never a computed one.
+A field typed "enum" only accepts one of its declared "values". A field typed
+"decimal" holds an exact decimal string (a rate, a unit cost).
 
 EFFECT 1 - "object": materialize one object of a declared type.
   "effect": {"object": {"type": "invoice", "fields": {"<field>": "<template>", ...}}}
@@ -231,14 +253,26 @@ func (a *Agent) DraftRule(ctx context.Context, ask Ask) (Draft, error) {
 	if d.Priority == 0 {
 		d.Priority = 100
 	}
-	target, err := targetType(d.Spec, ask.Types)
-	if err != nil {
+	if _, err := targetType(d.Spec, ask.Types); err != nil {
 		return Draft{}, fmt.Errorf("draft failed validation: %w", err)
 	}
-	if err := d.Spec.Validate(target); err != nil {
+	if err := d.Spec.Check(CatalogOf(ask.Types)); err != nil {
 		return Draft{}, fmt.Errorf("draft failed validation: %w", err)
 	}
 	return d, nil
+}
+
+// CatalogOf turns a type list into the catalog the typed draft gate reads:
+// formulas are checked against the fields they read through links and the
+// fields they write.
+func CatalogOf(types []core.ObjectType) core.Catalog {
+	return func(name string) (core.ObjectType, bool) {
+		i := slices.IndexFunc(types, func(t core.ObjectType) bool { return t.Name == name })
+		if i < 0 {
+			return core.ObjectType{}, false
+		}
+		return types[i], true
+	}
 }
 
 // targetType finds the declared type an object or amend effect names. A
