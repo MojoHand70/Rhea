@@ -273,10 +273,18 @@ func TestRuleSpecValidateRefs(t *testing.T) {
 		t.Fatalf("valid ref spec rejected: %v", err)
 	}
 
-	// A ref field filled without resolution has no referential integrity.
+	// A ref field may carry an id by path (DECISIONS 2026-10-08, carried
+	// links): integrity moves to expansion, where the kernel vouches the id's
+	// kind and existence. Structurally the path is admitted...
 	s = validSpec()
+	if err := s.Validate(&ot); err != nil {
+		t.Errorf("ref field with a carried id rejected: %v", err)
+	}
+	// ...a literal never is: a rule cannot hard-code what it points at.
+	s = validSpec()
+	s.Effect.Object.Fields["customer"] = "company-12"
 	if err := s.Validate(&ot); err == nil {
-		t.Error("ref field with plain path template accepted")
+		t.Error("ref field with a literal id accepted")
 	}
 
 	s = validSpec()

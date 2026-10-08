@@ -832,9 +832,9 @@ on enrichment and backfill, and evolution carried. Enrichment earned
 past closed periods, per chain in v1. The operations corpus reached DONE
 in two of three live runs.
 
-Out of scope here and still waiting on its own decision: ref
-re-reference in cascades (DECISIONS 2026-10-08, the model's first reach,
-now four times).
+Ref re-reference, out of scope here, was decided the same day (KK,
+option A: a follow-up points at exactly what caused it). It shipped as
+carried links plus lookups one step through a link (see DECISIONS).
 
 One line: *nothing approved is final; late understanding enters as a new
 explanation (backfill), a new fact (enrichment) or a new version

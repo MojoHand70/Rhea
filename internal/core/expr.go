@@ -14,6 +14,13 @@ import (
 //	=sum($.x[*].y)           money sum over decimal strings at path, in minor units
 //	=ref(type, field, $.p)   object_id of the single object of that type whose
 //	                         field equals the value at path (ref<type> fields)
+//	=ref(t, f, ref(u, g, $.p))  one step through a link: the t whose f holds
+//	                         the id of the u whose g equals the value at path
+//
+// A ref<type> field takes either =ref(...) (resolve by a value) or =$.path
+// carrying an object id — the exact object a cascade reacts to ($.object_id)
+// or a ref it holds ($.state.item). Carried ids are vouched at expansion:
+// the right kind (identity is typed, <type>-…) and existing. Never a literal.
 //
 // Paths: $.seg, seg[N], seg[*]. A [*] fans out into a slice of values.
 
@@ -23,6 +30,10 @@ type Template struct {
 	path     []pathSeg
 	refType  string // ref only: target object type
 	refField string // ref only: field matched against the path's value
+	// inner is a nested ref() whose resolved id is the value matched — one
+	// step through a link: the case whose complaint is complaint R-1 is
+	// ref(case, complaint, ref(complaint, number, $.number)).
+	inner *Template
 }
 
 // Lookup finds objects in current state: the object_ids of every object of
@@ -57,6 +68,11 @@ type pathSeg struct {
 	hasIx bool
 }
 
+// CarriesID reports whether the template copies a value by path — for a ref
+// field, an object id carried from the event (the causing object, or a ref it
+// holds), which the kernel vouches for at expansion.
+func (t Template) CarriesID() bool { return t.kind == "path" }
+
 func ParseTemplate(s string) (Template, error) {
 	if !strings.HasPrefix(s, "=") {
 		return Template{raw: s, kind: "literal"}, nil
@@ -71,7 +87,15 @@ func ParseTemplate(s string) (Template, error) {
 		if typ == "" || field == "" {
 			return Template{}, fmt.Errorf("ref() wants (type, field, $.path)")
 		}
-		p, err := parsePath(strings.TrimSpace(parts[2]))
+		arg := strings.TrimSpace(parts[2])
+		if strings.HasPrefix(arg, "ref(") {
+			in, err := ParseTemplate("=" + arg)
+			if err != nil {
+				return Template{}, fmt.Errorf("nested %w", err)
+			}
+			return Template{raw: s, kind: "ref", refType: typ, refField: field, inner: &in}, nil
+		}
+		p, err := parsePath(arg)
 		if err != nil {
 			return Template{}, err
 		}
@@ -183,7 +207,13 @@ func (t Template) Eval(payload any, fd FieldDef, lookup Lookup) (any, error) {
 		if lookup == nil {
 			return nil, fmt.Errorf("ref() needs object state, none available here")
 		}
-		v, err := resolve(payload, t.path)
+		var v any
+		var err error
+		if t.inner != nil {
+			v, err = t.inner.Eval(payload, FieldDef{}, lookup) // the linked object's id
+		} else {
+			v, err = resolve(payload, t.path)
+		}
 		if err != nil {
 			return nil, err
 		}

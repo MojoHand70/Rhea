@@ -439,7 +439,7 @@ func (x *Executor) expandEffect(ctx context.Context, root core.Event, idBase str
 		return nil, fmt.Errorf("rule %s v%d: %w", r.ID, r.Version, err)
 	}
 	if tmpl.Each == "" {
-		state, err := Expand(tmpl, objType, payload, lookup)
+		state, err := Expand(tmpl, objType, payload, lookup, get)
 		if err != nil {
 			return nil, fmt.Errorf("rule %s v%d expand: %w", r.ID, r.Version, err)
 		}
@@ -477,7 +477,7 @@ func (x *Executor) expandEffect(ctx context.Context, root core.Event, idBase str
 	mats := make([]core.MaterializedObject, 0, len(arr))
 	for i, el := range arr {
 		scope := map[string]any{"doc": payload, "line": el, "n": i + 1}
-		state, err := Expand(tmpl, objType, scope, lookup)
+		state, err := Expand(tmpl, objType, scope, lookup, get)
 		if err != nil {
 			return nil, fmt.Errorf("rule %s v%d line %d: %w", r.ID, r.Version, i+1, err)
 		}
@@ -543,6 +543,9 @@ func (x *Executor) expandAmend(ctx context.Context, r core.Rule, payload any, lo
 		if err != nil {
 			return nil, fmt.Errorf("rule %s v%d set %q: %w", r.ID, r.Version, name, err)
 		}
+		if err := vouchRef(fd, tp, val, get); err != nil {
+			return nil, fmt.Errorf("rule %s v%d set %q: %w", r.ID, r.Version, name, err)
+		}
 		set[name] = val
 	}
 	// Consent was judged per field by Validate; the lifecycle field, when the
@@ -572,7 +575,7 @@ func (x *Executor) expandAmend(ctx context.Context, r core.Rule, payload any, lo
 // Expand evaluates every field template against the payload, typed by the
 // object type. Missing required fields, evaluation failures or unresolvable
 // refs abort the whole expansion — a half-materialized object never exists.
-func Expand(tmpl core.ObjectTemplate, objType core.ObjectType, payload any, lookup core.Lookup) (map[string]any, error) {
+func Expand(tmpl core.ObjectTemplate, objType core.ObjectType, payload any, lookup core.Lookup, get core.Getter) (map[string]any, error) {
 	if err := (core.RuleSpec{
 		Match:  core.Match{EventType: "-"},
 		Effect: core.Effect{Object: tmpl},
@@ -590,9 +593,37 @@ func Expand(tmpl core.ObjectTemplate, objType core.ObjectType, payload any, look
 		if err != nil {
 			return nil, fmt.Errorf("field %q: %w", name, err)
 		}
+		if err := vouchRef(fd, t, v, get); err != nil {
+			return nil, fmt.Errorf("field %q: %w", name, err)
+		}
 		state[name] = v
 	}
 	return state, nil
+}
+
+// vouchRef checks an object id a ref field carries by path (KK, 2026-10-08:
+// a follow-up may point at exactly the thing that caused it): it is an id
+// of the declared kind — identity is typed by construction, <type>-… — and
+// the object exists, in the world or earlier in this chain. The same courtesy
+// the amendment pays its target. Resolved refs (=ref) need no vouching.
+func vouchRef(fd core.FieldDef, t core.Template, v any, get core.Getter) error {
+	target, isRef := core.RefTarget(fd.Type)
+	if !isRef || !t.CarriesID() {
+		return nil
+	}
+	id, ok := v.(string)
+	if !ok || !strings.HasPrefix(id, target+"-") {
+		return fmt.Errorf("%v is not a %s id", v, target)
+	}
+	if get == nil {
+		return nil // structural contexts without state
+	}
+	if _, found, err := get(id); err != nil {
+		return err
+	} else if !found {
+		return fmt.Errorf("no %s %q", target, id)
+	}
+	return nil
 }
 
 // Replay rebuilds the object projection cache from the derived events in the

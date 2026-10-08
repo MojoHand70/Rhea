@@ -128,13 +128,19 @@ TEMPLATES - every field value in an effect is a template string:
 - a plain string is a literal
 - "=$.path.to.value" copies a value from the event payload (indexing: $.lines[0].x)
 - "=sum($.lines[*].amount)" sums decimal-string amounts into a money value
+- "=ref(T, field, ref(U, field2, $.path))" looks up one step through a link: the T whose
+  field holds the U found by field2 (the case of complaint R-1:
+  "=ref(case, complaint, ref(complaint, number, $.number))")
 - "=ref(T, field, $.path)" resolves a reference: the id of the single existing object
   of type T whose field equals the payload value (usually T's label field)
 There is no other syntax: no arithmetic, no string building, no conditionals.
 Money fields MUST use "=$.path" to a decimal string or "=sum(...)". Dates are copied
-as strings. A field typed "ref<T>" MUST use "=ref(T, ...)", and the referenced object
-must exist (see the master data in the request). A field typed "enum" only accepts
-one of its declared "values".
+as strings. A field typed "ref<T>" links to an object of type T, in one of two ways:
+"=ref(T, field, $.path)" looks it up by a field value (the referenced object must exist -
+see the master data in the request), or "=$.path" carries the exact object id - in a
+cascade, "=$.object_id" is the object that caused it and "=$.state.<ref field>" a link
+it holds. The kernel checks a carried id is a T and exists. Never a literal id.
+A field typed "enum" only accepts one of its declared "values".
 
 EFFECT 1 - "object": materialize one object of a declared type.
   "effect": {"object": {"type": "invoice", "fields": {"<field>": "<template>", ...}}}
@@ -179,15 +185,14 @@ This is how one fact grows its consequences: a document materializes, a cascade
 rule posts it, another raises a follow-up case. Amendments end chains: never match
 "object.amended".
 
-LIMITS of the language as it stands - draft around them:
-- A ref<T> field can only be filled by "=ref(T, field, $.path)", which resolves by a
-  field VALUE. It can never take an id: not "$.object_id", not "$.state.<ref field>".
-  So in a cascade rule, link to the causing object by copying its label value into a
-  plain string field (e.g. "subject": "=$.state.number"), or write a second rule that
-  matches the same RAW event and resolves the refs from the payload - every rule
-  matching an event fires on it, in priority order.
-- An event is explained once: when its rules fire, later rules never revisit it.
-  Every consequence of an event must be in place when its explanation activates.
+A follow-up points at exactly the thing that caused it: a case raised from a complaint
+carries "complaint": "=$.object_id", and a later event naming only the complaint's number
+finds that case through the link (see the nested ref above). A cascade may also copy a
+link the causing object holds, e.g. "item": "=$.state.item". Create only the objects the
+question asks for.
+
+Put every consequence of an event in the same answer: rules approved later reach events
+already explained only through a separate, human-approved backfill.
 
 Choose the effect the intent asks for. Prefer reusing declared types.
 `

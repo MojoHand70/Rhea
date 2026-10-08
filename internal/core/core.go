@@ -427,11 +427,11 @@ func checkFieldTemplate(target *ObjectType, name, tmpl string) error {
 	}
 	refTarget, isRef := RefTarget(fd.Type)
 	switch {
-	case isRef && pt.kind != "ref":
-		return fmt.Errorf("field %q is %s and must use =ref(%s, <field>, $.path)", name, fd.Type, refTarget)
+	case isRef && pt.kind != "ref" && pt.kind != "path":
+		return fmt.Errorf("field %q is %s and must use =ref(%s, <field>, $.path) or a =$.path carrying a %s id", name, fd.Type, refTarget, refTarget)
 	case !isRef && pt.kind == "ref":
 		return fmt.Errorf("field %q is %s, not a ref", name, fd.Type)
-	case isRef && pt.refType != refTarget:
+	case isRef && pt.kind == "ref" && pt.refType != refTarget:
 		return fmt.Errorf("field %q is %s but template resolves a %q", name, fd.Type, pt.refType)
 	}
 	if fd.Type == "enum" && pt.kind == "literal" && !slices.Contains(fd.Values, pt.raw) {

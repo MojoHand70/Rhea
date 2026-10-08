@@ -55,6 +55,44 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-08 — carried links: a follow-up points at exactly what caused it
+
+- **KK's decision (option A, posed in business terms):** a follow-up may
+  point at exactly the thing that caused it. This is ref re-reference,
+  the exit named since E2/E4 and the model's first reach four times
+  over. A `ref<T>` field now takes either `=ref(...)` (a lookup by
+  value) or `=$.path` carrying an object id: in a cascade, `$.object_id`
+  (the causing object) or `$.state.<ref field>` (a link it holds).
+  Literal ids stay refused at validation, so a rule never hard-codes a
+  link.
+- **Vouched at expansion** (`vouchRef`), the courtesy the amendment
+  already pays its target. A carried id must be of the declared kind
+  (identity is typed by construction, `<type>-…`) and must exist, in the
+  world or earlier in the same chain. This applies to materializations
+  and to amendment sets.
+- **The reading side, part of the same decision:** a lookup may take one
+  step through a link, `=ref(case, complaint, ref(complaint, number,
+  $.number))`, meaning "the case of complaint R-1". Without it, exact
+  links make follow-ups unfindable from events that name only a number.
+  The live eval showed exactly that: the case linked properly and the
+  withdrawal could not find it.
+- **Prompt:** the ref limit is replaced by the capability (link to the
+  cause, find through the link). "An event is explained once" became
+  "rules approved later reach explained events only through a
+  human-approved backfill". "Create only the objects the question asks
+  for" was added after my own receipt example nudged the model into extra
+  goods receipts.
+- **Live, operations corpus, three runs:** DONE once. The withdrawal now
+  works in all three, directly or by backfill through the link. The two
+  NOT DONE runs both turn delivery lines into goods receipts (3 where the
+  corpus expects 1). That is a business question for KK (does a delivery
+  get a goods-receipt document, the Polish PZ?), not a language gap. The
+  corpus is left as is until KK answers.
+- `core_test` now asserts the new law: a carried id is admitted and a
+  literal is refused. `exec/link_test.go` covers the receipt → movement
+  cascade copying links, case → complaint, the withdrawal closing the
+  case through its link, a wrong-kind id, a missing id, and replay.
+
 ## 2026-10-08 — ruled backfill: the past explained further, never rewritten
 
 - **`PlanBackfill` and the `approve_backfill` door** (`backfill.approved`,
