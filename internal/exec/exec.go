@@ -288,12 +288,16 @@ func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []cor
 				RuleID:     n.rule.ID, RuleVersion: n.rule.Version,
 			}
 			// What a cascade rule sees is the materialization itself, shaped
-			// exactly as it will be written to the log.
+			// exactly as it will be written to the log — plus, under "root",
+			// the fact that started the chain (read-only, never written into
+			// the derived event): a document's lines live in the delivery,
+			// not in the PZ header that cascades them (KK, 2026-10-08).
 			evPayload := map[string]any{
 				"object_id":    n.mat.ObjectID,
 				"object_type":  n.mat.ObjectType,
 				"type_version": n.mat.TypeVersion,
 				"state":        n.mat.State,
+				"root":         payload,
 			}
 			if err := fire(derived, evPayload, i); err != nil {
 				return nil, err

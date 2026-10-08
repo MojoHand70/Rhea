@@ -180,7 +180,11 @@ materializes an object, the kernel emits "object.materialized" with payload
   {"object_id": "...", "object_type": "<type>", "state": {<the object's fields>}}
 and rules matching it fire in the same atomic chain. Match it with
   "where": [{"path": "$.object_type", "op": "eq", "value": "<type>"}]
-and read fields as "=$.state.<field>" and the new object's id as "=$.object_id".
+and read fields as "=$.state.<field>", the new object's id as "=$.object_id", and the
+raw event that started the chain as "=$.root.<field>". A document with lines: one rule
+materializes the header from the raw event, a cascade on the header fans out its lines
+with "each": "=$.root.lines[*]", each line pointing at its header with
+"=$.doc.object_id" (inside "each", "doc" is the cascade payload).
 This is how one fact grows its consequences: a document materializes, a cascade
 rule posts it, another raises a follow-up case. Amendments end chains: never match
 "object.amended".

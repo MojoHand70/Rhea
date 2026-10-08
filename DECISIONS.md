@@ -55,6 +55,37 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-08 — the PZ: a document with lines, and what it exposed
+
+- **KK: "Yes, absolutely we need a PZ document."** A delivery gets one PZ
+  (goods received note) with one line per item. Each line points at its
+  PZ and moves that item's stock in.
+- **Cascades read the chain's root fact under `$.root`.** The lines live
+  in the delivery, not in the PZ header that cascades them, so the
+  header's cascade fans out with `each: =$.root.lines[*]` and each line
+  points back with `=$.doc.object_id`. `$.root` is read-only: it is
+  never written into derived events (asserted), and replay is untouched.
+  `exec/pz_test.go` covers one delivery → one PZ, two lines, two
+  movements.
+- **The operations corpus task 4 now asks for the PZ shape** (types `pz`
+  and `pz_line` named in the question; the delivery carries the supplier
+  and its WZ number). The reference passes. **Live: 0 of 3.** The agent
+  looked the warehouse up by name instead of code once, and twice tried
+  to read "the PZ's warehouse" through the line's link, which the
+  language cannot do (it reads `$.root`, not fields of linked objects).
+  Not prompt-tuned yet.
+- **Two gaps that KK's question "how did we teach the agent which
+  accounts to book the PZ?" makes concrete:**
+  1. *Booking policy is never taught.* The agent knows accounts only from
+     the question's own words and the chart of accounts (codes, names,
+     kinds), never policy such as "PZ: Wn 330 / Ma 300". The interview
+     must ask for it, and a pack can offer the market default as a draft.
+  2. *There is no arithmetic.* A PZ entry is quantity × purchase price,
+     and templates copy and sum but cannot multiply. This is the first
+     business case that forces the arithmetic sub-language (DIRECTION,
+     2026-10-03), together with reading fields through links
+     (`item.std_cost`).
+
 ## 2026-10-08 — carried links: a follow-up points at exactly what caused it
 
 - **KK's decision (option A, posed in business terms):** a follow-up may
