@@ -679,6 +679,143 @@ extends invariant 2 to every definition; it adds no new primitive.
 One line: *an implementation is a corpus being explained; the interview
 is how, residue is when, and the gate is who.*
 
+## Late understanding: backfill, enrichment, evolution (KK, 2026-10-08)
+
+KK's question, after approving the Poland pack: nobody can settle a
+definition up front. Should a bank account carry the IBAN separately, or
+the bank's country? It is unknowable today, the same holds for every
+other definition, and it will hold for every client. Can definitions be
+amended later, extended, reduced?
+
+The answer is the experiment's oldest invariant: nothing approved is
+final, it is version 1. Types have already moved this way (invoice v1→v2,
+posting v1→v3, sales_invoice v1→v3, the Poland pack at v6), and every
+object records the type version it was built under. A schema change is
+a bundle: new versions, a dry run against the client's real history,
+then approval. In a classic ERP the data model is settled up front
+because changing it later is a migration. In Rhea it is a reviewed
+proposal. That is a selling point, and it is the same mechanism that
+delivers pack updates to every subscriber.
+
+What is missing is narrower and has one shape: **understanding that
+arrives after the facts.** The eval found it first: an approved
+withdrawal rule that never fires, because the withdrawal was already
+explained another way. There are three variants.
+
+Status: **draft for KK.** Proposals with the simplest option chosen,
+predictions for the attempt, open questions at the end.
+
+**1. Late rule: ruled backfill.** The facts are old and the explanation
+is new. DIRECTION fixed the stance on 2026-10-03: backfill is the
+promotion of a simulation diff into the log, approved like everything
+else, and a locked month is a locked month. The proposal makes it
+buildable:
+
+- *Additive only.* Backfill fires (event, rule) pairs that never fired:
+  a rule approved after the event, whose derived events carry no
+  rooted chain from it. The log can decide this, since every derived
+  event names its cause and its rule. It never rewrites an existing
+  derivation. Correcting a wrong past explanation stays the human
+  korekta in an open period, as decided. This covers the forcing case
+  (the case resolves on the old withdrawal) without touching identity
+  physics.
+- *A deliberate act, sibling to the clock's catch-up.* Approving a
+  bundle changes the future. When its dry run shows that the bundle
+  would also explain old events, the shell offers a second, separate
+  gated act: `approve_backfill` emits `backfill.approved` with the
+  pairs it promotes, and the kernel's reaction fires exactly those.
+  Steady state stays automatic, and rewriting the past needs a human,
+  the same physics as re-entry after a clock gap.
+- *Dated by the fact, recorded by the understanding.* Backfilled
+  consequences carry the original event's business date, so period
+  locks judge them where they belong and a pair landing in a locked
+  month is refused, per pair, with no exceptions. `recorded_at` keeps
+  the honest answer to "when did we understand this".
+- *Replay stays boring.* Backfilled derived events are ordinary derived
+  events, later in the log. Replay re-projects them in log order, and
+  invariant 4 holds by construction.
+
+**2. Late fact: enrichment.** The thing is old and the information is
+new. The existing bank accounts get their IBANs; no old event ever
+carried them, so backfill cannot help. This is a new fact and enters as
+one (`bank_account.details_provided`), explained by a rule that sets
+fields on an existing object: the amendment, which already exists.
+What does not fit is its consent. Today a type that declares a lifecycle
+lets rules set *any* of its fields, and a type without one allows none.
+Consent is all or nothing, and it is spelled as a status machine.
+
+- *Proposal: field-level consent.* The type declares `amendable:
+  ["iban", "bank_country"]`, the fields rules may set after
+  materialization. The lifecycle field stays implicitly amendable and
+  keeps its transition law. Everything else is fixed at birth, which
+  matches how the business treats it: an invoice number never changes,
+  an IBAN legitimately does. This is ObjectType vocabulary, not a
+  closed-class admission: it refines the amendment's consent, the third
+  primitive's own shape.
+- *Every enrichment is a fact with provenance.* The walk shows "IBAN
+  set by `bank_account.details_provided` #812 through rule
+  `enrich-bank-account` v1", never a silent edit.
+
+**3. Late schema: evolution.** The language itself grows. This already
+works, and the proposal turns practice into stance:
+
+- *A type version never rewrites old objects.* They keep the version
+  they were born under. Views render them through the newest version,
+  and a field missing from an older version shows as "not recorded
+  under v1" rather than blank. Old objects gain new fields only by
+  enrichment (a new fact) or backfill (a new explanation), never by
+  migration.
+- *Subtracting never deletes.* A field dropped in v2 stays in history
+  and in the walk. Rules still setting it break, and the bundle's dry
+  run shows it before approval, because the overlay re-validates the
+  active rules against the drafted type. The type change and its rule
+  redrafts travel in one bundle.
+- *There is no rename.* A rename is a new field plus enrichment or
+  backfill, so the log says what happened.
+
+**The attempt, predictions kept for the record.** A bank-account story
+as a falsifiability test of the M2 kind:
+
+1. `bank_account` v1 (number, bank name), three accounts from
+   `bank_account.opened` events.
+2. A bundle raises it to v2 with optional `iban` and `bank_country`. The
+   old accounts keep v1 and render "not recorded under v1".
+3. Three `bank_account.details_provided` events arrive, and an
+   enrichment rule tries to set the IBANs. **Predicted fail:** the
+   amendment is refused (no lifecycle, no consent), which admits
+   `amendable`.
+4. The operations corpus's withdrawal task, rerun. **Predicted fail:**
+   the approved rule never sees the explained event, which builds the
+   backfill door. After both, the corpus reaches DONE.
+5. Replay reproduces identical state throughout, and the walk shows
+   every IBAN's provenance.
+
+**Open questions for KK.**
+
+1. Backfill scope: additive only (new rules on old events), with
+   corrections of past derivations left to korekta? Proposed yes.
+   Rewriting derivations would need object identity to supersede
+   itself, a far bigger change.
+2. Backfill trigger: a separate deliberate act after approving the
+   bundle (proposed; the sibling of catch-up), or an option on the
+   approval itself?
+3. Enrichment consent: an explicit field list on the type (proposed),
+   or keep today's rule that any field is amendable once a lifecycle
+   exists? The explicit list tightens existing types: the case type
+   would declare `resolution`.
+4. Old objects under a new type version: stay at their version forever
+   (proposed; honest), or offer an "upgrade" that re-derives them by
+   backfill when the old events carry the new data?
+5. Backfilled consequences dated by the original event (proposed; locks
+   judge them there), or by the backfill's own date?
+
+Out of scope here and still waiting on its own decision: ref
+re-reference in cascades (DECISIONS 2026-10-08, the model's first reach).
+
+One line: *nothing approved is final; late understanding enters as a new
+explanation (backfill), a new fact (enrichment) or a new version
+(evolution), each gated, each in the log, none rewriting history.*
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
@@ -715,6 +852,8 @@ is how, residue is when, and the gate is who.*
   A backfill firing into a locked period is refused per event, no
   exceptions; the open-period correction (korekta) is the human
   alternative. Nothing retroactive ever happens silently.
+  Made buildable in "Late understanding" above (2026-10-08, draft for
+  KK): additive pairs only, a deliberate act sibling to catch-up.
 - **Conflicts stay human.** Same-object-id claims refuse the event into the
   worklist; semantic double-booking is simulation's job to reveal before
   approval; static conflict detection is parked (SPEC §7).
