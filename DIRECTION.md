@@ -945,6 +945,73 @@ formula language must serve all the common variants: the delivery
 states the value, a price list computes it, or the value comes later
 from the purchase invoice.
 
+**Iteration: folds over named collections, never loops (KK, agreed
+2026-10-08).** KK's question: goods counting and production scheduling
+will need looping, the simplest form being "for all order lines" — can
+the formula language avoid it? Agreed: iteration cannot be avoided, and
+general loops stay out. The distinction is *bounded iteration over a
+named collection* versus *a loop that runs until a condition holds*.
+The first is total — it always terminates and costs the size of the
+collection; the second is what makes AL and ABAP customizations slow
+and unauditable. sfmt is the mirror: its formula text has no loops, yet
+its aggregation VM walks a whole dimension to sum it. Rhea already
+iterates in three places — `each` fans a document into line objects,
+`sum` folds an array, cascade iterates generations under a depth cap —
+and the formula language extends exactly that, nothing more.
+
+What the language gets:
+
+- *Comprehensions and folds*: `sum`, `count`, `min`, `max`, `any`,
+  `all`, a filter, each over a collection with a per-element expression.
+  `sum(line in $.lines: line.qty * line.price)` is "for all order lines".
+- *One `fold` with an accumulator*, for scans such as forward scheduling
+  (operations in routing order, start = previous end), still bounded by
+  the number of operations.
+- *No `while`, no recursion, no mutable variables.* Termination by
+  construction, so the VM stays total (security rule 1); the model can
+  author it, the network can cluster it, and the walk explains it as
+  "the sum of these twelve values".
+
+The performance risk sits in the collection, not the loop, so the
+design handle is *which collections a formula may walk*. Three kinds:
+
+1. *The event's own payload* — order lines, counted items. Free, and the
+   first customer.
+2. *Objects one step through a link, keyed and filtered* — the open
+   invoices of this customer, the movements of this item in this
+   warehouse. This reads state, so it is declared on the rule as a named
+   read (as `ref` is today), resolved by index, ordered by log sequence
+   for determinism, and refused into the worklist above a per-rule size
+   cap — the cascade depth cap's sibling. Scale rule 2 holds because the
+   read is keyed, never a scan. **Admitted in phase 1, with the cap from
+   day one**: the stock count (book quantity of the item in the
+   warehouse) and bank matching (the open invoices of a customer) are
+   both in the demo story.
+3. *The whole state.* Never.
+
+Whatever a fold costs is paid once at firing and baked into the event
+(scale rule 3): replay never loops, views never loop.
+
+What stays out, deliberately: algorithms that carry state across
+iterations with ordering or backtracking — FIFO layers, allocating a
+header amount across lines with the remainder on the last (largest
+remainder), finite-capacity scheduling, MRP netting. These are standards
+with names; a client chooses one and never writes one ("Rhea suggests
+standards"). They land as kernel methods parameterized by rules and
+callable from a formula (`=fifo_cost(item, warehouse, qty)`), the
+postings and `convert` precedent. "The AI composes; it never authors
+loops" stands unchanged.
+
+The claim this sharpens: every ERP has a calculation engine. The
+advantage is that every number carries its inputs and its formula, and
+that iteration is only ever over named, capped, visible collections. The
+restriction is the feature.
+
+Order of work for the formula session: scalar formulas with declared
+rounding and reads through links (the brief above); folds over the
+payload; folds over linked collections with the cap; the first kernel
+method when FIFO arrives in phase 4.
+
 ## Scale and security are welded, not added (KK, 2026-10-08)
 
 KK's question: how does Rhea carry thousands of companies and millions
@@ -1084,7 +1151,7 @@ P4 is after the demo.
 
 | Area | Today | Done for the demo | P |
 |---|---|---|---|
-| Calculation | No arithmetic; `convert` only | Formula language per the arithmetic brief: integer/decimal VM, declared rounding, reads through links, baked at firing; PZ value, VAT, due dates as customers | P1 |
+| Calculation | No arithmetic; `convert` only | Formula language per the arithmetic brief: integer/decimal VM, declared rounding, reads through links, folds over the document and over linked collections under a cap, baked at firing; PZ value, VAT, due dates, stock count as customers | P1 |
 | Intake | JSON raw events via CLI/API; KSeF stub; clock | Design note first ("documents in"), then three real paths: KSeF, bank statement (MT940), scanned PDF. Extraction is interpretation: a proposed raw event with confidence, validated against the schema, low confidence to the worklist | P1 |
 | Views | Generic shell, derived defaults, pl/de eyes, formatted strings in the API | Typed view API (semantics in, formatting in the renderer); one new notion, the **matching grid** (two sides, a pairing verb), with bank reconciliation as its first customer | P2 |
 | Decisions | Worklist, approval, simulation diff, explain, cases as data | The briefing as narrative ViewDef; the walk from any number to its inputs and formula | P2 |
@@ -1157,7 +1224,10 @@ ask for waits.*
   production allocation, stock counting — arrive as *kernel sub-languages
   parameterized by rules* (the postings and `each` precedent):
   deterministic method vocabulary in code, choice and parameters as data.
-  The AI composes sub-languages; it never authors loops.
+  The AI composes sub-languages; it never authors loops. Refined
+  2026-10-08 (the iteration note in the arithmetic brief): bounded folds
+  over named, capped collections are formula vocabulary; a loop that runs
+  until a condition holds never is.
 - **Lifecycle: status is a projection, never an update** (KK, 2026-10-03:
   every object has a life, and month-end status must be answerable). An
   invoice becomes "paid" because a payment event, matched by a rule, emits
