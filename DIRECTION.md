@@ -840,6 +840,64 @@ One line: *nothing approved is final; late understanding enters as a new
 explanation (backfill), a new fact (enrichment) or a new version
 (evolution), each gated, each in the log, none rewriting history.*
 
+## Arithmetic: a formula language of our own (KK, 2026-10-08)
+
+KK's call, after the PZ showed that value = quantity × price has no way
+in: approach arithmetic as sfmt and Swan did, with our own tokenizer,
+parser, formula compiler and a VM that runs compiled formulas. It gets
+**a dedicated session.** This section is the brief that session starts
+from. It records constraints, not a design.
+
+**Prior art to read first.** sfmt's engine (`~/projects/sfmt/pkg/engine`):
+`070-formula_vm.go` (byte opcodes, a stack VM), `072-formula_compiler.go`
+(and its tests), `073-formula_aggregation.go`, `074-formula_sql.go` (the
+same formula compiled to SQL), with `docs/FORMULA_INTELLISENSE_IMPLEMENTATION.md`
+and `docs/calc-engine-cleanup-audit.md` alongside. Swan
+(`~/projects/Swan`) carries formulas as element data (`formulaText`,
+derived class C), which is the "formula as data, compiled by the kernel"
+shape Rhea needs.
+
+**What Rhea's invariants demand of it.** These differ from sfmt:
+
+1. *No floats, ever* (invariant 6). sfmt's VM computes in `float64`;
+   Rhea's cannot. Money is int64 minor units, quantities are integers or
+   fixed-point decimals, rates are exact decimals (`fx_rate` is already
+   a string). Port the architecture, not the number core.
+2. *Rounding is declared, never implied.* Division and multiplication
+   by rates are where determinism dies (DIRECTION, 2026-10-03). Every
+   operation that can lose precision names its rounding (`half_up`
+   today, others joining by proof), as `convert` already does. Rounding
+   is statutory and therefore pack data: per-line versus per-document
+   VAT rounding differs by country.
+3. *Computed at firing, baked into the event.* The VM runs inside rule
+   expansion. Results are written into the derived event, so replay
+   never recomputes and invariant 4 holds by construction. DuckDB keeps
+   analysis arithmetic only; sfmt's formula→SQL path is the natural fit
+   for that side.
+4. *Formulas are data, small and comparable.* They live in rule
+   templates (an `=` template kind), are validated and type-checked at
+   draft time against the fields they read and write (money × int →
+   money, money ÷ money → rate), and stay tiny enough for the network
+   to cluster. The AI composes formulas; it never authors loops
+   (algorithmics such as FIFO stay kernel sub-languages).
+5. *Every value is explained.* Invariant 5 extends to computed values:
+   the walk should be able to show which inputs and which formula
+   produced a number.
+6. *Reads through links come with it.* The PZ also showed the agent
+   reaching for "the price of the line's item" and "the PZ's warehouse":
+   field reads through a link (`item.std_cost`). Name resolution is the
+   parser's job, so it belongs in the same design.
+
+**First customers, to test it against:** PZ line value (qty × price,
+rounded), the PZ entry (Wn 330 / Ma 300 at that value, KK to confirm the
+policy), VAT from net × rate with statutory rounding, and due dates
+(date + payment term days, named by the cases test).
+
+**Open before the session** (business questions to KK, recorded
+2026-10-08): where a PZ's value comes from (stated by the delivery,
+computed from a price list, or valued later when the purchase invoice
+arrives), and how a PZ is booked.
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
