@@ -57,8 +57,13 @@ OBJECT TYPES - declare a new type only when nothing in the catalog fits:
               {"name": "status", "type": "enum", "values": ["open", "resolved"], "required": true}],
    "lifecycle": {"field": "status", "transitions": {"open": ["resolved"]}}}
 Field types: string, int, date, money, enum (with "values"), ref<type>. Omit "version";
-the kernel assigns it. Declare a "lifecycle" only if objects of the type must later be
-amended (status moves); its field must be an enum and the transitions name its values.
+the kernel assigns it. Declare a "lifecycle" only if objects of the type have a status
+that moves; its field must be an enum and the transitions name its values. List in
+"amendable" the other fields rules may set after the object exists (details that
+legitimately arrive later, a resolution); everything else is fixed at birth.
+To extend an existing type, declare it again with the same name and the new fields:
+it becomes the next version, and existing objects keep the version they were born
+under.
 Rules in the bundle may target the bundle's own new types.
 
 VIEWS - every type already gets a derived list and detail view. Add a view_def only

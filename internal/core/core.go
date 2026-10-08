@@ -96,6 +96,17 @@ type ObjectType struct {
 	// lifecycle, and the kernel validates every move of the lifecycle field
 	// against the declared transitions, the way it validates balance.
 	Lifecycle *LifecycleDef `json:"lifecycle,omitempty"`
+	// Amendable lists the fields rules may set after materialization —
+	// consent per field (DECISIONS 2026-10-08, enrichment): an IBAN
+	// legitimately arrives later, an account number never changes. The
+	// lifecycle field is amendable implicitly, under its transition law;
+	// every other field is fixed at birth unless listed here.
+	Amendable []string `json:"amendable,omitempty"`
+}
+
+// CanAmend reports whether rules may set a field after materialization.
+func (t ObjectType) CanAmend(field string) bool {
+	return (t.Lifecycle != nil && t.Lifecycle.Field == field) || slices.Contains(t.Amendable, field)
 }
 
 // LifecycleDef: the status field and its allowed moves, as data. The initial
@@ -151,6 +162,11 @@ func (t ObjectType) Validate() error {
 	if t.LabelField != "" {
 		if _, ok := t.Field(t.LabelField); !ok {
 			return fmt.Errorf("label_field %q is not a field of %q", t.LabelField, t.Name)
+		}
+	}
+	for _, f := range t.Amendable {
+		if _, ok := t.Field(f); !ok {
+			return fmt.Errorf("amendable %q is not a field of %q", f, t.Name)
 		}
 	}
 	if lc := t.Lifecycle; lc != nil {
@@ -455,10 +471,16 @@ func (a *AmendTemplate) validate(target *ObjectType) error {
 		if target.Name != a.Type {
 			return fmt.Errorf("amend targets %q but validated against %q", a.Type, target.Name)
 		}
-		// Amendment is consent-based: only a type that declares its life may
-		// be moved by rules.
-		if target.Lifecycle == nil {
-			return fmt.Errorf("type %q declares no lifecycle — amendment refused", target.Name)
+		// Amendment is consent-based, per field: the lifecycle field moves
+		// under its transition law, the declared amendable fields may be set,
+		// everything else is fixed at birth.
+		if target.Lifecycle == nil && len(target.Amendable) == 0 {
+			return fmt.Errorf("type %q declares no lifecycle and no amendable fields — amendment refused", target.Name)
+		}
+		for name := range a.Set {
+			if !target.CanAmend(name) {
+				return fmt.Errorf("field %q of %q is fixed at birth — not its lifecycle field, not declared amendable", name, target.Name)
+			}
 		}
 	}
 	return nil

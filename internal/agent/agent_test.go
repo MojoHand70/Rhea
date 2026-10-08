@@ -53,6 +53,7 @@ func caseType() core.ObjectType {
 		},
 		Lifecycle: &core.LifecycleDef{Field: "status",
 			Transitions: map[string][]string{"open": {"resolved"}}},
+		Amendable: []string{"resolution"},
 	}
 }
 

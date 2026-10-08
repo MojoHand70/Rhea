@@ -45,6 +45,8 @@ func seedLifecycleWorld(t *testing.T, x *exec.Executor) {
 				Field:       "status",
 				Transitions: map[string][]string{"open": {"resolved"}},
 			},
+			// ...and the one field besides its status a rule may set later.
+			Amendable: []string{"resolution"},
 		},
 	} {
 		if err := x.Store.InsertObjectType(ctx, ot); err != nil {

@@ -163,8 +163,10 @@ credits; the kernel rejects anything else. Optional beside "currency":
 EFFECT 3 - "amend": move an EXISTING object along its declared lifecycle.
   "effect": {"amend": {"type": "case", "target": "=$.case",
     "set": {"status": "resolved", "resolution": "=$.resolution"}}}
-Only types with a "lifecycle" may be amended, and a status change must follow a
-declared transition. "target" is "=$.path" carrying an object id, or
+Amendment is consent-based, per field: a rule may set a type's lifecycle field (along
+a declared transition) and the fields the type lists in "amendable"; every other field
+is fixed at birth. Late information about an existing thing (an IBAN for an account)
+is an amendment of an amendable field. "target" is "=$.path" carrying an object id, or
 "=ref(T, field, $.path)" with T equal to the amended type - never a literal id.
 
 CASCADE - rules may match derived events, not only raw ones. When a rule

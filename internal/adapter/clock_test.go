@@ -38,6 +38,7 @@ func seedClockWorld(t *testing.T, x *exec.Executor) {
 			},
 			Lifecycle: &core.LifecycleDef{Field: "status",
 				Transitions: map[string][]string{"active": {"paused"}, "paused": {"active"}}},
+			Amendable: []string{"next_run"}, // the schedule advances itself
 		},
 		{
 			Name: "case", Version: 1, Domain: "work", LabelField: "title",

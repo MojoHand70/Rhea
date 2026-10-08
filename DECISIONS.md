@@ -55,6 +55,32 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-08 — enrichment: amendment consent is per field
+
+- **`ObjectType.amendable`** lists the fields rules may set after
+  materialization. The lifecycle field stays implicitly amendable under
+  its transition law, and every other field is fixed at birth. A type
+  consents to amendment by declaring a lifecycle, amendable fields, or
+  both. This refines the amendment's shape (the third primitive); it is
+  vocabulary on ObjectType, not a closed-class admission. KK settled
+  question 3 on it.
+- **Existing types tightened, as decided.** Case types declare
+  `resolution`, schedule types declare `next_run` (the schedule advances
+  itself). Every test that broke did so for exactly that reason.
+- **Kernel bug found on the way:** `expandAmend` assumed a lifecycle was
+  always present (`lc := objType.Lifecycle // non-nil`) and panicked on
+  an enrichment-only type. The transition law now applies only when a
+  lifecycle exists.
+- **The attempt test now tells the after story.** The contortion (a
+  lifecycle invented to buy consent) no longer opens the account number
+  ("fixed at birth"). `bank_account` v3 declares `amendable: [iban,
+  bank_country]`, the waiting IBAN books on the next pass as an
+  `object.amended` with provenance, and the account keeps
+  `type_version` 1.
+- **The agent learned it.** Both prompts explain per-field consent, and
+  the bundle prompt explains extension: redeclaring a type by name makes
+  it the next version.
+
 ## 2026-10-08 — late-understanding attempt: evolution carries, enrichment and backfill fail
 
 - **The attempt is kept as executable evidence** in

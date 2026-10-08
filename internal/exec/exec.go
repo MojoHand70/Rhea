@@ -503,7 +503,13 @@ func (x *Executor) expandAmend(ctx context.Context, r core.Rule, payload any, lo
 		}
 		set[name] = val
 	}
-	lc := objType.Lifecycle // non-nil: amendment is consent-based, Validate enforced it
+	// Consent was judged per field by Validate; the lifecycle field, when the
+	// type has one, additionally moves only along a declared transition. An
+	// enrichment-only type (amendable fields, no lifecycle) has no law to apply.
+	lc := objType.Lifecycle
+	if lc == nil {
+		return &core.AmendedObject{ObjectID: id, ObjectType: tmpl.Type, Set: set}, nil
+	}
 	if nv, touched := set[lc.Field]; touched {
 		from, _ := cur[lc.Field].(string)
 		to, _ := nv.(string)

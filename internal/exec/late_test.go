@@ -15,8 +15,8 @@ import (
 // 2026-10-08), kept as executable evidence. Bank accounts exist before anyone
 // knew to ask for their IBANs; the type grows to v2; the IBANs arrive later as
 // facts; a check nobody thought of is approved after the accounts were opened.
-// Evolution carries as pure data. Enrichment and backfill fail exactly as
-// predicted.
+// Evolution carried as pure data; enrichment failed as predicted and earned
+// per-field consent (amendable); backfill fails as predicted.
 func TestLateUnderstandingAttempt(t *testing.T) {
 	ctx := context.Background()
 	s := storetest.New(t)
@@ -94,22 +94,51 @@ func TestLateUnderstandingAttempt(t *testing.T) {
 		t.Fatalf("predicted refusal (no lifecycle, no consent), got %v", errs)
 	}
 
-	// The contortion, recorded: a lifecycle invented only to buy consent. It
-	// works — and consent is all or nothing, so the same type now lets any
-	// rule rewrite the account NUMBER, the identity the IBAN was keyed by.
-	// Consent spelled as a status machine is too coarse: it must be per field.
+	// The contortion the attempt recorded (DECISIONS 2026-10-08): a lifecycle
+	// invented only to buy consent used to open EVERY field — the account
+	// number included. Consent is per field now: the invented lifecycle buys
+	// its own status and nothing else.
+	contorted := v2
+	contorted.Version = 3
+	contorted.Fields = append(append([]core.FieldDef{}, v2.Fields...),
+		core.FieldDef{Name: "state", Type: "enum", Values: []string{"open"}})
+	contorted.Lifecycle = &core.LifecycleDef{Field: "state", Transitions: map[string][]string{"open": {}}}
+	if err := (core.RuleSpec{Match: core.Match{EventType: "bank_account.renumbered"},
+		Effect: core.Effect{Amend: &core.AmendTemplate{Type: "bank_account",
+			Target: "=ref(bank_account, number, $.old)", Set: map[string]string{"number": "=$.new"}}}}).Validate(&contorted); err == nil ||
+		!strings.Contains(err.Error(), "fixed at birth") {
+		t.Fatalf("the account number must be fixed at birth: %v", err)
+	}
+
+	// The exit: v3 declares which fields legitimately arrive later. The
+	// waiting IBAN books on the next pass, and nothing else became mutable.
 	v3 := v2
 	v3.Version = 3
-	v3.Fields = append(append([]core.FieldDef{}, v2.Fields...),
-		core.FieldDef{Name: "state", Type: "enum", Values: []string{"open"}})
-	v3.Lifecycle = &core.LifecycleDef{Field: "state", Transitions: map[string][]string{"open": {}}}
+	v3.Amendable = []string{"iban", "bank_country"}
 	if err := s.InsertObjectType(ctx, v3); err != nil {
 		t.Fatal(err)
 	}
-	if err := (core.RuleSpec{Match: core.Match{EventType: "bank_account.renumbered"},
-		Effect: core.Effect{Amend: &core.AmendTemplate{Type: "bank_account",
-			Target: "=ref(bank_account, number, $.old)", Set: map[string]string{"number": "=$.new"}}}}).Validate(&v3); err != nil {
-		t.Fatalf("contortion should admit any field (that is the finding): %v", err)
+	if booked, errs := x.ProcessPending(ctx); booked != 1 || len(errs) != 0 {
+		t.Fatalf("enrichment: booked %d, %v", booked, errs)
+	}
+	accounts, _ = s.ObjectsByType(ctx, "bank_account")
+	if !strings.Contains(stateOf(accounts, "PL-1"), `"iban":"PL61109010140000071219812874"`) ||
+		!strings.Contains(stateOf(accounts, "PL-1"), `"bank_country":"PL"`) {
+		t.Fatalf("PL-1 not enriched: %v", stateOf(accounts, "PL-1"))
+	}
+	// Enrichment is a fact with provenance, never a silent edit: the IBAN's
+	// delta is an object.amended event caused by the details event.
+	for _, a := range accounts {
+		if a.State["number"] != "PL-1" {
+			continue
+		}
+		amends, _ := s.AmendmentsOf(ctx, a.ID)
+		if len(amends) != 1 || amends[0].RuleID != "enrich-bank-account" {
+			t.Fatalf("IBAN provenance = %+v", amends)
+		}
+		if a.TypeVersion != 1 {
+			t.Fatalf("enrichment rewrote the birth version: v%d", a.TypeVersion)
+		}
 	}
 
 	// --- 3. backfill fails: a check approved after the accounts were opened --
@@ -127,13 +156,8 @@ func TestLateUnderstandingAttempt(t *testing.T) {
 	if len(diff.Added) != 3 {
 		t.Fatalf("dry run should see the three past accounts: added %d", len(diff.Added))
 	}
-	// The approval's worklist pass books one event: the waiting IBAN, which
-	// the contortion's invented lifecycle has just bought consent for.
-	if _, booked, _, err := x.ApproveRule(ctx, "kyc-on-open", "krzysztof", "2026-10-02"); err != nil || booked != 1 {
+	if _, booked, _, err := x.ApproveRule(ctx, "kyc-on-open", "krzysztof", "2026-10-02"); err != nil || booked != 0 {
 		t.Fatalf("approve: booked %d, %v", booked, err)
-	}
-	if pl1, _ := s.ObjectsByType(ctx, "bank_account"); !strings.Contains(stateOf(pl1, "PL-1"), "PL61109010140000071219812874") {
-		t.Fatalf("contortion did not carry the IBAN: %v", pl1)
 	}
 	// The dry run saw three checks; approval can deliver none. The explained
 	// events are never revisited — understanding arrived after the facts and

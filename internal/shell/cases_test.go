@@ -88,6 +88,7 @@ func TestCasesArePureData(t *testing.T) {
 			},
 			Lifecycle: &core.LifecycleDef{Field: "status",
 				Transitions: map[string][]string{"open": {"resolved"}}},
+			Amendable: []string{"resolution"},
 		},
 	} {
 		if err := s.InsertObjectType(ctx, ot); err != nil {
