@@ -33,6 +33,9 @@ type Manifest struct {
 	Rules       []Rule            `json:"rules,omitempty"`
 	Activities  []Activity        `json:"activities,omitempty"`
 	Events      []Event           `json:"events,omitempty"`
+	// Warrant: why the pack proposes what it does. Defaults to the pack's
+	// own authority ("pack" basis, its description as citation).
+	Warrant *core.Warrant `json:"warrant,omitempty"`
 }
 
 // Rule is a pack-shipped rule. It always lands as a draft; status is not a
@@ -180,9 +183,14 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 	}
 
 	if len(members) > 0 {
+		warrant := m.Warrant
+		if warrant == nil {
+			warrant = &core.Warrant{Basis: "pack", Citations: []string{fmt.Sprintf("pack %s v%d", m.Pack, m.Version)}}
+		}
 		b, err := s.InsertBundle(ctx, core.Bundle{
 			ID: BundleID(m.Pack, m.Version), CreatedBy: "pack:" + m.Pack, Members: members,
 			Description: fmt.Sprintf("Install pack %s v%d: %s", m.Pack, m.Version, m.Description),
+			Warrant:     warrant,
 		})
 		if err != nil {
 			return sum, err

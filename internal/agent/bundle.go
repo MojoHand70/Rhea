@@ -22,6 +22,9 @@ type BundleDraft struct {
 	ViewDefs    []core.ViewDef    `json:"view_defs,omitempty"`
 	Rules       []Draft           `json:"rules,omitempty"`
 	Activities  []ActivityDraft   `json:"activities,omitempty"`
+	// Warrant: why this is the proposal. Required — Rhea speaks first with
+	// a standard, and says where it comes from.
+	Warrant *core.Warrant `json:"warrant"`
 }
 
 // ActivityDraft is a proposed verb: a declared door with typed inputs.
@@ -46,7 +49,8 @@ The JSON shape:
   "object_types": [ ... new types only, see OBJECT TYPES ... ],
   "rules": [ ... one or more rules, each shaped as below ... ],
   "view_defs": [ ... optional, see VIEWS ... ],
-  "activities": [ ... optional, see ACTIVITIES ... ]
+  "activities": [ ... optional, see ACTIVITIES ... ],
+  "warrant": { ... required, see WARRANT ... }
 }
 
 A rule:
@@ -81,6 +85,17 @@ ACTIVITIES - a declared verb a human uses to record something, emitting a raw ev
             "emits": "complaint.registered", "who": ["human"]}}
 Add one only when the question is about something people will record by hand.
 
+WARRANT - Rhea suggests standards: when the question leaves practice open ("it depends",
+"everyone does it a bit differently"), propose the customary standard of the market rather
+than leaving it out, and say where it comes from. The client may always replace it.
+  "warrant": {"basis": "practice", "citations": ["dokument PZ dla każdej dostawy; Wn 330 / Ma 300"],
+              "scope": "PL, trade"}
+Basis: "statute" or "standard" (cite the act or standard), "practice" (customary practice -
+name it), "pack" (the market pack's default), "model" (your general knowledge, when nothing
+firmer applies), "client" (what the client said). Never state percentages, counts or shares
+of companies: Rhea adds real support figures herself, from what she has learned. Cite only
+what you are sure of; a vague true citation beats a precise invented one.
+
 Explain the events the question is about - the unexplained events in the request show
 what is waiting. One event may need several rules (a document AND a ledger posting AND a
 stock movement); put them all in the bundle - they activate together. Propose only what
@@ -113,6 +128,12 @@ func (b *BundleDraft) Validate(catalog []core.ObjectType) error {
 	}
 	if len(b.ObjectTypes)+len(b.Rules)+len(b.ViewDefs)+len(b.Activities) == 0 {
 		return fmt.Errorf("bundle %s proposes nothing", b.BundleID)
+	}
+	if b.Warrant == nil {
+		return fmt.Errorf("bundle %s has no warrant: say where the proposal comes from", b.BundleID)
+	}
+	if err := b.Warrant.ValidateProposed(); err != nil {
+		return err
 	}
 	overlay := slices.Clone(catalog)
 	seen := map[string]bool{}

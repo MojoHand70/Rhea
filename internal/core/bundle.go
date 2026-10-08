@@ -15,13 +15,55 @@ import (
 // Versioned like everything: draft → active on approval, draft → superseded
 // on rejection, the reason in the rejection event.
 type Bundle struct {
-	ID          string    `json:"bundle_id"`
-	Version     int       `json:"version"`
-	Status      string    `json:"status"` // draft | active | superseded
-	Description string    `json:"description"`
-	Members     []Member  `json:"members"`
-	CreatedBy   string    `json:"created_by"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID          string   `json:"bundle_id"`
+	Version     int      `json:"version"`
+	Status      string   `json:"status"` // draft | active | superseded
+	Description string   `json:"description"`
+	Members     []Member `json:"members"`
+	// Warrant says why this is the proposal: where the knowledge comes from
+	// (DIRECTION, "Rhea suggests standards"). Nil on hand-made bundles.
+	Warrant   *Warrant  `json:"warrant,omitempty"`
+	CreatedBy string    `json:"created_by"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// Warrant is a suggestion's provenance, as provenance is a fact's: its
+// basis, the citations behind it, and the scope it holds in. Support — how
+// many approved explanations across the network agree — is Rhea's to count
+// from what she has actually learned; whoever proposes may never supply it.
+type Warrant struct {
+	Basis     string   `json:"basis"`               // see WarrantBases
+	Citations []string `json:"citations,omitempty"` // statute, standard, textbook, pack
+	Scope     string   `json:"scope,omitempty"`     // market, industry, size: "PL, wholesale"
+	Support   *Support `json:"support,omitempty"`   // counted by Rhea, never proposed
+}
+
+// Support is a real count over approved rules: Count of Of installations in
+// Population explain this shape this way.
+type Support struct {
+	Count      int    `json:"count"`
+	Of         int    `json:"of"`
+	Population string `json:"population"`
+}
+
+// WarrantBases are the kinds of knowledge a suggestion may rest on. "model"
+// is the agent's general training (books, the web) — honest about being
+// unverified; "network" is learned consensus and comes only with Support.
+var WarrantBases = []string{"statute", "standard", "practice", "pack", "model", "client", "network"}
+
+// ValidateProposed checks a warrant as a proposer wrote it: a known basis,
+// and no support figures — those are counted, not claimed.
+func (w Warrant) ValidateProposed() error {
+	if !slices.Contains(WarrantBases, w.Basis) {
+		return fmt.Errorf("warrant basis %q is not one of %v", w.Basis, WarrantBases)
+	}
+	if w.Support != nil || w.Basis == "network" {
+		return fmt.Errorf("support figures are counted by Rhea from approved rules, never proposed")
+	}
+	if (w.Basis == "statute" || w.Basis == "standard") && len(w.Citations) == 0 {
+		return fmt.Errorf("a %s warrant needs its citation", w.Basis)
+	}
+	return nil
 }
 
 // Member points at one draft definition row.

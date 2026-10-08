@@ -214,7 +214,14 @@
               }
             }
           }
-        ]
+        ],
+        "warrant": {
+          "basis": "practice",
+          "citations": [
+            "master data as records of their own"
+          ],
+          "scope": "any market"
+        }
       }
     },
     {
@@ -316,7 +323,14 @@
               }
             }
           }
-        ]
+        ],
+        "warrant": {
+          "basis": "standard",
+          "citations": [
+            "Ustawa o rachunkowości: zasada memoriału — przychód w okresie sprzedaży"
+          ],
+          "scope": "PL"
+        }
       }
     },
     {
@@ -414,7 +428,14 @@
               }
             }
           }
-        ]
+        ],
+        "warrant": {
+          "basis": "practice",
+          "citations": [
+            "perpetual inventory: każdy przychód i rozchód zmienia stan magazynu"
+          ],
+          "scope": "PL, trade"
+        }
       }
     },
     {
@@ -553,7 +574,14 @@
               }
             }
           }
-        ]
+        ],
+        "warrant": {
+          "basis": "practice",
+          "citations": [
+            "dokument PZ (przyjęcie zewnętrzne) dla każdej dostawy"
+          ],
+          "scope": "PL, trade"
+        }
       }
     },
     {
@@ -663,7 +691,14 @@
               }
             }
           }
-        ]
+        ],
+        "warrant": {
+          "basis": "practice",
+          "citations": [
+            "obsługa reklamacji jako sprawa z cyklem życia"
+          ],
+          "scope": "any market"
+        }
       }
     },
     {
@@ -692,7 +727,14 @@
               }
             }
           }
-        ]
+        ],
+        "warrant": {
+          "basis": "practice",
+          "citations": [
+            "wycofana reklamacja zamyka jej sprawę"
+          ],
+          "scope": "any market"
+        }
       }
     }
   ],

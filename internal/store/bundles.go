@@ -21,6 +21,11 @@ func (s *Store) InsertBundle(ctx context.Context, b core.Bundle) (core.Bundle, e
 	if err := b.Validate(); err != nil {
 		return b, err
 	}
+	if b.Warrant != nil {
+		if err := b.Warrant.ValidateProposed(); err != nil {
+			return b, fmt.Errorf("bundle %s: %w", b.ID, err)
+		}
+	}
 	if _, err := s.GetBundle(ctx, b.ID); err == nil {
 		return b, fmt.Errorf("bundle %s already exists — a redraft is a new bundle", b.ID)
 	}
@@ -47,23 +52,35 @@ func InsertBundleVersion(ctx context.Context, q Querier, b core.Bundle) (core.Bu
 	if err != nil {
 		return b, err
 	}
+	var warrant []byte
+	if b.Warrant != nil {
+		if warrant, err = json.Marshal(b.Warrant); err != nil {
+			return b, err
+		}
+	}
 	err = q.QueryRow(ctx, `
-		INSERT INTO bundle (bundle_id, version, status, description, members, created_by)
+		INSERT INTO bundle (bundle_id, version, status, description, members, created_by, warrant)
 		VALUES ($1, COALESCE((SELECT MAX(version) FROM bundle WHERE bundle_id = $1), 0) + 1,
-		        $2, $3, $4, $5)
+		        $2, $3, $4, $5, $6)
 		RETURNING version, created_at`,
-		b.ID, b.Status, b.Description, members, b.CreatedBy,
+		b.ID, b.Status, b.Description, members, b.CreatedBy, warrant,
 	).Scan(&b.Version, &b.CreatedAt)
 	return b, err
 }
 
-const bundleCols = `bundle_id, version, status, description, members, created_by, created_at`
+const bundleCols = `bundle_id, version, status, description, members, created_by, created_at, warrant`
 
 func scanBundle(row pgx.Row) (core.Bundle, error) {
 	var b core.Bundle
-	var members []byte
-	if err := row.Scan(&b.ID, &b.Version, &b.Status, &b.Description, &members, &b.CreatedBy, &b.CreatedAt); err != nil {
+	var members, warrant []byte
+	if err := row.Scan(&b.ID, &b.Version, &b.Status, &b.Description, &members, &b.CreatedBy, &b.CreatedAt, &warrant); err != nil {
 		return b, err
+	}
+	if len(warrant) > 0 {
+		b.Warrant = &core.Warrant{}
+		if err := json.Unmarshal(warrant, b.Warrant); err != nil {
+			return b, err
+		}
 	}
 	return b, json.Unmarshal(members, &b.Members)
 }

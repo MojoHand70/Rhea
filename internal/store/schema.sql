@@ -114,6 +114,8 @@ CREATE TABLE IF NOT EXISTS bundle (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (bundle_id, version)
 );
+-- Why the bundle is proposed (DIRECTION, "Rhea suggests standards").
+ALTER TABLE bundle ADD COLUMN IF NOT EXISTS warrant JSONB;
 
 -- Projection cache. Rebuildable from the event log at any time.
 CREATE TABLE IF NOT EXISTS object (

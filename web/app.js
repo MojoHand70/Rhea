@@ -597,6 +597,16 @@ function openBundles() {
           el("span", { class: "status " + b.status }, b.status),
           el("span", { class: "hint", style: "margin:0" }, `v${b.version} · ${b.created_by}`)),
         el("p", {}, b.description));
+      // Why this is proposed: the warrant, and — once Rhea has learned it —
+      // how many explanations across the network agree. Never invented.
+      if (b.warrant) {
+        const w = b.warrant;
+        const why = el("p", { class: "hint" }, "Why: " + w.basis +
+          (w.citations && w.citations.length ? " — " + w.citations.join("; ") : "") +
+          (w.scope ? ` (${w.scope})` : ""));
+        if (w.support) why.append(` · ${w.support.count} of ${w.support.of} ${w.support.population} explain it this way`);
+        card.append(why);
+      }
       const tbody = el("tbody", {});
       for (const d of b.definitions) {
         tbody.append(el("tr", {},

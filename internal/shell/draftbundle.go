@@ -67,5 +67,5 @@ func StoreBundleDraft(ctx context.Context, st *store.Store, bd agent.BundleDraft
 		id = fmt.Sprintf("%s-%d", bd.BundleID, n)
 	}
 	return st.InsertBundle(ctx, core.Bundle{ID: id, Description: bd.Description,
-		Members: members, CreatedBy: createdBy})
+		Members: members, CreatedBy: createdBy, Warrant: bd.Warrant})
 }

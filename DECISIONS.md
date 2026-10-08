@@ -55,6 +55,32 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-08 — the warrant: every suggestion says where it comes from
+
+- **`core.Warrant` on bundles** (a `warrant` JSONB column): basis
+  (statute | standard | practice | pack | model | client | network),
+  citations, scope (market, industry). Required on agent bundles, and
+  packs default to their own authority. The Bundles tab shows "Why: …"
+  next to Approve. This is DIRECTION's "Rhea suggests standards" made
+  concrete: the agent proposes the customary standard when practice is
+  open, rather than leaving it out or asking.
+- **Support is counted, never claimed.** `Warrant.Support` ("N of M in
+  population") is Rhea's to fill from approved rules across
+  installations. `ValidateProposed` refuses any proposal carrying
+  support or claiming the `network` basis, and `InsertBundle` enforces
+  it for every door. A `statute` or `standard` warrant needs its
+  citation. The prompt asks for no percentages and no invented
+  citations. KK's "90%" was a metaphor for what learning should make
+  true; the slot exists so the learning loop has somewhere honest to
+  write it.
+- **Why the guard exists, recorded because KK asked "if it learns, why
+  wouldn't it use what it learned?":** it does. Learned knowledge is
+  exactly what fills Support. The guard only stops the language model
+  from fabricating the evidence in the moment. Cross-client learning (the
+  network) is designed, not built. A first slice (rule shapes collected
+  from several local installations, anonymized, clustered and counted,
+  fed back as priors) is proposed as the next step after the PZ pack.
+
 ## 2026-10-08 — the PZ: a document with lines, and what it exposed
 
 - **KK: "Yes, absolutely we need a PZ document."** A delivery gets one PZ

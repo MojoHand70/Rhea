@@ -14,6 +14,7 @@ import (
 const complaintBundle = `{
   "bundle_id": "complaints",
   "description": "Complaints are registered and each opens a follow-up case.",
+  "warrant": {"basis": "practice", "citations": ["complaint handling as a case with a lifecycle"], "scope": "any market"},
   "object_types": [
     {"name": "complaint", "domain": "sales", "is_document": true, "label_field": "number",
      "fields": [{"name": "number", "type": "string", "required": true},
@@ -65,6 +66,10 @@ func TestDraftBundleRefusals(t *testing.T) {
 		"rule proposed twice":          {`"rule_id": "close-followup"`, `"rule_id": "book-complaint"`},
 		"ref to an undeclared type":    {`{"name": "customer", "type": "string", "required": true}]},`, `{"name": "customer", "type": "ref<customer>", "required": true}]},`},
 		"amending without consent":     {`"lifecycle": {"field": "status", "transitions": {"open": ["resolved"]}}`, `"label_field": "status"`},
+		"no warrant":                   {`"warrant": {"basis": "practice", "citations": ["complaint handling as a case with a lifecycle"], "scope": "any market"},`, ``},
+		"support figures claimed":      {`"scope": "any market"}`, `"scope": "any market", "support": {"count": 9, "of": 10, "population": "PL"}}`},
+		"network claimed":              {`"basis": "practice"`, `"basis": "network"`},
+		"standard without citation":    {`"basis": "practice", "citations": ["complaint handling as a case with a lifecycle"]`, `"basis": "standard"`},
 	}
 	for name, edit := range cases {
 		answer := strings.Replace(complaintBundle, edit[0], edit[1], 1)
