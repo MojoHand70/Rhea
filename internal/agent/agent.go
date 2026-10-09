@@ -92,7 +92,7 @@ func New() *Agent {
 	return &Agent{Complete: func(ctx context.Context, system, user string) (string, error) {
 		msg, err := client.Messages.New(ctx, anthropic.MessageNewParams{
 			Model:     anthropic.Model(Model()),
-			MaxTokens: 4000,
+			MaxTokens: 16000,
 			System:    []anthropic.TextBlockParam{{Text: system}},
 			Messages:  []anthropic.MessageParam{anthropic.NewUserMessage(anthropic.NewTextBlock(user))},
 		})

@@ -1593,3 +1593,14 @@ evidence in `internal/exec/case_test.go`.
   for adapter docs), and refuse the subtype taxonomy into the kernel. Why:
   free standard lineage for positioning and agent drafting context; zero
   kernel impact.
+
+## 2026-10-10 — the agent's output cap
+
+- **The agent's `max_tokens` goes from 4000 to 16000.** Models that think
+  before answering (Haiku 5.5, Sonnet 5.5 and later) spend part of the cap on
+  thinking, and a bundle with two posting books or PZ lines was cut off at
+  4000: "unexpected end of JSON input" on three of four nordwind voices and
+  three of four helios voices under claude-haiku-5-5. At 16000 the operations
+  corpus went from NOT DONE to DONE on the same model. The cap is a ceiling,
+  not a target: Sonnet 4.6 answers are unchanged. Why: a cap that truncates
+  measures the cap, not the author.
