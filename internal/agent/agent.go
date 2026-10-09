@@ -234,7 +234,10 @@ with "each": "=$.root.lines[*]", each line pointing at its header with
 "=$.doc.object_id" (inside "each", "doc" is the cascade payload).
 This is how one fact grows its consequences: a document materializes, a cascade
 rule posts it, another raises a follow-up case. Amendments end chains: never match
-"object.amended".
+"object.amended", and an amended status never re-materializes - a rule matching
+"object.materialized" with a status set later by an amendment never fires. React to
+the raw event instead (complaint.withdrawn), and find the object through what the
+event names.
 
 A follow-up points at exactly the thing that caused it: a case raised from a complaint
 carries "complaint": "=$.object_id", and a later event naming only the complaint's number
