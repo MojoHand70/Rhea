@@ -106,9 +106,9 @@ func TestPersonaReferenceIsDone(t *testing.T) {
 	}
 }
 
-// The verdict over several runs is all or nothing: an author that passes
-// most of the time is not done.
-func TestVerdictIsAllOrNothing(t *testing.T) {
+// The verdict over several runs: done when every run is done, and the
+// counts beside it say how the author got there.
+func TestVerdictCountsRuns(t *testing.T) {
 	done := eval.Report{Intake: 3}
 	notDone := eval.Report{Intake: 3, Residue: []string{"x #1"}}
 	v := eval.Verdict{Corpus: "sim:x", Outcomes: []eval.Outcome{{Voice: 0, Run: 1, Report: done}, {Voice: 1, Run: 1, Report: done}}}

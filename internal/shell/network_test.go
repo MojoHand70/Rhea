@@ -138,7 +138,7 @@ func TestRheaLearnsAcrossInstallations(t *testing.T) {
 	learned := agent.BundleDraft{BundleID: "post-invoices", Description: "post invoices as most do",
 		Warrant: &core.Warrant{Basis: "network"},
 		Rules:   []agent.Draft{{RuleID: "post-invoice", Description: "201/702", Priority: 200, Spec: posting("702")}}}
-	b, err := shell.StoreBundleDraft(ctx, fifth, &k, learned, "agent:test", "2026-01-01")
+	b, err := shell.StoreBundleDraft(ctx, fifth, &k, learned, "agent:test", "2026-01-01", "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +149,7 @@ func TestRheaLearnsAcrossInstallations(t *testing.T) {
 	claim := learned
 	claim.BundleID = "post-invoices-730"
 	claim.Rules = []agent.Draft{{RuleID: "post-invoice-730", Description: "201/730", Priority: 200, Spec: posting("730")}}
-	if _, err := shell.StoreBundleDraft(ctx, fifth, &k, claim, "agent:test", "2026-01-01"); err == nil ||
+	if _, err := shell.StoreBundleDraft(ctx, fifth, &k, claim, "agent:test", "2026-01-01", "", ""); err == nil ||
 		!strings.Contains(err.Error(), "none of its rules is an answer Rhea has learned") {
 		t.Fatalf("unlearned network claim: %v", err)
 	}
@@ -158,7 +158,7 @@ func TestRheaLearnsAcrossInstallations(t *testing.T) {
 	own := agent.BundleDraft{BundleID: "our-way", Description: "we book services to 700",
 		Warrant: &core.Warrant{Basis: "client", Citations: []string{"our accountant's policy"}},
 		Rules:   []agent.Draft{{RuleID: "post-invoice-700", Description: "201/700", Priority: 200, Spec: posting("700")}}}
-	ob, err := shell.StoreBundleDraft(ctx, fifth, &k, own, "agent:test", "2026-01-01")
+	ob, err := shell.StoreBundleDraft(ctx, fifth, &k, own, "agent:test", "2026-01-01", "", "")
 	if err != nil {
 		t.Fatal(err)
 	}

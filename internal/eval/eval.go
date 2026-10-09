@@ -7,6 +7,7 @@
 package eval
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -98,7 +99,16 @@ type Row struct {
 	ApproveErrs []string
 	Draft       json.RawMessage // what the agent proposed, for the verbose report
 	Backfilled  int             // past events the approval's backfill explained further
+	// Reasks are the refusals the recorded approver sent back before this
+	// outcome, oldest first — the conversation a person would have had.
+	Reasks []string
 }
+
+// Fixed reports an outcome that needed a re-ask and ended approved.
+func (r Row) Fixed() bool { return len(r.Reasks) > 0 && r.Approved && len(r.ApproveErrs) == 0 }
+
+// FirstDraft reports an outcome approved on the first draft.
+func (r Row) FirstDraft() bool { return len(r.Reasks) == 0 && r.Approved && len(r.ApproveErrs) == 0 }
 
 // Report is the run's verdict.
 type Report struct {
@@ -124,11 +134,12 @@ type Outcome struct {
 	Report Report
 }
 
-// Verdict is the all-or-nothing reading of several runs (KK, 2026-10-09:
-// in accounting there is no "passes one time and not the other"). Booking
-// is deterministic by invariant; authoring is where a model varies, and a
-// draft that is right most of the time is a defect, not a percentage. A
-// corpus is done only when every run in every voice is done.
+// Verdict reads several runs together. A corpus is done when every run in
+// every voice ends with nothing unexplained and the expected state — with
+// the recorded approver allowed the second ask a person would give (KK,
+// 2026-10-10: authoring is a conversation; what must be all or nothing is
+// the booking, and the kernel already is). The counts say how the author
+// got there: first drafts right, re-asks, re-asks that fixed it.
 type Verdict struct {
 	Corpus   string
 	Outcomes []Outcome
@@ -146,7 +157,30 @@ func (v Verdict) Done() bool {
 	return true
 }
 
-// String renders one line per run and the verdict.
+// Counts is how the author got there, over every run: questions asked,
+// answered right on the first draft, re-asked, and re-asked then fixed.
+type Counts struct{ Questions, FirstDraft, Reasked, Fixed int }
+
+func (v Verdict) Counts() Counts {
+	var c Counts
+	for _, o := range v.Outcomes {
+		for _, row := range o.Report.Rows {
+			c.Questions++
+			if row.FirstDraft() {
+				c.FirstDraft++
+			}
+			if len(row.Reasks) > 0 {
+				c.Reasked++
+			}
+			if row.Fixed() {
+				c.Fixed++
+			}
+		}
+	}
+	return c
+}
+
+// String renders one line per run, the verdict, and the counts.
 func (v Verdict) String() string {
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "%s: %d run(s)\n", v.Corpus, len(v.Outcomes))
@@ -160,14 +194,30 @@ func (v Verdict) String() string {
 		if len(o.Report.Mismatch) > 0 {
 			fmt.Fprintf(&sb, "; state: %s", strings.Join(o.Report.Mismatch, "; "))
 		}
+		if n := o.Report.Reasked(); n > 0 {
+			fmt.Fprintf(&sb, "; re-asked %d", n)
+		}
 		sb.WriteByte('\n')
 	}
 	if v.Done() {
 		fmt.Fprintf(&sb, "DONE in every run (%d of %d)\n", done, len(v.Outcomes))
 	} else {
-		fmt.Fprintf(&sb, "NOT DONE: %d of %d runs done — an author that passes most of the time is not done\n", done, len(v.Outcomes))
+		fmt.Fprintf(&sb, "NOT DONE: %d of %d runs done\n", done, len(v.Outcomes))
 	}
+	c := v.Counts()
+	fmt.Fprintf(&sb, "first draft right on %d of %d questions; %d re-asked, %d of those fixed\n", c.FirstDraft, c.Questions, c.Reasked, c.Fixed)
 	return sb.String()
+}
+
+// Reasked counts the questions this run had to ask twice.
+func (r Report) Reasked() int {
+	n := 0
+	for _, row := range r.Rows {
+		if len(row.Reasks) > 0 {
+			n++
+		}
+	}
+	return n
 }
 
 // Load reads a corpus file.
@@ -391,59 +441,112 @@ func triggerPresent(ctx context.Context, st *store.Store, spec core.RuleSpec) (b
 	return found, err
 }
 
-// runBundle plays one bundle task: draft, land as drafts, dry-run the whole
-// bundle, approve it whole when the dry run is clean.
+// maxReasks is how many times the recorded approver sends a refused draft
+// back with its reason before giving up on the question — the second ask a
+// person gives at the screen. The verdict counts every re-ask.
+const maxReasks = 1
+
+// runBundle plays one bundle task as a person would: draft, land as drafts,
+// dry-run the whole bundle, approve it whole when the dry run is clean — and
+// when the draft is refused, say why and ask again, once.
 func runBundle(ctx context.Context, st *store.Store, x *exec.Executor, a *agent.Agent, model string, ask agent.Ask, k *network.Knowledge, row *Row) error {
+	after := ""
+	for {
+		refusal, rejected, err := tryBundle(ctx, st, x, a, model, ask, k, row, after)
+		if err != nil {
+			return err
+		}
+		if refusal == "" || len(row.Reasks) >= maxReasks {
+			return nil
+		}
+		// The approver's reply, as a person would give it: the reason, and the
+		// proposal it refers to. The refused draft stays on the record; the
+		// next draft names it and answers the reason.
+		row.Reasks = append(row.Reasks, refusal)
+		ask.Rejections = append(ask.Rejections, agent.Rejection{Proposal: compact(row.Draft), Reason: refusal, By: "the approver"})
+		after = rejected
+		row.Error, row.SimErrors, row.ApproveErrs, row.RuleID = "", nil, nil, ""
+		row.Explains, row.Added = 0, 0
+	}
+}
+
+// compact strips the report's indentation from a kept draft.
+func compact(draft json.RawMessage) json.RawMessage {
+	if len(draft) == 0 {
+		return nil
+	}
+	var buf bytes.Buffer
+	if err := json.Compact(&buf, draft); err != nil {
+		return draft
+	}
+	return buf.Bytes()
+}
+
+// tryBundle is one attempt at a bundle task. It returns the refusal the
+// approver would send back — empty when the bundle was approved or there
+// was nothing to approve — and the id of the bundle refused and rejected on
+// the record, if one was stored.
+func tryBundle(ctx context.Context, st *store.Store, x *exec.Executor, a *agent.Agent, model string, ask agent.Ask, k *network.Knowledge, row *Row, after string) (refusal, rejected string, err error) {
 	bd, err := a.DraftBundle(ctx, ask)
 	if errors.Is(err, agent.ErrAlreadyAnswered) {
 		// Nothing to approve; whether that was right, the state check says.
 		row.RuleID, row.Approved = "already answered: "+bd.Description, true
-		return nil
+		return "", "", nil
 	}
 	if err != nil {
 		row.Error = err.Error()
+		row.Draft = nil
 		if bd.BundleID != "" { // refused, but what was proposed is worth reading
 			row.Draft, _ = json.MarshalIndent(bd, "       ", "  ")
 		}
-		return nil
+		return row.Error, "", nil
 	}
 	date := ask.Sample.OccurredAt
 	if date == "" {
 		date = "2026-01-01"
 	}
-	b, err := shell.StoreBundleDraft(ctx, st, k, bd, "agent:"+model, date)
+	b, err := shell.StoreBundleDraft(ctx, st, k, bd, "agent:"+model, date, ask.Intent, after)
 	if err != nil {
 		row.Error = "store bundle: " + err.Error()
-		return nil
+		row.Draft, _ = json.MarshalIndent(bd, "       ", "  ")
+		return row.Error, "", nil
 	}
 	row.RuleID = fmt.Sprintf("%s [%s]", b.ID, bd.Summary())
 	row.Draft, _ = json.MarshalIndent(bd, "       ", "  ")
+	// refuse sends a stored draft back: the rejection, with its reason, is
+	// on the record before the next draft is asked for.
+	refuse := func(reason string) (string, string, error) {
+		if _, err := x.RejectBundle(ctx, b.ID, reason, "eval", date); err != nil {
+			return "", "", err
+		}
+		return reason, b.ID, nil
+	}
 	diff, err := x.SimulateBundle(ctx, b)
 	if err != nil {
-		return err
+		return "", "", err
 	}
 	row.SimErrors = diff.Errors
 	row.Explains = len(diff.UnexplainedBefore) - len(diff.UnexplainedAfter)
 	row.Added = len(diff.Added)
 	if len(diff.Errors) > 0 {
-		return nil
+		return refuse("the dry run fails: " + strings.Join(diff.Errors, "; "))
 	}
 	specs := make([]core.RuleSpec, 0, len(bd.Rules))
 	for _, d := range bd.Rules {
 		specs = append(specs, d.Spec)
 	}
-	refusal, err := noEffect(ctx, st, diff, specs)
+	refusal, err = noEffect(ctx, st, diff, specs)
 	if err != nil {
-		return err
+		return "", "", err
 	}
 	if refusal != "" {
 		row.Error = refusal
-		return nil
+		return refuse(refusal)
 	}
 	_, booked, procErrs, err := x.ApproveBundle(ctx, b.ID, "eval", date)
 	if err != nil {
 		row.ApproveErrs = append(row.ApproveErrs, err.Error())
-		return nil
+		return "", "", nil
 	}
 	row.Approved, row.Booked = true, booked
 	for _, e := range procErrs {
@@ -453,7 +556,7 @@ func runBundle(ctx context.Context, st *store.Store, x *exec.Executor, a *agent.
 	// explain the past further, the dry run is read and the backfill approved.
 	plan, err := x.PlanBackfill(ctx, date)
 	if err != nil {
-		return err
+		return "", "", err
 	}
 	if len(plan.Chains) > 0 && len(plan.Errors) == 0 {
 		n, errs, err := x.ApproveBackfill(ctx, "eval", date)
@@ -465,7 +568,7 @@ func runBundle(ctx context.Context, st *store.Store, x *exec.Executor, a *agent.
 			row.ApproveErrs = append(row.ApproveErrs, "backfill: "+e.Error())
 		}
 	}
-	return nil
+	return "", "", nil
 }
 
 func loadSeed(ctx context.Context, st *store.Store, path string) error {
@@ -528,6 +631,9 @@ func (r Report) render(verbose bool) string {
 			mark = "✓"
 		}
 		fmt.Fprintf(&sb, "%s %2d. %s\n", mark, i+1, row.Intent)
+		for _, reason := range row.Reasks {
+			fmt.Fprintf(&sb, "       re-asked: %s\n", reason)
+		}
 		switch {
 		case row.Error != "":
 			fmt.Fprintf(&sb, "       refused: %s\n", row.Error)

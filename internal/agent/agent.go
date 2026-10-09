@@ -50,6 +50,10 @@ type Ask struct {
 	// Priors are what Rhea has learned across installations: for questions
 	// like this one, how many explain it which way — real counts only.
 	Priors []Prior
+	// Rejections are the earlier answers to this very question that were
+	// refused, oldest first: a redraft answers the latest refusal instead of
+	// starting over.
+	Rejections []Rejection
 }
 
 // Prior is one learned answer: Count of Of installations answer Question
@@ -59,6 +63,16 @@ type Prior struct {
 	Count    int             `json:"count"`
 	Of       int             `json:"of"`
 	Rule     json.RawMessage `json:"rule"`
+}
+
+// Rejection is one earlier answer to this question that was refused, with
+// the reason: the conversation so far. Proposal is the refused bundle as it
+// was proposed; By names who refused it — a person, or the approver that
+// read the dry run.
+type Rejection struct {
+	Proposal json.RawMessage `json:"proposal,omitempty"`
+	Reason   string          `json:"reason"`
+	By       string          `json:"by"`
 }
 
 // Cluster is one unexplained event shape in the worklist.
@@ -360,6 +374,16 @@ func userMessage(ask Ask) string {
 	}
 	if ask.Hint != "" {
 		fmt.Fprintf(&sb, "\nThe user points at object type %q.\n", ask.Hint)
+	}
+	if len(ask.Rejections) > 0 {
+		sb.WriteString("\nThe conversation so far - earlier answers to this question, refused, oldest first:\n")
+		for i, rj := range ask.Rejections {
+			fmt.Fprintf(&sb, "%d. Refused by %s: %s\n", i+1, rj.By, rj.Reason)
+			if len(rj.Proposal) > 0 {
+				fmt.Fprintf(&sb, "   The refused proposal was: %s\n", rj.Proposal)
+			}
+		}
+		sb.WriteString("Answer the latest refusal: change what it objects to, keep what it does not, and use a new bundle_id.\n")
 	}
 	fmt.Fprintf(&sb, "\nUser intent: %s\n", ask.Intent)
 	return sb.String()

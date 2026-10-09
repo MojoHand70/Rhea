@@ -386,6 +386,7 @@ func BuiltinActivities() []Activity {
 				Inputs: []FieldDef{
 					{Name: "intent", Type: "string", Required: true},
 					{Name: "sample_event_id", Type: "int"},
+					{Name: "after", Type: "string"}, // the rejected bundle this ask redrafts
 				},
 				Emits: "bundle.draft_requested",
 				Who:   []string{"human"},

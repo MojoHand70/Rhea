@@ -36,6 +36,9 @@ var activeRulesSQL string
 //go:embed queries/chain.sql
 var chainSQL string
 
+//go:embed queries/bundle_rejection.sql
+var bundleRejectionSQL string
+
 type Store struct {
 	Pool *pgxpool.Pool
 }
@@ -417,6 +420,26 @@ func (s *Store) GetRule(ctx context.Context, id string) (core.Rule, error) {
 		}
 	}
 	return core.Rule{}, fmt.Errorf("rule %q not found", id)
+}
+
+// GetRuleVersion returns one exact rule version, whatever its status: the
+// draft a rejected bundle carried is read back as it was proposed.
+func (s *Store) GetRuleVersion(ctx context.Context, id string, version int) (core.Rule, error) {
+	rows, err := s.Pool.Query(ctx, `
+		SELECT rule_id, version, status, priority, to_char(effective_from,'YYYY-MM-DD'),
+		       created_by, description, spec, created_at
+		FROM rule WHERE rule_id = $1 AND version = $2`, id, version)
+	if err != nil {
+		return core.Rule{}, err
+	}
+	rules, err := scanRules(rows)
+	if err != nil {
+		return core.Rule{}, err
+	}
+	if len(rules) == 0 {
+		return core.Rule{}, fmt.Errorf("rule %s v%d not found", id, version)
+	}
+	return rules[0], nil
 }
 
 // RuleKey names one exact rule version — the unit provenance speaks in.

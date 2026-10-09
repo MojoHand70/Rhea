@@ -112,6 +112,12 @@ because an earlier answer took up what Rhea had learned), propose nothing - retu
 {"bundle_id": "...", "description": "already answered by <rule ids>: <how>"} with no
 definitions. Never propose a second rule doing what an active rule already does.
 
+REDRAFTING - when the request shows a conversation so far (earlier proposals, each refused
+with a reason), you are answering the latest refusal, not starting over: fix exactly what the
+reason objects to, keep what it does not object to, and give the bundle a new id. A refusal
+from the approver names a defect the kernel found; a refusal from a person may change what
+the question means - follow the person.
+
 Explain the events the question is about - the unexplained events in the request show
 what is waiting. One event may need several rules (a document AND a ledger posting AND a
 stock movement); put them all in the bundle - they activate together. Propose only what

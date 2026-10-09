@@ -14,8 +14,9 @@ import (
 // their next version, rules and verbs as new draft versions, and the bundle
 // over all of them. Validation already ran (agent.BundleDraft.Validate);
 // versions are the kernel's to assign, and a taken bundle id gets a suffix —
-// a redraft is a new bundle.
-func StoreBundleDraft(ctx context.Context, st *store.Store, k *network.Knowledge, bd agent.BundleDraft, createdBy, effectiveFrom string) (core.Bundle, error) {
+// a redraft is a new bundle, naming in `after` the rejected one it answers,
+// and every bundle keeps the question it answers.
+func StoreBundleDraft(ctx context.Context, st *store.Store, k *network.Knowledge, bd agent.BundleDraft, createdBy, effectiveFrom, question, after string) (core.Bundle, error) {
 	// A proposal resting on the network is verified here, and its support is
 	// counted by Rhea from what she learned — never taken from the proposer.
 	if bd.Warrant != nil && bd.Warrant.Basis == "network" {
@@ -85,5 +86,5 @@ func StoreBundleDraft(ctx context.Context, st *store.Store, k *network.Knowledge
 		id = fmt.Sprintf("%s-%d", bd.BundleID, n)
 	}
 	return st.InsertBundle(ctx, core.Bundle{ID: id, Description: bd.Description,
-		Members: members, CreatedBy: createdBy, Warrant: bd.Warrant})
+		Members: members, CreatedBy: createdBy, Warrant: bd.Warrant, Question: question, After: after})
 }

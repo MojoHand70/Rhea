@@ -59,21 +59,23 @@ func InsertBundleVersion(ctx context.Context, q Querier, b core.Bundle) (core.Bu
 		}
 	}
 	err = q.QueryRow(ctx, `
-		INSERT INTO bundle (bundle_id, version, status, description, members, created_by, warrant)
+		INSERT INTO bundle (bundle_id, version, status, description, members, created_by, warrant, question, after_bundle)
 		VALUES ($1, COALESCE((SELECT MAX(version) FROM bundle WHERE bundle_id = $1), 0) + 1,
-		        $2, $3, $4, $5, $6)
+		        $2, $3, $4, $5, $6, $7, $8)
 		RETURNING version, created_at`,
-		b.ID, b.Status, b.Description, members, b.CreatedBy, warrant,
+		b.ID, b.Status, b.Description, members, b.CreatedBy, warrant, b.Question, b.After,
 	).Scan(&b.Version, &b.CreatedAt)
 	return b, err
 }
 
-const bundleCols = `bundle_id, version, status, description, members, created_by, created_at, warrant`
+const bundleCols = `bundle_id, version, status, description, members, created_by, created_at, warrant,
+	COALESCE(question, ''), COALESCE(after_bundle, '')`
 
 func scanBundle(row pgx.Row) (core.Bundle, error) {
 	var b core.Bundle
 	var members, warrant []byte
-	if err := row.Scan(&b.ID, &b.Version, &b.Status, &b.Description, &members, &b.CreatedBy, &b.CreatedAt, &warrant); err != nil {
+	if err := row.Scan(&b.ID, &b.Version, &b.Status, &b.Description, &members, &b.CreatedBy, &b.CreatedAt, &warrant,
+		&b.Question, &b.After); err != nil {
 		return b, err
 	}
 	if len(warrant) > 0 {
@@ -196,4 +198,26 @@ func (s *Store) NextViewDefVersion(ctx context.Context, id string) (int, error) 
 	var v int
 	err := s.Pool.QueryRow(ctx, `SELECT COALESCE(MAX(version), 0) + 1 FROM view_def WHERE view_id = $1`, id).Scan(&v)
 	return v, err
+}
+
+// Rejection is what was said when a bundle was refused, read from the log:
+// the reject_bundle door's event, never a column that could drift from it.
+type Rejection struct {
+	Reason string `json:"reason"`
+	By     string `json:"by"`
+	Date   string `json:"date"`
+}
+
+// BundleRejection returns a bundle's latest rejection, if it was ever
+// rejected.
+func (s *Store) BundleRejection(ctx context.Context, id string) (Rejection, bool, error) {
+	var r Rejection
+	err := s.Pool.QueryRow(ctx, bundleRejectionSQL, id).Scan(&r.Reason, &r.By, &r.Date)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return r, false, nil
+	}
+	if err != nil {
+		return r, false, err
+	}
+	return r, true, nil
 }

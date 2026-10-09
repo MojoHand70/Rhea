@@ -615,6 +615,8 @@ function openBundles() {
           el("span", { class: "status " + b.status }, b.status),
           el("span", { class: "hint", style: "margin:0" }, `v${b.version} · ${b.created_by}`)),
         el("p", {}, b.description));
+      if (b.question) card.append(el("p", { class: "hint" }, "Question: " + b.question +
+        (b.after ? ` · redrafts ${b.after}` : "")));
       // Why this is proposed: the warrant, and — once Rhea has learned it —
       // how many explanations across the network agree. Never invented.
       if (b.warrant) {
@@ -676,6 +678,27 @@ function openBundles() {
           } catch (e) { toast(e.message, true); reject.disabled = false; }
         } }, "Reject");
         card.append(el("div", { class: "row", style: "margin-top:8px" }, sim, approve, reason, reject), simBox);
+      }
+      // The conversation: a rejected bundle shows why, and the next draft
+      // answers that reason — the agent reads it from the record.
+      if (b.rejection) {
+        card.append(el("p", { class: "hint" },
+          `Rejected by ${b.rejection.by} on ${b.rejection.date}: ${b.rejection.reason}`));
+        const again = el("textarea", { placeholder: "Say it again, or differently (optional — the reason above is already on the record)." });
+        const redraft = el("button", { class: "primary", onclick: async () => {
+          redraft.disabled = true; redraft.textContent = "Asking the agent…";
+          try {
+            const nb = await api("/api/bundles/draft", {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ intent: again.value, after: b.bundle_id }),
+            });
+            if (nb.already_answered) { toast(`Nothing to add: ${nb.description}`); return; }
+            toast(`Bundle ${nb.bundle_id} ready for approval: ${nb.members.length} definition(s).`);
+            refreshActive();
+          } catch (e) { toast(e.message, true); }
+          redraft.disabled = false; redraft.textContent = "Draft again";
+        } }, "Draft again");
+        card.append(el("div", { class: "draft-form" }, again, el("div", { class: "row", style: "margin-top:8px" }, redraft)));
       }
       out.push(card);
     }

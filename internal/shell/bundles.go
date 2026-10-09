@@ -11,6 +11,7 @@ import (
 	"rhea/internal/agent"
 	"rhea/internal/core"
 	"rhea/internal/network"
+	"rhea/internal/store"
 )
 
 // bundleView is a bundle with its members' definitions inlined: the human
@@ -18,6 +19,9 @@ import (
 type bundleView struct {
 	core.Bundle
 	Definitions []memberView `json:"definitions"`
+	// Rejection is why a superseded bundle was refused, from the log — the
+	// start of the conversation its redraft continues.
+	Rejection *store.Rejection `json:"rejection,omitempty"`
 }
 
 type memberView struct {
@@ -72,6 +76,15 @@ func (s *Server) bundleViewWith(ctx context.Context, b core.Bundle, k *network.K
 			mv.Definition = json.RawMessage(v.Spec)
 		}
 		out.Definitions = append(out.Definitions, mv)
+	}
+	if b.Status == core.StatusSuperseded {
+		rj, ok, err := s.Store.BundleRejection(ctx, b.ID)
+		if err != nil {
+			return out, err
+		}
+		if ok {
+			out.Rejection = &rj
+		}
 	}
 	return out, nil
 }
@@ -167,16 +180,37 @@ func (s *Server) handleRejectBundle(w http.ResponseWriter, r *http.Request) {
 // as bundle.draft_requested before any model answers; the shell then runs the
 // agent (its runner, until agent-as-user) and lands the answer as drafts.
 // The sample event is optional — the agent always sees the whole residue.
+// With `after`, the ask continues a conversation: the named bundle was
+// rejected, and the agent sees it and the reason; an empty intent then
+// means "the same question again".
 func (s *Server) handleDraftBundle(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Intent        string `json:"intent"`
 		SampleEventID int64  `json:"sample_event_id"`
+		After         string `json:"after"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeErr(w, 400, err)
 		return
 	}
 	ctx := r.Context()
+	var conversation []agent.Rejection
+	if req.After != "" {
+		var question string
+		var err error
+		conversation, question, err = Conversation(ctx, s.Store, req.After)
+		if err != nil {
+			writeErr(w, 400, err)
+			return
+		}
+		if req.Intent == "" {
+			req.Intent = question
+		}
+		if req.Intent == "" {
+			writeErr(w, 400, fmt.Errorf("bundle %s has no recorded question: say what you want", req.After))
+			return
+		}
+	}
 	var sample core.Event
 	if req.SampleEventID != 0 {
 		ev, err := s.Store.GetEvent(ctx, req.SampleEventID)
@@ -190,6 +224,9 @@ func (s *Server) handleDraftBundle(w http.ResponseWriter, r *http.Request) {
 	if req.SampleEventID != 0 {
 		inputs["sample_event_id"] = req.SampleEventID
 	}
+	if req.After != "" {
+		inputs["after"] = req.After
+	}
 	if _, err := s.Exec.TriggerActivity(ctx, "draft_bundle", inputs, "shell", ""); err != nil {
 		writeErr(w, 400, err)
 		return
@@ -200,6 +237,7 @@ func (s *Server) handleDraftBundle(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 500, err)
 		return
 	}
+	ask.Rejections = conversation
 	bd, err := s.Agent.DraftBundle(ctx, ask)
 	if errors.Is(err, agent.ErrAlreadyAnswered) {
 		writeJSON(w, 200, map[string]any{"already_answered": true, "description": bd.Description})
@@ -222,7 +260,7 @@ func (s *Server) handleDraftBundle(w http.ResponseWriter, r *http.Request) {
 	if effective == "" {
 		effective = time.Now().Format("2006-01-02")
 	}
-	b, err := StoreBundleDraft(ctx, s.Store, k, bd, "agent:"+agent.Model(), effective)
+	b, err := StoreBundleDraft(ctx, s.Store, k, bd, "agent:"+agent.Model(), effective, req.Intent, req.After)
 	if err != nil {
 		writeErr(w, 500, err)
 		return

@@ -116,6 +116,9 @@ CREATE TABLE IF NOT EXISTS bundle (
 );
 -- Why the bundle is proposed (DIRECTION, "Rhea suggests standards").
 ALTER TABLE bundle ADD COLUMN IF NOT EXISTS warrant JSONB;
+-- The conversation: the question a bundle answers, and the rejected bundle it redrafts.
+ALTER TABLE bundle ADD COLUMN IF NOT EXISTS question TEXT;
+ALTER TABLE bundle ADD COLUMN IF NOT EXISTS after_bundle TEXT;
 
 -- Projection cache. Rebuildable from the event log at any time.
 CREATE TABLE IF NOT EXISTS object (

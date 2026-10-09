@@ -108,3 +108,39 @@ func TestDraftBundleAlreadyAnswered(t *testing.T) {
 		t.Fatalf("got %v, %+v", err, b)
 	}
 }
+
+// The conversation so far reaches the agent before the question: every
+// refusal with its reason and the refused proposal, oldest first, and the
+// request still ends with the intent — the line the test bench matches on.
+func TestAskCarriesTheConversation(t *testing.T) {
+	var got string
+	a := &agent.Agent{Complete: func(ctx context.Context, system, user string) (string, error) {
+		got = user
+		return complaintBundle, nil
+	}}
+	ask := ask("complaints open cases")
+	ask.Rejections = []agent.Rejection{
+		{Proposal: []byte(`{"bundle_id":"one"}`), Reason: "too many fields", By: "krzysztof"},
+		{Reason: "model returned unparseable JSON", By: "the approver"},
+	}
+	if _, err := a.DraftBundle(context.Background(), ask); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"The conversation so far",
+		"1. Refused by krzysztof: too many fields",
+		`The refused proposal was: {"bundle_id":"one"}`,
+		"2. Refused by the approver: model returned unparseable JSON",
+		"Answer the latest refusal",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("ask lacks %q:\n%s", want, got)
+		}
+	}
+	if !strings.HasSuffix(strings.TrimSpace(got), "User intent: complaints open cases") {
+		t.Fatalf("ask must end with the intent:\n%s", got)
+	}
+	if strings.Index(got, "The conversation so far") > strings.Index(got, "User intent:") {
+		t.Fatal("the conversation must come before the intent")
+	}
+}

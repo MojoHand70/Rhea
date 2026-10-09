@@ -1604,3 +1604,36 @@ evidence in `internal/exec/case_test.go`.
   corpus went from NOT DONE to DONE on the same model. The cap is a ceiling,
   not a target: Sonnet 4.6 answers are unchanged. Why: a cap that truncates
   measures the cap, not the author.
+
+## 2026-10-10 — authoring is a conversation; the all-or-nothing verdict was a misreading
+
+- **KK: the sentence "in accounting there is no document that passes one
+  time and not the other" was about booking, not authoring.** One document
+  with four rules must not be booked under three when the fourth fails —
+  and the kernel already does exactly that: the whole chain books or
+  nothing does (`evaluate`, pinned by TestMultiRuleFiring and the
+  parallel-books test). The eval verdict I built on that sentence on
+  2026-10-09 — every run of every paraphrase DONE or NOT DONE — was my
+  construction, and it punished a refusal the gate caught (nothing booked)
+  exactly like a draft that booked wrong state. The bar stays absolute
+  where money is; the author gets the second chance a person gives.
+- **The loop, in the product:** a rejected bundle keeps its reason on the
+  record (the reject_bundle event), and "Draft again" on a rejected bundle
+  asks with `after`: the shell reads the chain of rejected bundles behind
+  it from the store (`shell.Conversation`, three deep), each with its
+  reason and the proposal as the agent shaped it, and the agent answers
+  the latest refusal instead of starting over. Every bundle now keeps the
+  question it answers (`question`) and the rejected bundle it redrafts
+  (`after_bundle`); an empty re-ask means "the same question again".
+- **The loop, on the test bench:** the recorded approver sends a refused
+  draft back once (`maxReasks = 1`) with the reason — a validation
+  refusal, unparseable JSON, a failing dry run, "explains nothing" — and
+  rejects the stored draft on the record first, so the bench walks the
+  same path as the shell. The verdict keeps "DONE in every run" as the
+  definition of done, drops the sermon, and prints the counts that matter
+  now: first draft right on N of M questions, re-asked K, of those fixed J.
+  Rule-mode tasks (the M0 corpus) stay one-shot.
+- **Why:** the eval's harshness on the author was measuring my rule, not
+  KK's; what KK wants is the exchange one has with an accountant — propose,
+  explain, refuse with a reason, propose again — and a count of how often
+  the first proposal was right is the honest number about the author.
