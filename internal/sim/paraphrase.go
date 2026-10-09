@@ -68,37 +68,75 @@ func Preserved(original, paraphrase string) []string {
 	var missing []string
 	lower := strings.ToLower(paraphrase)
 	seen := map[string]bool{}
+	prev := ""
 	for _, tok := range strings.FieldsFunc(original, func(r rune) bool {
 		return r == ' ' || r == ',' || r == ';' || r == ':' || r == '(' || r == ')' || r == '\n'
 	}) {
 		t := strings.Trim(tok, ".'\"")
-		if t == "" || seen[t] {
+		if t == "" {
 			continue
 		}
-		if !factual(t) {
+		isFact := factual(t, prev)
+		prev = strings.ToLower(t)
+		if !isFact || seen[t] {
 			continue
 		}
 		seen[t] = true
-		if !strings.Contains(lower, strings.ToLower(t)) {
+		if !present(lower, strings.ToLower(t)) {
 			missing = append(missing, t)
+		}
+	}
+	orig := strings.ToLower(original)
+	for _, forms := range roundingPhrases {
+		if has(orig, forms) && !has(lower, forms) {
+			missing = append(missing, forms[0])
 		}
 	}
 	return missing
 }
 
-// factual: a token that carries a fact rather than wording — it has a
-// digit, a code's dash, slash or underscore, or is a known vocabulary word
-// of the language.
-func factual(t string) bool {
-	if strings.ContainsAny(t, "0123456789_-/") {
+func has(s string, forms []string) bool {
+	for _, f := range forms {
+		if strings.Contains(s, f) {
+			return true
+		}
+	}
+	return false
+}
+
+// present finds a fact in the paraphrase; a hyphenated token ("follow-up",
+// "pl-stat") may be written with its dash, a space, or joined.
+func present(lower, t string) bool {
+	if strings.Contains(lower, t) {
 		return true
 	}
+	if strings.Contains(t, "-") {
+		return strings.Contains(lower, strings.ReplaceAll(t, "-", " ")) || strings.Contains(lower, strings.ReplaceAll(t, "-", ""))
+	}
+	return false
+}
+
+// factual: a token that carries a fact rather than wording — it has a
+// digit, a slash or an underscore, it names a book, type or thing ("the
+// book pl-stat", "a new type named pz"), or it is a vocabulary word of the
+// language. A hyphen alone is wording ("follow-up").
+func factual(t, prev string) bool {
+	if strings.ContainsAny(t, "0123456789_/") {
+		return true
+	}
+	if strings.Contains(t, "-") && (prev == "book" || prev == "type" || prev == "named") {
+		return true // a hyphenated name: pl-stat
+	}
 	switch strings.ToLower(t) {
-	case "open", "paid", "resolved", "half", "up", "grosz", "net", "vat", "gross", "debit", "credit":
+	case "open", "paid", "resolved", "grosz", "net", "vat", "gross", "debit", "credit":
 		return true
 	}
 	return false
 }
+
+// roundingPhrases are the rounding stances, checked as phrases: "half up"
+// may be written with a space, a dash or an underscore.
+var roundingPhrases = [][]string{{"half up", "half-up", "half_up"}, {"half even", "half-even", "half_even"}}
 
 // SaveVoices writes the paraphrases beside the persona.
 func SaveVoices(personaPath string, v Voices) error {

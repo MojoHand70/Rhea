@@ -148,4 +148,19 @@ func TestPreserved(t *testing.T) {
 	if len(m) != 2 || m[0] != "pl-stat" || m[1] != "700" {
 		t.Fatalf("missing = %v", m)
 	}
+	// a hyphen alone is wording; a named book or type is a fact
+	if m := sim.Preserved("Every complaint opens a follow-up case in the book pl-stat.", "Each complaint opens a case to track it, in the book pl-stat."); len(m) != 0 {
+		t.Fatalf("wording reported as fact: %v", m)
+	}
+	if m := sim.Preserved("A new type named pz-doc holds it in the book pl-stat.", "A new type called receipt holds it in the main book."); len(m) != 2 || m[0] != "pz-doc" || m[1] != "pl-stat" {
+		t.Fatalf("missing = %v", m)
+	}
+	// the rounding stance is a phrase in any spelling; "book quantity" and
+	// "dated up to" are wording
+	if m := sim.Preserved("rounded half up to the grosz; the book quantity, dated up to the count date", "half-up rounding to the grosz; the ledger amount through the count date"); len(m) != 0 {
+		t.Fatalf("wording reported as fact: %v", m)
+	}
+	if m := sim.Preserved("rounded half up to the grosz", "rounded to the grosz"); len(m) != 1 || m[0] != "half up" {
+		t.Fatalf("dropped rounding not reported: %v", m)
+	}
 }

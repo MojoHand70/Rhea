@@ -1,0 +1,35 @@
+{
+  "model": "claude-sonnet-4-6",
+  "answers": [
+    [
+      "Chart of accounts, companies (our own, customers, suppliers), sellable services as catalogue items, and VAT rates — each is its own master-data object.",
+      "So when we're talking about our master data, what we've got is the chart of accounts living as one master-data object, then all the companies we deal with — that's ourselves, our customers, and our suppliers — as another, then the services we sell stored as catalogue items as their own object, and finally the VAT rates, which also each get their own master-data object.",
+      "Our master data breaks down like this: the chart of accounts is its own master-data object, the companies we deal with — ourselves, customers, suppliers — are their own master-data object, the services we sell as catalogue items are their own master-data object, and the VAT rates are their own master-data object."
+    ],
+    [
+      "Sales invoices we issue are recorded as sales_invoice documents. Pull the number, issue date, seller, buyer (looked up by NIP), net amount, currency, and VAT rate code straight from the invoice. VAT = net × rate% ÷ 100, rounded half up to the grosz; gross = net + VAT; due date = issue date + payment days shown on the invoice. Status begins as open and may move to paid. Book each one in pl-stat: debit 201 for the gross, credit 701 for the net, credit 222 for the VAT.",
+      "So whenever we put out a sales invoice, what we're doing is creating a document of type sales_invoice, and we're grabbing all the key bits from it — the number, the issue date, who the seller is, who the buyer is with their NIP, the net amount, the currency, and the VAT rate code. From there, we work out the VAT by taking the net, multiplying it by the rate's percentage, dividing by 100, and rounding that result half up to the nearest grosz, and then the gross is just the net plus that VAT figure. The due date? That's the issue date with the payment days from the invoice added on top. The status kicks off as open and can eventually flip to paid. And for the bookkeeping side of things, everything goes into pl-stat: 201 gets debited for the gross, 701 gets credited for the net, and 222 gets credited for the VAT.",
+      "Every invoice we send out gets logged as a sales_invoice — we're talking number, issue date, seller, buyer by NIP, net amount, currency, VAT rate code, all pulled from the invoice itself. VAT's calculated as net times the rate percent over 100, half-up rounded to the grosz; add that to net and you've got your gross; slap the payment days from the invoice onto the issue date and that's your due date. Starts off open, can go to paid down the line. Hits pl-stat as: debit 201 at gross, credit 701 at net, credit 222 at VAT."
+    ],
+    [
+      "From a supplier's invoice we create a purchase_invoice document with these fields: number, invoice date, supplier looked up by NIP, our company as owner, net amount, currency, and VAT rate code. VAT = net × rate% ÷ 100, rounded half up to the grosz; gross = net + VAT. Booking goes to pl-stat: debit 402 for net, debit 221 for VAT, credit 202 for gross.",
+      "So when a supplier sends us an invoice, what we do is create a document of type purchase_invoice, and on that document we record the number, the invoice date, we look the supplier up by their NIP, we put our own company in as the owner, and we also capture the net amount, the currency, and the VAT rate code. Then to work out the VAT we take the net, multiply it by the rate's percentage, divide by 100, and round that result half up to the nearest grosz, and the gross is simply the net with the VAT added on top. Once that's all set, every one of these purchase invoices gets posted into the pl-stat book: 402 gets debited with the net amount, 221 gets debited with the VAT amount, and 202 gets credited with the gross amount.",
+      "Supplier invoice comes in, we slap it into the system as a purchase_invoice — number, invoice date, supplier pulled up by NIP, our company as the owner, net amount, currency, VAT rate code, the whole lot. VAT's just net times the rate percent over 100, round half up to the grosz, and gross is net plus that VAT. Then it hits pl-stat: 402 debited with the net, 221 debited with the VAT, 202 credited with the gross."
+    ],
+    [
+      "A sales invoice gets marked paid when a bank statement line references its number.",
+      "So basically what happens is, if you've got a bank statement line and its reference field has one of our sales invoice numbers in it, then that sales invoice is going to get marked as paid automatically.",
+      "Bank statement line references a sales invoice number? That invoice gets flagged as paid."
+    ],
+    [
+      "Complaints get logged with a number, customer, and details. Each one automatically triggers a case — type: case, subject set to the complaint number, status beginning at open and moveable to resolved.",
+      "So here's how it works: when a customer complaint comes in, you record it as a complaint document, and that document needs to carry the number, the customer, and all the relevant details. On top of that, every single complaint document has to open up a follow-up case — now this case is its own thing, it's got a type called case, its subject field holds the complaint number, and the status kicks off as open, though it can be switched over to resolved down the line.",
+      "Every complaint doc you create — number, customer, details — spins up a follow-up case straight away, type named case, subject filled in with that complaint number, status starting on open and flipping to resolved when it's sorted."
+    ],
+    [
+      "A withdrawn complaint gets its case closed as resolved.",
+      "So basically, if a customer decides to pull back their complaint, what happens is that the case tied to it ends up being marked as resolved — that's the outcome there.",
+      "Customer pulls the complaint, case gets resolved, done."
+    ]
+  ]
+}
