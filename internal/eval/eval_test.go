@@ -2,6 +2,7 @@ package eval_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -141,5 +142,55 @@ func TestRefusedDraftIsKept(t *testing.T) {
 	}
 	if rep.Rows[0].Error == "" || !strings.Contains(string(rep.Rows[0].Draft), "ledger_account") || !strings.Contains(rep.Verbose(), "ledger_account") {
 		t.Fatalf("refused draft not kept: %+v", rep.Rows[0])
+	}
+}
+
+// The recorded approver reads the dry run the way a person does: a rule
+// that would explain nothing, add nothing and change nothing is refused,
+// not approved on the strength of a clean dry run — whether it comes alone
+// or in a bundle. Definitions alone still pass.
+func TestApproverRefusesNoEffect(t *testing.T) {
+	c, dir, err := eval.Load("../../testdata/eval/corpus.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// accounts are in the log, and this rule matches none of them
+	idle := `{"rule_id":"idle","description":"matches no account","spec":{"match":{"event_type":"account.created","where":[{"path":"$.code","op":"eq","value":"no-such-code"}]},"effect":{"object":{"type":"account","fields":{"code":"=$.code","name":"=$.name","type":"=$.type"}}}}}`
+	bundle := `{"bundle_id":"idle-bundle","description":"a rule that matches none of the accounts","rules":[` + idle + `],"warrant":{"basis":"client","citations":["said so"]}}`
+	typesOnly := `{"bundle_id":"types-only","description":"a type and nothing else","object_types":[{"name":"memo","domain":"work","fields":[{"name":"text","type":"string","required":true}]}],"warrant":{"basis":"client"}}`
+	// a rule for the future: nothing of its kind has happened yet
+	future := `{"bundle_id":"future","description":"a rule for an event still to come","rules":[{"rule_id":"future","description":"later","spec":{"match":{"event_type":"audit.started"},"effect":{"object":{"type":"account","fields":{"code":"=$.code","name":"=$.name","type":"=$.type"}}}}}],"warrant":{"basis":"client"}}`
+	c.Tasks = []eval.Task{
+		{Intent: "one", SampleType: "account.created", Reference: json.RawMessage(idle)},
+		{Intent: "two", Mode: "bundle", Reference: json.RawMessage(bundle)},
+		{Intent: "three", Mode: "bundle", Reference: json.RawMessage(typesOnly)},
+		{Intent: "four", Mode: "bundle", Reference: json.RawMessage(future)},
+	}
+	s := storetest.New(t)
+	recorded := &agent.Agent{Complete: func(ctx context.Context, system, user string) (string, error) {
+		for _, task := range c.Tasks {
+			if strings.HasSuffix(strings.TrimSpace(user), "User intent: "+task.Intent) {
+				return string(task.Reference), nil
+			}
+		}
+		return "", fmt.Errorf("no reference")
+	}}
+	rep, err := eval.Run(context.Background(), s, recorded, "recorded", c, dir, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 2; i++ {
+		if rep.Rows[i].Approved || !strings.Contains(rep.Rows[i].Error, "answers nothing") {
+			t.Fatalf("task %d: approved an idle rule: %+v", i+1, rep.Rows[i])
+		}
+	}
+	if !rep.Rows[2].Approved || rep.Rows[2].Error != "" {
+		t.Fatalf("definitions alone must pass: %+v", rep.Rows[2])
+	}
+	if !rep.Rows[3].Approved || rep.Rows[3].Error != "" {
+		t.Fatalf("a rule for the future must pass: %+v", rep.Rows[3])
+	}
+	if rep.Done() {
+		t.Fatal("nothing was explained; the run is not done")
 	}
 }

@@ -260,6 +260,17 @@ func Run(ctx context.Context, st *store.Store, a *agent.Agent, model string, c C
 		row.Explains = len(diff.UnexplainedBefore) - len(diff.UnexplainedAfter)
 		row.Added = len(diff.Added)
 		if len(diff.Errors) == 0 {
+			refusal, err := noEffect(ctx, st, diff, []core.RuleSpec{d.Spec})
+			if err != nil {
+				return rep, err
+			}
+			if refusal != "" {
+				row.Error = refusal
+				rep.Rows = append(rep.Rows, row)
+				continue
+			}
+		}
+		if len(diff.Errors) == 0 {
 			_, booked, procErrs, err := x.ApproveRule(ctx, d.RuleID, "eval", sample.OccurredAt)
 			if err != nil {
 				row.ApproveErrs = append(row.ApproveErrs, err.Error())
@@ -336,6 +347,50 @@ func Run(ctx context.Context, st *store.Store, a *agent.Agent, model string, c C
 	return rep, nil
 }
 
+// noEffect is the recorded approver's second look, the one a person gives a
+// dry run that reads "explains 0, adds 0". A rule whose trigger is already
+// there — raw events of its type in the log, objects of the type it cascades
+// from in state — and that still explains nothing, adds nothing and changes
+// nothing answers nothing, and is refused. A rule for the future (a posting
+// cascade approved before any invoice is a document) has nothing to fire on
+// yet and passes, as definitions alone (a type, a view, a verb) do. Returns
+// the refusal, or "".
+func noEffect(ctx context.Context, st *store.Store, diff exec.SimDiff, rules []core.RuleSpec) (string, error) {
+	explains := len(diff.UnexplainedBefore) - len(diff.UnexplainedAfter)
+	if explains > 0 || len(diff.Added) > 0 || len(diff.Changed) > 0 || len(diff.Removed) > 0 {
+		return "", nil
+	}
+	for _, r := range rules {
+		present, err := triggerPresent(ctx, st, r)
+		if err != nil {
+			return "", err
+		}
+		if present {
+			return "the approver refused: the dry run explains nothing, adds nothing and changes nothing, though what the rule matches is already there — a rule that answers nothing is not approved", nil
+		}
+	}
+	return "", nil
+}
+
+// triggerPresent reports whether a rule has anything to fire on yet.
+func triggerPresent(ctx context.Context, st *store.Store, spec core.RuleSpec) (bool, error) {
+	if spec.Match.EventType == core.EventObjectMaterialized {
+		counts, err := st.CountObjectsByType(ctx)
+		if err != nil {
+			return false, err
+		}
+		for _, c := range spec.Match.Where {
+			if c.Path == "$.object_type" && c.Op == "eq" {
+				t, _ := c.Value.(string)
+				return counts[t] > 0, nil
+			}
+		}
+		return len(counts) > 0, nil
+	}
+	_, found, err := st.LatestEventOfType(ctx, spec.Match.EventType)
+	return found, err
+}
+
 // runBundle plays one bundle task: draft, land as drafts, dry-run the whole
 // bundle, approve it whole when the dry run is clean.
 func runBundle(ctx context.Context, st *store.Store, x *exec.Executor, a *agent.Agent, model string, ask agent.Ask, k *network.Knowledge, row *Row) error {
@@ -371,6 +426,18 @@ func runBundle(ctx context.Context, st *store.Store, x *exec.Executor, a *agent.
 	row.Explains = len(diff.UnexplainedBefore) - len(diff.UnexplainedAfter)
 	row.Added = len(diff.Added)
 	if len(diff.Errors) > 0 {
+		return nil
+	}
+	specs := make([]core.RuleSpec, 0, len(bd.Rules))
+	for _, d := range bd.Rules {
+		specs = append(specs, d.Spec)
+	}
+	refusal, err := noEffect(ctx, st, diff, specs)
+	if err != nil {
+		return err
+	}
+	if refusal != "" {
+		row.Error = refusal
 		return nil
 	}
 	_, booked, procErrs, err := x.ApproveBundle(ctx, b.ID, "eval", date)

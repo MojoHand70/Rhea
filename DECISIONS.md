@@ -101,13 +101,17 @@ so the next session does not re-derive them.
   work now: not more language, but the author learning its grammar's
   edges, one refusal at a time. The paraphrase guard needed three
   turns of its own to tell a fact from a hyphen.
-- **Costs and shortcuts noted:** the recorded approver approves any
-  bundle whose dry run has no errors, even one that does nothing (9);
-  a human would read "adds 0" and reject. A policy that refuses a
-  no-effect bundle is cheap and would make the eval's approver as
-  careful as the person it stands in for — not done. The seeds now
-  carry two general-case fields (`mirror_of` optional, `vat_rate`) the
-  intercompany ladder had left out.
+- **The recorded approver reads the dry run now** (KK asked whether the
+  "policy" was a rule or code: code, in the eval only, standing in for
+  a person; never a kernel rule, since definitions alone legitimately
+  change nothing). It refuses a rule whose dry run explains nothing,
+  adds nothing and changes nothing *while what it matches is already
+  there* — raw events of its type in the log, objects of the type it
+  cascades from in state. A rule for the future passes: the simple
+  corpus approves the invoice posting cascade before any invoice is a
+  document, and a person would too. (9) is caught by this. The seeds
+  now carry two general-case fields (`mirror_of` optional, `vat_rate`)
+  the intercompany ladder had left out.
 
 ## 2026-10-09 — the eval's verdict is all or nothing
 
