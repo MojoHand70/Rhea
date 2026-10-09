@@ -140,7 +140,9 @@ TEMPLATES - every field value in an effect is a template string:
 - a plain string is a literal
 - "=$.path.to.value" copies a value from the event payload (indexing: $.lines[0].x)
 - "=ref(T, field, $.path)" resolves a reference: the id of the single existing object
-  of type T whose field equals the payload value (usually T's label field)
+  of type T whose field equals the payload value (usually T's label field). The value
+  may be a quoted literal: our own company is "=ref(company, kind, \"self\")" - a bare
+  word is a name, not a value
 - "=ref(T, field, ref(U, field2, $.path))" looks up one step through a link: the T whose
   field holds the U found by field2 (the case of complaint R-1:
   "=ref(case, complaint, ref(complaint, number, $.number))")
