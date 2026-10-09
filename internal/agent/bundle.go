@@ -86,7 +86,9 @@ ACTIVITIES - a declared verb a human uses to record something, emitting a raw ev
    "spec": {"inputs": [{"name": "number", "type": "string", "required": true},
                        {"name": "occurred_at", "type": "date", "required": true}],
             "emits": "complaint.registered", "who": ["human"]}}
-Add one only when the question is about something people will record by hand.
+Add one only when the question says people will record something by hand ("we enter",
+"someone registers"). Master data and documents that arrive as events need no verb;
+the master-data answer never gets one. An "enum" input must list its "values".
 
 WARRANT - Rhea suggests standards: when the question leaves practice open ("it depends",
 "everyone does it a bit differently"), propose the customary standard of the market rather

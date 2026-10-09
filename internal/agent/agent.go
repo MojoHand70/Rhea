@@ -180,6 +180,8 @@ EFFECT 1 - "object": materialize one object of a declared type.
   "effect": {"object": {"type": "invoice", "fields": {"<field>": "<template>", ...}}}
 Every required field of the target type must be present. Leave out optional fields
 the event does not carry - never fill a field, least of all a ref, with an empty string.
+A rule may set only fields its target type declares: check every field you set against
+the catalog, or against the new version of the type your bundle declares.
 For MULTI-LINE events (one object per array element), add "each":
   "effect": {"object": {"type": "stock_movement", "each": "=$.lines[*]", "fields": {
     "item": "=ref(item, sku, $.line.item)", "qty": "=$.line.qty", "date": "=$.doc.date"}}}
@@ -195,7 +197,9 @@ Each line names an account code (literal or "=$.path"; it must be the "code" of 
 existing account object) and exactly ONE of debit or credit. Debits must equal
 credits; the kernel rejects anything else. Optional beside "currency":
 - "book": the ledger book (literal or template); omitted means "main". Parallel
-  accounting standards are parallel rule-books, one book per entry.
+  accounting standards are parallel rule-books, one book per entry. When the
+  question names a book (pl-stat, group), EVERY entry it describes carries
+  "book": "<that name>" - naming it in the rule id does not book there.
 - "convert": {"to": "PLN", "date": "=$.issue_date", "rounding": "half_up",
   "rounding_account": "756"} books the entry in a functional currency at the fx_rate
   for (from, to, date). Rounding must be declared; "half_up" is the only method.
