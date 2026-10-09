@@ -486,6 +486,13 @@ func (x *Executor) expandEffect(ctx context.Context, root core.Event, idBase str
 	mats := make([]core.MaterializedObject, 0, len(arr))
 	for i, el := range arr {
 		scope := map[string]any{"doc": payload, "line": el, "n": i + 1}
+		// The chain's root fact stays readable inside each, as it is on the
+		// cascade payload itself: a line's date is the delivery's date.
+		if m, ok := payload.(map[string]any); ok {
+			if root, ok := m["root"]; ok {
+				scope["root"] = root
+			}
+		}
 		state, calc, err := Expand(tmpl, objType, scope, x.env(ctx, scope, lookup, get))
 		if err != nil {
 			return nil, fmt.Errorf("rule %s v%d line %d: %w", r.ID, r.Version, i+1, err)

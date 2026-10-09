@@ -117,6 +117,11 @@
           "required": true
         },
         {
+          "name": "vat_rate",
+          "type": "ref<vat_rate>",
+          "required": false
+        },
+        {
           "name": "currency",
           "type": "string",
           "required": true

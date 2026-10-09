@@ -31,7 +31,8 @@ func TestDocumentWithLines(t *testing.T) {
 			{Name: "date", Type: "date", Required: true}}},
 		{Name: "pz_line", Version: 1, Domain: "warehouse", Fields: []core.FieldDef{
 			{Name: "document", Type: "ref<pz>", Required: true}, {Name: "line", Type: "int", Required: true},
-			{Name: "item", Type: "ref<item>", Required: true}, {Name: "qty", Type: "int", Required: true}}},
+			{Name: "item", Type: "ref<item>", Required: true}, {Name: "qty", Type: "int", Required: true},
+			{Name: "received", Type: "date", Required: true}}},
 		{Name: "stock_movement", Version: 1, Domain: "warehouse", Fields: []core.FieldDef{
 			{Name: "item", Type: "ref<item>", Required: true}, {Name: "location", Type: "ref<location>", Required: true},
 			{Name: "qty", Type: "int", Required: true}, {Name: "date", Type: "date", Required: true}}},
@@ -60,7 +61,10 @@ func TestDocumentWithLines(t *testing.T) {
 		{"pz-lines", 200, core.RuleSpec{Match: materialized("pz"),
 			Effect: core.Effect{Object: core.ObjectTemplate{Type: "pz_line", Each: "=$.root.lines[*]", Fields: map[string]string{
 				"document": "=$.doc.object_id", "line": "=$.n",
-				"item": "=ref(item, sku, $.line.item)", "qty": "=$.line.qty"}}}}},
+				"item": "=ref(item, sku, $.line.item)", "qty": "=$.line.qty",
+				// the chain's root stays readable inside each: the line's
+				// date is the delivery's
+				"received": "=$.root.date"}}}}},
 		{"pz-line-moves-stock", 300, core.RuleSpec{Match: materialized("pz_line"),
 			Effect: core.Effect{Object: core.ObjectTemplate{Type: "stock_movement", Fields: map[string]string{
 				"item": "=$.state.item", "qty": "=$.state.qty",
@@ -98,8 +102,8 @@ func TestDocumentWithLines(t *testing.T) {
 		t.Fatalf("pz %d, lines %d, movements %d — want one document, two lines, two movements", len(pzs), len(lines), len(moves))
 	}
 	for _, l := range lines {
-		if l.State["document"] != pzs[0].ID {
-			t.Fatalf("line %v does not point at its PZ %s", l.State, pzs[0].ID)
+		if l.State["document"] != pzs[0].ID || l.State["received"] != "2026-09-14" {
+			t.Fatalf("line %v does not point at its PZ %s with its date", l.State, pzs[0].ID)
 		}
 	}
 	for _, m := range moves {

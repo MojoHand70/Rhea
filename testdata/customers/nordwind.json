@@ -421,7 +421,7 @@
       }
     },
     {
-      "answer": "Every delivery gets one PZ document (goods received note; a new type named pz) with the supplier, the supplier's delivery document number, the warehouse location, the date and the currency. Each delivered item becomes a line of that PZ (a new type named pz_line) pointing at it, with the quantity, the unit price and the value being quantity times the unit price stated on the delivery. Every line moves that item's stock into the delivery's location and is posted in the book pl-stat at its value: debit 330, credit 300.",
+      "answer": "Every delivery gets one PZ document (goods received note; a new type named pz) with the supplier, the supplier's delivery document number, the warehouse location, the date and the currency. Each delivered item becomes a line of that PZ (a new type named pz_line) pointing at it, with the fields qty, price and value, the value being quantity times the unit price stated on the delivery. Every line moves that item's stock into the delivery's location and is posted in the book pl-stat at its value: debit 330, credit 300.",
       "mode": "bundle",
       "reference": {
         "bundle_id": "deliveries",
@@ -1011,7 +1011,7 @@
       }
     },
     {
-      "answer": "A stock count of an item at a location records a stock level (a new type named stock_level): the count date, the counted quantity, the book quantity, which is the sum of that item's stock movements into the location minus those out of it, dated up to and including the count date, and the difference, counted minus book.",
+      "answer": "A stock count of an item at a location records a stock level (a new type named stock_level) with the fields date, counted, book and difference: the count date, the counted quantity, the book quantity, which is the sum of that item's stock movements into the location minus those out of it, dated up to and including the count date, and the difference, counted minus book.",
       "mode": "bundle",
       "reference": {
         "bundle_id": "stock-counts",

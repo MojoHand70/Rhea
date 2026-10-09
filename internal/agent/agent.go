@@ -174,7 +174,8 @@ object id - in a cascade, "=$.object_id" is the object that caused it and
 "=$.state.<ref field>" a link it holds. The kernel checks a carried id is a T and
 exists. Never a literal id, never a computed one.
 A field typed "enum" only accepts one of its declared "values". A field typed
-"decimal" holds an exact decimal string (a rate, a unit cost).
+"decimal" holds an exact decimal string (a rate, a unit cost). When the question
+names fields, use exactly those names.
 
 EFFECT 1 - "object": materialize one object of a declared type.
   "effect": {"object": {"type": "invoice", "fields": {"<field>": "<template>", ...}}}
@@ -186,7 +187,8 @@ For MULTI-LINE events (one object per array element), add "each":
   "effect": {"object": {"type": "stock_movement", "each": "=$.lines[*]", "fields": {
     "item": "=ref(item, sku, $.line.item)", "qty": "=$.line.qty", "date": "=$.doc.date"}}}
 Inside an "each" rule, templates see {"doc": the whole event payload, "line": one
-array element, "n": the 1-based line number} instead of the payload.
+array element, "n": the 1-based line number} instead of the payload; in a cascade,
+"$.root" (the raw event that started the chain) stays readable inside each too.
 
 EFFECT 2 - "postings": post one balanced journal entry (accounting rules).
   "effect": {"postings": {"currency": "=$.currency", "lines": [
@@ -194,7 +196,9 @@ EFFECT 2 - "postings": post one balanced journal entry (accounting rules).
     {"account": "702", "credit": "=sum($.lines[*].amount)"}
   ]}}
 Each line names an account code (literal or "=$.path"; it must be the "code" of an
-existing account object) and exactly ONE of debit or credit. Debits must equal
+existing account object - see the master data in the request; never an account the
+chart does not have) and exactly ONE of debit or credit. Post only what the question
+asks to post: a question that says nothing about booking gets no postings. Debits must equal
 credits; the kernel rejects anything else. Optional beside "currency":
 - "book": the ledger book (literal or template); omitted means "main". Parallel
   accounting standards are parallel rule-books, one book per entry. When the
