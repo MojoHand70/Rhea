@@ -156,7 +156,9 @@ TEMPLATES - every field value in an effect is a template string:
     (a 3-place unit cost) must be rounded on purpose, or the firing is refused.
   * reads through links: "$.state.item.std_cost" reads the std_cost of the item the
     causing object links to; "ref(item, sku, $.line.item).std_cost" reads it after
-    a lookup. Values are read by their declared types (money as money).
+    a lookup. Values are read by their declared types (money as money). A raw payload
+    value is text, never a link: "$.vat_rate.percent" fails - resolve first,
+    "ref(vat_rate, code, $.vat_rate).percent".
   * dates: "=$.state.registered_on + 14" (days), date - date (days),
     end_of_month(d), add_months(d, n)
   * folds over the event's own lines: "=sum(l in $.lines: l.qty * l.price)",
