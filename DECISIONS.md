@@ -55,6 +55,60 @@ so the next session does not re-derive them.
   string; the v2 analysis view joins on refs and so aggregates only v2 invoices.
   Schema evolution of live objects remains parked (SPEC §7).
 
+## 2026-10-09 — the first measurement against the bar: both simulated customers DONE in every run
+
+- **The measurement:** each persona, four voices (the scripted interview
+  and three model paraphrases), three runs each, one month of documents,
+  the verdict all or nothing. Eight rounds in all — Helios six, Nordwind
+  two — about a hundred live runs and seven hundred interview answers
+  drafted by claude-sonnet-4-6 and judged against the generator's
+  rule-free expected state.
+- **Verdicts, round by round.** Helios: 6, 11, 11, 8, 10, then **12 of
+  12**. Nordwind: 3, then **12 of 12**. Every count, every lifecycle
+  move and every computed sum matched in the final rounds: VAT, gross,
+  PZ line values, book stock from the fold.
+- **The arithmetic was never wrong, in any run.** Not one formula was
+  refused by the typed gate or the VM, and no computed sum ever came
+  out wrong when the formula fired. Every loss was vocabulary or
+  reach, and each was fixed once, where it belonged:
+  1. an unrequested verb with an enum lacking values (prompt: no verb
+     unless people record by hand);
+  2. a rule setting a field its type lacked (prompt, then the seed:
+     a purchase invoice carries its VAT rate, optional);
+  3. the book named in the rule id and left off the entry, three times
+     in three under one phrasing (prompt: a named book goes on every
+     entry);
+  4. `$.root` unreadable inside `each` (kernel: the chain's root stays
+     readable inside each, as on the cascade payload);
+  5. fields named `book_qty` where the expectation said `book` (the
+     owner's answers name the fields that will be checked, as the
+     operations corpus already did);
+  6. bank receipts booked to accounts the chart does not have, which
+     nobody asked for (prompt: post only what the question asks, never
+     to an absent account);
+  7. `ref(company, kind, self)` with the literal unquoted (prompt: the
+     quoted-literal idiom, our own company);
+  8. `$.vat_rate.percent` read through a raw code string (prompt: a raw
+     value is text, never a link; resolve first);
+  9. a withdrawal rule matching a re-materialization that never happens
+     because amendments end chains — approved on a dry run that
+     honestly said "explains 0, adds 0" (prompt: an amended status
+     never re-materializes; react to the raw event).
+- **What this says about the loop.** The gate gets stricter with every
+  wrong draft, and the all-or-nothing verdict is what makes a one-in-
+  twelve habit visible at all; averaged, every round after the first
+  would have looked fine. Nine habits in a day is the shape of the
+  work now: not more language, but the author learning its grammar's
+  edges, one refusal at a time. The paraphrase guard needed three
+  turns of its own to tell a fact from a hyphen.
+- **Costs and shortcuts noted:** the recorded approver approves any
+  bundle whose dry run has no errors, even one that does nothing (9);
+  a human would read "adds 0" and reject. A policy that refuses a
+  no-effect bundle is cheap and would make the eval's approver as
+  careful as the person it stands in for — not done. The seeds now
+  carry two general-case fields (`mirror_of` optional, `vat_rate`) the
+  intercompany ladder had left out.
+
 ## 2026-10-09 — the eval's verdict is all or nothing
 
 - **KK: "In accounting there is no such thing as a document that passes
