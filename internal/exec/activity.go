@@ -60,6 +60,11 @@ func (x *Executor) TriggerActivity(ctx context.Context, name string, inputs map[
 		}
 	}
 
+	// A file's hash is its identity: the same file through the same door is
+	// the same fact, unless the caller names the fact otherwise.
+	if dedupKey == "" && built.Identity != "" {
+		dedupKey = act.Name + "/" + built.Identity
+	}
 	ev := core.Event{
 		Kind: core.KindRaw, Type: built.Type, OccurredAt: built.OccurredAt,
 		Payload: built.Payload, DedupKey: dedupKey, Actor: actor,
@@ -76,6 +81,14 @@ func (x *Executor) TriggerActivity(ctx context.Context, name string, inputs map[
 		return Triggered{}, err
 	}
 	defer tx.Rollback(ctx)
+	// The file is the fact, so the file comes first: its bytes are kept
+	// under their hash in the same transaction, and the event naming them
+	// cannot exist without them.
+	for _, f := range built.Files {
+		if _, err := store.PutBlob(ctx, tx, f.Hash, f.MediaType, f.Bytes); err != nil {
+			return Triggered{}, err
+		}
+	}
 	if out.EventID, err = store.AppendEvent(ctx, tx, ev); err != nil {
 		return Triggered{}, err
 	}

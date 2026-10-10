@@ -157,8 +157,30 @@ const numericType = (t) => t === "money" || t === "int";
    derived if not stored). An enum renders as a chip, so state reads as
    state; an event-typed cell opens the provenance walk. Untyped columns
    (analysis without declarations) render as-is. */
+/* The file is the fact (DIRECTION 2026-10-10): a value shaped like a content
+   hash opens the stored file. The shell knows no document type; it knows
+   what a hash looks like. */
+const isFileHash = (v) => typeof v === "string" && /^sha256:[0-9a-f]{64}$/.test(v);
+function fileLink(hash, label) {
+  return el("a", { href: `/api/blobs/${encodeURIComponent(hash)}`, target: "_blank", title: hash },
+    label || "open file");
+}
+/* Every file fact a payload carries — {hash, name, media_type, size} under
+   an input's name — as one link line; nothing when there is none. */
+function payloadFiles(payload) {
+  const links = [];
+  for (const [k, v] of Object.entries(payload || {})) {
+    if (v && typeof v === "object" && isFileHash(v.hash)) {
+      links.push(el("span", {}, `${k}: `, fileLink(v.hash, v.name || v.hash),
+        el("span", { class: "hint" }, ` ${v.media_type || ""}${v.size ? " · " + v.size + " B" : ""}`)));
+    }
+  }
+  return links.length ? [el("div", { class: "row" }, ...links)] : [];
+}
+
 function cellContent(cell, type) {
   const v = cell?.v ?? "";
+  if (isFileHash(v)) return fileLink(v, v.slice(0, 19) + "…");
   if (type === "money") return fmtMoney(v);
   if (type === "enum") return v ? el("span", { class: "chip" }, v) : "";
   if (type === "event") return v ? explainLink({ event: v }, v) : "";
@@ -337,8 +359,9 @@ function openExplain(q) {
         head.append(...renderCalc(a.calc));
       }
       if (n.payload) {
-        head.append(el("details", {}, el("summary", {}, "the fact"),
-          el("pre", {}, JSON.stringify(n.payload, null, 2))));
+        head.append(...payloadFiles(n.payload),
+          el("details", {}, el("summary", {}, "the fact"),
+            el("pre", {}, JSON.stringify(n.payload, null, 2))));
       }
       const node = el("div", { class: "explain-node" }, head);
       if (n.children.length) {
@@ -382,6 +405,7 @@ function openWorklist() {
           el("strong", {}, `#${ev.event_id} ${ev.event_type}`),
           el("span", { class: "hint" }, ev.occurred_at +
             (ev.activity_name ? ` · through ${ev.activity_name} v${ev.activity_version}` : ""))),
+        ...payloadFiles(ev.payload),
         el("details", {}, el("summary", {}, "payload"),
           el("pre", {}, JSON.stringify(ev.payload, null, 2))),
         draftForm(ev, d.object_types)));
@@ -941,6 +965,10 @@ function openVerbForm(name, prefill = {}) {
           ...f.values.map(v => el("option", { value: v }, v)));
       } else if (f.type === "json") {
         c = el("textarea", { placeholder: '{ "field": "value", … }', spellcheck: "false" });
+      } else if (f.type === "file") {
+        // The drop zone, derived like every other control: the file's bytes
+        // cross as base64, the kernel keeps them under their hash.
+        c = el("input", { type: "file" });
       } else if (f.type === "date") {
         c = el("input", { type: "date" });
         if (f.name === "occurred_at") c.value = new Date().toISOString().slice(0, 10);
@@ -963,6 +991,21 @@ function openVerbForm(name, prefill = {}) {
       onclick: async () => {
         const inputs = {};
         for (const [fname, { control, def }] of Object.entries(controls)) {
+          if (def.type === "file") {
+            const file = control.files && control.files[0];
+            if (!file) {
+              if (def.required) { toast(`${fname} is required.`, true); return; }
+              continue;
+            }
+            const dataUrl = await new Promise((ok, fail) => {
+              const r = new FileReader();
+              r.onload = () => ok(r.result); r.onerror = () => fail(r.error);
+              r.readAsDataURL(file);
+            });
+            inputs[fname] = { name: file.name, media_type: file.type || "application/octet-stream",
+              content_base64: String(dataUrl).split(",", 2)[1] || "" };
+            continue;
+          }
           const raw = control.value.trim();
           if (raw === "") {
             if (def.required) { toast(`${fname} is required.`, true); return; }

@@ -1693,3 +1693,40 @@ evidence in `internal/exec/case_test.go`.
 - **Left for the brief's later steps**: `document.received` and the blob store, the batch
   append (step 2); the confidence threshold enforced for model readers (step 6 — declared
   and displayed today, inert like `who`).
+
+## 2026-10-11 — the file is the fact: a blob store, a second open door, the batch pass
+
+- **A file enters through a verb input of type `file`** (`core.FileInput`, admitted by
+  activity inputs alongside `json`): over the wire `{name, media_type, content_base64}`,
+  in-process `{name, media_type, bytes}`. The door computes the hash, keeps the bytes in
+  the blob store inside the trigger's transaction, and the payload carries only the facts
+  about the file — `{hash, name, media_type, size}` under the input's name. The bytes
+  never enter the payload. The hash is the trigger's default dedup key when the caller
+  gives none (`<door>/<hash>`): the same file through the same door is the same fact,
+  unless the caller names it otherwise. Cap: 32 MB.
+- **The blob store is an append-only table keyed by content hash** (`blob`; invariant 1's
+  trigger covers it). `PutBlob` verifies the hash against the bytes and is a no-op on a
+  known hash; `GetBlob` reads it back; `GET /api/blobs/{hash}` serves it with the media
+  type it was received as, immutable. No company key yet (P3).
+- **`document.received` is not reserved, but it is checked**: the store refuses one whose
+  payload names no file or a file it does not hold — whoever emits it (the open door, a
+  channel, a pack), the file comes first. The brief's rule "the file is the fact" is thus
+  enforced at the one write into the log, not by a namespace. (M5's reasoning holds: who
+  said it is visible via the actor; the missing bytes were the only lie worth refusing.)
+- **`receive_document` is the second open door, a builtin**: inputs `file` (required),
+  `source` (required — the person says where it came from: email, scan, the bank's site)
+  and `occurred_at`. Required because a template reading `=$.source` fails on a missing
+  path, and the packs' convention is to map only what the event always carries. The
+  namespace test now exempts the two open doors. `rhea intake [-source S] [-date D] FILE`
+  (source defaults to `upload`); the shell derives a file picker for any `file` input,
+  so the drop zone is a derived form and no screen knows about documents.
+- **`packs/common/documents.json`**: `received_document` (document-flagged; hash, name,
+  media_type, size, source, status received → read | set_aside) and one rule registering
+  it from `document.received`. The reader of step 4 will amend its status; the shell links
+  any hash-shaped value and any file fact in a payload to the stored file.
+- **An adapter pass appends in one transaction** (`Store.AppendEvents`: known dedup keys
+  are skipped and counted via `ON CONFLICT DO NOTHING`, any other failure rolls the whole
+  batch back; `ErrDuplicate` joins `IsDuplicate`). The clock keeps its per-day interleave
+  by design. This is the high-volume treatment's cheap-now item, done.
+- **Local DBs**: `rhea init` re-run on `rhea` and `rhea_pl` (the blob table and the new
+  door); the documents pack loaded into both as a draft bundle for KK.

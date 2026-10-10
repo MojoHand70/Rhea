@@ -1,0 +1,58 @@
+{
+  "pack": "common-documents",
+  "version": 1,
+  "description": "Documents as received: the file is the fact, and this object is its place in state until a reader explains it",
+  "warrant": {
+    "basis": "practice",
+    "citations": [
+      "every accounting suite keeps a tray of received documents ahead of their booking (the 'do zatwierdzenia' inbox of Polish SME suites, DATEV's Belege online); in Rhea the tray is the file itself under its hash, and this object is its status",
+      "a file re-read later by a newer channel amends this object and never changes the bytes — late understanding without rewriting the past"
+    ],
+    "scope": "all markets"
+  },
+  "object_types": [
+    {
+      "name": "received_document",
+      "version": 1,
+      "domain": "intake",
+      "is_document": true,
+      "label_field": "name",
+      "fields": [
+        {"name": "hash", "type": "string", "required": true},
+        {"name": "name", "type": "string", "required": true},
+        {"name": "media_type", "type": "string", "required": true},
+        {"name": "size", "type": "int", "required": true},
+        {"name": "source", "type": "string"},
+        {"name": "status", "type": "enum", "required": true, "values": ["received", "read", "set_aside"]}
+      ],
+      "lifecycle": {
+        "field": "status",
+        "transitions": {"received": ["read", "set_aside"], "set_aside": ["received", "read"]}
+      }
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "register-received-document",
+      "priority": 10,
+      "effective_from": "2026-01-01",
+      "description": "A received file becomes a received_document, waiting for a reader",
+      "spec": {
+        "match": {"event_type": "document.received"},
+        "effect": {
+          "object": {
+            "type": "received_document",
+            "fields": {
+              "hash": "=$.file.hash",
+              "name": "=$.file.name",
+              "media_type": "=$.file.media_type",
+              "size": "=$.file.size",
+              "source": "=$.source",
+              "status": "received"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

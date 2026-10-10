@@ -173,3 +173,27 @@ func TestChannelNotImplemented(t *testing.T) {
 	}
 	t.Fatal("fax channel not listed")
 }
+
+// A pass lands whole or not at all: one bad event inside the batch rolls
+// back the good ones with it (the high-volume treatment's cheap-now item).
+func TestPassAppendsInOneTransaction(t *testing.T) {
+	Register(Implemented{Name: "probe", CodeVersion: 2, Format: "test fixture"})
+	ctx := context.Background()
+	s := storetest.New(t)
+	x := &exec.Executor{Store: s}
+	if _, err := s.InsertActivityVersion(ctx, probeChannel(core.StatusActive, 2)); err != nil {
+		t.Fatal(err)
+	}
+	good := core.Event{Type: "probe.seen", OccurredAt: "2026-10-11", Payload: []byte(`{"n":1}`), DedupKey: "probe/1"}
+	bad := core.Event{Type: "probe.seen", OccurredAt: "yesterday-ish", Payload: []byte(`{"n":2}`), DedupKey: "probe/2"}
+	if _, err := Run(ctx, s, x, probe{[]core.Event{good, bad}}); err == nil {
+		t.Fatal("a batch with a bad date was accepted")
+	}
+	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {
+		t.Fatalf("the good event survived the failed batch: %d", len(wl))
+	}
+	res, err := Run(ctx, s, x, probe{[]core.Event{good}})
+	if err != nil || res.Submitted != 1 {
+		t.Fatalf("run = %+v, %v", res, err)
+	}
+}

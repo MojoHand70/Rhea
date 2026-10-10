@@ -128,10 +128,11 @@ type Result struct {
 
 // Run executes one adapter pass through its channel: bind, let the adapter
 // read and return, check every event against the declaration, append what
-// the log does not have yet (stamped with the channel), then process pending
-// so the evidence materializes. An event of a type the channel never declared
-// or one without identity is a bug in the adapter, not residue: the whole
-// pass is refused and nothing is appended.
+// the log does not have yet (stamped with the channel) in one transaction,
+// then process pending so the evidence materializes. An event of a type the
+// channel never declared or one without identity is a bug in the adapter,
+// not residue: the whole pass is refused and nothing is appended — and the
+// same holds for any failure inside the batch.
 func Run(ctx context.Context, s *store.Store, x *exec.Executor, a Adapter) (Result, error) {
 	ch, err := Bind(ctx, s, a.Name(), a.CodeVersion())
 	if err != nil {
@@ -148,18 +149,13 @@ func Run(ctx context.Context, s *store.Store, x *exec.Executor, a Adapter) (Resu
 			return res, fmt.Errorf("channel %s v%d: a %s event without identity (no dedup key) — nothing of this pass is appended", ch.Name, ch.Version, ev.Type)
 		}
 	}
-	for _, ev := range events {
-		ev.Kind = core.KindRaw
-		ev.Actor = "adapter:" + a.Name()
-		ev.ActivityName, ev.ActivityVersion = ch.Name, ch.Version
-		switch _, err := s.AppendEvent(ctx, ev); {
-		case err == nil:
-			res.Submitted++
-		case store.IsDuplicate(err):
-			res.Duplicates++
-		default:
-			return res, err
-		}
+	for i := range events {
+		events[i].Kind = core.KindRaw
+		events[i].Actor = "adapter:" + a.Name()
+		events[i].ActivityName, events[i].ActivityVersion = ch.Name, ch.Version
+	}
+	if res.Submitted, res.Duplicates, err = s.AppendEvents(ctx, events); err != nil {
+		return res, err
 	}
 	if res.Submitted > 0 {
 		res.Booked, res.Errors = x.ProcessPending(ctx)

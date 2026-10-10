@@ -63,7 +63,7 @@ import (
 func main() {
 	log.SetFlags(0)
 	if len(os.Args) < 2 {
-		log.Fatal("usage: rhea init|load|submit|serve|replay|channels|ksef|clock")
+		log.Fatal("usage: rhea init|load|submit|intake|serve|replay|channels|ksef|clock")
 	}
 	ctx := context.Background()
 	s, err := store.Open(ctx, store.DSN())
@@ -277,6 +277,32 @@ func main() {
 			log.Fatal(err)
 		}
 		fmt.Printf("event %d accepted; booked %d\n", id, booked)
+
+	case "intake":
+		// A document through the second open door: the file is the fact,
+		// kept under its hash; a reader explains it later or it waits in the
+		// worklist as residue (flags before the path).
+		fs := flag.NewFlagSet("intake", flag.ExitOnError)
+		source := fs.String("source", "upload", "where the document came from, in your words (email, scan, the bank's site)")
+		date := fs.String("date", "", "the business date it was received (YYYY-MM-DD; default today)")
+		fs.Parse(os.Args[2:])
+		if fs.NArg() != 1 {
+			log.Fatal("usage: rhea intake [-source S] [-date YYYY-MM-DD] FILE")
+		}
+		hash, t, err := intake(ctx, x, fs.Arg(0), *source, *date)
+		if store.IsDuplicate(err) {
+			log.Fatalf("document %s was already received — the same file through this door is the same fact", hash)
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("document %s received as event %d; booked %d\n", hash, t.EventID, t.Booked)
+		for _, e := range t.Errors {
+			fmt.Println("worklist:", e)
+		}
+		if t.Booked == 0 && len(t.Errors) == 0 {
+			fmt.Println("no reader explains it yet — it waits in the worklist")
+		}
 
 	case "serve":
 		fs := flag.NewFlagSet("serve", flag.ExitOnError)
@@ -636,4 +662,31 @@ func printRegistry(reg adapter.RegistryStatus) {
 		}
 		fmt.Printf("  %-18s v%-3d %s%s; reads %s\n", a.Name, a.CodeVersion, a.State, via, a.Format)
 	}
+}
+
+// intake hands a file to the receive_document door. The media type comes
+// from the extension where it is unambiguous, else from the bytes; the hash
+// is the door's identity, so the same file never books twice.
+func intake(ctx context.Context, x *exec.Executor, path, source, date string) (string, exec.Triggered, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", exec.Triggered{}, err
+	}
+	media := map[string]string{
+		".pdf": "application/pdf", ".xml": "application/xml", ".json": "application/json",
+		".csv": "text/csv", ".txt": "text/plain", ".sta": "text/plain", ".mt940": "text/plain",
+		".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+	}[strings.ToLower(filepath.Ext(path))]
+	if media == "" {
+		media = http.DetectContentType(data)
+	}
+	inputs := map[string]any{
+		"file": map[string]any{"name": filepath.Base(path), "media_type": media, "bytes": data},
+	}
+	inputs["source"] = source
+	if date != "" {
+		inputs["occurred_at"] = date
+	}
+	t, err := x.TriggerActivity(ctx, "receive_document", inputs, actor(), "")
+	return core.HashBytes(data), t, err
 }

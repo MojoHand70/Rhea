@@ -10,6 +10,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
+	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -78,6 +81,9 @@ func (s *Store) Init(ctx context.Context) error {
 // say "already there". Idempotent loaders (packs, adapter retries) treat it
 // as a skip, not an error.
 func IsDuplicate(err error) bool {
+	if errors.Is(err, ErrDuplicate) {
+		return true
+	}
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == "23505"
 }
@@ -93,6 +99,17 @@ type Querier interface {
 // --- events ---------------------------------------------------------------
 
 func AppendEvent(ctx context.Context, q Querier, ev core.Event) (int64, error) {
+	return appendEvent(ctx, q, ev, false)
+}
+
+// ErrDuplicate is how the batch append says "already there" for one event;
+// IsDuplicate recognizes it alongside the database's own unique violation.
+var ErrDuplicate = errors.New("event already in the log (dedup key)")
+
+// appendEvent is the one write into the log. With skipDuplicate the insert
+// does nothing on a known dedup key and reports ErrDuplicate instead of
+// aborting the enclosing transaction — the batch path.
+func appendEvent(ctx context.Context, q Querier, ev core.Event, skipDuplicate bool) (int64, error) {
 	// The object.* namespace is the kernel's own: a raw event spelled like a
 	// derived one could trigger cascade rules — or claim an amendment — for
 	// a fact that never happened.
@@ -104,6 +121,24 @@ func AppendEvent(ctx context.Context, q Querier, ev core.Event) (int64, error) {
 	// (an approval, a request) that no declared verb performed.
 	if ev.Kind == core.KindRaw && core.ReservedEventType(ev.Type) && ev.ActivityName == "" {
 		return 0, fmt.Errorf("event type %q is a system verb — it enters only through its declared activity", ev.Type)
+	}
+	// The file is the fact: a document.received names files the store holds,
+	// or it is not appended. Whoever emits it — a door, a channel, a pack —
+	// the file comes first.
+	if ev.Kind == core.KindRaw && ev.Type == core.EventDocumentReceived {
+		hashes := fileHashes(ev.Payload)
+		if len(hashes) == 0 {
+			return 0, fmt.Errorf("%s names no file — the payload wants {<input>: {hash, name, media_type, size}}", ev.Type)
+		}
+		for _, h := range hashes {
+			ok, err := hasBlob(ctx, q, h)
+			if err != nil {
+				return 0, err
+			}
+			if !ok {
+				return 0, fmt.Errorf("%s names file %s, which the store does not hold — the file is the fact, so the file comes first", ev.Type, h)
+			}
+		}
 	}
 	var dedup *string
 	if ev.DedupKey != "" {
@@ -124,17 +159,121 @@ func AppendEvent(ctx context.Context, q Querier, ev core.Event) (int64, error) {
 		actName, actVersion = &ev.ActivityName, &ev.ActivityVersion
 	}
 	var id int64
-	err := q.QueryRow(ctx, `
+	sql := `
 		INSERT INTO event (kind, event_type, occurred_at, payload, cause_event_id, rule_id, rule_version, dedup_key, actor, activity_name, activity_version)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-		RETURNING event_id`,
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
+	if skipDuplicate {
+		sql += ` ON CONFLICT (dedup_key) DO NOTHING`
+	}
+	err := q.QueryRow(ctx, sql+` RETURNING event_id`,
 		ev.Kind, ev.Type, ev.OccurredAt, ev.Payload, ev.CauseEventID, ruleID, ruleVersion, dedup, actor, actName, actVersion,
 	).Scan(&id)
+	if skipDuplicate && errors.Is(err, pgx.ErrNoRows) {
+		return 0, ErrDuplicate
+	}
 	return id, err
 }
 
 func (s *Store) AppendEvent(ctx context.Context, ev core.Event) (int64, error) {
 	return AppendEvent(ctx, s.Pool, ev)
+}
+
+// AppendEvents appends a batch in one transaction: an adapter pass lands
+// whole or not at all (DIRECTION 2026-10-10, the high-volume treatment's
+// cheap-now item). Events the log already has, by dedup key, are skipped and
+// counted; any other failure rolls the whole batch back.
+func (s *Store) AppendEvents(ctx context.Context, evs []core.Event) (appended, duplicates int, err error) {
+	tx, err := s.Pool.Begin(ctx)
+	if err != nil {
+		return 0, 0, err
+	}
+	defer tx.Rollback(ctx)
+	for _, ev := range evs {
+		switch _, err := appendEvent(ctx, tx, ev, true); {
+		case err == nil:
+			appended++
+		case errors.Is(err, ErrDuplicate):
+			duplicates++
+		default:
+			return 0, 0, err
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return 0, 0, err
+	}
+	return appended, duplicates, nil
+}
+
+// fileHashes collects the hashes a document.received payload names: every
+// top-level value shaped like a file fact, {hash: "sha256:…", …}.
+func fileHashes(payload []byte) []string {
+	var top map[string]json.RawMessage
+	if json.Unmarshal(payload, &top) != nil {
+		return nil
+	}
+	var out []string
+	for _, v := range top {
+		var f struct {
+			Hash string `json:"hash"`
+		}
+		if json.Unmarshal(v, &f) == nil && strings.HasPrefix(f.Hash, "sha256:") {
+			out = append(out, f.Hash)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+// --- blobs ----------------------------------------------------------------
+
+// Blob is one stored file: the bytes under their content hash.
+type Blob struct {
+	Hash      string
+	MediaType string
+	Size      int64
+	Bytes     []byte
+	CreatedAt time.Time
+}
+
+// PutBlob keeps a file under its hash, once: a second put of the same bytes
+// is a no-op (stored=false). The hash is checked against the bytes — the
+// store vouches the content address, whoever computed it.
+func PutBlob(ctx context.Context, q Querier, hash, mediaType string, data []byte) (stored bool, err error) {
+	if want := core.HashBytes(data); hash != want {
+		return false, fmt.Errorf("blob %s: the bytes hash to %s", hash, want)
+	}
+	if mediaType == "" {
+		mediaType = "application/octet-stream"
+	}
+	tag, err := q.Exec(ctx, `
+		INSERT INTO blob (hash, media_type, size, bytes) VALUES ($1, $2, $3, $4)
+		ON CONFLICT (hash) DO NOTHING`, hash, mediaType, len(data), data)
+	if err != nil {
+		return false, err
+	}
+	return tag.RowsAffected() == 1, nil
+}
+
+func (s *Store) PutBlob(ctx context.Context, hash, mediaType string, data []byte) (bool, error) {
+	return PutBlob(ctx, s.Pool, hash, mediaType, data)
+}
+
+// GetBlob returns a stored file, bytes included.
+func (s *Store) GetBlob(ctx context.Context, hash string) (Blob, error) {
+	var b Blob
+	err := s.Pool.QueryRow(ctx,
+		`SELECT hash, media_type, size, bytes, created_at FROM blob WHERE hash = $1`, hash,
+	).Scan(&b.Hash, &b.MediaType, &b.Size, &b.Bytes, &b.CreatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return b, fmt.Errorf("no file %s in the store", hash)
+	}
+	return b, err
+}
+
+func hasBlob(ctx context.Context, q Querier, hash string) (bool, error) {
+	var ok bool
+	err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM blob WHERE hash = $1)`, hash).Scan(&ok)
+	return ok, err
 }
 
 func scanEvents(rows pgx.Rows) ([]core.Event, error) {

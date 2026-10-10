@@ -3,6 +3,7 @@ package store_test
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -114,6 +115,105 @@ func TestAppendOnlyInvariant(t *testing.T) {
 	}
 	if _, err := s.Pool.Exec(ctx, `UPDATE object_type SET status = 'active'`); err == nil {
 		t.Fatal("UPDATE on object_type succeeded — invariant 1 broken")
+	}
+	// The blob store joins the family (DIRECTION 2026-10-10): a file is kept
+	// whole under its hash, and never changed or removed.
+	data := []byte("a scanned page")
+	if _, err := s.PutBlob(ctx, core.HashBytes(data), "image/png", data); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Pool.Exec(ctx, `UPDATE blob SET bytes = 'x'`); err == nil {
+		t.Fatal("UPDATE on blob succeeded — invariant 1 broken")
+	}
+	if _, err := s.Pool.Exec(ctx, `DELETE FROM blob`); err == nil {
+		t.Fatal("DELETE on blob succeeded — invariant 1 broken")
+	}
+}
+
+// The file is the fact: bytes are kept once under their content hash, the
+// hash is checked against the bytes, and a document.received event is
+// refused until the file it names is in the store.
+func TestBlobStoreAndTheFileFirst(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	data := []byte("<Faktura>…</Faktura>")
+	hash := core.HashBytes(data)
+
+	received := func(h string) core.Event {
+		return core.Event{Kind: core.KindRaw, Type: core.EventDocumentReceived, OccurredAt: "2026-10-11",
+			Payload:  json.RawMessage(`{"file":{"hash":"` + h + `","name":"fv.xml","media_type":"application/xml","size":21},"source":"email"}`),
+			DedupKey: "doc/" + h}
+	}
+	if _, err := s.AppendEvent(ctx, received(hash)); err == nil || !strings.Contains(err.Error(), "does not hold") {
+		t.Fatalf("document.received without its file was appended: %v", err)
+	}
+	if _, err := s.AppendEvent(ctx, core.Event{Kind: core.KindRaw, Type: core.EventDocumentReceived,
+		OccurredAt: "2026-10-11", Payload: json.RawMessage(`{"note":"no file here"}`)}); err == nil ||
+		!strings.Contains(err.Error(), "names no file") {
+		t.Fatalf("document.received naming no file was appended: %v", err)
+	}
+
+	if _, err := s.PutBlob(ctx, "sha256:0000", "application/xml", data); err == nil {
+		t.Fatal("a wrong hash was accepted")
+	}
+	stored, err := s.PutBlob(ctx, hash, "application/xml", data)
+	if err != nil || !stored {
+		t.Fatalf("first put: %v %v", stored, err)
+	}
+	stored, err = s.PutBlob(ctx, hash, "application/xml", data)
+	if err != nil || stored {
+		t.Fatalf("second put should be a no-op: %v %v", stored, err)
+	}
+	b, err := s.GetBlob(ctx, hash)
+	if err != nil || string(b.Bytes) != string(data) || b.MediaType != "application/xml" || b.Size != int64(len(data)) {
+		t.Fatalf("get: %+v %v", b, err)
+	}
+	if _, err := s.GetBlob(ctx, "sha256:nothing"); err == nil {
+		t.Fatal("an unknown hash was found")
+	}
+
+	if _, err := s.AppendEvent(ctx, received(hash)); err != nil {
+		t.Fatalf("with the file in the store: %v", err)
+	}
+}
+
+// A batch lands whole or not at all; known events are skipped and counted.
+func TestAppendEventsIsOneTransaction(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	if _, err := s.AppendEvent(ctx, rawEvent("e1")); err != nil {
+		t.Fatal(err)
+	}
+	count := func() int {
+		evs, err := s.EventsByKind(ctx, core.KindRaw)
+		if err != nil {
+			t.Fatal(err)
+		}
+		n := 0
+		for _, ev := range evs {
+			if ev.Type == "invoice.received" {
+				n++
+			}
+		}
+		return n
+	}
+	bad := rawEvent("e3")
+	bad.OccurredAt = "not a date"
+	if _, _, err := s.AppendEvents(ctx, []core.Event{rawEvent("e2"), bad}); err == nil {
+		t.Fatal("a batch with a bad event was accepted")
+	}
+	if count() != 1 {
+		t.Fatalf("a failed batch left %d events, want 1", count())
+	}
+	appended, duplicates, err := s.AppendEvents(ctx, []core.Event{rawEvent("e1"), rawEvent("e2"), rawEvent("e3")})
+	if err != nil || appended != 2 || duplicates != 1 {
+		t.Fatalf("batch = %d appended, %d duplicates, %v", appended, duplicates, err)
+	}
+	if count() != 3 {
+		t.Fatalf("after the batch: %d events, want 3", count())
+	}
+	if _, err := s.AppendEvent(ctx, rawEvent("e1")); !store.IsDuplicate(err) {
+		t.Fatalf("the single append still reports a duplicate: %v", err)
 	}
 }
 

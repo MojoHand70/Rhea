@@ -1532,6 +1532,13 @@ a `channel` section, the binary registers its adapters, `Bind` joins the
 two before every pass, every adapter event names its channel, the clock
 is the first channel (a builtin) and the Poland pack ships the KSeF
 channel; `rhea channels` and the Channels tab show both lists.
+**Step 2 shipped 2026-10-11** (DECISIONS, "the file is the fact"): a
+`file` input kind on verbs, bytes kept in an append-only blob store under
+their hash inside the trigger's transaction, `document.received` refused
+without its file, the `receive_document` door (`rhea intake`, a derived
+file picker in the shell), the `received_document` type in a common pack,
+files linked wherever the shell shows them, and the adapter pass appending
+in one transaction.
 
 One line: *a channel is who reads the document and how sure they are;
 the file is the fact and the reading has an author; the registry is an

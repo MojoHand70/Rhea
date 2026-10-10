@@ -1,6 +1,9 @@
 package core
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -221,7 +224,7 @@ func (a Activity) Validate() error {
 		}
 		byName[f.Name] = f
 		switch f.Type {
-		case "string", "int", "date", "money":
+		case "string", "int", "date", "money", "file":
 		case "enum":
 			if len(f.Values) == 0 {
 				return fmt.Errorf("activity %q input %q: enum needs values", a.Name, f.Name)
@@ -262,6 +265,35 @@ func (a Activity) Validate() error {
 	return nil
 }
 
+// FileInput is a file handed to a door (DIRECTION 2026-10-10, "the file is
+// the fact"): its bytes, which the kernel keeps in the blob store under their
+// hash in the same transaction as the event, and the facts about it that
+// enter the payload under the input's name — {hash, name, media_type, size}.
+// The bytes never enter the payload; the hash is the file's identity.
+type FileInput struct {
+	Input     string
+	Name      string
+	MediaType string
+	Bytes     []byte
+	Hash      string // "sha256:" + hex of the bytes
+}
+
+// MaxFileBytes caps one file through a door — the experiment's blob store is
+// a Postgres table, not an object store.
+const MaxFileBytes = 32 << 20
+
+// EventDocumentReceived is the fact that a file arrived: the first event of
+// every document that is not born as JSON. The store refuses one whose file
+// it does not hold, so the claim "a document was received" is never made
+// without the document.
+const EventDocumentReceived = "document.received"
+
+// HashBytes is the content address every file is kept and named by.
+func HashBytes(b []byte) string {
+	sum := sha256.Sum256(b)
+	return "sha256:" + hex.EncodeToString(sum[:])
+}
+
 // RefInput is a declared ref input and the id a trigger handed it; existence
 // and type are the caller's to verify against state — core stays pure.
 type RefInput struct {
@@ -279,6 +311,12 @@ type BuiltEvent struct {
 	OccurredAt string
 	Payload    json.RawMessage
 	Refs       []RefInput
+	// Files are the bytes the door must keep before the event exists.
+	Files []FileInput
+	// Identity is the door's default dedup key when the caller gives none:
+	// the hash of the one file a trigger carried. The same file through the
+	// same door is the same fact.
+	Identity string
 }
 
 // BuildEvent validates trigger inputs against the declaration and shapes the
@@ -333,7 +371,18 @@ func (a Activity) BuildEvent(in map[string]any, today string) (BuiltEvent, error
 			out.Payload = b
 			continue
 		}
+		if fi, ok := cv.(FileInput); ok {
+			fi.Input = f.Name
+			out.Files = append(out.Files, fi)
+			payload[f.Name] = map[string]any{
+				"hash": fi.Hash, "name": fi.Name, "media_type": fi.MediaType, "size": len(fi.Bytes),
+			}
+			continue
+		}
 		payload[f.Name] = cv
+	}
+	if len(out.Files) == 1 {
+		out.Identity = out.Files[0].Hash
 	}
 
 	if _, ok := sp.emitsSource(); ok && ReservedEventType(out.Type) {
@@ -413,6 +462,8 @@ func coerceInput(f FieldDef, v any) (any, error) {
 			return nil, fmt.Errorf("input %q wants a JSON object, got %T", f.Name, v)
 		}
 		return m, nil
+	case "file":
+		return coerceFile(f, v)
 	default: // ref<T>, vetted by Validate
 		s, ok := v.(string)
 		if !ok {
@@ -420,6 +471,47 @@ func coerceInput(f FieldDef, v any) (any, error) {
 		}
 		return s, nil
 	}
+}
+
+// coerceFile reads a file input: {name, media_type, content_base64} over the
+// wire, or {name, media_type, bytes} from a caller in the same process. The
+// hash is computed here, never trusted from the caller.
+func coerceFile(f FieldDef, v any) (any, error) {
+	m, ok := v.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("input %q wants a file {name, media_type, content_base64}, got %T", f.Name, v)
+	}
+	name, _ := m["name"].(string)
+	if name == "" {
+		return nil, fmt.Errorf("input %q: a file needs a name", f.Name)
+	}
+	media, _ := m["media_type"].(string)
+	if media == "" {
+		media = "application/octet-stream"
+	}
+	var data []byte
+	switch c := m["bytes"].(type) {
+	case []byte:
+		data = c
+	case nil:
+		enc, _ := m["content_base64"].(string)
+		if enc == "" {
+			return nil, fmt.Errorf("input %q: a file needs content", f.Name)
+		}
+		var err error
+		if data, err = base64.StdEncoding.DecodeString(enc); err != nil {
+			return nil, fmt.Errorf("input %q: content_base64: %w", f.Name, err)
+		}
+	default:
+		return nil, fmt.Errorf("input %q: bytes must be []byte, got %T", f.Name, c)
+	}
+	if len(data) == 0 {
+		return nil, fmt.Errorf("input %q: an empty file is not a document", f.Name)
+	}
+	if len(data) > MaxFileBytes {
+		return nil, fmt.Errorf("input %q: %d bytes is over the %d-byte cap", f.Name, len(data), MaxFileBytes)
+	}
+	return FileInput{Name: name, MediaType: media, Bytes: data, Hash: HashBytes(data)}, nil
 }
 
 // BuiltinActivities are the kernel's own verbs, seeded active at init with
@@ -438,6 +530,19 @@ func BuiltinActivities() []Activity {
 					{Name: "payload", Type: "json", Required: true},
 				},
 				Emits: "=event_type",
+				Who:   []string{"human", "agent"},
+			},
+		},
+		{
+			Name: "receive_document", Domain: "system",
+			Description: "The door for documents: the file itself is the fact. Its bytes are kept under their hash, the event names them, and a reader — a parser or the model — turns the file into the typed event later. The same file through this door twice is the same fact.",
+			Spec: ActivitySpec{
+				Inputs: []FieldDef{
+					{Name: "file", Type: "file", Required: true},
+					{Name: "source", Type: "string", Required: true}, // where it came from, in the person's words: email, scan, a bank's site
+					{Name: "occurred_at", Type: "date"},
+				},
+				Emits: EventDocumentReceived,
 				Who:   []string{"human", "agent"},
 			},
 		},

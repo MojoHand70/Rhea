@@ -1,6 +1,7 @@
 package core_test
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"reflect"
 	"strings"
@@ -179,7 +180,12 @@ func TestDeclaredActivitiesKeepOutOfKernelNamespaces(t *testing.T) {
 		if a.Spec.Channel != nil {
 			continue
 		}
-		if !strings.HasPrefix(a.Spec.Emits, "=") && a.Name != "submit_event" && !core.ReservedEventType(a.Spec.Emits) {
+		// The two open doors — facts as JSON, facts as files — speak the
+		// business namespace by design; the kernel's verbs stay in theirs.
+		if a.Name == "submit_event" || a.Name == "receive_document" {
+			continue
+		}
+		if !strings.HasPrefix(a.Spec.Emits, "=") && !core.ReservedEventType(a.Spec.Emits) {
 			t.Errorf("builtin %s emits %q outside the kernel namespaces", a.Name, a.Spec.Emits)
 		}
 	}
@@ -268,4 +274,87 @@ func TestChannelValidate(t *testing.T) {
 		}
 	}
 	t.Fatal("clock is not a builtin")
+}
+
+// A file through a door: the bytes become a blob under their hash, the
+// payload carries the facts about the file, and the hash is the trigger's
+// default identity (DIRECTION 2026-10-10, "the file is the fact").
+func TestFileInput(t *testing.T) {
+	var door core.Activity
+	for _, a := range core.BuiltinActivities() {
+		if a.Name == "receive_document" {
+			door = a
+		}
+	}
+	if door.Name == "" {
+		t.Fatal("receive_document is not a builtin")
+	}
+	if err := door.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	data := []byte("%PDF-1.4 not really")
+	built, err := door.BuildEvent(map[string]any{
+		"file":   map[string]any{"name": "fv-12.pdf", "media_type": "application/pdf", "bytes": data},
+		"source": "email",
+	}, "2026-10-11")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := core.HashBytes(data)
+	if built.Type != core.EventDocumentReceived || built.Identity != want || len(built.Files) != 1 ||
+		built.Files[0].Input != "file" || string(built.Files[0].Bytes) != string(data) || built.Files[0].Hash != want {
+		t.Fatalf("built = %+v", built)
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(built.Payload, &payload); err != nil {
+		t.Fatal(err)
+	}
+	file, _ := payload["file"].(map[string]any)
+	if file["hash"] != want || file["name"] != "fv-12.pdf" || file["media_type"] != "application/pdf" ||
+		file["size"] != float64(len(data)) || payload["source"] != "email" {
+		t.Fatalf("payload = %v", payload)
+	}
+	if strings.Contains(string(built.Payload), "not really") {
+		t.Fatal("the bytes leaked into the payload")
+	}
+
+	// Over the wire the content is base64; the hash is computed, never trusted.
+	enc := base64.StdEncoding.EncodeToString(data)
+	built2, err := door.BuildEvent(map[string]any{
+		"file":   map[string]any{"name": "fv-12.pdf", "content_base64": enc, "hash": "sha256:forged"},
+		"source": "email",
+	}, "2026-10-11")
+	if err != nil || built2.Identity != want || built2.Files[0].MediaType != "application/octet-stream" {
+		t.Fatalf("base64 file: %+v %v", built2, err)
+	}
+
+	for name, in := range map[string]any{
+		"not an object": "fv-12.pdf",
+		"no name":       map[string]any{"content_base64": enc},
+		"no content":    map[string]any{"name": "x.pdf"},
+		"empty":         map[string]any{"name": "x.pdf", "bytes": []byte{}},
+		"bad base64":    map[string]any{"name": "x.pdf", "content_base64": "***"},
+		"too big":       map[string]any{"name": "x.pdf", "bytes": make([]byte, core.MaxFileBytes+1)},
+	} {
+		if _, err := door.BuildEvent(map[string]any{"file": in, "source": "scan"}, "2026-10-11"); err == nil {
+			t.Errorf("%s: accepted", name)
+		}
+	}
+	// A document without a stated source is not received: the person says
+	// where it came from.
+	if _, err := door.BuildEvent(map[string]any{"file": map[string]any{"name": "x.pdf", "bytes": data}}, "2026-10-11"); err == nil ||
+		!strings.Contains(err.Error(), `"source" is required`) {
+		t.Fatalf("no source: %v", err)
+	}
+
+	// Two files, no default identity: the caller names the fact.
+	two := core.Activity{Name: "attach_pair", Spec: core.ActivitySpec{Emits: "pair.attached", Inputs: []core.FieldDef{
+		{Name: "front", Type: "file", Required: true}, {Name: "back", Type: "file", Required: true}}}}
+	built3, err := two.BuildEvent(map[string]any{
+		"front": map[string]any{"name": "a", "bytes": []byte("a")},
+		"back":  map[string]any{"name": "b", "bytes": []byte("b")},
+	}, "2026-10-11")
+	if err != nil || len(built3.Files) != 2 || built3.Identity != "" {
+		t.Fatalf("two files: %+v %v", built3, err)
+	}
 }

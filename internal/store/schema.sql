@@ -120,6 +120,19 @@ ALTER TABLE bundle ADD COLUMN IF NOT EXISTS warrant JSONB;
 ALTER TABLE bundle ADD COLUMN IF NOT EXISTS question TEXT;
 ALTER TABLE bundle ADD COLUMN IF NOT EXISTS after_bundle TEXT;
 
+-- The blob store (DIRECTION 2026-10-10, "the file is the fact"): every file
+-- a door or a channel receives, kept whole under its content hash. A
+-- document.received event names a row here, and the store refuses the event
+-- without it. Append-only like the log: a file re-read later by a newer
+-- channel yields an amendment, never a rewrite.
+CREATE TABLE IF NOT EXISTS blob (
+    hash       TEXT PRIMARY KEY,          -- "sha256:" + hex of the bytes
+    media_type TEXT NOT NULL,
+    size       BIGINT NOT NULL,
+    bytes      BYTEA NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- Projection cache. Rebuildable from the event log at any time.
 CREATE TABLE IF NOT EXISTS object (
     object_id       TEXT PRIMARY KEY,
@@ -143,7 +156,7 @@ $$ LANGUAGE plpgsql;
 DO $$
 DECLARE t TEXT;
 BEGIN
-    FOREACH t IN ARRAY ARRAY['event','rule','object_type','view_def','activity','bundle'] LOOP
+    FOREACH t IN ARRAY ARRAY['event','rule','object_type','view_def','activity','bundle','blob'] LOOP
         IF NOT EXISTS (
             SELECT 1 FROM pg_trigger WHERE tgname = t || '_append_only'
         ) THEN

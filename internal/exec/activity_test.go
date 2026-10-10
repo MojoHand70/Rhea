@@ -9,6 +9,7 @@ import (
 
 	"rhea/internal/core"
 	"rhea/internal/exec"
+	"rhea/internal/store"
 	"rhea/internal/store/storetest"
 )
 
@@ -304,5 +305,78 @@ func TestRefInputsVouchForObjects(t *testing.T) {
 	json.Unmarshal(ev.Payload, &p)
 	if p["invoice"] != objs[0].ID {
 		t.Fatalf("payload = %v", p)
+	}
+}
+
+// The second open door (DIRECTION 2026-10-10, "the file is the fact"): a
+// file through receive_document is kept under its hash in the same
+// transaction as the event that names it; the hash is the fact's identity;
+// and with no reader yet the fact waits in the worklist as residue.
+func TestReceiveDocumentKeepsTheFile(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	x := &exec.Executor{Store: s}
+	data := []byte("%PDF-1.7 a supplier's invoice")
+	hash := core.HashBytes(data)
+
+	tr, err := x.TriggerActivity(ctx, "receive_document", map[string]any{
+		"file":   map[string]any{"name": "re-2026-17.pdf", "media_type": "application/pdf", "bytes": data},
+		"source": "email", "occurred_at": "2026-10-11",
+	}, "cli:kk", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ev, err := s.GetEvent(ctx, tr.EventID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ev.Type != core.EventDocumentReceived || ev.DedupKey != "receive_document/"+hash ||
+		ev.ActivityName != "receive_document" || ev.Actor != "cli:kk" {
+		t.Fatalf("event = %+v", ev)
+	}
+	var payload struct {
+		File struct {
+			Hash, Name, MediaType string
+			Size                  int
+		} `json:"file"`
+		Source string `json:"source"`
+	}
+	if err := json.Unmarshal(ev.Payload, &payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload.File.Hash != hash || payload.File.Name != "re-2026-17.pdf" || payload.File.Size != len(data) || payload.Source != "email" {
+		t.Fatalf("payload = %+v", payload)
+	}
+	b, err := s.GetBlob(ctx, hash)
+	if err != nil || string(b.Bytes) != string(data) || b.MediaType != "application/pdf" {
+		t.Fatalf("blob = %+v %v", b, err)
+	}
+	// No reader explains it yet: residue, visible to the person.
+	wl, _ := s.UnmatchedRawEvents(ctx)
+	if len(wl) != 1 || wl[0].ID != tr.EventID {
+		t.Fatalf("worklist = %+v", wl)
+	}
+
+	// The same file again, from another source, is the same fact.
+	_, err = x.TriggerActivity(ctx, "receive_document", map[string]any{
+		"file":   map[string]any{"name": "copy.pdf", "media_type": "application/pdf", "bytes": data},
+		"source": "scan",
+	}, "shell:anna", "")
+	if !store.IsDuplicate(err) {
+		t.Fatalf("the same file booked twice: %v", err)
+	}
+	// Unless the caller names the fact otherwise.
+	if _, err := x.TriggerActivity(ctx, "receive_document", map[string]any{
+		"file":   map[string]any{"name": "copy.pdf", "media_type": "application/pdf", "bytes": data},
+		"source": "scan",
+	}, "shell:anna", "second-copy"); err != nil {
+		t.Fatalf("a named second receipt refused: %v", err)
+	}
+	// The open door cannot claim a file the store lacks.
+	if _, err := x.TriggerActivity(ctx, "submit_event", map[string]any{
+		"event_type": core.EventDocumentReceived, "occurred_at": "2026-10-11",
+		"payload": map[string]any{"file": map[string]any{"hash": "sha256:" + strings.Repeat("0", 64), "name": "ghost.pdf"}},
+	}, "shell:anna", "ghost"); err == nil || !strings.Contains(err.Error(), "does not hold") {
+		t.Fatalf("a document.received without its file was appended: %v", err)
 	}
 }
