@@ -41,6 +41,14 @@ func TestPolishPZPack(t *testing.T) {
 			}
 		}
 	}
+	// People first: the pl pack's task vocabulary assigns work to persons.
+	people, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", "common", "people.json"), "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, errs, err := x.ApproveBundle(ctx, people.Bundle, "krzysztof", "2026-09-01"); err != nil || len(errs) != 0 {
+		t.Fatalf("approve %s: %v %v", people.Bundle, err, errs)
+	}
 	for _, p := range []string{"pack.json", "warehouse.json"} {
 		sum, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", "pl", p), "test")
 		if err != nil {

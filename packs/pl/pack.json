@@ -1,6 +1,6 @@
 {
   "pack": "pl",
-  "version": 6,
+  "version": 7,
   "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane",
   "requires": [
     "company",
@@ -8,7 +8,8 @@
     "posting",
     "vat_rate",
     "sales_invoice",
-    "fx_rate"
+    "fx_rate",
+    "person"
   ],
   "object_types": [
     {
@@ -213,7 +214,7 @@
     },
     {
       "name": "task",
-      "version": 1,
+      "version": 2,
       "domain": "finance",
       "is_document": false,
       "label_field": "title",
@@ -266,11 +267,11 @@
         },
         {
           "name": "requester",
-          "type": "string"
+          "type": "ref<person>"
         },
         {
           "name": "assignee",
-          "type": "string"
+          "type": "ref<person>"
         },
         {
           "name": "description",
@@ -280,7 +281,7 @@
     },
     {
       "name": "task_schedule",
-      "version": 1,
+      "version": 2,
       "domain": "finance",
       "is_document": false,
       "label_field": "name",
@@ -319,11 +320,11 @@
         },
         {
           "name": "requester",
-          "type": "string"
+          "type": "ref<person>"
         },
         {
           "name": "assignee",
-          "type": "string"
+          "type": "ref<person>"
         }
       ]
     },

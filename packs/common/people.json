@@ -1,0 +1,136 @@
+{
+  "pack": "common-people",
+  "version": 1,
+  "description": "People: the person as master data — who acts, who is assigned, who stands in. Market-neutral; every pack that assigns work builds on it",
+  "warrant": {
+    "basis": "practice",
+    "citations": [
+      "every ERP keeps the people who use it as master data: a user with a role, and a substitute for absence (SAP workflow substitutes, Comarch operators)",
+      "every event in Rhea already names its actor; a person is that actor as an object, so cases, notifications and disputes can refer to a human the way documents refer to a contractor"
+    ],
+    "scope": "all markets"
+  },
+  "object_types": [
+    {
+      "name": "person",
+      "version": 1,
+      "domain": "people",
+      "is_document": false,
+      "label_field": "name",
+      "fields": [
+        { "name": "name", "type": "string", "required": true },
+        { "name": "handle", "type": "string", "required": true },
+        { "name": "role", "type": "string", "required": true },
+        { "name": "status", "type": "enum", "required": true, "values": ["active", "away", "left"] },
+        { "name": "deputy", "type": "ref<person>" }
+      ],
+      "lifecycle": {
+        "field": "status",
+        "transitions": {
+          "active": ["away", "left"],
+          "away": ["active", "left"]
+        }
+      },
+      "amendable": ["role", "deputy"]
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "register-person",
+      "priority": 10,
+      "effective_from": "2026-01-01",
+      "description": "A registered person becomes a person object, active from the day of registration",
+      "spec": {
+        "match": { "event_type": "person.registered" },
+        "effect": {
+          "object": {
+            "type": "person",
+            "fields": {
+              "name": "=$.name",
+              "handle": "=$.handle",
+              "role": "=$.role",
+              "status": "active"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "appoint-deputy",
+      "priority": 10,
+      "effective_from": "2026-01-01",
+      "description": "Appointing a deputy amends the person: work addressed to them can be routed to the deputy while they are away",
+      "spec": {
+        "match": { "event_type": "person.deputy_appointed" },
+        "effect": {
+          "amend": {
+            "type": "person",
+            "target": "=$.person",
+            "set": { "deputy": "=$.deputy" }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "move-person-status",
+      "priority": 10,
+      "effective_from": "2026-01-01",
+      "description": "A person's status moves along the declared lifecycle: active ⇄ away, either → left; the kernel refuses any other move",
+      "spec": {
+        "match": { "event_type": "person.status_changed" },
+        "effect": {
+          "amend": {
+            "type": "person",
+            "target": "=$.person",
+            "set": { "status": "=$.status" }
+          }
+        }
+      }
+    }
+  ],
+  "activities": [
+    {
+      "name": "register_person",
+      "domain": "people",
+      "description": "Register a person: name, the handle their actions are signed with, and their role",
+      "spec": {
+        "inputs": [
+          { "name": "name", "type": "string", "required": true },
+          { "name": "handle", "type": "string", "required": true },
+          { "name": "role", "type": "string", "required": true },
+          { "name": "occurred_at", "type": "date" }
+        ],
+        "emits": "person.registered",
+        "who": ["human"]
+      }
+    },
+    {
+      "name": "appoint_deputy",
+      "domain": "people",
+      "description": "Appoint who stands in for a person",
+      "spec": {
+        "inputs": [
+          { "name": "person", "type": "ref<person>", "required": true },
+          { "name": "deputy", "type": "ref<person>", "required": true },
+          { "name": "occurred_at", "type": "date" }
+        ],
+        "emits": "person.deputy_appointed",
+        "who": ["human"]
+      }
+    },
+    {
+      "name": "set_person_status",
+      "domain": "people",
+      "description": "Mark a person away, back, or gone",
+      "spec": {
+        "inputs": [
+          { "name": "person", "type": "ref<person>", "required": true },
+          { "name": "status", "type": "enum", "required": true, "values": ["active", "away", "left"] },
+          { "name": "occurred_at", "type": "date" }
+        ],
+        "emits": "person.status_changed",
+        "who": ["human"]
+      }
+    }
+  ]
+}

@@ -83,14 +83,20 @@ func TestM3PolandPack(t *testing.T) {
 		}
 	}
 
-	// Load the pack: 1 type, 5 views, 5 draft rules, 30 master-data events.
+	// People first: the pl pack's task vocabulary assigns work to persons.
+	if _, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", "common", "people.json"), "test"); err != nil {
+		t.Fatal(err)
+	}
+	post("/api/bundles/pack-common-people-v1/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+
+	// Load the pack: 14 types, 5 views, 5 draft rules, 31 master-data events.
 	packPath := filepath.Join("..", "..", "packs", "pl", "pack.json")
 	sum, err := pack.Load(ctx, s, packPath, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if sum.Types != 14 || sum.Views != 5 || sum.Rules != 5 || sum.Events != 31 || sum.Skipped != 0 ||
-		sum.Bundle != "pack-pl-v6" {
+		sum.Bundle != "pack-pl-v7" {
 		t.Fatalf("first load: %+v", sum)
 	}
 	// Idempotent: a reload changes nothing.
@@ -111,7 +117,7 @@ func TestM3PolandPack(t *testing.T) {
 	// Approving the pack's bundle IS the installation: its types, views and
 	// rules activate together, and the chart of accounts and the VAT rates
 	// materialize from the waiting events.
-	post("/api/bundles/pack-pl-v6/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-pl-v7/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {
 		t.Fatalf("worklist not cleared after approvals: %d", len(wl))
 	}

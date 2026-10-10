@@ -1218,6 +1218,110 @@ One line: *the story sets the depth; six months buys one country end to
 end, twelve buys the picture of "big", and everything the story does not
 ask for waits.*
 
+## The host is a concierge: scenarios as data (KK, 2026-10-10)
+
+KK's image for the interaction side, verbatim: *"She should be like the
+best concierge in the world. Absolute luxury. Like Winston in John Wick,
+like Charon."* The Continental's rules are absolute and everyone knows
+it; the concierge is discreet, anticipates, knows every guest by name
+and history, speaks little, is never obsequious, and acts within the
+rules without being asked twice. In Rhea the rules are the invariants
+and the approved corpus; the concierge is the host of the north-star
+note (system as host, owner as principal, the decision as the unit of
+interaction). Rhea is "she".
+
+KK's list of what she does — welcomes, suggests what to do today, points
+at hotspots and bottlenecks, runs implementation interviews, manages
+rights and access, executes actions, notifies other people, helps settle
+substantive disputes — and the question: how do we approach use case
+scenarios, and how does Rhea support more and more of them over time?
+
+**The interaction side is not a second system.** It is the same six
+concepts seen from the chair of the person at the screen. A scenario is
+a composition, every part is data behind the approval, and so scenarios
+grow the way the rule corpus grows. The morning scene ("I contacted the
+bank, booked 98 invoices, 2 are strange and need your decision") has
+five parts, and every scenario has the same five:
+
+1. *A trigger.* The clock, an event, or the person.
+2. *Facts the kernel computes.* A view: bookings made, documents still
+   unexplained, open cases by deadline.
+3. *What the person can do.* Actions offered on those facts, inline.
+4. *What Rhea does alone.* Rules.
+5. *What the host says.* The agent phrases the facts fresh each time;
+   its words are logged as events so it never repeats itself (the
+   north-star note's "never a templated welcome"). It never computes a
+   number.
+
+A scenario is therefore a set of definitions — a case type, a view, a
+few actions, a few rules, sometimes an adapter — approved together like
+a pack. No scenario needs code in the shell; if one seems to, the view
+vocabulary is missing a kind, and the kind gets added, never the screen.
+
+**The eight scenarios, mapped.**
+
+| Scenario | What it is in Rhea | Missing |
+|---|---|---|
+| Welcomes | Briefing: facts from the kernel, narrative by the agent, logged | The narrative view kind; a "host said" door |
+| What to do today | Open cases ranked by deadline and amount, plus pending approvals | The queue view kind; ranking as a formula on the case |
+| Hotspots, bottlenecks | Thresholds are rules that count across a customer's documents and raise a case; trends are analysis views the agent reads and phrases | Nothing in the language; a library of hotspot rules in the pack |
+| Implementation interview | Adopted 2026-10-08 ("Implementation by interview"); turns are events | The conversation loop, step 6 of that note |
+| Rights and access | "Who may trigger this action" on the action itself; people and roles as objects | The mechanism — Phase 4 |
+| Executes actions | Doors for the person; rules and the clock for Rhea; adapters for the outside world | Nothing |
+| Notifies people | A rule routes a case to a person; an adapter delivers; evidence as events | The outbound adapter — Phase 4 |
+| Substantive disputes | A case with two parties; the evidence is the walk from the number to the events and rules behind it; what-if shows the month under the other side's reading; resolution is a door (correction, acknowledgment, redraft) | A dispute case type in the pack; the walk from any number — Phase 2 |
+
+Seven of eight need no new concept. Rights has a destination ("authz
+belongs in the language", below) and no mechanism, and the growth plan
+already places it in Phase 4.
+
+**How the catalogue grows.** Three sources, one measure.
+
+- *Packs ship scenarios* with a warrant, as they ship VAT rules:
+  "overdue receivables" is a case type, a threshold rule, a queue view
+  and two doors.
+- *The host captures decisions.* The person handles something by hand
+  twice; the host asks whether to put it down for the future and drafts
+  the rule. A hotspot the host pointed out and the person confirmed
+  becomes a rule the same way. This is the Junior Accountant → CFO path,
+  and it needs nothing beyond the interview loop.
+- *The network shares shapes.* A hotspot rule that worked for one
+  company arrives behind another company's approval.
+
+The measure is the simulated customer: each scenario is one scene in a
+persona's day, and "Rhea supports this scenario" means the scene passes
+unattended in every run — the growth plan's metric, unchanged.
+
+**The one decision, settled: people are data now.** Three scenarios key
+on a person — who is notified, who may act, who disputes — and the actor
+on an event was a plain string. KK, 2026-10-10: "I think we need to add
+person object now." Shipped the same day (see DECISIONS): a `person`
+type in the first market-neutral pack (`packs/common/people.json`) with
+a role, a deputy and a life; three doors; the pl pack's task vocabulary
+assigning work to persons by ref; the actor string resolving to a
+person by lookup, never by kernel code. The warrant is the one the
+company key got: cheap now, expensive later. What stays out, by the
+plan: permissions (Phase 4), login (never, in the experiment), the
+notification address (with the adapter that sends).
+
+**Order.** Phase 2 of the plan, scene 3 of the story, already covers
+four scenarios: the briefing, what to do today, hotspots from the pack,
+and the walk that disputes need. The interview loop sits in the same
+phase. Rights and notifications stay in Phase 4.
+
+**The two welding questions.** *Partition:* a person belongs to a
+company's log like a contractor does; the same human serving several
+client companies (bureau mode) is a person in each, matched by handle
+across logs only in the network's sense, never by a cross-company read
+on the hot path. *Containment:* the host's words are events in the
+company's log and the agent reads persons only through views; a
+person's name and role are instance values, which the network's
+no-facts-leave test already strips.
+
+One line: *the concierge is the same six concepts from the guest's
+chair; a scenario is five parts of data behind one approval, and the
+guest is now a person Rhea can name.*
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,

@@ -115,12 +115,17 @@ func TestCohabitation(t *testing.T) {
 	// Both markets into one kernel; approving each pack's rules installs
 	// only its own master data now — the market binding keeps the other
 	// pack's events out of reach.
+	// People first: the pl pack's task vocabulary assigns work to persons.
+	if _, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", "common", "people.json"), "test"); err != nil {
+		t.Fatal(err)
+	}
+	post("/api/bundles/pack-common-people-v1/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	for _, p := range []string{"pl", "de"} {
 		if _, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", p, "pack.json"), "test"); err != nil {
 			t.Fatal(err)
 		}
 	}
-	for _, id := range []string{"pack-pl-v6", "pack-de-v3"} {
+	for _, id := range []string{"pack-pl-v7", "pack-de-v3"} {
 		post("/api/bundles/"+id+"/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	}
 	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {

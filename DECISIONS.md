@@ -1637,3 +1637,26 @@ evidence in `internal/exec/case_test.go`.
   KK's; what KK wants is the exchange one has with an accountant — propose,
   explain, refuse with a reason, propose again — and a count of how often
   the first proposal was right is the honest number about the author.
+
+## 2026-10-10 — people as data: the person is master data, the actor resolves to it
+
+- **A `person` object type ships in a market-neutral pack, `packs/common/people.json`**:
+  name, handle, role, a status with a lifecycle (active ⇄ away, either → left, nothing
+  back from left), a deputy as `ref<person>`; role and deputy amendable. Three doors —
+  `register_person`, `appoint_deputy`, `set_person_status` — and the three rules that
+  explain their events. First pack outside `packs/<market>/`: `common/` holds what every
+  market builds on. KK, 2026-10-10: "add person object now" — three scenarios of the
+  interaction brief (who is notified, who may act, who disputes) key on a person, and
+  identity retrofitted later is the hole replay never forgives.
+- **The actor convention is data, not code.** A human signs events as `<door>:<handle>`
+  (`shell:kk`, `cli:anna`); `person.handle` holds the part after the colon, and the
+  person is found by the ordinary field lookup. No kernel code knows the type exists;
+  `internal/pack/people_test.go` is the convention's only enforcement. The agent, the
+  adapters and the kernel keep their own actor prefixes and resolve to nobody.
+- **The pl pack's `task` and `task_schedule` move to v2: `requester` and `assignee` are
+  `ref<person>`**, and the pack (v7) requires `person`. Every pack-loading test installs
+  `common/people` first, so "requires" stays honest: a type that assigns work builds on
+  the person.
+- **No permissions, no login, no address.** `who` on activities stays inert (Phase 4 of
+  the growth plan); the notification address arrives with the outbound adapter, as an
+  amendable field, when Phase 4 asks for it. Email is not a field until something sends.
