@@ -59,6 +59,7 @@ type Party struct {
 	Name    string `json:"name"`
 	VATID   string `json:"vat_id"`
 	Country string `json:"country"`
+	IBAN    string `json:"iban,omitempty"` // the account statements and invoices name; derived when absent
 }
 
 // Item is a catalogue line: goods with a purchase cost and stock, or a
@@ -225,6 +226,9 @@ type Facts struct {
 	Sums   []eval.Sum
 	// Totals for the report, in minor units.
 	SalesNet, SalesVAT, PurchaseVAT, PZValue int64
+	// Documents are the same facts as files, the way channels deliver them
+	// (documents.go); each names the events it carries.
+	Documents []Document
 }
 
 // Generate runs the persona through its months. The same persona always
@@ -244,7 +248,9 @@ func Generate(p Persona) (Facts, error) {
 	g.payments()
 	// Facts in time order: a stable sort keeps the generator's order within a day.
 	sort.SliceStable(g.events, func(i, j int) bool { return g.events[i].OccurredAt < g.events[j].OccurredAt })
-	return g.facts(), nil
+	f := g.facts()
+	f.Documents = g.documents(f.Events)
+	return f, nil
 }
 
 type gen struct {
@@ -262,10 +268,11 @@ type gen struct {
 }
 
 type saleFact struct {
-	number string
-	date   time.Time
-	gross  int64
-	paid   bool
+	number   string
+	date     time.Time
+	gross    int64
+	paid     bool
+	customer string
 }
 
 type levelFact struct{ book, counted int }
@@ -390,7 +397,7 @@ func (g *gen) month(start time.Time) {
 			"payment_days": g.p.Volume.PaymentDays, "market": "pl", "lines": lines})
 		g.salesNet += net
 		g.salesVAT += vat
-		g.sales = append(g.sales, saleFact{number: number, date: date, gross: net + vat})
+		g.sales = append(g.sales, saleFact{number: number, date: date, gross: net + vat, customer: cust.Name})
 		g.counts["sales_invoice"]++
 	}
 	for i := 0; i < g.p.Volume.Issues; i++ {
@@ -494,7 +501,7 @@ func (g *gen) payments() {
 		}
 		s.paid = true
 		g.emit("bank.statement.line", ymd(paid), map[string]any{"date": ymd(paid), "amount": core.FormatMoney(s.gross),
-			"currency": "PLN", "reference": s.number, "counterparty": "customer transfer"})
+			"currency": "PLN", "reference": s.number, "counterparty": s.customer})
 	}
 }
 
@@ -621,6 +628,25 @@ func Summary(p Persona, f Facts) string {
 	}
 	fmt.Fprintf(&sb, "expected: sales net %s, VAT %s; purchase VAT %s; PZ value %s\n",
 		core.FormatMoney(f.SalesNet), core.FormatMoney(f.SalesVAT), core.FormatMoney(f.PurchaseVAT), core.FormatMoney(f.PZValue))
+	docs := map[string]int{}
+	covered := map[int]bool{}
+	for _, d := range f.Documents {
+		docs[d.Source]++
+		for _, i := range d.Events {
+			covered[i] = true
+		}
+	}
+	foreign := 0
+	for i, ev := range f.Events {
+		if ev.EventType == "purchase.invoice.received" && !covered[i] {
+			foreign++
+		}
+	}
+	fmt.Fprintf(&sb, "documents: %d KSeF invoices, %d bank statements", docs["ksef"], docs["bank"])
+	if foreign > 0 {
+		fmt.Fprintf(&sb, "; %d purchase invoices from foreign suppliers arrive as PDF (phase 2)", foreign)
+	}
+	sb.WriteByte('\n')
 	types := make([]string, 0, len(f.Counts))
 	for t := range f.Counts {
 		types = append(types, t)

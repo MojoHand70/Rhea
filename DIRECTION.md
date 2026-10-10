@@ -1538,7 +1538,12 @@ their hash inside the trigger's transaction, `document.received` refused
 without its file, the `receive_document` door (`rhea intake`, a derived
 file picker in the shell), the `received_document` type in a common pack,
 files linked wherever the shell shows them, and the adapter pass appending
-in one transaction.
+in one transaction. **Step 3 shipped 2026-10-11** (DECISIONS, "the
+simulated customer emits documents"): a FA-shaped XML per Polish
+supplier's invoice named by its KSeF reference, one MT940 per month in the
+"sim-bank" dialect, each naming the events it carries; `rhea sim
+-documents DIR`; the FA namespace and rate slots to be checked against the
+published XSD before the first real pull.
 
 One line: *a channel is who reads the document and how sure they are;
 the file is the fact and the reading has an author; the registry is an

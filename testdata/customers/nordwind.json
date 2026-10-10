@@ -19,35 +19,41 @@
   "company": {
     "name": "Nordwind Sp. z o.o.",
     "vat_id": "PL5260301234",
-    "country": "PL"
+    "country": "PL",
+    "iban": "PL61109010140000071219812874"
   },
   "customers": [
     {
       "name": "Kowalski i Wspólnicy sp. z o.o.",
       "vat_id": "PL5213456789",
-      "country": "PL"
+      "country": "PL",
+      "iban": "PL27114020040000300201355387"
     },
     {
       "name": "Mazowiecka Hurtownia S.A.",
       "vat_id": "PL7010203040",
-      "country": "PL"
+      "country": "PL",
+      "iban": "PL10105000997603123456789123"
     },
     {
       "name": "Baltic Trade sp. j.",
       "vat_id": "PL5842233445",
-      "country": "PL"
+      "country": "PL",
+      "iban": "PL02124010371111001012345678"
     }
   ],
   "suppliers": [
     {
       "name": "Omikron GmbH",
       "vat_id": "DE123456789",
-      "country": "DE"
+      "country": "DE",
+      "iban": "DE89370400440532013000"
     },
     {
       "name": "Fabryka Metali Zabrze S.A.",
       "vat_id": "PL6481122334",
-      "country": "PL"
+      "country": "PL",
+      "iban": "PL49102055581111123456789012"
     }
   ],
   "items": [

@@ -19,30 +19,35 @@
   "company": {
     "name": "Helios Studio sp. z o.o.",
     "vat_id": "PL7011998877",
-    "country": "PL"
+    "country": "PL",
+    "iban": "PL83101010230000261395100000"
   },
   "customers": [
     {
       "name": "Agencja Reklamowa Nova sp. z o.o.",
       "vat_id": "PL5272001122",
-      "country": "PL"
+      "country": "PL",
+      "iban": "PL60102010260000042270201111"
     },
     {
       "name": "Tech Park Gdańsk S.A.",
       "vat_id": "PL5833344556",
-      "country": "PL"
+      "country": "PL",
+      "iban": "PL37116022020000000012345678"
     }
   ],
   "suppliers": [
     {
       "name": "Biuro Plus sp. z o.o.",
       "vat_id": "PL6762223344",
-      "country": "PL"
+      "country": "PL",
+      "iban": "PL58105014451000009012345678"
     },
     {
       "name": "Hostingowo sp. z o.o.",
       "vat_id": "PL9542211009",
-      "country": "PL"
+      "country": "PL",
+      "iban": "PL14114020040000320012345678"
     }
   ],
   "items": [

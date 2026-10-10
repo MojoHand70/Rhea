@@ -1730,3 +1730,39 @@ evidence in `internal/exec/case_test.go`.
   by design. This is the high-volume treatment's cheap-now item, done.
 - **Local DBs**: `rhea init` re-run on `rhea` and `rhea_pl` (the blob table and the new
   door); the documents pack loaded into both as a draft bundle for KK.
+
+## 2026-10-11 — the simulated customer emits documents: FA XML and MT940, the facts as files
+
+- **`Facts.Documents`** (`internal/sim/documents.go`): after generation, every purchase
+  invoice from a Polish supplier becomes one FA-shaped XML file, as KSeF hands it to the
+  buyer, and every month becomes one MT940 statement of the company's account. Each
+  document names the events it carries by index, so the eval of step 4 can feed the file
+  in place of the JSON fact and expect the same state. `rhea sim -documents DIR PERSONA`
+  writes them under `DIR/<persona>/<YYYY-MM>/{ksef,bank}/`; the summary counts them.
+- **The FA subset, not the schema.** Parties (NIP without the country prefix, name,
+  country), dates, number, the WZ it settles, net and VAT in the slot of the one rate the
+  persona uses (`P_13_1`/`P_14_1` for 23%, `_2` for 8%, `_3` for 5%, `_6` for 0%), gross,
+  lines (name, unit, quantity, unit price, line net, rate) and payment (term, the
+  supplier's account), under the FA(3) namespace with `KodFormularza="FA (3)"`. The
+  file is named by its KSeF reference, derived deterministically from seller NIP, date
+  and number in the `<NIP>-<YYYYMMDD>-<12 hex>-<2 hex>` shape. **The namespace, the
+  schema version and the rate slots must be checked against the published FA(3) XSD
+  before the first real KSeF pull** (step 4): the fake client and the reader are the
+  experiment's; the files are shaped so a real reader would not need a different test.
+- **The MT940 dialect is "sim-bank."** Tags `:20:` (STMTyyyymm), `:25:` (the company's
+  IBAN), `:28C:` (n/year), `:60F:`/`:62F:` (balances, carried month to month from a
+  fixed opening of 10 000,00), `:61:` (value date, entry date, C, amount with a comma,
+  NTRF, NONREF, //sequence) and `:86:` as `PRZELEW PRZYCHODZACY|<title>|<counterparty>|
+  <account>`. Every bank writes `:86:` differently; the reader keeps the raw line
+  (DIRECTION, the one trap). CRLF, UTF-8; a bank's export may be CP1250 — a reader's
+  concern, not the generator's.
+- **Personas carry accounts**: `iban` on the company, customers and suppliers (derived
+  from the VAT id when absent), and the bank line's counterparty now names the paying
+  customer instead of "customer transfer" — a statement never says less. Expected state
+  is unchanged: the documents are a representation, not new facts.
+- **Foreign suppliers are not in KSeF.** Omikron GmbH's invoices get no XML; the summary
+  says how many arrive as PDF, for the model-read channel of phase 2. Until then they
+  enter as JSON through the open door, which is exactly "what no channel reads yet".
+- **Sales invoices stay JSON**: they are the company's own act, not a document received.
+  Payments of purchase invoices (debit lines) come with step 5, where the expected state
+  gains "purchase invoice paid".

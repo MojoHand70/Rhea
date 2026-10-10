@@ -480,9 +480,10 @@ func main() {
 		voice := fs.Int("voice", 0, "compile with the k-th paraphrase (0: the scripted answers)")
 		out := fs.String("corpus", "", "write the compiled corpus to this file")
 		play := fs.Bool("play", false, "submit the persona's documents into THIS installation through the door, for a live demo")
+		docDir := fs.String("documents", "", "write the persona's documents — KSeF invoices as FA XML, bank statements as MT940 — under this directory")
 		fs.Parse(os.Args[2:])
 		if fs.NArg() != 1 {
-			log.Fatal("usage: rhea sim [-months N] [-paraphrase N] [-voice N] [-corpus FILE] [-play] PERSONA")
+			log.Fatal("usage: rhea sim [-months N] [-paraphrase N] [-voice N] [-corpus FILE] [-documents DIR] [-play] PERSONA")
 		}
 		path := fs.Arg(0)
 		p, _, err := sim.Load(path)
@@ -512,6 +513,13 @@ func main() {
 			log.Fatal(err)
 		}
 		fmt.Print(sim.Summary(p, facts))
+		if *docDir != "" {
+			n, err := sim.WriteDocuments(*docDir, p, facts.Documents)
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Printf("%d documents written under %s\n", n, filepath.Join(*docDir, p.Name))
+		}
 		if *out != "" {
 			b, err := json.MarshalIndent(c, "", "  ")
 			if err != nil {
