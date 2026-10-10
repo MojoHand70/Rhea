@@ -71,6 +71,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/activities", s.handleActivities)
 	mux.HandleFunc("POST /api/activities/{name}/trigger", s.handleTrigger)
 	mux.HandleFunc("POST /api/activities/{name}/approve", s.handleApproveActivity)
+	mux.HandleFunc("GET /api/channels", s.handleChannels)
 	mux.HandleFunc("GET /api/time", s.handleTime)
 	mux.HandleFunc("POST /api/time/advance", s.handleTimeAdvance)
 	mux.HandleFunc("POST /api/time/catchup", s.handleTimeCatchUp)

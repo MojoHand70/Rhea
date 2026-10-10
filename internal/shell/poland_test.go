@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"rhea/internal/adapter"
@@ -89,14 +90,15 @@ func TestM3PolandPack(t *testing.T) {
 	}
 	post("/api/bundles/pack-common-people-v1/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 
-	// Load the pack: 14 types, 5 views, 5 draft rules, 31 master-data events.
+	// Load the pack: 14 types, 5 views, 5 draft rules, one channel (the KSeF
+	// adapter's door, a draft like any verb), 31 master-data events.
 	packPath := filepath.Join("..", "..", "packs", "pl", "pack.json")
 	sum, err := pack.Load(ctx, s, packPath, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 14 || sum.Views != 5 || sum.Rules != 5 || sum.Events != 31 || sum.Skipped != 0 ||
-		sum.Bundle != "pack-pl-v7" {
+	if sum.Types != 14 || sum.Views != 5 || sum.Rules != 5 || sum.Activities != 1 || sum.Events != 31 || sum.Skipped != 0 ||
+		sum.Bundle != "pack-pl-v8" {
 		t.Fatalf("first load: %+v", sum)
 	}
 	// Idempotent: a reload changes nothing.
@@ -104,8 +106,15 @@ func TestM3PolandPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Events != 0 || sum.Skipped != 55 || sum.Bundle != "" {
+	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Skipped != 56 || sum.Bundle != "" {
 		t.Fatalf("reload: %+v", sum)
+	}
+
+	// Before approval the KSeF channel is a draft: the adapter is implemented
+	// but not connected, and a pass is refused before it reads anything.
+	ksefDraft := adapter.KSeF{Client: adapter.FakeKSeF{}}
+	if _, err := adapter.Run(ctx, s, srv.Exec, ksefDraft); err == nil || !strings.Contains(err.Error(), "no active channel") {
+		t.Fatalf("a draft channel let the adapter through: %v", err)
 	}
 
 	// Nothing is installed yet: the chart of accounts sits in the worklist,
@@ -117,7 +126,7 @@ func TestM3PolandPack(t *testing.T) {
 	// Approving the pack's bundle IS the installation: its types, views and
 	// rules activate together, and the chart of accounts and the VAT rates
 	// materialize from the waiting events.
-	post("/api/bundles/pack-pl-v7/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-pl-v8/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {
 		t.Fatalf("worklist not cleared after approvals: %d", len(wl))
 	}
@@ -223,8 +232,35 @@ func TestM3PolandPack(t *testing.T) {
 	if err != nil || run.PassErr != nil {
 		t.Fatalf("adapter run: %v / %v", err, run.PassErr)
 	}
-	if run.Submitted != 1 || run.Booked != 1 || len(run.Errors) != 0 {
+	if run.Submitted != 1 || run.Booked != 1 || len(run.Errors) != 0 || run.Channel != "ksef" {
 		t.Fatalf("adapter run: %+v", run)
+	}
+	// The evidence names its channel, the way an event through a door names
+	// its activity: provenance on the raw side reaches intake.
+	if ev, ok, err := s.LatestEventOfType(ctx, "ksef.invoice.submitted"); err != nil || !ok ||
+		ev.ActivityName != "ksef" || ev.ActivityVersion != run.Version || ev.Actor != "adapter:ksef" {
+		t.Fatalf("evidence stamp: %+v %v %v", ev, ok, err)
+	}
+	var registry struct {
+		Channels []struct {
+			Name, State string
+		} `json:"channels"`
+		Adapters []struct {
+			Name, State, Channel string
+		} `json:"adapters"`
+	}
+	get("/api/channels", &registry)
+	connected := map[string]string{}
+	for _, c := range registry.Channels {
+		connected[c.Name] = c.State
+	}
+	if connected["ksef"] != "connected" || connected["clock"] != "connected" {
+		t.Fatalf("channels = %+v", registry.Channels)
+	}
+	for _, a := range registry.Adapters {
+		if a.Name == "ksef" && (a.State != "connected" || a.Channel != "ksef") {
+			t.Fatalf("ksef adapter = %+v", a)
+		}
 	}
 	var subs struct {
 		Rows [][]cell `json:"rows"`

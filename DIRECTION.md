@@ -1526,7 +1526,12 @@ adapter contract and nowhere else (security rule 5).
 
 Status: **drafted 2026-10-10**. The channel map agreed by KK; the
 registry, streams and the high-volume treatment added by KK the same
-day; the rest is Claude's proposal for KK's read.
+day; KK: "let's move on" (2026-10-11). **Step 1 shipped 2026-10-11**
+(see DECISIONS, "the channel registry"): a channel is an activity with
+a `channel` section, the binary registers its adapters, `Bind` joins the
+two before every pass, every adapter event names its channel, the clock
+is the first channel (a builtin) and the Poland pack ships the KSeF
+channel; `rhea channels` and the Channels tab show both lists.
 
 One line: *a channel is who reads the document and how sure they are;
 the file is the fact and the reading has an author; the registry is an

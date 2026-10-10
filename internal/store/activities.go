@@ -33,6 +33,13 @@ func InsertActivityVersion(ctx context.Context, q Querier, a core.Activity) (cor
 	if !strings.HasPrefix(a.Spec.Emits, "=") && core.ReservedEventType(a.Spec.Emits) {
 		return a, fmt.Errorf("activity %q: %q is a kernel namespace — declared activities do not speak it", a.Name, a.Spec.Emits)
 	}
+	if ch := a.Spec.Channel; ch != nil {
+		for _, t := range ch.Events {
+			if core.ReservedEventType(t) {
+				return a, fmt.Errorf("channel %q: %q is a kernel namespace — declared channels do not speak it", a.Name, t)
+			}
+		}
+	}
 	return insertActivityVersion(ctx, q, a)
 }
 

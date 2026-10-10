@@ -173,8 +173,99 @@ func TestDeclaredActivitiesKeepOutOfKernelNamespaces(t *testing.T) {
 		if err := a.Validate(); err != nil {
 			t.Errorf("builtin %s: %v", a.Name, err)
 		}
+		// A builtin channel speaks the outside world's events — the clock's
+		// time.* is deliberately not reserved (M5: forgery stays visible via
+		// the actor); the kernel's own verbs stay in their namespaces.
+		if a.Spec.Channel != nil {
+			continue
+		}
 		if !strings.HasPrefix(a.Spec.Emits, "=") && a.Name != "submit_event" && !core.ReservedEventType(a.Spec.Emits) {
 			t.Errorf("builtin %s emits %q outside the kernel namespaces", a.Name, a.Spec.Emits)
 		}
 	}
+}
+
+// A channel is an activity triggered by code (DIRECTION 2026-10-10): the
+// declaration must say what it binds to, what it reads, what identity is,
+// how sure the reader is, and it declares no inputs.
+func TestChannelValidate(t *testing.T) {
+	sound := func() core.Activity {
+		return core.Activity{Name: "bank_mt940", Domain: "finance", Spec: core.ActivitySpec{
+			Emits: "bank.statement.received",
+			Channel: &core.ChannelSpec{
+				Adapter: "mt940", CodeVersion: 1, Format: "MT940", Identity: "statement number and line",
+				Confidence: core.ConfidenceSpec{Policy: core.ConfidenceExact},
+				Events:     []string{"bank.statement.received", "bank.line.received"},
+			},
+		}}
+	}
+	if err := sound().Validate(); err != nil {
+		t.Fatalf("sound channel refused: %v", err)
+	}
+	model := sound()
+	model.Spec.Channel.Confidence = core.ConfidenceSpec{Policy: core.ConfidenceModel, Threshold: "0.95"}
+	if err := model.Validate(); err != nil {
+		t.Fatalf("model reader refused: %v", err)
+	}
+	if sp := sound().Spec; !sp.Allows("bank.line.received") || !sp.Allows("bank.statement.received") || sp.Allows("bank.fee") {
+		t.Fatal("Allows does not follow the declaration")
+	}
+	if sp := (core.ActivitySpec{Emits: "x"}); !sp.Allows("x") || sp.Allows("y") {
+		t.Fatal("a plain verb allows only what it emits")
+	}
+
+	bad := []struct {
+		name   string
+		mutate func(a *core.Activity)
+		want   string
+	}{
+		{"no adapter", func(a *core.Activity) { a.Spec.Channel.Adapter = "" }, "adapter is required"},
+		{"code version 0", func(a *core.Activity) { a.Spec.Channel.CodeVersion = 0 }, "code_version"},
+		{"no format", func(a *core.Activity) { a.Spec.Channel.Format = "" }, "format is required"},
+		{"no identity", func(a *core.Activity) { a.Spec.Channel.Identity = "" }, "identity is required"},
+		{"unknown policy", func(a *core.Activity) { a.Spec.Channel.Confidence.Policy = "guess" }, "confidence policy"},
+		{"exact with threshold", func(a *core.Activity) { a.Spec.Channel.Confidence.Threshold = "0.5" }, "no threshold"},
+		{"model without threshold", func(a *core.Activity) {
+			a.Spec.Channel.Confidence = core.ConfidenceSpec{Policy: core.ConfidenceModel}
+		}, "threshold in (0, 1]"},
+		{"model threshold above one", func(a *core.Activity) {
+			a.Spec.Channel.Confidence = core.ConfidenceSpec{Policy: core.ConfidenceModel, Threshold: "1.5"}
+		}, "threshold in (0, 1]"},
+		{"bad volume", func(a *core.Activity) { a.Spec.Channel.Volume = "firehose" }, "volume must be"},
+		{"inputs on a channel", func(a *core.Activity) {
+			a.Spec.Inputs = []core.FieldDef{{Name: "file", Type: "string"}}
+		}, "declares no inputs"},
+		{"emits outside events", func(a *core.Activity) { a.Spec.Emits = "bank.fee" }, "must be among the channel's events"},
+		{"event listed twice", func(a *core.Activity) {
+			a.Spec.Channel.Events = append(a.Spec.Channel.Events, "bank.line.received")
+		}, "listed twice"},
+		{"the open door as a channel", func(a *core.Activity) {
+			a.Spec.Inputs = []core.FieldDef{{Name: "event_type", Type: "string", Required: true}}
+			a.Spec.Emits = "=event_type"
+			a.Spec.Channel.Events = nil
+		}, "declares no inputs"},
+	}
+	for _, tc := range bad {
+		a := sound()
+		tc.mutate(&a)
+		err := a.Validate()
+		if err == nil || !strings.Contains(err.Error(), tc.want) {
+			t.Errorf("%s: want %q, got %v", tc.name, tc.want, err)
+		}
+	}
+
+	// The clock is the first channel, and a builtin: its declaration is sound
+	// and names the three event types time arrives as.
+	for _, a := range core.BuiltinActivities() {
+		if a.Name == "clock" {
+			if err := a.Validate(); err != nil {
+				t.Fatalf("clock builtin: %v", err)
+			}
+			if !a.Spec.Allows(core.EventMonthOpened) || !a.Spec.Allows("schedule.fired") {
+				t.Fatal("the clock channel does not declare what the clock emits")
+			}
+			return
+		}
+	}
+	t.Fatal("clock is not a builtin")
 }

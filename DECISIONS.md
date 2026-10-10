@@ -1660,3 +1660,36 @@ evidence in `internal/exec/case_test.go`.
 - **No permissions, no login, no address.** `who` on activities stays inert (Phase 4 of
   the growth plan); the notification address arrives with the outbound adapter, as an
   amendable field, when Phase 4 asks for it. Email is not a field until something sends.
+
+## 2026-10-11 — the channel registry: a channel is an activity triggered by code
+
+- **A channel is an activity with a `channel` section** (`core.ChannelSpec`): the adapter
+  it binds to and the code version it needs, the format it reads, what makes a document
+  the same one twice, the reader's confidence (`exact`, or `model` with a threshold in
+  (0, 1]), the event types it may append, and a volume class (`documents` or `stream`,
+  declared now, honored when the high-volume treatment lands). No inputs: code triggers
+  it. Versioned, approved and listed like every verb — the registry is the activity
+  store, and no seventh concept (DIRECTION 2026-10-10, "Documents in", step 1 of its order).
+- **The binary registers what it can read** (`adapter.Register` from each adapter's init:
+  `ksef` v1, `clock` v1), and **`adapter.Bind` joins the two before every pass**: no active
+  channel for the adapter, two of them, or a code version other than the binary's refuses
+  the pass before anything is read. The clock binds the same way, so a log without the
+  clock builtin refuses to open a day — `rhea init` seeds it (run once on existing DBs).
+- **Every event a channel appends names the channel**: `activity_name` and
+  `activity_version` on adapter events, the pair the schema documented as NULL for
+  adapters. Invariant 5 reaches the raw side: KSeF evidence reads "ksef v1 by adapter:ksef".
+- **The declaration is the contract**: an event of a type the channel never declared, or
+  one without a dedup key, refuses the whole pass and appends nothing — an adapter bug,
+  not residue.
+- **The clock is the first channel, a builtin** seeded active at init (`calendar`, exact;
+  `time.day_opened`, `time.month_opened`, `schedule.fired`). The namespace test exempts
+  channels: time.* is deliberately unreserved (M5). **The Poland pack ships the KSeF
+  channel** (pack v8, activity `ksef`): a draft like any verb, connected by the pack's
+  approval; until then the adapter is implemented but not connected, and a pass is refused.
+- **Two generic lists**: `adapter.Registry` joins declared channels with the binary's
+  adapters (states: connected, awaiting approval, not implemented, version mismatch, not
+  connected) → `GET /api/channels`, the Channels tab under Language, `rhea channels`, and
+  one startup line per active channel in `rhea serve`.
+- **Left for the brief's later steps**: `document.received` and the blob store, the batch
+  append (step 2); the confidence threshold enforced for model readers (step 6 — declared
+  and displayed today, inert like `who`).

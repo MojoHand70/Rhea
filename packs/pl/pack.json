@@ -1,6 +1,6 @@
 {
   "pack": "pl",
-  "version": 7,
+  "version": 8,
   "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane",
   "requires": [
     "company",
@@ -1016,6 +1016,33 @@
               "date": "=$.date"
             }
           }
+        }
+      }
+    }
+  ],
+  "activities": [
+    {
+      "name": "ksef",
+      "domain": "finance",
+      "description": "Kanał KSeF: wysyłka faktur sprzedaży do Krajowego Systemu e-Faktur; dowód (numer KSeF, UPO) wraca jako zdarzenie ksef.invoice.submitted i staje się obiektem ksef_submission",
+      "spec": {
+        "inputs": [],
+        "emits": "ksef.invoice.submitted",
+        "who": [
+          "adapter"
+        ],
+        "channel": {
+          "adapter": "ksef",
+          "code_version": 1,
+          "format": "KSeF API, jedna faktura sprzedaży na wysyłkę",
+          "identity": "numer referencyjny KSeF jednej faktury; klucz ksef/submit/<id faktury>",
+          "confidence": {
+            "policy": "exact"
+          },
+          "events": [
+            "ksef.invoice.submitted"
+          ],
+          "volume": "documents"
         }
       }
     }

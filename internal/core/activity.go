@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"strings"
 	"time"
 )
@@ -37,6 +38,129 @@ type ActivitySpec struct {
 	// stays a falsifiability test of its own (DIRECTION). Attribution is the
 	// actor column; this field is vocabulary.
 	Who []string `json:"who,omitempty"`
+	// Channel makes the activity a channel: a door code triggers instead of
+	// a person. Nil for every ordinary verb.
+	Channel *ChannelSpec `json:"channel,omitempty"`
+}
+
+// ChannelSpec is the registry entry of one channel (DIRECTION 2026-10-10,
+// "Documents in"): the registry of channels is the activity store itself —
+// versioned, approved like a rule — and no seventh concept. A channel
+// declares what it binds to (an adapter the kernel has code for, at a code
+// version), what it reads, what makes a document the same one twice, how
+// sure its reader is, and which event types it may append. The runner checks
+// the binding before every pass and stamps every event the channel appends
+// with the channel's name and version: invariant 5 reaches the raw side.
+type ChannelSpec struct {
+	// Adapter names the code the channel binds to; CodeVersion is the code
+	// version the kernel must carry — a mismatch refuses the channel.
+	Adapter     string `json:"adapter"`
+	CodeVersion int    `json:"code_version"`
+	// Format is what the reader reads, in the outside world's words:
+	// "FA(3)", "MT940", "PDF", "calendar".
+	Format string `json:"format"`
+	// Identity says what makes a document the same one twice; the reader
+	// turns it into the dedup key on every event it returns, and the runner
+	// refuses an event that has none.
+	Identity string `json:"identity"`
+	// Confidence is how sure the reader is: exact (a parser, the outside
+	// system's own numbers) or a model's reading with a threshold below
+	// which the reading waits for a person.
+	Confidence ConfidenceSpec `json:"confidence"`
+	// Events lists every event type the channel may append; Emits is one of
+	// them. Empty means Emits alone.
+	Events []string `json:"events,omitempty"`
+	// Volume is "documents" (the default) or "stream": a stream channel is
+	// batched and its residue counted by shape — the high-volume treatment,
+	// declared now, honored as the treatment lands.
+	Volume string `json:"volume,omitempty"`
+}
+
+// ConfidenceSpec says how sure a channel's reader is.
+type ConfidenceSpec struct {
+	Policy    string `json:"policy"`              // ConfidenceExact | ConfidenceModel
+	Threshold string `json:"threshold,omitempty"` // model only: a decimal in (0, 1], as a string
+}
+
+const (
+	ConfidenceExact = "exact"
+	ConfidenceModel = "model"
+
+	VolumeDocuments = "documents"
+	VolumeStream    = "stream"
+)
+
+// Allows reports whether a channel may append an event of this type: the
+// declared emits or one of the declared events. The declaration is the
+// contract; an adapter speaking outside it has a bug, not residue.
+func (sp ActivitySpec) Allows(eventType string) bool {
+	if sp.Channel == nil {
+		return eventType == sp.Emits
+	}
+	if eventType == sp.Emits {
+		return true
+	}
+	for _, t := range sp.Channel.Events {
+		if t == eventType {
+			return true
+		}
+	}
+	return false
+}
+
+// validate checks a channel declaration against the activity it sits on.
+func (c ChannelSpec) validate(a Activity) error {
+	sp := a.Spec
+	if c.Adapter == "" {
+		return fmt.Errorf("channel %q: adapter is required — the code it binds to", a.Name)
+	}
+	if c.CodeVersion < 1 {
+		return fmt.Errorf("channel %q: code_version must be at least 1", a.Name)
+	}
+	if c.Format == "" {
+		return fmt.Errorf("channel %q: format is required — what the reader reads", a.Name)
+	}
+	if c.Identity == "" {
+		return fmt.Errorf("channel %q: identity is required — what makes a document the same one twice", a.Name)
+	}
+	switch c.Confidence.Policy {
+	case ConfidenceExact:
+		if c.Confidence.Threshold != "" {
+			return fmt.Errorf("channel %q: an exact reader has no threshold", a.Name)
+		}
+	case ConfidenceModel:
+		t, ok := new(big.Rat).SetString(c.Confidence.Threshold)
+		if !ok || t.Sign() <= 0 || t.Cmp(big.NewRat(1, 1)) > 0 {
+			return fmt.Errorf("channel %q: a model reader wants a threshold in (0, 1], got %q", a.Name, c.Confidence.Threshold)
+		}
+	default:
+		return fmt.Errorf("channel %q: confidence policy must be %q or %q", a.Name, ConfidenceExact, ConfidenceModel)
+	}
+	switch c.Volume {
+	case "", VolumeDocuments, VolumeStream:
+	default:
+		return fmt.Errorf("channel %q: volume must be %q or %q", a.Name, VolumeDocuments, VolumeStream)
+	}
+	if len(sp.Inputs) > 0 {
+		return fmt.Errorf("channel %q: a channel is triggered by code and declares no inputs", a.Name)
+	}
+	if _, passthrough := sp.emitsSource(); passthrough {
+		return fmt.Errorf("channel %q: a channel names the event types it appends; the open door is not one", a.Name)
+	}
+	seen := map[string]bool{}
+	for _, t := range c.Events {
+		if t == "" {
+			return fmt.Errorf("channel %q: an empty event type", a.Name)
+		}
+		if seen[t] {
+			return fmt.Errorf("channel %q: event type %q listed twice", a.Name, t)
+		}
+		seen[t] = true
+	}
+	if len(c.Events) > 0 && !seen[sp.Emits] {
+		return fmt.Errorf("channel %q: emits %q must be among the channel's events", a.Name, sp.Emits)
+	}
+	return nil
 }
 
 // ReservedEventType reports whether an event type belongs to the kernel: the
@@ -131,6 +255,9 @@ func (a Activity) Validate() error {
 				return fmt.Errorf("activity %q: a passthrough activity has nothing else to say about the payload; input %q must go", a.Name, f.Name)
 			}
 		}
+	}
+	if sp.Channel != nil {
+		return sp.Channel.validate(a)
 	}
 	return nil
 }
@@ -390,6 +517,20 @@ func BuiltinActivities() []Activity {
 				},
 				Emits: "bundle.draft_requested",
 				Who:   []string{"human"},
+			},
+		},
+		{
+			Name: "clock", Domain: "system",
+			Description: "Time passing as facts: the clock opens days and months and fires due schedules. The first channel — code triggers it, never a person — with the burst gate as its switch (M5).",
+			Spec: ActivitySpec{
+				Emits: EventDayOpened,
+				Who:   []string{"adapter"},
+				Channel: &ChannelSpec{
+					Adapter: "clock", CodeVersion: 1, Format: "calendar",
+					Identity:   "one event per opened day, per opened month and per schedule occurrence",
+					Confidence: ConfidenceSpec{Policy: ConfidenceExact},
+					Events:     []string{EventDayOpened, EventMonthOpened, "schedule.fired"},
+				},
 			},
 		},
 		{

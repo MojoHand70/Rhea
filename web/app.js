@@ -72,7 +72,8 @@ function selectDomain(domain) {
     } else if (fn.function === "language") {
       menu.append(el("h2", {}, fn.function),
         el("div", { class: "menu-item", onclick: () => openLanguage() }, "Object types"),
-        el("div", { class: "menu-item", onclick: () => openVerbs() }, "Verbs"));
+        el("div", { class: "menu-item", onclick: () => openVerbs() }, "Verbs"),
+        el("div", { class: "menu-item", onclick: () => openChannels() }, "Channels"));
     } else if (fn.function === "time") {
       menu.append(el("h2", {}, fn.function),
         el("div", { class: "menu-item", onclick: () => openTime() }, "Clock"));
@@ -861,6 +862,67 @@ function openVerbs() {
   }, true); // emitted counts move with the log
 }
 
+/* --- system function: channels ---------------------------------------------
+   The registry (DIRECTION 2026-10-10, "Documents in"): a channel is a verb
+   that code triggers instead of a person — bound to an adapter at a code
+   version, reading a format, with an identity rule and a reader's confidence.
+   Two lists: what this company has connected, what Rhea can read. */
+
+function openChannels() {
+  openTab("channels", "Channels", async () => {
+    const reg = await api("/api/channels");
+    const out = [el("h1", {}, "Language — channels"),
+      el("p", { class: "hint" },
+        "A channel is how documents reach the log: a verb triggered by code, declared and approved like any other. " +
+        "Every event a channel appends names the channel and its version.")];
+    const stateCls = (st) => st === "connected" ? "active" : (st === "awaiting approval" ? "draft" : "superseded");
+    out.push(el("h2", {}, "Connected"));
+    if (!reg.channels.length) {
+      out.push(el("p", { class: "hint" }, "No channel declared yet. A pack ships one as an activity; approving the pack connects it."));
+    } else {
+      const tbody = el("tbody", {});
+      for (const c of reg.channels) {
+        tbody.append(
+          el("tr", {},
+            el("td", {}, c.name), el("td", { class: "num" }, String(c.version)),
+            el("td", {}, el("span", { class: "status " + stateCls(c.state) }, c.state)),
+            el("td", {}, `${c.adapter} v${c.code_version}` + (c.implemented && c.implemented !== c.code_version ? ` (binary: v${c.implemented})` : "")),
+            el("td", {}, c.format),
+            el("td", {}, c.confidence.policy + (c.confidence.threshold ? ` ≥ ${c.confidence.threshold}` : "")),
+            el("td", {}, c.volume),
+            el("td", {}, c.events.join(", ")),
+            el("td", { class: "num" }, String(c.events_emitted))),
+          el("tr", {}, el("td", { colspan: "9" },
+            el("details", {}, el("summary", {}, "identity and description"),
+              el("p", {}, el("b", {}, "the same document twice: "), c.identity),
+              el("p", {}, c.description)))));
+      }
+      out.push(el("table", {},
+        el("thead", {}, el("tr", {},
+          el("th", {}, "channel"), el("th", { class: "num" }, "ver"), el("th", {}, "state"),
+          el("th", {}, "binds"), el("th", {}, "reads"), el("th", {}, "reader"),
+          el("th", {}, "volume"), el("th", {}, "appends"), el("th", { class: "num" }, "events"))),
+        tbody));
+    }
+    out.push(el("h2", {}, "Implemented"),
+      el("p", { class: "hint" }, "What this binary can read. An adapter runs only through a connected channel."));
+    const abody = el("tbody", {});
+    for (const a of reg.adapters) {
+      abody.append(el("tr", {},
+        el("td", {}, a.name), el("td", { class: "num" }, String(a.code_version)),
+        el("td", {}, a.format),
+        el("td", {}, el("span", { class: "status " + stateCls(a.state) }, a.state)),
+        el("td", {}, a.channel ? `${a.channel} v${a.channel_version}` : "")));
+    }
+    out.push(el("table", {},
+      el("thead", {}, el("tr", {},
+        el("th", {}, "adapter"), el("th", { class: "num" }, "code"), el("th", {}, "reads"),
+        el("th", {}, "state"), el("th", {}, "channel"))),
+      abody));
+    return out;
+  }, true); // emitted counts move with the log
+}
+
 /* The derived action surface (SPEC §2's action notion): a trigger form built
    from the verb's declared inputs. Prefill carries context — a detail view's
    verb arrives with its ref input already naming the object. */
@@ -1051,6 +1113,7 @@ function omniEntries(acts) {
     { kind: "view", label: "Bundles", hint: "system", run: openBundles },
     { kind: "view", label: "Language", hint: "system", run: openLanguage },
     { kind: "view", label: "Verbs", hint: "system", run: openVerbs },
+    { kind: "view", label: "Channels", hint: "system", run: openChannels },
     { kind: "view", label: "Clock", hint: "system", run: openTime });
   for (const a of acts) {
     if (!a.offered) continue;

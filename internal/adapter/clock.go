@@ -47,6 +47,14 @@ type Clock struct {
 	Now func() time.Time
 }
 
+// clockCodeVersion is what the clock's channel declaration (a builtin, seeded
+// at init) binds to.
+const clockCodeVersion = 1
+
+func init() {
+	Register(Implemented{Name: "clock", CodeVersion: clockCodeVersion, Format: "calendar"})
+}
+
 // TodayUTC is the one wall-clock read: the clock's day, as a business date.
 func (c Clock) TodayUTC() string {
 	now := c.Now
@@ -145,9 +153,19 @@ func CatchUpClock(ctx context.Context, s *store.Store, x *exec.Executor, c Clock
 
 func openDays(ctx context.Context, s *store.Store, x *exec.Executor, lastOpened string, days []string) (ClockResult, error) {
 	var res ClockResult
+	// The clock speaks through its channel like any adapter: bound before
+	// anything is appended, every event stamped with the channel.
+	ch, err := Bind(ctx, s, "clock", clockCodeVersion)
+	if err != nil {
+		return res, err
+	}
 	appendNew := func(ev core.Event) (bool, error) {
+		if !ch.Spec.Allows(ev.Type) {
+			return false, fmt.Errorf("channel %s v%d does not declare event type %q", ch.Name, ch.Version, ev.Type)
+		}
 		ev.Kind = core.KindRaw
 		ev.Actor = "adapter:clock"
+		ev.ActivityName, ev.ActivityVersion = ch.Name, ch.Version
 		switch _, err := s.AppendEvent(ctx, ev); {
 		case err == nil:
 			return true, nil

@@ -26,7 +26,16 @@ type KSeF struct {
 	Today  func() string // business date of submissions; defaults to the wall clock
 }
 
-func (k KSeF) Name() string { return "ksef" }
+// ksefCodeVersion is what a channel declaration binds to; it moves when the
+// adapter's reading of the outside world changes (a new API, a new schema).
+const ksefCodeVersion = 1
+
+func init() {
+	Register(Implemented{Name: "ksef", CodeVersion: ksefCodeVersion, Format: "KSeF API, one sales invoice per submission"})
+}
+
+func (k KSeF) Name() string     { return "ksef" }
+func (k KSeF) CodeVersion() int { return ksefCodeVersion }
 
 func (k KSeF) Pass(ctx context.Context, reads Reads) ([]core.Event, error) {
 	invoices, err := reads.ObjectsByType(ctx, "sales_invoice")

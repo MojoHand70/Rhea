@@ -63,7 +63,7 @@ import (
 func main() {
 	log.SetFlags(0)
 	if len(os.Args) < 2 {
-		log.Fatal("usage: rhea init|load|submit|serve|replay")
+		log.Fatal("usage: rhea init|load|submit|serve|replay|channels|ksef|clock")
 	}
 	ctx := context.Background()
 	s, err := store.Open(ctx, store.DSN())
@@ -223,14 +223,23 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("ksef: %d submitted, %d retries already logged, %d booked\n",
-			run.Submitted, run.Duplicates, run.Booked)
+		fmt.Printf("ksef through channel %s v%d: %d submitted, %d retries already logged, %d booked\n",
+			run.Channel, run.Version, run.Submitted, run.Duplicates, run.Booked)
 		for _, e := range run.Errors {
 			fmt.Println("worklist:", e)
 		}
 		if run.PassErr != nil {
 			log.Fatal(run.PassErr)
 		}
+
+	case "channels":
+		// The registry, both lists: what this company has connected, what
+		// this binary can read (DIRECTION 2026-10-10, "Documents in").
+		reg, err := adapter.Registry(ctx, s)
+		if err != nil {
+			log.Fatal(err)
+		}
+		printRegistry(reg)
 
 	case "clock":
 		fs := flag.NewFlagSet("clock", flag.ExitOnError)
@@ -281,6 +290,22 @@ func main() {
 			log.Printf("network: %s", network.DSN())
 		} else {
 			log.Printf("network unavailable, running alone: %v", err)
+		}
+		// The registry's startup check: every declared channel against the
+		// code this binary carries, said once, before the first pass.
+		if reg, err := adapter.Registry(ctx, s); err == nil {
+			for _, c := range reg.Channels {
+				if c.Status == core.StatusActive {
+					log.Printf("channel %s v%d: %s (%s v%d)", c.Name, c.Version, c.State, c.Adapter, c.CodeVersion)
+				}
+			}
+			for _, a := range reg.Adapters {
+				if a.State == adapter.StateNotConnected {
+					log.Printf("adapter %s v%d: %s", a.Name, a.CodeVersion, a.State)
+				}
+			}
+		} else {
+			log.Printf("channels: %v", err)
 		}
 		log.Printf("rhea shell on http://localhost%s (model %s)", *addr, agent.Model())
 		log.Fatal(http.ListenAndServe(*addr, srv.Handler()))
@@ -590,4 +615,25 @@ func submit(ctx context.Context, s *store.Store, x *exec.Executor, path string) 
 		return t.EventID, t.Booked, t.Errors[0]
 	}
 	return t.EventID, t.Booked, nil
+}
+
+// printRegistry prints the channel registry: connected channels first, then
+// what the binary can read.
+func printRegistry(reg adapter.RegistryStatus) {
+	fmt.Println("channels (declared, versioned, approved like any verb):")
+	if len(reg.Channels) == 0 {
+		fmt.Println("  none declared")
+	}
+	for _, c := range reg.Channels {
+		fmt.Printf("  %-18s v%-3d %-18s binds %s v%d; reads %s; %s reader; %d events\n",
+			c.Name, c.Version, c.State, c.Adapter, c.CodeVersion, c.Format, c.Confidence.Policy, c.EventsEmitted)
+	}
+	fmt.Println("adapters (what this binary can read):")
+	for _, a := range reg.Adapters {
+		via := ""
+		if a.Channel != "" {
+			via = fmt.Sprintf(" through %s v%d", a.Channel, a.ChannelVersion)
+		}
+		fmt.Printf("  %-18s v%-3d %s%s; reads %s\n", a.Name, a.CodeVersion, a.State, via, a.Format)
+	}
 }
