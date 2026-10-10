@@ -1322,6 +1322,218 @@ One line: *the concierge is the same six concepts from the guest's
 chair; a scenario is five parts of data behind one approval, and the
 guest is now a person Rhea can name.*
 
+## Documents in: channels, readers, and the file as the fact (KK, 2026-10-10)
+
+KK's call: the time has come for intake, and channels first. Three
+things KK added the same day: *a registry of actually implemented
+channels, versioned*; *streaming from POS and IoT systems as a future
+channel*; and *a dedicated treatment for high-volume channels, for
+performance*. This section is the brief the intake work starts from,
+the arithmetic brief's sibling: constraints and a map, not a design.
+The growth plan places it in Phase 1 (KSeF and the bank statement in),
+with the scanned PDF behind the gate in Phase 2.
+
+**Prior art to read first.** `internal/adapter/adapter.go` (the
+contract: an adapter is a user, acts only by returning raw events,
+replay never re-runs it), `ksef.go` (outbound, the only statutory
+adapter today), `clock.go` (time as a channel, re-entry gated), the
+`submit_event` door and `rhea submit` (dedup by content hash), the
+people pack (an actor string resolved to an object by lookup, the shape
+a supplier's NIP will take), "Late understanding" above (the file must
+survive its first reading), and `internal/sim` (the persona generator,
+which becomes the outside world).
+
+**The channel map.** A channel is a way documents reach the log. What
+distinguishes one from another is *who reads the document and how sure
+they are*; everything else is one mechanism.
+
+| Channel | What arrives | Form | Reader | Identity (never twice) | Phase |
+|---|---|---|---|---|---|
+| KSeF | Purchase invoices from Polish suppliers; the UPO for our sales invoices | FA XML (FA(3) under the 2026 mandate), pulled by our NIP | Parser, exact | KSeF reference | 1 |
+| Bank | Statements: payments in and out, fees, interest | MT940 or CSV export; an API feed later | Parser, exact, except the free-text line every bank writes differently | Statement number + line | 1 |
+| Email | Foreign supplier invoices, subscriptions, proformas, customer orders | PDF, with or without a text layer | Model, with a confidence | File hash + message id | 2 |
+| Paper and photo | Receipts, paper invoices, signed delivery notes, expense slips | Scan or photo | Model, with a confidence | File hash | 2 |
+| A person | Cash sale, stock count, correction, acknowledgment | Typed in the shell | The person | The door's dedup key | exists |
+| Other systems | Webshop and marketplace orders, POS exports, the payroll bureau's file, warehouse scanners | CSV, JSON, API | Parser per source, exact | Source record id | 4 |
+| Streams | POS receipts as they happen; meter and sensor readings | Push: webhook, MQTT, a queue | Parser, exact; grain declared | Device id + sequence | 4 |
+| Other portals | ZUS notices, tax office messages, JPK and return acknowledgments | Portal downloads | Parser, exact | Portal reference | 4 |
+| The clock | Days opening | Not a document | Nobody | Date | exists (M5) |
+
+The map is intent. The registry below is the fact: which channels a
+company actually has, in which version.
+
+**What the invariants demand.**
+
+1. *The file is the fact; the reading is an interpretation with an
+   author.* A document first enters the log as received, a
+   `document.received` event with its hash, source channel, name and
+   type, the bytes kept in an append-only blob store keyed by hash (a
+   new append-only table; invariant 1 extends to it). Then a reader turns
+   it into the typed raw event (`purchase.invoice.received`,
+   `bank.statement.received`), signed by the reader (actor
+   `adapter:<channel>`, `agent:<model>`, or a person) and pointing at the
+   file by hash. For KSeF and the bank the reader is a parser and the
+   reading is exact. For a PDF the reader is the model and the reading
+   carries a confidence. The model's reading is data, never state
+   (invariant 3): proposed, validated against the event schema, then
+   booked or sent to the worklist. A person is a reader too: confirming
+   a doubtful reading is a door, and the typed event then carries the
+   person as actor.
+2. *Replay never re-reads.* The adapter contract already says replay
+   never re-runs an adapter. A model's reading is non-deterministic, and
+   that is fine, because it is a raw event in the log with the model and
+   the confidence on it. Invariant 4 holds by construction.
+3. *Every raw event names its channel and version.* Derived events carry
+   `(rule_id, rule_version)`; raw events through a door carry
+   `(activity_name, activity_version)`, which `core.Event` documents as
+   empty for adapter events. The registry fills that gap: adapter events
+   stamp the channel's activity name and version. Invariant 5 reaches
+   intake, and the walk reads: purchase_invoice ← rule v2 ←
+   `purchase.invoice.received` (KSeF channel v1, exact) ←
+   `document.received` sha256:… (pulled 2026-10-10).
+4. *Readers keep everything the document says.* No curated subset. Late
+   understanding is the reason: the field nobody asked for is wanted
+   later, and a stored file can be re-read by a new channel version, the
+   result landing as an amendment, never as a rewrite.
+5. *Never twice, per channel.* Each channel declares its identity rule,
+   which becomes the dedup key: the KSeF reference, statement number plus
+   line, file hash plus message id, device plus sequence. Retry stays
+   free, as the contract promises.
+6. *Doubt goes to the worklist; the threshold is company data.* A reading
+   below the channel's confidence threshold waits for a person; above it,
+   it books and appears in the morning line ("booked 98, 2 need you").
+   The default threshold ships in the pack with its warrant, and any
+   company may change it. A booked reading that was wrong is corrected
+   by amendment, like any fact.
+7. *Numbers cross as strings; the parser owns the decimal.* "1 234,56"
+   becomes minor units with the document's currency inside the reader.
+   No float anywhere (invariant 6).
+8. *Unknown parties are residue, not errors.* A supplier the company has
+   never seen is matched by NIP the way an actor is matched by handle.
+   No match refuses the event into the worklist, and a door creates the
+   contractor from the document. The people pack is the precedent.
+
+**The registry: a channel is an activity triggered by code (KK's
+requirement, versioned).** No seventh concept. An activity today
+declares inputs, the event it emits and who may trigger it. A channel is
+an activity whose trigger is an adapter rather than a person, with four
+more declared things: the *binding* (the adapter name and code version
+the kernel must have registered; a mismatch refuses the channel at
+startup, as data), the *format* it reads (FA(3), MT940, PDF), the
+*identity* rule (item 5), and the *confidence policy* (exact, or a model
+with a threshold). It is versioned like every definition, installed by a
+pack or drafted, and passes the same approval as a rule (settled
+2026-10-08: one gate, no second path). Three consequences:
+
+- *Implemented versus connected.* The code's adapter registry says what
+  Rhea can read; the active channel definitions say what this company
+  has connected. Both are generic list views in the shell; neither is a
+  screen.
+- *Format versions coexist.* When FA(3) gives way to FA(4), or a bank
+  changes its export, a new channel version activates and the old one
+  supersedes; every event says which version read it.
+- *The persona generator targets the registry.* It emits a document per
+  channel the persona has (a FA XML file, an MT940 file, a PDF), not
+  JSON events, the step already noted for the simulated customer.
+  "Documents in, state out" becomes the eval, and residue over the
+  intake corpus stays the gauge.
+
+**Streams: the same contract, pushed instead of polled (KK's future
+channel: POS and IoT).** The adapter contract defines a pass as a poll.
+A stream channel holds a listener (webhook, MQTT, a queue) and its pass
+drains what the listener buffered: still a pass, still idempotent by
+device plus sequence. What a stream needs that a document does not is a
+declared *grain*: one event per item (a POS receipt is a document; the
+cash sale in testdata already is one) or one event per window (a
+sensor's hourly reading), with the raw chunk kept as the evidence file
+of item 1, keyed by device and window, re-readable later. Polish
+practice offers the document-shaped grain for free: an online fiscal
+register produces a daily report, and the receipts behind it are the
+finer grain when stock needs them. Late readings are late facts, which
+the log already distinguishes from late understanding. Phase 4; the
+contract is fixed now so that nothing is designed against it.
+
+**High-volume channels get a dedicated treatment (KK, for performance),
+inside the non-goal.** No benchmarks and no caches, as SPEC says. The
+treatment is a declared *volume class* on the channel (`documents` or
+`stream`) and what the kernel does differently for `stream`:
+
+1. *Batch, not one by one.* A pass appends its events in one
+   transaction and projects them in one `ProcessPending`, never a round
+   trip per event. Today `adapter.Run` appends one at a time; the batch
+   append is this brief's cheap-now item, the company key's sibling, and
+   KSeF pulls and bank statements are batches already.
+2. *Residue is counted by shape, not listed by event.* A million
+   receipts with a new product code must not raise a million worklist
+   items. A stream channel's unexplained events fold into one case per
+   (event type, reason) with a count and a sample, which is already how
+   the interview clusters residue. The person decides once.
+3. *Rules on stream events are keyed and capped.* The formula cap on
+   linked collections and scale rule 2 (a bounded window, never the log)
+   already apply; the simulation reports per-event cost for a stream
+   channel so an expensive rule is seen before approval. The model is
+   never on the path (scale rule 5).
+4. *Aggregates are analysis views.* Sums over a month of readings live
+   in DuckDB, incrementally from the log tail, never as object lists.
+5. *Replay is snapshot plus tail* (scale rule 3), which a stream log is
+   the first to need in practice.
+
+**First customers.** Nordwind's purchase invoice arriving through KSeF
+as FA XML: the purchase invoice document, the input VAT register and
+the entry (net to 300, input VAT to the VAT account, gross to 202) as
+pack drafts with warrants, then the delivery settled against it (the
+300/202 pair noted in the arithmetic brief). The same month's MT940
+statement: the pack's existing `bank_account` and `bank_operation`
+types, then a matching rule that pairs a payment with the open invoice
+of that contractor (a fold under the cap, already in the language) and
+amends the invoice's status to paid. That is the Phase 1 exit of the
+growth plan. Phase 2's first model-read document: a German supplier's
+invoice in EUR as a PDF, the real reason a Polish company still
+receives PDFs after KSeF, carrying the FX the formula language already
+does. The matching grid view comes with it.
+
+**Not questions for KK** ("Rhea suggests standards"): how a purchase
+invoice is booked, how a payment is matched (amount and reference
+first, then amount and contractor), what the default confidence
+threshold is. Each arrives as a pack draft with its warrant; KK or the
+client overrides.
+
+**The two welding questions.** *Partition:* a channel belongs to a
+company like a contractor does; the blob store carries the company key;
+a stream's device belongs to one company. *Containment:* a reader's
+output is validated against the event schema before it touches the log;
+the model reads the file and returns JSON through the agent package,
+which has no store access; a channel's credentials live behind the
+adapter contract and nowhere else (security rule 5).
+
+**Order of work.**
+
+1. The registry: channel as activity with binding, format, identity and
+   confidence policy; adapter events stamp channel name and version;
+   the startup check; two generic list views.
+2. The file as the fact: `document.received`, the blob store, an upload
+   path in the CLI and the shell (`rhea intake FILE`, a drop zone), and
+   the adapter pass appending in one transaction (the cheap-now item).
+3. The persona generator emits documents: a FA XML and an MT940 file per
+   persona month.
+4. KSeF inbound: the FA parser as a channel; the purchase invoice, VAT
+   register and entry as pack drafts; the eval runs documents in.
+5. The bank statement: the MT940 channel keeping the raw free-text line;
+   the matching rule; the invoice paid by amendment. Phase 1 exit.
+6. The PDF reader behind the gate, with the German supplier's invoice,
+   and residue counted by shape. Phase 2.
+7. The first stream channel when a POS arrives. Phase 4.
+
+Status: **drafted 2026-10-10**. The channel map agreed by KK; the
+registry, streams and the high-volume treatment added by KK the same
+day; the rest is Claude's proposal for KK's read.
+
+One line: *a channel is who reads the document and how sure they are;
+the file is the fact and the reading has an author; the registry is an
+activity triggered by code, versioned and approved like everything
+else; a stream is a pushed channel with a declared grain, batched and
+counted rather than listed.*
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
