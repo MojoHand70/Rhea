@@ -1,6 +1,6 @@
 {
   "pack": "common-documents",
-  "version": 1,
+  "version": 2,
   "description": "Documents as received: the file is the fact, and this object is its place in state until a reader explains it",
   "warrant": {
     "basis": "practice",
@@ -18,16 +18,53 @@
       "is_document": true,
       "label_field": "name",
       "fields": [
-        {"name": "hash", "type": "string", "required": true},
-        {"name": "name", "type": "string", "required": true},
-        {"name": "media_type", "type": "string", "required": true},
-        {"name": "size", "type": "int", "required": true},
-        {"name": "source", "type": "string"},
-        {"name": "status", "type": "enum", "required": true, "values": ["received", "read", "set_aside"]}
+        {
+          "name": "hash",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "media_type",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "size",
+          "type": "int",
+          "required": true
+        },
+        {
+          "name": "source",
+          "type": "string"
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "received",
+            "read",
+            "set_aside"
+          ]
+        }
       ],
       "lifecycle": {
         "field": "status",
-        "transitions": {"received": ["read", "set_aside"], "set_aside": ["received", "read"]}
+        "transitions": {
+          "received": [
+            "read",
+            "set_aside"
+          ],
+          "set_aside": [
+            "received",
+            "read"
+          ]
+        }
       }
     }
   ],
@@ -38,7 +75,9 @@
       "effective_from": "2026-01-01",
       "description": "A received file becomes a received_document, waiting for a reader",
       "spec": {
-        "match": {"event_type": "document.received"},
+        "match": {
+          "event_type": "document.received"
+        },
         "effect": {
           "object": {
             "type": "received_document",
@@ -49,6 +88,26 @@
               "size": "=$.file.size",
               "source": "=$.source",
               "status": "received"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "mark-document-read",
+      "priority": 10,
+      "effective_from": "2026-01-01",
+      "description": "A document a channel has read moves to read: its facts are now typed events of their own, each naming the file by hash",
+      "spec": {
+        "match": {
+          "event_type": "document.read"
+        },
+        "effect": {
+          "amend": {
+            "type": "received_document",
+            "target": "=ref(received_document, hash, $.document)",
+            "set": {
+              "status": "read"
             }
           }
         }

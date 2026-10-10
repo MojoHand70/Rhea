@@ -13,6 +13,10 @@
     "../seed/finance_v9.json",
     "../seed/warehouse.json"
   ],
+  "packs": [
+    "../../packs/common/documents.json",
+    "../../packs/pl/ksef-inbound.json"
+  ],
   "seed": 11,
   "from": "2026-01",
   "months": 9,

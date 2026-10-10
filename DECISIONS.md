@@ -1766,3 +1766,40 @@ evidence in `internal/exec/case_test.go`.
 - **Sales invoices stay JSON**: they are the company's own act, not a document received.
   Payments of purchase invoices (debit lines) come with step 5, where the expected state
   gains "purchase invoice paid".
+
+## 2026-10-11 — the KSeF reader: documents in, state out
+
+- **`ksef_inbound` is the first reader** (`internal/adapter/ksef_inbound.go`): one pass
+  scans `received_document` objects still `received` whose bytes are a Faktura, reads
+  each into a `purchase.invoice.received` carrying the document's own numbers (net, VAT,
+  gross, rate, number, dates, parties, the WZ it settles, payment term, the supplier's
+  account) plus `document` (the file's hash) and `ksef_ref` (from the file name when it
+  has the KSeF shape), and a `document.read` beside it. Exact: no interpretation. A
+  document that contradicts itself — net plus VAT not the gross, lines not the net — is
+  not read but reported as `document.unreadable` with the reason, into the worklist; an
+  XML that is not an invoice is left alone. The pull from the KSeF API joins this reader
+  when a client exists; until then files reach the store through the door.
+- **The reader is declared by its own pack**, `packs/pl/ksef-inbound.json` (statutory
+  warrant, requires `received_document`): the market's channel, approved like any verb.
+  **The documents pack moves to v2**: `document.read` amends the received document to
+  `read` by hash lookup. `document.*` events are a channel's bookkeeping, explained by
+  the pack; `document.unreadable` has no rule on purpose.
+- **Readers are looked up by name** (`adapter.Lookup`), so a corpus or `rhea pass READER`
+  can run one; the outbound KSeF submission keeps its client and its verb. `Reads` gained
+  `GetBlob`: an adapter reads objects and the files they name, still no writes.
+- **The eval runs documents in.** A corpus gained `packs` (installed and approved before
+  the intake), `files` (through `receive_document`) and `readers` (one pass each);
+  `eval.Intake` is the shared intake, used by `rhea sim -play` too. Residue counts what
+  came through the open doors and the channels. `sim.CompileDocuments(…, ["ksef"])`
+  feeds the KSeF invoices as files, drops their JSON facts, expects every received
+  document `read`; `rhea eval -documents-in PERSONA`, `rhea sim -play -documents-in`.
+  **Both personas reach DONE with documents in** on the reference answers
+  (`TestPersonaReferenceIsDoneWithDocuments`), with the same rules as before: the reader's
+  event has the generator's shape plus the document's extra fields.
+- **Personas name their packs** (`packs`, relative to the persona file). Foreign
+  suppliers' invoices stay JSON until the PDF reader; the bank statement stays JSON until
+  its reader (step 5), when the matching rule and "purchase invoice paid" arrive.
+- **Not done, by choice:** the purchase-invoice booking rules as Poland-pack drafts (the
+  reference rules of the personas book them today; the pack's drafts with warrants come
+  when the pack gains its purchase side, with the VAT purchase register), and the default
+  of documents-in for `rhea eval` — flipped after one live run proves it.

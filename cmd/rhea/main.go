@@ -63,7 +63,7 @@ import (
 func main() {
 	log.SetFlags(0)
 	if len(os.Args) < 2 {
-		log.Fatal("usage: rhea init|load|submit|intake|serve|replay|channels|ksef|clock")
+		log.Fatal("usage: rhea init|load|submit|intake|pass|serve|replay|channels|ksef|clock")
 	}
 	ctx := context.Background()
 	s, err := store.Open(ctx, store.DSN())
@@ -232,6 +232,28 @@ func main() {
 			log.Fatal(run.PassErr)
 		}
 
+	case "pass":
+		// One pass of a reader of the document store, through its channel.
+		if len(os.Args) < 3 {
+			log.Fatal("usage: rhea pass READER   (rhea channels lists what this binary can read)")
+		}
+		a, ok := adapter.Lookup(os.Args[2])
+		if !ok {
+			log.Fatalf("no reader named %q — rhea channels lists what this binary can read", os.Args[2])
+		}
+		run, err := adapter.Run(ctx, s, x, a)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("%s through channel %s v%d: %d appended, %d already logged, %d booked\n",
+			a.Name(), run.Channel, run.Version, run.Submitted, run.Duplicates, run.Booked)
+		for _, e := range run.Errors {
+			fmt.Println("worklist:", e)
+		}
+		if run.PassErr != nil {
+			log.Fatal(run.PassErr)
+		}
+
 	case "channels":
 		// The registry, both lists: what this company has connected, what
 		// this binary can read (DIRECTION 2026-10-10, "Documents in").
@@ -349,6 +371,7 @@ func main() {
 
 	case "eval":
 		fs := flag.NewFlagSet("eval", flag.ExitOnError)
+		docsIn := fs.Bool("documents-in", false, "feed a persona's KSeF invoices as files through the document door and the reader, not as JSON facts")
 		verbose := fs.Bool("v", false, "print every draft the agent proposed, refused ones included")
 		learn := fs.Bool("network", false, "draw on what Rhea learned, then publish each run's explanations")
 		voice := fs.Int("voice", 0, "persona only: run the k-th paraphrase of the interview (0: as scripted)")
@@ -390,7 +413,7 @@ func main() {
 				}
 			}
 			for _, k := range which {
-				c, facts, err := sim.Compile(p, &saved, k)
+				c, facts, err := sim.CompileDocuments(p, &saved, k, docSources(*docsIn))
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -481,12 +504,13 @@ func main() {
 		out := fs.String("corpus", "", "write the compiled corpus to this file")
 		play := fs.Bool("play", false, "submit the persona's documents into THIS installation through the door, for a live demo")
 		docDir := fs.String("documents", "", "write the persona's documents — KSeF invoices as FA XML, bank statements as MT940 — under this directory")
+		docsIn := fs.Bool("documents-in", false, "with -play or -corpus: feed KSeF invoices as files through the document door and the reader, not as JSON facts")
 		fs.Parse(os.Args[2:])
 		if fs.NArg() != 1 {
 			log.Fatal("usage: rhea sim [-months N] [-paraphrase N] [-voice N] [-corpus FILE] [-documents DIR] [-play] PERSONA")
 		}
 		path := fs.Arg(0)
-		p, _, err := sim.Load(path)
+		p, pdir, err := sim.Load(path)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -508,7 +532,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		c, facts, err := sim.Compile(p, &voices, *voice)
+		c, facts, err := sim.CompileDocuments(p, &voices, *voice, docSources(*docsIn))
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -534,21 +558,41 @@ func main() {
 			// The demo's business: the same facts, through the real door
 			// into the live log, dedup-keyed so playing twice adds nothing.
 			// The interview stays the human's: it is printed as the script.
-			played, waiting := 0, 0
-			for i, ev := range facts.Events {
-				tr, err := x.TriggerActivity(ctx, "submit_event", map[string]any{
-					"event_type": ev.EventType, "occurred_at": ev.OccurredAt, "payload": ev.Payload,
-				}, "sim:"+p.Name, fmt.Sprintf("sim:%s:%d:%d", p.Name, p.Seed, i))
+			// Packs the intake needs are drafted here, never approved: the
+			// approval is the person's, in the shell.
+			for _, pk := range c.Packs {
+				sum, err := pack.Load(ctx, s, filepath.Join(pdir, pk), actor())
 				if err != nil {
-					if store.IsDuplicate(err) {
-						continue
-					}
-					log.Fatal(err)
+					// A pack built on another's type waits for that approval:
+					// approve in order, then play again — playing is idempotent.
+					fmt.Printf("pack %s not drafted yet: %v\n  approve the earlier bundle, then run -play again\n", pk, err)
+					continue
 				}
-				played++
-				waiting += len(tr.Errors)
+				if sum.Bundle != "" {
+					fmt.Printf("bundle %s waits for approval — the intake needs it\n", sum.Bundle)
+				}
 			}
-			fmt.Printf("played %d document(s) into this installation; the interview script:\n", played)
+			// The readers run only through an approved channel; until the
+			// person approves, the files wait as received and the reader's
+			// refusal is the instruction.
+			readers := c.Readers
+			c.Readers = nil
+			played, err := eval.Intake(ctx, s, x, c, pdir, "sim:"+p.Name,
+				func(i int) string { return fmt.Sprintf("sim:%s:%d:%d", p.Name, p.Seed, i) })
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Printf("played %d fact(s) and %d file(s) into this installation\n", played, len(c.Files))
+			for _, name := range readers {
+				a, _ := adapter.Lookup(name)
+				run, err := adapter.Run(ctx, s, x, a)
+				if err != nil {
+					fmt.Printf("reader %s did not run: %v\n  approve the bundles above in the shell, then: rhea pass %s\n", name, err, name)
+					continue
+				}
+				fmt.Printf("reader %s: %d appended, %d booked\n", name, run.Submitted, run.Booked)
+			}
+			fmt.Println("the interview script:")
 			for i, a := range c.Tasks {
 				fmt.Printf("%2d. %s\n", i+1, a.Intent)
 			}
@@ -697,4 +741,13 @@ func intake(ctx context.Context, x *exec.Executor, path, source, date string) (s
 	}
 	t, err := x.TriggerActivity(ctx, "receive_document", inputs, actor(), "")
 	return core.HashBytes(data), t, err
+}
+
+// docSources names the document sources the intake feeds as files: KSeF
+// invoices when asked; the bank statement joins with its reader (step 5).
+func docSources(documentsIn bool) []string {
+	if !documentsIn {
+		return nil
+	}
+	return []string{"ksef"}
 }

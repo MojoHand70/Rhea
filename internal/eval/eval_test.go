@@ -106,6 +106,49 @@ func TestPersonaReferenceIsDone(t *testing.T) {
 	}
 }
 
+// Documents in, state out (DIRECTION 2026-10-10, step 4): the same personas
+// reach DONE when their KSeF invoices enter as files through the document
+// door and the reader, the received documents counted and read.
+func TestPersonaReferenceIsDoneWithDocuments(t *testing.T) {
+	for _, name := range []string{"nordwind", "helios"} {
+		t.Run(name, func(t *testing.T) {
+			p, dir, err := sim.Load("../../testdata/customers/" + name + ".json")
+			if err != nil {
+				t.Fatal(err)
+			}
+			p.Months = 2
+			c, facts, err := sim.CompileDocuments(p, nil, 0, []string{"ksef"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(c.Files) == 0 || len(c.Readers) != 1 || c.Readers[0] != "ksef_inbound" || len(c.Packs) != 2 ||
+				c.Expect["received_document"] != len(c.Files) || len(c.Events)+len(c.Files) != len(facts.Events) {
+				t.Fatalf("corpus: %d files, readers %v, packs %v, events %d of %d", len(c.Files), c.Readers, c.Packs, len(c.Events), len(facts.Events))
+			}
+			s := storetest.New(t)
+			recorded := &agent.Agent{Complete: func(ctx context.Context, system, user string) (string, error) {
+				for _, task := range c.Tasks {
+					if strings.HasSuffix(strings.TrimSpace(user), "User intent: "+task.Intent) {
+						return string(task.Reference), nil
+					}
+				}
+				return "", fmt.Errorf("no reference for this ask")
+			}}
+			rep, err := eval.Run(context.Background(), s, recorded, "reference", c, dir, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Log("\n" + rep.String())
+			if !rep.Done() {
+				t.Fatalf("persona %s not done with documents in:\n%s", name, rep)
+			}
+			if rep.Intake != len(facts.Events) {
+				t.Fatalf("intake %d, facts %d", rep.Intake, len(facts.Events))
+			}
+		})
+	}
+}
+
 // The verdict over several runs: done when every run is done, and the
 // counts beside it say how the author got there.
 func TestVerdictCountsRuns(t *testing.T) {

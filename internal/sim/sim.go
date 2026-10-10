@@ -15,6 +15,7 @@
 package sim
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"math/rand/v2"
@@ -33,9 +34,10 @@ import (
 type Persona struct {
 	Name        string   `json:"name"`
 	Description string   `json:"description"`
-	Seeds       []string `json:"seeds"` // definition files, relative to the persona file
-	Seed        uint64   `json:"seed"`  // the generator's randomness, fixed
-	From        string   `json:"from"`  // first month, YYYY-MM
+	Seeds       []string `json:"seeds"`           // definition files, relative to the persona file
+	Packs       []string `json:"packs,omitempty"` // pack files, relative to the persona file: the documents pack, the market's readers
+	Seed        uint64   `json:"seed"`            // the generator's randomness, fixed
+	From        string   `json:"from"`            // first month, YYYY-MM
 	Months      int      `json:"months"`
 
 	Company   Party     `json:"company"`
@@ -583,13 +585,61 @@ func halfUp(n, d int64) int64 {
 // voice k the k-th paraphrase), and the expected state. The corpus is named
 // with the synthetic prefix so a networked run is marked.
 func Compile(p Persona, voices *Voices, voice int) (eval.Corpus, Facts, error) {
+	return CompileDocuments(p, voices, voice, nil)
+}
+
+// Readers names the channel that reads each document source a persona can
+// emit. A source without a reader stays JSON through the open door —
+// exactly "what no channel reads yet".
+var Readers = map[string]string{"ksef": "ksef_inbound"}
+
+// CompileDocuments compiles with the documents of the named sources fed as
+// files instead of the facts they carry — documents in, state out
+// (DIRECTION 2026-10-10). The expected state gains the received documents,
+// read by their channel.
+func CompileDocuments(p Persona, voices *Voices, voice int, sources []string) (eval.Corpus, Facts, error) {
 	facts, err := Generate(p)
 	if err != nil {
 		return eval.Corpus{}, Facts{}, err
 	}
-	c := eval.Corpus{Name: network.SyntheticPrefix + p.Name, Seeds: p.Seeds, Expect: facts.Counts,
+	c := eval.Corpus{Name: network.SyntheticPrefix + p.Name, Seeds: p.Seeds, Packs: p.Packs, Expect: facts.Counts,
 		ExpectWhere: facts.Where, ExpectSum: facts.Sums}
-	for _, ev := range facts.Events {
+	covered := map[int]bool{}
+	readers := map[string]bool{}
+	for _, src := range sources {
+		reader, ok := Readers[src]
+		if !ok {
+			return eval.Corpus{}, Facts{}, fmt.Errorf("no reader for %q documents yet — they stay JSON", src)
+		}
+		readers[reader] = true
+		for _, d := range facts.Documents {
+			if d.Source != src {
+				continue
+			}
+			c.Files = append(c.Files, eval.File{Name: filepath.Base(d.Path), MediaType: d.MediaType,
+				Source: d.Source, Date: d.Date, ContentBase64: base64.StdEncoding.EncodeToString(d.Bytes)})
+			for _, i := range d.Events {
+				covered[i] = true
+			}
+		}
+	}
+	for name := range readers {
+		c.Readers = append(c.Readers, name)
+	}
+	sort.Strings(c.Readers)
+	if len(c.Files) > 0 {
+		c.Expect = make(map[string]int, len(facts.Counts)+1)
+		for k, v := range facts.Counts {
+			c.Expect[k] = v
+		}
+		c.Expect["received_document"] = len(c.Files)
+		c.ExpectWhere = append(append([]eval.Where{}, facts.Where...),
+			eval.Where{Type: "received_document", Field: "status", Value: "read", Count: len(c.Files)})
+	}
+	for i, ev := range facts.Events {
+		if covered[i] {
+			continue
+		}
 		b, err := json.Marshal(ev)
 		if err != nil {
 			return eval.Corpus{}, Facts{}, err

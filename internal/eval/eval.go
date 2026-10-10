@@ -9,6 +9,7 @@ package eval
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,11 +17,14 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
+	"rhea/internal/adapter"
 	"rhea/internal/agent"
 	"rhea/internal/core"
 	"rhea/internal/exec"
 	"rhea/internal/network"
+	"rhea/internal/pack"
 	"rhea/internal/shell"
 	"rhea/internal/store"
 )
@@ -47,6 +51,24 @@ type Corpus struct {
 	// documents carry, the stock the counts found — computed values a count
 	// cannot judge. Money totals are decimal strings, int totals plain.
 	ExpectSum []Sum `json:"expect_sum,omitempty"`
+	// Packs are pack files, relative to the corpus file, installed and
+	// approved before the intake: the vocabulary and the channels the
+	// documents need (the documents pack, a market's reader).
+	Packs []string `json:"packs,omitempty"`
+	// Files are documents in (DIRECTION 2026-10-10): received through the
+	// receive_document door after the events, before the readers run.
+	Files []File `json:"files,omitempty"`
+	// Readers are the channels to run one pass of once the files are in.
+	Readers []string `json:"readers,omitempty"`
+}
+
+// File is one document of the intake, its bytes as base64.
+type File struct {
+	Name          string `json:"name"`
+	MediaType     string `json:"media_type"`
+	Source        string `json:"source"`
+	Date          string `json:"date,omitempty"`
+	ContentBase64 string `json:"content_base64"`
 }
 
 // Sum expects the values of Field over all objects of Type to add up to
@@ -245,18 +267,22 @@ func Run(ctx context.Context, st *store.Store, a *agent.Agent, model string, c C
 			return rep, err
 		}
 	}
-	for i, raw := range c.Events {
-		ev, err := readEvent(raw, dir)
+	for _, pk := range c.Packs {
+		sum, err := pack.Load(ctx, st, filepath.Join(dir, pk), "eval")
 		if err != nil {
-			return rep, fmt.Errorf("event %d: %w", i, err)
+			return rep, err
 		}
-		if _, err := x.TriggerActivity(ctx, "submit_event", map[string]any{
-			"event_type": ev.EventType, "occurred_at": ev.OccurredAt, "payload": ev.Payload,
-		}, "eval:intake", ""); err != nil {
-			return rep, fmt.Errorf("intake %d (%s): %w", i, ev.EventType, err)
+		if sum.Bundle != "" {
+			if _, _, _, err := x.ApproveBundle(ctx, sum.Bundle, "eval", time.Now().UTC().Format("2006-01-02")); err != nil {
+				return rep, fmt.Errorf("pack %s: %w", pk, err)
+			}
 		}
-		rep.Intake++
 	}
+	n, err := Intake(ctx, st, x, c, dir, "eval:intake", nil)
+	if err != nil {
+		return rep, err
+	}
+	rep.Intake = n
 	raws, err := st.EventsByKind(ctx, core.KindRaw)
 	if err != nil {
 		return rep, err
@@ -337,8 +363,20 @@ func Run(ctx context.Context, st *store.Store, a *agent.Agent, model string, c C
 	if err != nil {
 		return rep, err
 	}
+	// The intake is what came through the open doors and the channels; the
+	// run's own door events (approvals, asks) are not residue.
+	intake := map[string]bool{"submit_event": true, "receive_document": true}
+	acts, err := st.LatestActivities(ctx)
+	if err != nil {
+		return rep, err
+	}
+	for _, a := range acts {
+		if a.Spec.Channel != nil {
+			intake[a.Name] = true
+		}
+	}
 	for _, e := range left {
-		if e.ActivityName == "submit_event" { // the intake; door events are the run's own
+		if intake[e.ActivityName] {
 			rep.Residue = append(rep.Residue, fmt.Sprintf("%s #%d", e.Type, e.ID))
 		}
 	}
@@ -569,6 +607,73 @@ func tryBundle(ctx context.Context, st *store.Store, x *exec.Executor, a *agent.
 		}
 	}
 	return "", "", nil
+}
+
+// Intake plays a corpus's intake into a store: events through the open
+// door, files through the document door, then one pass of every reader the
+// corpus names. It returns how many facts entered — events, and the typed
+// events the readers made of the files; a reader's document.* events are
+// the channel's own bookkeeping, not facts to explain. dedup names an
+// event's idempotency key (nil: none — a fresh store); files are keyed by
+// their hash regardless, so playing twice adds nothing.
+func Intake(ctx context.Context, st *store.Store, x *exec.Executor, c Corpus, dir, actor string, dedup func(i int) string) (int, error) {
+	n := 0
+	for i, raw := range c.Events {
+		ev, err := readEvent(raw, dir)
+		if err != nil {
+			return n, fmt.Errorf("event %d: %w", i, err)
+		}
+		key := ""
+		if dedup != nil {
+			key = dedup(i)
+		}
+		if _, err := x.TriggerActivity(ctx, "submit_event", map[string]any{
+			"event_type": ev.EventType, "occurred_at": ev.OccurredAt, "payload": ev.Payload,
+		}, actor, key); err != nil {
+			if store.IsDuplicate(err) {
+				continue
+			}
+			return n, fmt.Errorf("intake %d (%s): %w", i, ev.EventType, err)
+		}
+		n++
+	}
+	for i, f := range c.Files {
+		data, err := base64.StdEncoding.DecodeString(f.ContentBase64)
+		if err != nil {
+			return n, fmt.Errorf("file %d (%s): %w", i, f.Name, err)
+		}
+		inputs := map[string]any{
+			"file":   map[string]any{"name": f.Name, "media_type": f.MediaType, "bytes": data},
+			"source": f.Source,
+		}
+		if f.Date != "" {
+			inputs["occurred_at"] = f.Date
+		}
+		if _, err := x.TriggerActivity(ctx, "receive_document", inputs, actor, ""); err != nil && !store.IsDuplicate(err) {
+			return n, fmt.Errorf("file %d (%s): %w", i, f.Name, err)
+		}
+	}
+	for _, name := range c.Readers {
+		a, ok := adapter.Lookup(name)
+		if !ok {
+			return n, fmt.Errorf("no reader named %q in this binary", name)
+		}
+		res, err := adapter.Run(ctx, st, x, a)
+		if err != nil {
+			return n, fmt.Errorf("reader %s: %w", name, err)
+		}
+		if res.PassErr != nil {
+			return n, fmt.Errorf("reader %s: %w", name, res.PassErr)
+		}
+		if res.Submitted > 0 {
+			for _, ev := range res.Events {
+				if !strings.HasPrefix(ev.Type, "document.") {
+					n++
+				}
+			}
+		}
+	}
+	return n, nil
 }
 
 func loadSeed(ctx context.Context, st *store.Store, path string) error {

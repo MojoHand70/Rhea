@@ -24,7 +24,7 @@ func TestDocumentsPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 1 || sum.Rules != 1 || sum.Bundle != "pack-common-documents-v1" {
+	if sum.Types != 1 || sum.Rules != 2 || sum.Bundle != "pack-common-documents-v2" {
 		t.Fatalf("load: %+v", sum)
 	}
 	if _, _, errs, err := x.ApproveBundle(ctx, sum.Bundle, "krzysztof", "2026-10-01"); err != nil || len(errs) != 0 {
@@ -83,5 +83,16 @@ func TestDocumentsPack(t *testing.T) {
 	}
 	if objs, _ := s.ObjectsByType(ctx, "received_document"); len(objs) != 2 {
 		t.Fatalf("received documents = %d, want 2", len(objs))
+	}
+
+	// A channel that has read a document says so, and the document moves on.
+	if tr, err := x.TriggerActivity(ctx, "submit_event", map[string]any{
+		"event_type": "document.read", "occurred_at": "2026-10-11",
+		"payload": map[string]any{"document": hash, "channel": "test", "event_type": "bank.statement.received"},
+	}, "test", "read/"+hash); err != nil || tr.Booked != 1 || len(tr.Errors) != 0 {
+		t.Fatalf("document.read: %+v %v", tr, err)
+	}
+	if o, _ := s.GetObject(ctx, ids[0]); o.State["status"] != "read" {
+		t.Fatalf("status after read = %v", o.State["status"])
 	}
 }

@@ -1,0 +1,45 @@
+{
+  "pack": "pl-ksef-inbound",
+  "version": 1,
+  "description": "Kanał KSeF (odbiór): faktury zakupu z Krajowego Systemu e-Faktur, czytane z magazynu dokumentów — każda staje się zdarzeniem purchase.invoice.received wskazującym plik",
+  "requires": [
+    "received_document"
+  ],
+  "warrant": {
+    "basis": "statute",
+    "citations": [
+      "od 2026 r. faktury między podatnikami VAT w Polsce są wystawiane i odbierane w KSeF; nabywca pobiera faktury zakupu po swoim NIP jako XML w schemacie FA",
+      "odczyt jest dokładny: liczby są liczbami dokumentu; dokument, który sam sobie przeczy (netto + VAT ≠ brutto), nie jest czytany, lecz zgłaszany człowiekowi"
+    ],
+    "scope": "pl"
+  },
+  "activities": [
+    {
+      "name": "ksef_inbound",
+      "domain": "finance",
+      "description": "Odbiór faktur zakupu z KSeF: plik FA z magazynu dokumentów staje się zdarzeniem purchase.invoice.received (z VAT i brutto dokumentu) oraz document.read; plik nieczytelny — document.unreadable do skrzynki",
+      "spec": {
+        "inputs": [],
+        "emits": "purchase.invoice.received",
+        "who": [
+          "adapter"
+        ],
+        "channel": {
+          "adapter": "ksef_inbound",
+          "code_version": 1,
+          "format": "FA(3) XML (podzbiór) z magazynu dokumentów; pobieranie z API KSeF dołączy z klientem",
+          "identity": "skrót pliku; numer KSeF z nazwy pliku, gdy jest",
+          "confidence": {
+            "policy": "exact"
+          },
+          "events": [
+            "purchase.invoice.received",
+            "document.read",
+            "document.unreadable"
+          ],
+          "volume": "documents"
+        }
+      }
+    }
+  ]
+}

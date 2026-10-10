@@ -1543,7 +1543,13 @@ simulated customer emits documents"): a FA-shaped XML per Polish
 supplier's invoice named by its KSeF reference, one MT940 per month in the
 "sim-bank" dialect, each naming the events it carries; `rhea sim
 -documents DIR`; the FA namespace and rate slots to be checked against the
-published XSD before the first real pull.
+published XSD before the first real pull. **Step 4 shipped 2026-10-11**
+(DECISIONS, "the KSeF reader"): `ksef_inbound` reads Faktura files from the
+store into `purchase.invoice.received` naming the file, refuses a document
+that contradicts itself into the worklist, and marks the document read;
+declared by `packs/pl/ksef-inbound.json`; the eval installs packs, receives
+files and runs readers, and both personas reach DONE with documents in.
+Left for later: the Poland pack's purchase-side drafts.
 
 One line: *a channel is who reads the document and how sure they are;
 the file is the fact and the reading has an author; the registry is an

@@ -31,10 +31,25 @@ import (
 	"rhea/internal/store"
 )
 
-// Reads is the slice of the read side an adapter may see. *store.Store
-// satisfies it; adapters get no writes.
+// Reads is the slice of the read side an adapter may see: projected objects
+// and the stored files they name. *store.Store satisfies it; adapters get
+// no writes.
 type Reads interface {
 	ObjectsByType(ctx context.Context, typ string) ([]core.Object, error)
+	GetBlob(ctx context.Context, hash string) (store.Blob, error)
+}
+
+// readers are the adapters that need no client to run — the readers of the
+// document store — by name, so a corpus or a CLI verb can name one.
+var readers = map[string]func() Adapter{}
+
+// Lookup returns a reader by its adapter name.
+func Lookup(name string) (Adapter, bool) {
+	mk, ok := readers[name]
+	if !ok {
+		return nil, false
+	}
+	return mk(), true
 }
 
 // Adapter is the declared contract: inspect the world, talk to the outside
@@ -117,13 +132,14 @@ func Bind(ctx context.Context, s *store.Store, name string, codeVersion int) (co
 // failure, if any — events gathered before it are still booked, which is
 // safe precisely because passes are idempotent.
 type Result struct {
-	Channel    string  `json:"channel"`         // the channel the pass spoke through
-	Version    int     `json:"channel_version"` // and its version
-	Submitted  int     `json:"submitted"`       // events newly appended
-	Duplicates int     `json:"duplicates"`      // retries the log already had
-	Booked     int     `json:"booked"`          // objects materialized from them
-	Errors     []error `json:"-"`               // worklist conditions from booking
-	PassErr    error   `json:"-"`
+	Channel    string       `json:"channel"`         // the channel the pass spoke through
+	Version    int          `json:"channel_version"` // and its version
+	Events     []core.Event `json:"-"`               // what the pass returned, stamped
+	Submitted  int          `json:"submitted"`       // events newly appended
+	Duplicates int          `json:"duplicates"`      // retries the log already had
+	Booked     int          `json:"booked"`          // objects materialized from them
+	Errors     []error      `json:"-"`               // worklist conditions from booking
+	PassErr    error        `json:"-"`
 }
 
 // Run executes one adapter pass through its channel: bind, let the adapter
@@ -154,6 +170,7 @@ func Run(ctx context.Context, s *store.Store, x *exec.Executor, a Adapter) (Resu
 		events[i].Actor = "adapter:" + a.Name()
 		events[i].ActivityName, events[i].ActivityVersion = ch.Name, ch.Version
 	}
+	res.Events = events
 	if res.Submitted, res.Duplicates, err = s.AppendEvents(ctx, events); err != nil {
 		return res, err
 	}
