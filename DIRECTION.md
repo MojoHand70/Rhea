@@ -1567,6 +1567,86 @@ activity triggered by code, versioned and approved like everything
 else; a stream is a pushed channel with a declared grain, batched and
 counted rather than listed.*
 
+## The host remembers: memory is the log with a lifecycle (KK, 2026-10-11)
+
+The case that opened it. On 2026-10-10 KK corrected a reading of mine
+(the "all-or-nothing over runs" verdict was my construction, not KK's
+rule). The correction went into my notes as a new note beside the old
+one; nothing marked the old one dead; a day later I cited the old one as
+KK's standard. Asked why it was not marked, the honest answer: appending
+was cheap and retiring cost a search through prose, so the correction
+was added, not applied. KK's question: can Rhea afford this? And a
+requirement, verbatim in spirit: *she is the concierge, she has to
+remember* — preferences, habits, customs, personality.
+
+**Both are true, and the second is the answer to the first.** Rhea
+remembers everything, and she remembers it as facts in the log and
+definitions with a lifecycle, never as notes. That is what makes her
+safe to remember with. The concierge who forgets is poor service; the
+concierge who remembers the guest's old room after the guest moved is
+worse. Winston knows both rooms, and which one is current.
+
+**The rule.** Everything Rhea remembers is one of two things: a fact in
+the event log (dated, signed, append-only) or a definition with a
+lifecycle (draft → active → superseded). A correction supersedes; it
+never sits beside. The old version stays readable as history, with its
+date and the reason it was replaced, and nothing the host says, drafts
+or does may draw on a superseded version as current. Supersession must
+be as cheap as recording — one act, behind the same gate — or stale
+truths accumulate the way they did in my notes.
+
+**Where each kind of memory lives.**
+
+- *Preferences* — how a person wants to be briefed, in which language,
+  at what hour, how much detail, which name — are amendable fields on the
+  person (the people pack of 2026-10-10), each amendment carrying who
+  changed it and when. "You told me on 3 October you prefer the brief at
+  seven" is a walk, not a recollection.
+- *Habits* are patterns the kernel can count in the log — the person
+  handles something by hand twice — and the host turns into a proposal
+  behind the gate ("The host captures decisions", the concierge note).
+  Until approved, a habit is an observation the host may mention, never
+  a rule she acts on.
+- *Customs* — how this company does things — are rules, scenarios and
+  packs: the corpus itself, versioned.
+- *Personality*, as the host meets it, is the sum of the above plus the
+  person's own words in the interview, which are events. The host's own
+  words are events too, so she never repeats a welcome and can be asked
+  what she said.
+
+**Where Rhea already refuses my mistake, and where she still could.**
+
+1. *Acting.* A superseded rule cannot fire: invariant 2, enforced by the
+   kernel and its tests; replay proves every booking used the version in
+   force on its day. This is the part that matters most and it holds.
+2. *Drafting.* The author's ask is built from the active rules, and
+   rejected drafts reach it only with the reason they were rejected
+   (`DraftAsk`, the conversation of 2026-10-10). Holds today; the test
+   below pins it.
+3. *Speaking.* The briefing phrases facts the kernel computed from
+   current state; the host's words are logged. Pins with the same test
+   when the narrative view kind lands.
+4. *Learning.* The gap found 2026-10-11: what an installation publishes
+   to the network is counted forever, and the network has no notion of a
+   shape being superseded where it came from. A standard every subscriber
+   abandoned would still arrive at a new subscriber with its old support.
+   The fix is the same shape as everything else: a supersession is
+   published too, and support follows the versions in force.
+
+**The standing test — "the overruled rule never returns."** Approve a
+rule; supersede it with a different reading; then: replay never fires
+the old one after its time; the author's ask names the new one and shows
+the old only as superseded, with the reason; the network counts the new
+one; the briefing speaks the new one. Of the ladder's kind: if the shape
+cannot carry it, the shape is wrong.
+
+**Order.** The test for acting and drafting now (small); the network's
+supersession with the next network slice; speaking with the briefing.
+
+One line: *the concierge remembers everything, as facts with a date and
+a status; a correction retires what it corrects; and the one place a
+memory could lie — in the author's eyes — is pinned by a test.*
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
