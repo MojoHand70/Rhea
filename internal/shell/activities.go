@@ -82,6 +82,9 @@ func (s *Server) handleTrigger(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	resp := map[string]any{"event_id": t.EventID, "booked": t.Booked}
+	if t.Proposed != nil {
+		resp["proposed"] = t.Proposed // the host's draft, when a pairing taught it something
+	}
 	if len(t.Errors) > 0 {
 		resp["errors"] = fmt.Sprintf("%v", t.Errors)
 	}

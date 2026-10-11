@@ -1223,7 +1223,8 @@ function renderMatching(d) {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ inputs: { pairing: { matching: d.rule, trigger: chosen.trigger, items: [...chosen.items] } } }),
       });
-      toast(`Paired: event #${res.event_id}, booked ${res.booked}.` + (res.errors ? ` Worklist: ${res.errors}` : ""));
+      toast(`Paired: event #${res.event_id}, booked ${res.booked}.` + (res.errors ? ` Worklist: ${res.errors}` : "") +
+        (res.proposed ? ` The host proposes: ${res.proposed.description} — see Bundles.` : ""));
       openView(d.view.view_id, d.view.title);
     } catch (e) { toast(e.message, true); }
     btn.disabled = false;

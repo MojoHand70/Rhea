@@ -153,7 +153,17 @@ type MatchedObjects struct {
 	// Inputs is what the engine read to decide: the candidates per side,
 	// the tolerances applied — the calc of a match, for the walk.
 	Inputs map[string]any `json:"inputs,omitempty"`
+	// Standards, on a person's pairing, names the strategies that would have
+	// found the same pairing over the sides as the policy reads them — what
+	// the host learns from: after a person has paired the same way twice,
+	// the host proposes that standard as a step, behind the gate.
+	Standards []string `json:"standards,omitempty"`
 }
+
+// LearnedBundleID names the proposal the host makes when a person has paired
+// one structure the same way twice: one bundle per structure and standard,
+// so a rejected proposal never returns (the overruled rule never returns).
+func LearnedBundleID(matching, standard string) string { return "learned-" + matching + "-" + standard }
 
 // UnmatchedObjects is the payload of an objects.unmatched event: the trigger
 // and every step tried, with why it found nothing — or, when no step could

@@ -2196,3 +2196,29 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   differences' directions flipped (the lifecycle then declares `paid → open` as
   consent); a write-off verb for a difference a person accepts; the host proposing a
   strategy after a person has paired the same way twice.
+
+## 2026-10-11 — the host proposes a strategy after a person has paired the same way twice
+
+- **A pairing says which standards would have found it.** On every pairing by hand the
+  kernel runs each learnable standard alone — reference, reference partial, exact, subset,
+  oldest first — over the sides as the policy reads them, and records in the match event
+  (`standards`) those that would have chosen exactly the same items on every side. The
+  first time, nothing more happens: it is noted in the event.
+- **The second time, the host proposes.** When an earlier pairing of the same structure
+  was explained by the same standard, the policy lacks it, and it was never proposed
+  before, the pairing's reaction drafts the matching rule's next version with the step
+  appended (subset with the size the pairing needed, at least the default) and a bundle
+  `learned-<structure>-<standard>` with a client warrant naming both pairings, in the
+  pairing's own transaction — behind the gate: the owner approves it in Bundles, or
+  rejects it, and a rejected proposal never returns (the bundle id is one per structure
+  and standard; "the overruled rule never returns"). The verb's response and the
+  shell's toast name the proposal.
+- **Proven in the grid test**: two part payments paired by hand with the oldest open
+  invoice are both what oldest first would have done; the second drafts version 2 of
+  the rule with oldest first as its last step, warranted by the two events; the owner
+  approves; the third part payment matches by itself, by the learned step, and the grid
+  shows the invoice's open amount moved.
+- **What this is not**: the interview loop (the brief's "the last with the interview
+  loop") — the host's proposal is deterministic kernel code over the engine's own
+  standards; the model is not asked. When the host learns a *structure* (a new side, a
+  new key) from what a person did, that is the interview's job and the agent's.

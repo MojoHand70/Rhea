@@ -43,7 +43,35 @@ func (x *Executor) expandMatching(ctx context.Context, r core.Rule, payload any,
 	if err != nil {
 		return nil, nil, fmt.Errorf("matching %s: the %s %s: %w", tmpl.Name, triggerSide.Name, objectID, err)
 	}
+	sides, inputs, unmatched := x.readSides(tmpl, trigger, state, env, kinds)
+	if unmatched != nil {
+		return nil, unmatched, nil
+	}
+	problem := match.Problem{TriggerSide: tmpl.Trigger, Trigger: triggerItem, Sides: sides,
+		Measures: measuresOf(tmpl, kinds), Policy: policySteps(tmpl, inputs),
+		Convert: converterOf(tmpl, lookup, get, inputs)}
+	result, found, err := match.Solve(problem)
+	if err != nil {
+		return nil, nil, fmt.Errorf("matching %s: %w", tmpl.Name, err)
+	}
+	if !found {
+		return nil, &core.UnmatchedObjects{Matching: tmpl.Name, Trigger: trigger, Tried: attempts(result.Tried), Inputs: inputs}, nil
+	}
+	m, err := bakeMatch(tmpl, trigger, triggerItem, result, kinds, map[string]map[string]any{objectID: state}, inputs, lookup, get)
+	if err != nil {
+		return nil, nil, err
+	}
+	return m, nil, nil
+}
+
+// readSides reads every side but the trigger's as the structure declares:
+// the keyed read against the trigger's payload, the join, the cap. A side
+// that cannot be read or is above its cap ends the firing as unmatched with
+// the reason — the trigger stays open for the person, and the log says why;
+// its own materialization is never held hostage.
+func (x *Executor) readSides(tmpl *core.MatchingTemplate, trigger core.MatchTrigger, state map[string]any, env *core.Env, kinds map[string]string) ([]match.Side, map[string]any, *core.UnmatchedObjects) {
 	inputs := map[string]any{}
+	payload := map[string]any{"object_id": trigger.ObjectID, "object_type": trigger.ObjectType, "state": state}
 	var sides []match.Side
 	for _, side := range tmpl.Sides {
 		if side.Name == tmpl.Trigger {
@@ -51,16 +79,13 @@ func (x *Executor) expandMatching(ctx context.Context, r core.Rule, payload any,
 		}
 		t, err := core.ParseTemplate(side.Items)
 		if err != nil {
-			return nil, nil, fmt.Errorf("matching %s side %s: %w", tmpl.Name, side.Name, err)
+			return nil, inputs, &core.UnmatchedObjects{Matching: tmpl.Name, Trigger: trigger, Inputs: inputs,
+				Reason: fmt.Sprintf("%s cannot be read: %v", side.Name, err)}
 		}
 		reads, in, err := t.Objects(payload, env)
 		if err != nil {
-			// A side that cannot be read — a payer no company carries the
-			// account of, a key above the collection cap — has no
-			// candidates: the trigger stays open for the person, and the
-			// log says why. Its own materialization is never held hostage.
-			return nil, &core.UnmatchedObjects{Matching: tmpl.Name, Trigger: trigger, Inputs: inputs,
-				Reason: fmt.Sprintf("%s cannot be read: %v", side.Name, err)}, nil
+			return nil, inputs, &core.UnmatchedObjects{Matching: tmpl.Name, Trigger: trigger, Inputs: inputs,
+				Reason: fmt.Sprintf("%s cannot be read: %v", side.Name, err)}
 		}
 		for k, v := range in {
 			inputs[k] = v
@@ -82,7 +107,8 @@ func (x *Executor) expandMatching(ctx context.Context, r core.Rule, payload any,
 			}
 			it, err := itemOf(side, rd.ID, rd.State, kinds, i+1)
 			if err != nil {
-				return nil, nil, fmt.Errorf("matching %s: the %s %s: %w", tmpl.Name, side.Name, rd.ID, err)
+				return nil, inputs, &core.UnmatchedObjects{Matching: tmpl.Name, Trigger: trigger, Inputs: inputs,
+					Reason: fmt.Sprintf("the %s %s cannot be read: %v", side.Name, rd.ID, err)}
 			}
 			s.Items = append(s.Items, it)
 			ids = append(ids, rd.ID)
@@ -98,32 +124,111 @@ func (x *Executor) expandMatching(ctx context.Context, r core.Rule, payload any,
 		// included (the key is one field; the VM's collection cap bounds
 		// the read itself); the side's cap bounds what the engine may
 		// search — the open ones. Above it the items go to the person,
-		// never to a long search: the trigger stays open, the log says why.
+		// never to a long search.
 		capacity := side.Cap
 		if capacity <= 0 {
 			capacity = core.DefaultMatchingCap
 		}
 		if open > capacity {
-			return nil, &core.UnmatchedObjects{Matching: tmpl.Name, Trigger: trigger, Inputs: inputs,
-				Reason: fmt.Sprintf("%s holds %d open candidates, above the cap of %d — a person decides", side.Name, open, capacity)}, nil
+			return nil, inputs, &core.UnmatchedObjects{Matching: tmpl.Name, Trigger: trigger, Inputs: inputs,
+				Reason: fmt.Sprintf("%s holds %d open candidates, above the cap of %d — a person decides", side.Name, open, capacity)}
 		}
 		sides = append(sides, s)
 	}
-	problem := match.Problem{TriggerSide: tmpl.Trigger, Trigger: triggerItem, Sides: sides,
-		Measures: measuresOf(tmpl, kinds), Policy: policySteps(tmpl, inputs),
-		Convert: converterOf(tmpl, lookup, get, inputs)}
-	result, found, err := match.Solve(problem)
+	return sides, inputs, nil
+}
+
+// learnable lists the standards the host may learn from a person's pairing,
+// each as the step it would propose.
+var learnable = []core.MatchingStep{
+	{Strategy: match.Reference},
+	{Strategy: match.Reference, Partial: true},
+	{Strategy: match.Exact},
+	{Strategy: match.Subset, MaxItems: match.MaxMaxItems},
+	{Strategy: match.OldestFirst},
+}
+
+// standardsFor names the strategies that, run alone over the sides as the
+// policy reads them, would have found exactly the person's pairing: the
+// same items on every side.
+func (x *Executor) standardsFor(ctx context.Context, tmpl *core.MatchingTemplate, matched *core.MatchedObjects, lookup core.Lookup, get core.Getter) ([]string, error) {
+	state, ok, err := get(matched.Trigger.ObjectID)
+	if err != nil || !ok {
+		return nil, err
+	}
+	payload := map[string]any{"object_id": matched.Trigger.ObjectID, "object_type": matched.Trigger.ObjectType, "state": state}
+	env := x.env(ctx, payload, lookup, get)
+	kinds, err := tmpl.MeasureKinds(env.Types)
 	if err != nil {
-		return nil, nil, fmt.Errorf("matching %s: %w", tmpl.Name, err)
+		return nil, err
 	}
-	if !found {
-		return nil, &core.UnmatchedObjects{Matching: tmpl.Name, Trigger: trigger, Tried: attempts(result.Tried), Inputs: inputs}, nil
-	}
-	m, err := bakeMatch(tmpl, trigger, triggerItem, result, kinds, map[string]map[string]any{objectID: state}, inputs, lookup, get)
+	triggerSide, _ := tmpl.Side(tmpl.Trigger)
+	triggerItem, err := itemOf(triggerSide, matched.Trigger.ObjectID, state, kinds, 0)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return m, nil, nil
+	sides, _, unmatched := x.readSides(tmpl, matched.Trigger, state, env, kinds)
+	if unmatched != nil {
+		return nil, nil // nothing a standard could have read
+	}
+	chosen := map[string]map[string]bool{}
+	for name, allocs := range matched.Sides {
+		if name == tmpl.Trigger {
+			continue
+		}
+		chosen[name] = map[string]bool{}
+		for _, a := range allocs {
+			chosen[name][a.ObjectID] = true
+		}
+	}
+	var out []string
+	for _, step := range learnable {
+		trial := &core.MatchingTemplate{Name: tmpl.Name, Trigger: tmpl.Trigger, Sides: tmpl.Sides, Policy: []core.MatchingStep{step}, Convert: tmpl.Convert}
+		problem := match.Problem{TriggerSide: tmpl.Trigger, Trigger: triggerItem, Sides: sides,
+			Measures: measuresOf(tmpl, kinds), Policy: policySteps(trial, map[string]any{}),
+			Convert: converterOf(tmpl, lookup, get, map[string]any{})}
+		result, found, err := match.Solve(problem)
+		if err != nil || !found {
+			continue
+		}
+		same := true
+		for name, want := range chosen {
+			got := map[string]bool{}
+			for _, a := range result.Sides[name] {
+				got[a.ID] = true
+			}
+			if len(got) != len(want) {
+				same = false
+			}
+			for id := range want {
+				if !got[id] {
+					same = false
+				}
+			}
+		}
+		if same {
+			out = append(out, standardName(step))
+		}
+	}
+	return out, nil
+}
+
+// standardName spells a learnable step the way the policy would.
+func standardName(step core.MatchingStep) string {
+	if step.Strategy == match.Reference && step.Partial {
+		return "reference partial"
+	}
+	return step.Strategy
+}
+
+// hasStandard reports whether a policy already runs a learnable standard.
+func hasStandard(policy []core.MatchingStep, standard string) bool {
+	for _, st := range policy {
+		if standardName(st) == standard {
+			return true
+		}
+	}
+	return false
 }
 
 // pairSelection runs a matching rule's structure on a person's selection

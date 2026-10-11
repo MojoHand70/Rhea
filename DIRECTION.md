@@ -1840,9 +1840,15 @@ once, the elimination's evidence), the sides' declared `join` the one
 addition; the grid — the `matching` notion over the remainder, every
 side's open items with why the policy left each trigger item, and the
 pairing verb running the same engine on a person's selection into the
-same event. Next in order: the host proposing strategies (after a person
-has paired the same way twice, behind the gate), the Poland pack's
-default policy as drafts with warrants, unpairing as a correcting event.
+same event; the host proposing a strategy — every pairing by hand says
+which named standards would have found it, and the second pairing the
+same way drafts the rule's next version with that step, warranted by the
+two pairings, behind the gate. The order of work is walked. Owed next:
+the Poland pack's default policy as drafts with warrants (the pack's
+invoice types gain the open amount first), unpairing as a correcting
+event, the live run with the model drafting the matching bundle from the
+paraphrased answers (with the twelve-run round), and the one-sided time
+window when a customer asks.
 
 ## Language decisions with a recorded destination
 

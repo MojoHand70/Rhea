@@ -249,7 +249,78 @@ func TestMatchingGridAndPairing(t *testing.T) {
 		t.Fatalf("a pairing is never residue: %v", left)
 	}
 
-	// 5. Replay reproduces the person's match as it does the policy's.
+	// 5. The host learns. The pairing was what oldest-first would have done,
+	// and the event says so; a second pairing the same way makes the host
+	// propose oldest-first as a step — a draft bundle with a client warrant
+	// naming both pairings, behind the gate.
+	var m1 core.MatchedObjects
+	for _, ev := range mustDerived(t, s) {
+		if ev.Type == core.EventObjectsMatched {
+			json.Unmarshal(ev.Payload, &m1)
+		}
+	}
+	if !reflect.DeepEqual(m1.Standards, []string{"oldest_first"}) {
+		t.Fatalf("the standards that would have found the pairing: %v", m1.Standards)
+	}
+	if _, err := s.GetBundle(ctx, core.LearnedBundleID("incoming-payments", "oldest_first")); err == nil {
+		t.Fatal("one pairing proposes nothing yet")
+	}
+	submit("l2", "bank.statement.line", "2026-09-11", `{"date":"2026-09-11","amount":"30.00","currency":"PLN","reference":"przelew","counterparty_account":"PL60"}`)
+	if _, errs := x.ProcessPending(ctx); len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	get("/api/views/bank-grid", &g)
+	line2 := g.Sides[0].Items[0].ObjectID
+	var res2 struct {
+		EventID  int64 `json:"event_id"`
+		Proposed *struct {
+			BundleID string `json:"bundle_id"`
+		} `json:"proposed"`
+	}
+	if code, msg := post("/api/activities/pair_items/trigger", map[string]any{"inputs": map[string]any{
+		"pairing": map[string]any{"matching": "match-incoming-payments", "trigger": line2, "items": []string{fv1}}}}, &res2); code != 200 {
+		t.Fatalf("second pairing: %d %s", code, msg)
+	}
+	if res2.Proposed == nil || res2.Proposed.BundleID != "learned-incoming-payments-oldest_first" {
+		t.Fatalf("the second pairing the same way proposes: %+v", res2)
+	}
+	b, err := s.GetBundle(ctx, "learned-incoming-payments-oldest_first")
+	if err != nil || b.Status != core.StatusDraft || b.Warrant == nil || b.Warrant.Basis != "client" || len(b.Warrant.Citations) != 2 ||
+		!strings.Contains(b.Warrant.Citations[0], "#"+strconvItoa(res.EventID)) || !strings.Contains(b.Warrant.Citations[1], "#"+strconvItoa(res2.EventID)) {
+		t.Fatalf("the proposal: %+v %v", b, err)
+	}
+	draft, err := s.GetRule(ctx, "match-incoming-payments")
+	if err != nil || draft.Status != core.StatusDraft || draft.Version != 2 || len(draft.Spec.Effect.Matching.Policy) != 2 ||
+		draft.Spec.Effect.Matching.Policy[1].Strategy != "oldest_first" || draft.CreatedBy != "kernel" {
+		t.Fatalf("the drafted next version: %+v %v", draft.Spec.Effect.Matching, err)
+	}
+	// The owner approves; the third part payment (10.00 against the 20.00
+	// still open) matches by itself, by the learned step.
+	if _, _, procErrs, err := x.ApproveBundle(ctx, b.ID, "krzysztof", "2026-09-30"); err != nil || len(procErrs) > 0 {
+		t.Fatalf("approve: %v %v", err, procErrs)
+	}
+	submit("l3", "bank.statement.line", "2026-09-12", `{"date":"2026-09-12","amount":"10.00","currency":"PLN","reference":"przelew","counterparty_account":"PL60"}`)
+	if _, errs := x.ProcessPending(ctx); len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	get("/api/views/bank-grid", &g)
+	if len(g.Sides[0].Items) != 0 || g.Sides[1].Items[0].Label != "FV/1" || g.Sides[1].Items[0].Cells["open"]["v"] != "10.00" {
+		t.Fatalf("after the learned step: %+v", g.Sides)
+	}
+	var last core.MatchedObjects
+	for _, ev := range mustDerived(t, s) {
+		if ev.Type == core.EventObjectsMatched {
+			json.Unmarshal(ev.Payload, &last)
+		}
+	}
+	if last.Strategy != "oldest_first" || last.Step != 2 {
+		t.Fatalf("the third payment, matched by the learned step: %+v", last)
+	}
+	// Pairing the same way again proposes nothing: the standard is a step now.
+	// And an overruled proposal never returns — the bundle id is one per
+	// structure and standard.
+
+	// 6. Replay reproduces the person's match as it does the policy's.
 	before, _ := s.AllObjects(ctx)
 	if _, err := x.Replay(ctx); err != nil {
 		t.Fatal(err)
@@ -265,4 +336,15 @@ func strconvItoa(n int64) string { return json.Number(fmtInt(n)).String() }
 func fmtInt(n int64) string {
 	b, _ := json.Marshal(n)
 	return string(b)
+}
+
+func mustDerived(t *testing.T, s interface {
+	EventsByKind(ctx context.Context, kind string) ([]core.Event, error)
+}) []core.Event {
+	t.Helper()
+	evs, err := s.EventsByKind(context.Background(), core.KindDerived)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return evs
 }

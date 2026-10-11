@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"rhea/internal/core"
+	"rhea/internal/match"
 	"rhea/internal/store"
 )
 
@@ -33,6 +34,94 @@ type Triggered struct {
 	// Backfilled counts the past events approve_backfill explained further.
 	Backfilled int
 	backfill   *BackfillPlan // planned before the append, booked after commit
+	// Proposed is the bundle the host drafted on this pairing, when a
+	// person has paired the same way twice: the standard as a policy step,
+	// waiting for approval.
+	Proposed *core.Bundle
+}
+
+// learnedProposal decides, before the pairing is appended, whether the host
+// proposes a standard: one of the pairing's standards that the policy lacks,
+// that an earlier pairing of this structure was also explained by, and that
+// was never proposed before — a rejected proposal never returns. It returns
+// the write that drafts the rule's next version with the step appended,
+// bundled with a client warrant naming both pairings, or nil.
+func (x *Executor) learnedProposal(ctx context.Context, rule core.Rule, matched *core.MatchedObjects) (func(tx store.Querier, eventID int64) (*core.Bundle, error), error) {
+	tmpl := rule.Spec.Effect.Matching
+	if len(matched.Standards) == 0 {
+		return nil, nil
+	}
+	derived, err := x.Store.EventsByKind(ctx, core.KindDerived)
+	if err != nil {
+		return nil, err
+	}
+	for _, standard := range matched.Standards {
+		if hasStandard(tmpl.Policy, standard) {
+			continue
+		}
+		if _, err := x.Store.GetBundle(ctx, core.LearnedBundleID(tmpl.Name, standard)); err == nil {
+			continue // proposed already: open, approved, or overruled — never again
+		}
+		var earlier int64
+		for _, ev := range derived {
+			if ev.Type != core.EventObjectsMatched {
+				continue
+			}
+			var m core.MatchedObjects
+			if json.Unmarshal(ev.Payload, &m) != nil || m.Matching != tmpl.Name || m.Strategy != match.Selected {
+				continue
+			}
+			for _, s := range m.Standards {
+				if s == standard && ev.CauseEventID != nil {
+					earlier = *ev.CauseEventID
+				}
+			}
+		}
+		if earlier == 0 {
+			continue // the first time: noted in the event, nothing proposed yet
+		}
+		step := core.MatchingStep{Strategy: standard}
+		switch standard {
+		case "reference partial":
+			step = core.MatchingStep{Strategy: match.Reference, Partial: true}
+		case match.Subset:
+			step.MaxItems = 0
+			for name, allocs := range matched.Sides {
+				if name != tmpl.Trigger && len(allocs) > step.MaxItems {
+					step.MaxItems = len(allocs)
+				}
+			}
+			if step.MaxItems < match.DefaultMaxItems {
+				step.MaxItems = match.DefaultMaxItems
+			}
+		}
+		return func(tx store.Querier, eventID int64) (*core.Bundle, error) {
+			next := rule
+			next.Status = core.StatusDraft
+			next.CreatedBy = "kernel"
+			next.Description = fmt.Sprintf("%s; learned: %s, after the owner paired this way twice", rule.Description, standard)
+			spec := *rule.Spec.Effect.Matching
+			spec.Policy = append(append([]core.MatchingStep{}, rule.Spec.Effect.Matching.Policy...), step)
+			next.Spec.Effect.Matching = &spec
+			next, err := store.InsertRuleVersion(ctx, tx, next)
+			if err != nil {
+				return nil, err
+			}
+			b := core.Bundle{ID: core.LearnedBundleID(tmpl.Name, standard), Status: core.StatusDraft,
+				Description: fmt.Sprintf("The owner paired %s by hand the %s way twice: add %s as the last step of the policy.", tmpl.Name, standard, standard),
+				Members:     []core.Member{{Kind: core.KindRule, Name: next.ID, Version: next.Version}},
+				Warrant: &core.Warrant{Basis: "client",
+					Citations: []string{fmt.Sprintf("paired by hand: event #%d", earlier), fmt.Sprintf("paired by hand: event #%d", eventID)}},
+				Question:  fmt.Sprintf("Should %s also match the %s way?", tmpl.Name, standard),
+				CreatedBy: "kernel"}
+			b, err = store.InsertBundleVersion(ctx, tx, b)
+			if err != nil {
+				return nil, err
+			}
+			return &b, nil
+		}, nil
+	}
+	return nil, nil
 }
 
 // TriggerActivity fires a declared verb: input validation, ref existence,
@@ -319,6 +408,18 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 		if err != nil {
 			return nil, err
 		}
+		// What the host learns: which named standards would have found this
+		// pairing over the sides as the policy reads them. After a person
+		// has paired the same way twice, the host proposes the standard as a
+		// step of the policy — a draft bundle behind the gate (DIRECTION
+		// 2026-10-11, the brief; "the host remembers").
+		if matched.Standards, err = x.standardsFor(ctx, rule.Spec.Effect.Matching, matched, lookup, get); err != nil {
+			return nil, err
+		}
+		proposal, err := x.learnedProposal(ctx, *rule, matched)
+		if err != nil {
+			return nil, err
+		}
 		var payload any
 		if err := json.Unmarshal(ev.Payload, &payload); err != nil {
 			return nil, err
@@ -331,7 +432,17 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 		return func(tx store.Querier) error {
 			root := *ev
 			root.ID = out.EventID
-			return x.bookTx(ctx, tx, root, nodes)
+			if err := x.bookTx(ctx, tx, root, nodes); err != nil {
+				return err
+			}
+			if proposal != nil {
+				b, err := proposal(tx, out.EventID)
+				if err != nil {
+					return err
+				}
+				out.Proposed = b
+			}
+			return nil
 		}, nil
 
 	case "bundle.rejected":
