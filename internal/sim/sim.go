@@ -264,27 +264,21 @@ type gen struct {
 	counts map[string]int
 
 	salesNo, deliveryNo, purchaseNo, complaintNo int
-	sales                                        []saleFact
-	purchases                                    []purchaseFact
+	sales                                        []invoiceFact
+	purchases                                    []invoiceFact
 	salesNet, salesVAT, purchaseVAT, pzValue     int64
 	pzLines, movesIn, movesOut, resolved         int
 	levels                                       []levelFact
 }
 
-type saleFact struct {
-	number   string
-	date     time.Time
-	gross    int64
-	paid     bool
-	customer string
-}
-
-type purchaseFact struct {
-	number   string
-	date     time.Time
-	gross    int64
-	paid     bool
-	supplier Party
+// invoiceFact is a generated invoice the bank may settle; the party is the
+// customer who pays us or the supplier we pay.
+type invoiceFact struct {
+	number string
+	date   time.Time
+	gross  int64
+	paid   bool
+	party  Party
 }
 
 type levelFact struct{ book, counted int }
@@ -409,7 +403,7 @@ func (g *gen) month(start time.Time) {
 			"payment_days": g.p.Volume.PaymentDays, "market": "pl", "lines": lines})
 		g.salesNet += net
 		g.salesVAT += vat
-		g.sales = append(g.sales, saleFact{number: number, date: date, gross: net + vat, customer: cust.Name})
+		g.sales = append(g.sales, invoiceFact{number: number, date: date, gross: net + vat, party: cust})
 		g.counts["sales_invoice"]++
 	}
 	for i := 0; i < g.p.Volume.Issues; i++ {
@@ -461,7 +455,7 @@ func (g *gen) purchaseInvoice(date time.Time, sup Party, net int64, forDocument 
 	}
 	g.emit("purchase.invoice.received", ymd(date), payload)
 	g.purchaseVAT += vat
-	g.purchases = append(g.purchases, purchaseFact{number: number, date: date, gross: net + vat, supplier: sup})
+	g.purchases = append(g.purchases, invoiceFact{number: number, date: date, gross: net + vat, party: sup})
 	g.counts["purchase_invoice"]++
 }
 
@@ -507,39 +501,24 @@ func (g *gen) stockCounts() {
 func (g *gen) payments() {
 	end, _ := time.Parse("2006-01", g.p.From)
 	end = end.AddDate(0, g.p.Months, -1)
-	customers := map[string]Party{}
-	for _, c := range g.p.Customers {
-		customers[c.Name] = c
-	}
-	line := func(date time.Time, gross int64, direction, reference string, who Party) {
-		g.emit("bank.statement.line", ymd(date), map[string]any{"date": ymd(date), "amount": core.FormatMoney(gross),
-			"currency": "PLN", "direction": direction, "reference": reference, "counterparty": who.Name,
-			"counterparty_account": iban(who), "account": iban(g.p.Company)})
-	}
-	for i := range g.sales {
-		s := &g.sales[i]
-		if g.pick(100) >= g.p.Volume.PaidShare {
-			continue
+	settle := func(invoices []invoiceFact, direction string) {
+		for i := range invoices {
+			inv := &invoices[i]
+			if g.pick(100) >= g.p.Volume.PaidShare {
+				continue
+			}
+			paid := inv.date.AddDate(0, 0, 3+g.pick(max(1, g.p.Volume.PaymentDays+10)))
+			if paid.After(end) {
+				continue
+			}
+			inv.paid = true
+			g.emit("bank.statement.line", ymd(paid), map[string]any{"date": ymd(paid), "amount": core.FormatMoney(inv.gross),
+				"currency": "PLN", "direction": direction, "reference": inv.number, "counterparty": inv.party.Name,
+				"counterparty_account": iban(inv.party), "account": iban(g.p.Company)})
 		}
-		paid := s.date.AddDate(0, 0, 3+g.pick(max(1, g.p.Volume.PaymentDays+10)))
-		if paid.After(end) {
-			continue
-		}
-		s.paid = true
-		line(paid, s.gross, "credit", s.number, customers[s.customer])
 	}
-	for i := range g.purchases {
-		pf := &g.purchases[i]
-		if g.pick(100) >= g.p.Volume.PaidShare {
-			continue
-		}
-		paid := pf.date.AddDate(0, 0, 3+g.pick(max(1, g.p.Volume.PaymentDays+10)))
-		if paid.After(end) {
-			continue
-		}
-		pf.paid = true
-		line(paid, pf.gross, "debit", pf.number, pf.supplier)
-	}
+	settle(g.sales, "credit")    // money in: a customer pays us
+	settle(g.purchases, "debit") // money out: we pay a supplier
 }
 
 func (g *gen) facts() Facts {

@@ -227,7 +227,7 @@ func ExpandPostings(p *core.PostingsTemplate, postingType core.ObjectType, ev co
 	if diff := fdebits - fcredits; diff != 0 {
 		if p.Convert == nil || p.Convert.RoundingAccount == "" {
 			return nil, fmt.Errorf("rounding broke the balance by %s %s — the rule declares no rounding_account",
-				core.FormatMoney(absInt64(diff)), bookCurrency)
+				core.FormatMoney(core.Abs(diff)), bookCurrency)
 		}
 		code, err := evalString(p.Convert.RoundingAccount, payload, env)
 		if err != nil {
@@ -278,13 +278,6 @@ func divHalfUp(n, d int64) int64 {
 		q++
 	}
 	return q
-}
-
-func absInt64(n int64) int64 {
-	if n < 0 {
-		return -n
-	}
-	return n
 }
 
 // PeriodLockedError refuses a posting into a closed (book, month). Typed so

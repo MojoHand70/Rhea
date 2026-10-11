@@ -47,3 +47,11 @@ func FormatMoney(minor int64) string {
 	}
 	return fmt.Sprintf("%s%d.%02d", sign, minor/100, minor%100)
 }
+
+// Abs is the magnitude of an amount in minor units.
+func Abs(n int64) int64 {
+	if n < 0 {
+		return -n
+	}
+	return n
+}

@@ -1947,4 +1947,11 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   missing field. The generator now emits `vat`, `gross` and `market` too, and the JSON
   path and the document path give the same event. A persona's own rules still compute
   the VAT from the net; the eval checks they agree with the document.
+- **One `core.Abs`.** The executor and the generator each kept a private copy of the
+  same int64 magnitude; it lives in core beside the money formatters now.
+- **One settle loop in the generator.** Sales and purchases were paid by two copies of
+  the same loop, differing in the direction and in how the party was kept (a name to
+  look up against a Party). Both invoice sides are one `invoiceFact` carrying its party,
+  settled by one closure; the random draws come in the same order, so every generated
+  persona is byte-for-byte what it was.
 

@@ -316,7 +316,7 @@ func (g *gen) statements(events []Event) []Document {
 			if ev.Payload["direction"] == "debit" {
 				mark, kind, amount = "D", "PRZELEW WYCHODZACY", -amount
 			}
-			w(":61:%s%s%s%sNTRFNONREF//%d", day.Format("060102"), day.Format("0102"), mark, mt940Amount(absMinor(amount)), n+1)
+			w(":61:%s%s%s%sNTRFNONREF//%d", day.Format("060102"), day.Format("0102"), mark, mt940Amount(core.Abs(amount)), n+1)
 			w(":86:%s|%s|%s|%s", kind, ref, who, whoAccount)
 			balance += amount
 		}
@@ -329,13 +329,6 @@ func (g *gen) statements(events []Event) []Document {
 		})
 	}
 	return out
-}
-
-func absMinor(n int64) int64 {
-	if n < 0 {
-		return -n
-	}
-	return n
 }
 
 // mt940Amount writes minor units the way the format does: a comma decimal.
