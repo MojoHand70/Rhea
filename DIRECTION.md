@@ -1824,9 +1824,14 @@ because a rule already has a `match`), four strategies (reference, exact,
 subset, oldest first) with tolerance and a time window, one baked event
 per match or non-match, consequences as ordinary rules (`each` on amend
 earned), replay and simulation sharing the path, the walk showing it, the
-agent taught. Next in order: the persona scene and the Poland pack's
-default policy, FX and netting, three-way with the PZ, intercompany, the
-grid notion, the host proposing strategies.
+agent taught; the persona scene — the simulated customers pay in every way
+the policy names (named, exact, several at once, two grosz short, a named
+part, an unnamed part the policy reads as the oldest), the generator
+predicts the settlement without any rule, the interview answers carry the
+owner's policy, both personas DONE as JSON and as documents. Next in
+order: the Poland pack's default policy as drafts with warrants, FX and
+netting, three-way with the PZ, intercompany, the grid notion, the host
+proposing strategies.
 
 ## Language decisions with a recorded destination
 

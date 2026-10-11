@@ -229,6 +229,14 @@ type Facts struct {
 	Sums   []eval.Sum
 	// Totals for the report, in minor units.
 	SalesNet, SalesVAT, PurchaseVAT, PZValue int64
+	// The bank story's identity, in minor units: money in equals the gross
+	// of the sales invoices it paid, less the differences written off, plus
+	// what it paid of invoices still open, plus the stray line nobody can
+	// match; money out equals the gross of the purchase invoices it paid.
+	BankIn, BankOut, PaidSalesGross, PaidPurchaseGross, Differences, PartialOpen, Stray int64
+	// Ways counts the payments by the way they were made, after every
+	// fall-back: named, exact, subset, short, named_part, oldest_part, stray.
+	Ways map[string]int
 	// Documents are the same facts as files, the way channels deliver them
 	// (documents.go); each names the events it carries.
 	Documents []Document
@@ -241,7 +249,7 @@ func Generate(p Persona) (Facts, error) {
 		return Facts{}, err
 	}
 	g := &gen{p: p, rng: rand.New(rand.NewPCG(p.Seed, p.Seed^0x9e3779b97f4a7c15)),
-		stock: map[string]int{}, counts: map[string]int{}}
+		stock: map[string]int{}, counts: map[string]int{}, ways: map[string]int{}}
 	g.masterData()
 	start, _ := time.Parse("2006-01", p.From)
 	for m := 0; m < p.Months; m++ {
@@ -268,7 +276,11 @@ type gen struct {
 	purchases                                    []invoiceFact
 	salesNet, salesVAT, purchaseVAT, pzValue     int64
 	pzLines, movesIn, movesOut, resolved         int
-	levels                                       []levelFact
+	// the bank story as the generator predicts it (payments)
+	ways                                                                                         map[string]int
+	settlements                                                                                  int
+	bankIn, bankOut, paidSalesGross, paidPurchaseGross, differences, partialOpen, stray, settled int64
+	levels                                                                                       []levelFact
 }
 
 // invoiceFact is a generated invoice the bank may settle; the party is the
@@ -277,6 +289,7 @@ type invoiceFact struct {
 	number string
 	date   time.Time
 	gross  int64
+	open   int64 // what payments have not yet settled, as the generator predicts it
 	paid   bool
 	party  Party
 }
@@ -305,13 +318,14 @@ func (g *gen) masterData() {
 	for _, a := range g.p.Accounts {
 		g.emit("account.created", day, map[string]any{"code": a.Code, "name": a.Name, "type": a.Type})
 	}
+	// Every party carries its account: the key a bank line is matched by.
 	g.emit("company.registered", day, map[string]any{"name": g.p.Company.Name, "kind": "self",
-		"vat_id": g.p.Company.VATID, "country": g.p.Company.Country})
+		"vat_id": g.p.Company.VATID, "country": g.p.Company.Country, "iban": iban(g.p.Company)})
 	for _, c := range g.p.Customers {
-		g.emit("company.registered", day, map[string]any{"name": c.Name, "kind": "customer", "vat_id": c.VATID, "country": c.Country})
+		g.emit("company.registered", day, map[string]any{"name": c.Name, "kind": "customer", "vat_id": c.VATID, "country": c.Country, "iban": iban(c)})
 	}
 	for _, s := range g.p.Suppliers {
-		g.emit("company.registered", day, map[string]any{"name": s.Name, "kind": "supplier", "vat_id": s.VATID, "country": s.Country})
+		g.emit("company.registered", day, map[string]any{"name": s.Name, "kind": "supplier", "vat_id": s.VATID, "country": s.Country, "iban": iban(s)})
 	}
 	for _, it := range g.p.Items {
 		g.emit("item.created", day, map[string]any{"sku": it.SKU, "name": it.Name, "unit": it.Unit})
@@ -494,36 +508,307 @@ func (g *gen) stockCounts() {
 	}
 }
 
-// payments: a share of sales invoices is paid to us, and a share of purchase
-// invoices is paid by us, each by a bank line naming the invoice, some days
-// after issue and inside the period. A line says what a statement says:
-// the direction, the account, the counterparty and its account.
+// payWay is one of the ways a customer pays — the ways the owner's matching
+// policy names (DIRECTION 2026-10-11): the simulated customer pays in every
+// one of them.
+type payWay int
+
+const (
+	payNamed      payWay = iota // the invoice named in the title, whole
+	payExact                    // unnamed, the exact amount
+	paySubset                   // unnamed, several invoices of one customer in one line
+	payShort                    // named, two grosz short — the difference written off
+	payNamedPart                // named, in part; the rest named later
+	payOldestPart               // unnamed, in part: the customer's oldest open invoice; the rest named later
+)
+
+type plannedPayment struct {
+	date     time.Time
+	way      payWay
+	invs     []*invoiceFact
+	purchase bool
+}
+
+// payments: a share of sales invoices is paid to us, in every way the
+// matching policy names, and a share of purchase invoices is paid by us,
+// whole, naming the invoice. The generator predicts what the policy
+// settles without any rule: it walks the planned payments in date order
+// with the open amount of every invoice, and a scenario the policy could
+// read two ways (an unnamed amount two open invoices share, a sum two
+// subsets reach) falls back to a payment naming the invoice. In the eval
+// every invoice of the period exists before any line is matched, so "open"
+// counts them all; a live run sees only the past ones, and the scenarios
+// hold either way — the oldest open invoice is a past one, and fewer
+// candidates make nothing ambiguous. One stray line, from a payer nobody
+// knows, stays open for the person. A line says what a statement says: the
+// direction, the account, the counterparty and its account.
 func (g *gen) payments() {
 	end, _ := time.Parse("2006-01", g.p.From)
 	end = end.AddDate(0, g.p.Months, -1)
-	settle := func(invoices []invoiceFact, direction string) {
-		for i := range invoices {
-			inv := &invoices[i]
-			if g.pick(100) >= g.p.Volume.PaidShare {
-				continue
+	later := func(from time.Time) time.Time {
+		return from.AddDate(0, 0, 3+g.pick(max(1, g.p.Volume.PaymentDays+10)))
+	}
+	var plans []plannedPayment
+	members := map[string][]*invoiceFact{} // customer → invoices to be paid together
+	for i := range g.sales {
+		s := &g.sales[i]
+		s.open = s.gross
+		if g.pick(100) >= g.p.Volume.PaidShare {
+			continue
+		}
+		way := payNamed
+		switch d := g.pick(20); {
+		case d < 8:
+			way = payNamed
+		case d < 11:
+			way = payExact
+		case d < 15:
+			way = paySubset
+		case d < 17:
+			way = payShort
+		case d < 18:
+			way = payNamedPart
+		default:
+			way = payOldestPart
+		}
+		if way == paySubset {
+			members[s.party.Name] = append(members[s.party.Name], s)
+			continue
+		}
+		plans = append(plans, plannedPayment{date: later(s.date), way: way, invs: []*invoiceFact{s}})
+	}
+	names := make([]string, 0, len(members))
+	for name := range members {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		group := members[name]
+		for len(group) >= 2 {
+			k := min(len(group), 2+g.pick(2))
+			together := group[:k]
+			group = group[k:]
+			latest := together[0].date
+			for _, m := range together {
+				if m.date.After(latest) {
+					latest = m.date
+				}
 			}
-			paid := inv.date.AddDate(0, 0, 3+g.pick(max(1, g.p.Volume.PaymentDays+10)))
-			if paid.After(end) {
-				continue
-			}
-			inv.paid = true
-			g.emit("bank.statement.line", ymd(paid), map[string]any{"date": ymd(paid), "amount": core.FormatMoney(inv.gross),
-				"currency": "PLN", "direction": direction, "reference": inv.number, "counterparty": inv.party.Name,
-				"counterparty_account": iban(inv.party), "account": iban(g.p.Company)})
+			plans = append(plans, plannedPayment{date: later(latest), way: paySubset, invs: together})
+		}
+		for _, m := range group { // a lone member pays alone, named
+			plans = append(plans, plannedPayment{date: later(m.date), way: payNamed, invs: []*invoiceFact{m}})
 		}
 	}
-	settle(g.sales, "credit")    // money in: a customer pays us
-	settle(g.purchases, "debit") // money out: we pay a supplier
+	for i := range g.purchases {
+		pf := &g.purchases[i]
+		pf.open = pf.gross
+		if g.pick(100) >= g.p.Volume.PaidShare {
+			continue
+		}
+		plans = append(plans, plannedPayment{date: later(pf.date), way: payNamed, invs: []*invoiceFact{pf}, purchase: true})
+	}
+	// The walk: earliest first, follow-ups (the rest of a part payment)
+	// joining the queue at their own date.
+	for len(plans) > 0 {
+		sort.SliceStable(plans, func(i, j int) bool { return plans[i].date.Before(plans[j].date) })
+		pl := plans[0]
+		plans = plans[1:]
+		if pl.date.After(end) {
+			continue
+		}
+		if rest, ok := g.apply(pl, later); ok {
+			plans = append(plans, rest)
+		}
+	}
+	// The stray line: a payer no company carries the account of.
+	mid, _ := time.Parse("2006-01", g.p.From)
+	mid = mid.AddDate(0, g.p.Months/2, 14)
+	g.line(mid, 10000, "credit", "PRZELEW", Party{Name: "Nieznany Płatnik", IBAN: "PL00000000000000000000000000"})
+	g.stray += 10000
+	g.ways["stray"]++
+}
+
+// line emits one bank statement line.
+func (g *gen) line(date time.Time, amount int64, direction, reference string, who Party) {
+	g.emit("bank.statement.line", ymd(date), map[string]any{"date": ymd(date), "amount": core.FormatMoney(amount),
+		"currency": "PLN", "direction": direction, "reference": reference, "counterparty": who.Name,
+		"counterparty_account": iban(who), "account": iban(g.p.Company)})
+	g.counts["bank_line"]++
+	if direction == "credit" {
+		g.bankIn += amount
+	} else {
+		g.bankOut += amount
+	}
+}
+
+// openOf lists a party's invoices with something open, the way the engine
+// orders them: by date, then the order they were issued in.
+func (g *gen) openOf(party string, purchase bool) []*invoiceFact {
+	all := g.sales
+	if purchase {
+		all = g.purchases
+	}
+	var out []*invoiceFact
+	for i := range all {
+		if all[i].party.Name == party && all[i].open > 0 {
+			out = append(out, &all[i])
+		}
+	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].date.Before(out[j].date) })
+	return out
+}
+
+// apply emits the line of one planned payment and records what the policy
+// will settle; a scenario the policy could read two ways falls back to
+// naming the invoice. It returns the follow-up a part payment schedules.
+func (g *gen) apply(pl plannedPayment, later func(time.Time) time.Time) (plannedPayment, bool) {
+	x := pl.invs[0]
+	direction := "credit"
+	if pl.purchase {
+		direction = "debit"
+	}
+	settle := func(inv *invoiceFact, amount int64) {
+		before := inv.open
+		inv.open -= amount
+		g.settlements++
+		g.settled += amount
+		if inv.open == 0 {
+			inv.paid = true
+			g.partialOpen -= inv.gross - before // what earlier part payments had left open
+			if pl.purchase {
+				g.paidPurchaseGross += inv.gross
+			} else {
+				g.paidSalesGross += inv.gross
+			}
+		}
+	}
+	named := func(inv *invoiceFact) {
+		g.line(pl.date, inv.open, direction, inv.number, inv.party)
+		settle(inv, inv.open)
+		g.ways["named"]++
+	}
+	// An invoice another line settled meanwhile (a part payment's rest
+	// after its own named payment, a subset member paid in part) has
+	// nothing left for this plan.
+	var live []*invoiceFact
+	for _, inv := range pl.invs {
+		if inv.open > 0 {
+			live = append(live, inv)
+		}
+	}
+	if len(live) == 0 {
+		return plannedPayment{}, false
+	}
+	pl.invs, x = live, live[0]
+	if pl.way == paySubset && len(live) < 2 {
+		named(x)
+		return plannedPayment{}, false
+	}
+	open := g.openOf(x.party.Name, pl.purchase)
+	switch pl.way {
+	case payExact:
+		if countOpen(open, x.open) != 1 {
+			named(x)
+			return plannedPayment{}, false
+		}
+		g.line(pl.date, x.open, direction, "PRZELEW", x.party)
+		settle(x, x.open)
+		g.ways["exact"]++
+	case paySubset:
+		var sum int64
+		for _, inv := range pl.invs {
+			sum += inv.open
+		}
+		// the fewest items first: no single invoice, no smaller subset,
+		// and exactly one subset of this size
+		if countOpen(open, sum) != 0 || subsets(open, sum, len(pl.invs)-1) != 0 || subsets(open, sum, len(pl.invs)) != 1 {
+			for _, inv := range pl.invs {
+				named(inv)
+			}
+			return plannedPayment{}, false
+		}
+		g.line(pl.date, sum, direction, "PRZELEW", x.party)
+		for _, inv := range pl.invs {
+			settle(inv, inv.open)
+		}
+		g.ways["subset"]++
+	case payShort:
+		g.line(pl.date, x.open-2, direction, x.number, x.party)
+		g.differences += 2
+		g.counts["matching_difference"]++
+		settle(x, x.open)
+		g.ways["short"]++
+	case payNamedPart, payOldestPart:
+		target := x
+		if pl.way == payOldestPart {
+			target = open[0] // the customer's oldest open invoice, whoever it is
+		}
+		part := target.open / 2
+		// an unnamed part must match nothing whole: no single invoice, no
+		// subset the policy would find first; a named part only needs its
+		// invoice open
+		if part < 1 || (pl.way == payOldestPart && (countOpen(open, part) != 0 || subsets(open, part, 4) != 0)) {
+			named(x)
+			return plannedPayment{}, false
+		}
+		reference, way := target.number, "named_part"
+		if pl.way == payOldestPart {
+			reference, way = "PRZELEW", "oldest_part"
+		}
+		g.line(pl.date, part, direction, reference, target.party)
+		settle(target, part)
+		g.partialOpen += part
+		g.ways[way]++
+		return plannedPayment{date: later(pl.date), way: payNamed, invs: []*invoiceFact{target}, purchase: pl.purchase}, true
+	default:
+		named(x)
+	}
+	return plannedPayment{}, false
+}
+
+func countOpen(open []*invoiceFact, amount int64) int {
+	n := 0
+	for _, inv := range open {
+		if inv.open == amount {
+			n++
+		}
+	}
+	return n
+}
+
+// subsets counts the subsets of exactly k open invoices whose open amounts
+// sum to the target — the generator's check that the policy's subset step
+// reads a line one way only. Stops counting at two.
+func subsets(open []*invoiceFact, target int64, k int) int {
+	if k <= 0 {
+		return 0
+	}
+	n := 0
+	var walk func(i, left int, sum int64)
+	walk = func(i, left int, sum int64) {
+		if n >= 2 || sum > target {
+			return
+		}
+		if left == 0 {
+			if sum == target {
+				n++
+			}
+			return
+		}
+		for j := i; j <= len(open)-left; j++ {
+			walk(j+1, left-1, sum+open[j].open)
+		}
+	}
+	walk(0, k, 0)
+	return n
 }
 
 func (g *gen) facts() Facts {
 	f := Facts{Events: g.events, Counts: map[string]int{}, SalesNet: g.salesNet, SalesVAT: g.salesVAT,
-		PurchaseVAT: g.purchaseVAT, PZValue: g.pzValue}
+		PurchaseVAT: g.purchaseVAT, PZValue: g.pzValue,
+		BankIn: g.bankIn, BankOut: g.bankOut, PaidSalesGross: g.paidSalesGross, PaidPurchaseGross: g.paidPurchaseGross,
+		Differences: g.differences, PartialOpen: g.partialOpen, Stray: g.stray, Ways: g.ways}
 	for k, v := range g.counts {
 		if v > 0 {
 			f.Counts[k] = v
@@ -556,6 +841,18 @@ func (g *gen) facts() Facts {
 	}
 	if paidPurchases > 0 {
 		f.Where = append(f.Where, eval.Where{Type: "purchase_invoice", Field: "status", Value: "paid", Count: paidPurchases})
+	}
+	// The bank story: every line but the stray one settles; a settlement
+	// per invoice a match allocated; a difference per short payment.
+	if lines := g.counts["bank_line"]; lines > 0 {
+		f.Where = append(f.Where,
+			eval.Where{Type: "bank_line", Field: "status", Value: "settled", Count: lines - 1},
+			eval.Where{Type: "bank_line", Field: "status", Value: "open", Count: 1})
+		f.Counts["settlement"] = g.settlements
+		f.Sums = append(f.Sums, eval.Sum{Type: "settlement", Field: "amount", Total: core.FormatMoney(g.settled)})
+	}
+	if g.counts["matching_difference"] > 0 {
+		f.Sums = append(f.Sums, eval.Sum{Type: "matching_difference", Field: "amount", Total: core.FormatMoney(g.differences)})
 	}
 	postings := 0
 	for kind, lines := range g.p.Postings {
@@ -712,6 +1009,16 @@ func Summary(p Persona, f Facts) string {
 			foreign++
 		}
 	}
+	ways := make([]string, 0, len(f.Ways))
+	for w := range f.Ways {
+		ways = append(ways, w)
+	}
+	sort.Strings(ways)
+	sb.WriteString("payments by way:")
+	for _, w := range ways {
+		fmt.Fprintf(&sb, " %s %d", w, f.Ways[w])
+	}
+	sb.WriteByte('\n')
 	fmt.Fprintf(&sb, "documents: %d KSeF invoices, %d bank statements", docs["ksef"], docs["bank"])
 	if foreign > 0 {
 		fmt.Fprintf(&sb, "; %d purchase invoices from foreign suppliers arrive as PDF (phase 2)", foreign)

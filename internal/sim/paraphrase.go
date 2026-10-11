@@ -27,28 +27,44 @@ func Paraphrase(ctx context.Context, complete func(ctx context.Context, system, 
 	v := Voices{Model: model}
 	for i, a := range p.Interview {
 		user := fmt.Sprintf("Rephrase this answer %d different ways:\n\n%s", n, a.Answer)
-		raw, err := complete(ctx, paraphraseSystem, user)
-		if err != nil {
-			return v, fmt.Errorf("answer %d: %w", i+1, err)
-		}
-		variants, err := decodeVariants(raw)
-		if err != nil {
-			return v, fmt.Errorf("answer %d: %w", i+1, err)
-		}
-		if len(variants) < n {
-			return v, fmt.Errorf("answer %d: model gave %d variants, wanted %d", i+1, len(variants), n)
-		}
-		for k, s := range variants[:n] {
-			if missing := Preserved(a.Answer, s); len(missing) > 0 {
-				return v, fmt.Errorf("answer %d, variant %d drops %v — a paraphrase keeps every fact", i+1, k+1, missing)
+		// A long answer carries many facts, and a model drops one now and
+		// then: the answer is asked again, up to three times, before the
+		// run gives up — the check stays strict, the tool stays usable.
+		var variants []string
+		var last error
+		for attempt := 0; attempt < 3 && variants == nil; attempt++ {
+			raw, err := complete(ctx, paraphraseSystem, user)
+			if err != nil {
+				return v, fmt.Errorf("answer %d: %w", i+1, err)
+			}
+			got, err := decodeVariants(raw)
+			if err != nil {
+				last = fmt.Errorf("answer %d: %w", i+1, err)
+				continue
+			}
+			if len(got) < n {
+				last = fmt.Errorf("answer %d: model gave %d variants, wanted %d", i+1, len(got), n)
+				continue
+			}
+			last = nil
+			for k, s := range got[:n] {
+				if missing := Preserved(a.Answer, s); len(missing) > 0 {
+					last = fmt.Errorf("answer %d, variant %d drops %v — a paraphrase keeps every fact", i+1, k+1, missing)
+					break
+				}
+			}
+			if last == nil {
+				variants = got[:n]
 			}
 		}
-		v.Answers = append(v.Answers, variants[:n])
+		if variants == nil {
+			return v, last
+		}
+		v.Answers = append(v.Answers, variants)
 	}
 	return v, nil
 }
 
-// decodeVariants tolerates prose or fences around the JSON array.
 func decodeVariants(raw string) ([]string, error) {
 	start := strings.IndexByte(raw, '[')
 	if start < 0 {

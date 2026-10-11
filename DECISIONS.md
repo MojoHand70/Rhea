@@ -2044,3 +2044,52 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   proposes. And intercompany matching for group consolidation is one of the
   important kinds — the brief lists it among the three-sided structures; it becomes
   this session's generality customer (customer 5), not an afterthought.
+
+## 2026-10-11 — the persona scene: the simulated customer pays in every way the policy names
+
+- **The generator pays in every way** (`sim.payments`): each sales invoice chosen to be
+  paid (`paid_share`) is paid one of six ways by a fixed draw — named whole (the rule
+  of today, most of them), unnamed at the exact amount, several invoices of one
+  customer in one unnamed line (two or three, grouped per customer), named two grosz
+  short, named in part with the rest named later, or an unnamed part payment that the
+  policy reads as the customer's oldest open invoice, the rest named later. Purchase
+  invoices are paid by us whole, naming them. One stray line per run, from a payer no
+  company carries the account of, stays open for the person.
+- **The expected state is predicted without any rule.** The generator walks the
+  planned payments in date order with every invoice's open amount and records what
+  the policy will settle: paid invoices, a settlement per allocation, a difference per
+  short payment, the line settled or open. A scenario the policy could read two ways —
+  an unnamed amount two open invoices share, a sum a smaller or a second subset reaches,
+  a part that is itself a whole amount — falls back to naming the invoice; the fall-back
+  is the honest answer, not a weaker check. In the eval every invoice of the period
+  exists before any line is matched (the intake precedes the interview), so "open"
+  counts them all; a live run sees only the past ones, and the scenarios hold either
+  way: the oldest open invoice is a past one, and fewer candidates make nothing
+  ambiguous. The facts carry the bank story's identity, checked a second way from the
+  events: money in = the gross of the sales invoices it paid − the differences written
+  off + what it paid of invoices still open + the stray line; money out = the gross of
+  the purchase invoices it paid (`TestFactsAreConsistent`).
+- **The personas carry the policy** (`testdata/customers/*.json`): the master-data
+  answer adds the company's IBAN (the key a bank line is matched by; the generator
+  emits it); the invoice answers add the open amount ("starts at the gross and goes
+  down as payments are matched; a partly paid invoice stays open" — `open` amendable,
+  `open → open` declared); the bank answer states the owner's policy in business words
+  and its reference bundle is the first full matching bundle: `bank_line`, `settlement`
+  (the payment, the document type and id, the amount, the date), `matching_difference`;
+  two matching rules over one shape — money in against the payer's open sales
+  invoices with the policy *reference; reference ± 0.02 → 755; exact; subset ≤ 4;
+  reference partial; oldest first*, money out against the supplier's open purchase
+  invoices without the tolerance; the consequences as ordinary rules (the open
+  amounts by `each` over the match's items, the settlement per item, the difference
+  as an object, the short one posted Wn 755 / Ma 201 in pl-stat). Account 755 joins
+  both charts; the posting policy counts two lines per difference.
+- **Both personas DONE** on the reference answers, facts as JSON and as documents
+  (`TestPersonaReferenceIsDone`, `…WithDocuments`): every bank line but the stray one
+  settled, every settlement and difference counted and summed, every invoice's
+  status as predicted. The voices are regenerated for the changed answers.
+- **Named, not done here**: the Poland pack's own version of the policy as drafts
+  with warrants (the pack's invoice types gain the open amount first); a one-sided
+  time window ("not issued after the payment") when a customer asks — `within_days`
+  is symmetric; a live run over the voices with the model drafting the matching
+  bundle — the agent knows the effect, the measurement is owed with the twelve-run
+  round.

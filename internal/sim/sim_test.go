@@ -86,7 +86,7 @@ func TestFactsAreConsistent(t *testing.T) {
 	if f.Counts["stock_movement"] != movesIn+kinds["goods.issued"] {
 		t.Fatalf("movements %d, want %d in + %d out", f.Counts["stock_movement"], movesIn, kinds["goods.issued"])
 	}
-	want := 3*f.Counts["sales_invoice"] + 3*f.Counts["purchase_invoice"] + 2*lines
+	want := 3*f.Counts["sales_invoice"] + 3*f.Counts["purchase_invoice"] + 2*lines + 2*f.Counts["matching_difference"]
 	if f.Counts["posting"] != want {
 		t.Fatalf("postings %d, want %d", f.Counts["posting"], want)
 	}
@@ -100,30 +100,7 @@ func TestFactsAreConsistent(t *testing.T) {
 	if sums["pz_line.value"] != core.FormatMoney(pzValue) || sums["sales_invoice.vat"] == "" || sums["stock_level.book"] == "" {
 		t.Fatalf("sums = %v", sums)
 	}
-	// Every bank line pays exactly one invoice: money in a sales invoice,
-	// money out a purchase invoice.
-	paidSales, paidPurchases := 0, 0
-	for _, w := range f.Where {
-		if w.Type == "sales_invoice" && w.Value == "paid" {
-			paidSales = w.Count
-		}
-		if w.Type == "purchase_invoice" && w.Value == "paid" {
-			paidPurchases = w.Count
-		}
-	}
-	credits, debits := 0, 0
-	for _, ev := range f.Events {
-		if ev.EventType == "bank.statement.line" {
-			if ev.Payload["direction"] == "debit" {
-				debits++
-			} else {
-				credits++
-			}
-		}
-	}
-	if paidSales != credits || paidPurchases != debits || paidSales == 0 || paidPurchases == 0 {
-		t.Fatalf("paid sales %d vs credits %d, paid purchases %d vs debits %d", paidSales, credits, paidPurchases, debits)
-	}
+	bankStory(t, f)
 	if kinds["stock.counted"] != 2*len(p.Locations)*3 {
 		t.Fatalf("stock counts %d", kinds["stock.counted"])
 	}
@@ -177,5 +154,54 @@ func TestPreserved(t *testing.T) {
 	}
 	if m := sim.Preserved("rounded half up to the grosz", "rounded to the grosz"); len(m) != 1 || m[0] != "half up" {
 		t.Fatalf("dropped rounding not reported: %v", m)
+	}
+}
+
+// The bank story's identity, counted from the events a second way: money
+// in is the gross of the sales invoices it paid, less the differences
+// written off, plus what it paid of invoices still open, plus the one stray
+// line; money out is the gross of the purchase invoices it paid. And the
+// customer pays in every way the policy names, after every fall-back.
+func bankStory(t *testing.T, f sim.Facts) {
+	t.Helper()
+	var credits, debits int64
+	bankLines := 0
+	for _, ev := range f.Events {
+		if ev.EventType == "bank.statement.line" {
+			bankLines++
+			amount, _ := core.ParseMoney(ev.Payload["amount"].(string))
+			if ev.Payload["direction"] == "debit" {
+				debits += amount
+			} else {
+				credits += amount
+			}
+		}
+	}
+	if credits != f.BankIn || debits != f.BankOut || bankLines != f.Counts["bank_line"] {
+		t.Fatalf("lines: in %d vs %d, out %d vs %d, %d vs %d", credits, f.BankIn, debits, f.BankOut, bankLines, f.Counts["bank_line"])
+	}
+	if f.BankIn != f.PaidSalesGross-f.Differences+f.PartialOpen+f.Stray || f.BankOut != f.PaidPurchaseGross {
+		t.Fatalf("money in %d ≠ paid %d − differences %d + partial %d + stray %d, or out %d ≠ paid %d",
+			f.BankIn, f.PaidSalesGross, f.Differences, f.PartialOpen, f.Stray, f.BankOut, f.PaidPurchaseGross)
+	}
+	for _, way := range []string{"named", "exact", "subset", "short", "named_part", "oldest_part", "stray"} {
+		if f.Ways[way] == 0 {
+			t.Fatalf("the customer pays in every way: %v lacks %s", f.Ways, way)
+		}
+	}
+	if f.Counts["matching_difference"] != f.Ways["short"] || f.Counts["settlement"] <= bankLines-1 {
+		t.Fatalf("differences %d vs short %d, settlements %d of %d lines", f.Counts["matching_difference"], f.Ways["short"], f.Counts["settlement"], bankLines)
+	}
+}
+
+// Both personas pay in every way over their nine months.
+func TestEveryWayOfPaying(t *testing.T) {
+	for _, name := range []string{"helios", "nordwind"} {
+		f, err := sim.Generate(load(t, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		bankStory(t, f)
+		t.Logf("%s pays: %v", name, f.Ways)
 	}
 }

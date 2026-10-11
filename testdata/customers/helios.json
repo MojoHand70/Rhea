@@ -105,6 +105,11 @@
       "code": "701",
       "name": "Sprzedaż usług",
       "type": "revenue"
+    },
+    {
+      "code": "755",
+      "name": "Koszty finansowe",
+      "type": "expense"
     }
   ],
   "vat_rates": [
@@ -123,12 +128,13 @@
   },
   "postings": {
     "sales_invoice": 3,
-    "purchase_invoice": 3
+    "purchase_invoice": 3,
+    "matching_difference": 2
   },
   "book": "pl-stat",
   "interview": [
     {
-      "answer": "Our master data: the chart of accounts, the companies we deal with (ourselves, customers, suppliers), the services we sell as catalogue items, and the VAT rates each become their own master-data object.",
+      "answer": "Our master data: the chart of accounts, the companies we deal with (ourselves, customers, suppliers), the services we sell as catalogue items, and the VAT rates each become their own master-data object; each company also carries its bank account number (IBAN) when we know it.",
       "mode": "bundle",
       "reference": {
         "bundle_id": "master-data",
@@ -169,7 +175,8 @@
                     "name": "=$.name",
                     "kind": "=$.kind",
                     "vat_id": "=$.vat_id",
-                    "country": "=$.country"
+                    "country": "=$.country",
+                    "iban": "=$.iban"
                   }
                 }
               }
@@ -222,11 +229,51 @@
             "master data as records of their own"
           ],
           "scope": "any market"
-        }
+        },
+        "object_types": [
+          {
+            "name": "company",
+            "domain": "finance",
+            "is_document": false,
+            "label_field": "name",
+            "fields": [
+              {
+                "name": "name",
+                "type": "string",
+                "required": true
+              },
+              {
+                "name": "kind",
+                "type": "enum",
+                "values": [
+                  "customer",
+                  "supplier",
+                  "self"
+                ],
+                "required": true
+              },
+              {
+                "name": "vat_id",
+                "type": "string",
+                "required": false
+              },
+              {
+                "name": "country",
+                "type": "string",
+                "required": false
+              },
+              {
+                "name": "iban",
+                "type": "string",
+                "required": false
+              }
+            ]
+          }
+        ]
       }
     },
     {
-      "answer": "Every sales invoice we issue becomes a sales invoice document (the type sales_invoice): number, issue date, the seller and the buyer found by NIP, the net amount, the currency and the VAT rate code from the invoice. VAT is the net times the rate's percent divided by 100, rounded half up to the grosz; gross is net plus VAT; the due date is the issue date plus the payment days printed on the invoice; the status starts open and can later move to paid. Each sales invoice is posted in the book pl-stat: debit 201 with the gross, credit 701 with the net, credit 222 with the VAT.",
+      "answer": "Every sales invoice we issue becomes a sales invoice document (the type sales_invoice): number, issue date, the seller and the buyer found by NIP, the net amount, the currency and the VAT rate code from the invoice. VAT is the net times the rate's percent divided by 100, rounded half up to the grosz; gross is net plus VAT; the due date is the issue date plus the payment days printed on the invoice; the status starts open and can later move to paid. The open amount starts at the gross and goes down as payments are matched; a partly paid invoice stays open. Each sales invoice is posted in the book pl-stat: debit 201 with the gross, credit 701 with the net, credit 222 with the VAT.",
       "mode": "bundle",
       "reference": {
         "bundle_id": "sales-invoices",
@@ -296,16 +343,25 @@
                   "open",
                   "paid"
                 ]
+              },
+              {
+                "name": "open",
+                "type": "money",
+                "required": true
               }
             ],
             "lifecycle": {
               "field": "status",
               "transitions": {
                 "open": [
+                  "open",
                   "paid"
                 ]
               }
-            }
+            },
+            "amendable": [
+              "open"
+            ]
           }
         ],
         "rules": [
@@ -331,7 +387,8 @@
                     "gross": "=$.net + round($.net * ref(vat_rate, code, $.vat_rate).percent / 100, 2, half_up)",
                     "vat_rate": "=ref(vat_rate, code, $.vat_rate)",
                     "currency": "=$.currency",
-                    "status": "open"
+                    "status": "open",
+                    "open": "=$.net + round($.net * ref(vat_rate, code, $.vat_rate).percent / 100, 2, half_up)"
                   }
                 }
               }
@@ -386,7 +443,7 @@
       }
     },
     {
-      "answer": "A supplier's invoice becomes a purchase invoice document (the type purchase_invoice): number, invoice date, the supplier found by NIP, our own company as the owner, the net amount, the currency and the VAT rate code. VAT is the net times the rate's percent divided by 100, rounded half up to the grosz, and gross is net plus VAT; the status starts open and can later move to paid. Each purchase invoice is posted in the book pl-stat: debit 402 with the net, debit 221 with the VAT, credit 202 with the gross.",
+      "answer": "A supplier's invoice becomes a purchase invoice document (the type purchase_invoice): number, invoice date, the supplier found by NIP, our own company as the owner, the net amount, the currency and the VAT rate code. VAT is the net times the rate's percent divided by 100, rounded half up to the grosz, and gross is net plus VAT; the status starts open and can later move to paid. The open amount starts at the gross and goes down as payments are matched; a partly paid invoice stays open. Each purchase invoice is posted in the book pl-stat: debit 402 with the net, debit 221 with the VAT, credit 202 with the gross.",
       "mode": "bundle",
       "reference": {
         "bundle_id": "purchase-invoices",
@@ -451,16 +508,25 @@
                   "open",
                   "paid"
                 ]
+              },
+              {
+                "name": "open",
+                "type": "money",
+                "required": true
               }
             ],
             "lifecycle": {
               "field": "status",
               "transitions": {
                 "open": [
+                  "open",
                   "paid"
                 ]
               }
-            }
+            },
+            "amendable": [
+              "open"
+            ]
           }
         ],
         "rules": [
@@ -485,7 +551,8 @@
                     "gross": "=$.net + round($.net * ref(vat_rate, code, $.vat_rate).percent / 100, 2, half_up)",
                     "vat_rate": "=ref(vat_rate, code, $.vat_rate)",
                     "currency": "=$.currency",
-                    "status": "open"
+                    "status": "open",
+                    "open": "=$.net + round($.net * ref(vat_rate, code, $.vat_rate).percent / 100, 2, half_up)"
                   }
                 }
               }
@@ -539,60 +606,521 @@
       }
     },
     {
-      "answer": "An incoming bank statement line (money in) whose reference names one of our sales invoice numbers marks that sales invoice as paid; an outgoing line (money out) whose reference names one of our purchase invoice numbers marks that purchase invoice as paid.",
+      "answer": "Every bank statement line becomes a bank line record (the type bank_line): date, amount, currency, direction, the title as its reference, the counterparty and its account, our account; its open amount starts at the amount, and its status starts open and moves to settled when nothing stays open. Money in is matched against the open sales invoices of the customer whose account it comes from, in this order: the invoice the title names; the named invoice up to 0.02 short or over, the difference written off to 755; an invoice of exactly that amount; the fewest invoices that add up to it, at most 4; the named invoice in part; otherwise the oldest open invoices as far as the money reaches. Money out is matched the same way against the open purchase invoices of the supplier whose account it goes to, without the tolerance. A match moves the open amounts of the invoices and of the line by what was allocated - paid, or settled, when nothing stays open - and records a settlement per invoice (the payment, the document type and id, the amount, the date). A tolerated difference becomes a matching difference record (kind, amount, currency, direction, account, date), and a short one is posted in the book pl-stat: debit the difference account, credit 201.",
       "mode": "bundle",
       "reference": {
         "bundle_id": "bank-payments",
-        "description": "Bank lines settle the invoices they name: money in pays a sales invoice, money out pays a purchase invoice.",
+        "description": "Bank lines are matched against open invoices by the owner's policy; every match settles, records a settlement and writes off a tolerated difference.",
+        "object_types": [
+          {
+            "name": "bank_line",
+            "domain": "finance",
+            "is_document": false,
+            "label_field": "reference",
+            "fields": [
+              {
+                "name": "date",
+                "type": "date",
+                "required": true
+              },
+              {
+                "name": "amount",
+                "type": "money",
+                "required": true
+              },
+              {
+                "name": "currency",
+                "type": "string",
+                "required": true
+              },
+              {
+                "name": "direction",
+                "type": "enum",
+                "values": [
+                  "credit",
+                  "debit"
+                ],
+                "required": true
+              },
+              {
+                "name": "reference",
+                "type": "string",
+                "required": false
+              },
+              {
+                "name": "counterparty",
+                "type": "string",
+                "required": false
+              },
+              {
+                "name": "counterparty_account",
+                "type": "string",
+                "required": false
+              },
+              {
+                "name": "account",
+                "type": "string",
+                "required": false
+              },
+              {
+                "name": "open",
+                "type": "money",
+                "required": true
+              },
+              {
+                "name": "status",
+                "type": "enum",
+                "values": [
+                  "open",
+                  "settled"
+                ],
+                "required": true
+              }
+            ],
+            "lifecycle": {
+              "field": "status",
+              "transitions": {
+                "open": [
+                  "open",
+                  "settled"
+                ]
+              }
+            },
+            "amendable": [
+              "open"
+            ]
+          },
+          {
+            "name": "settlement",
+            "domain": "finance",
+            "is_document": false,
+            "fields": [
+              {
+                "name": "payment",
+                "type": "ref<bank_line>",
+                "required": true
+              },
+              {
+                "name": "document_type",
+                "type": "string",
+                "required": true
+              },
+              {
+                "name": "document_id",
+                "type": "string",
+                "required": true
+              },
+              {
+                "name": "amount",
+                "type": "money",
+                "required": true
+              },
+              {
+                "name": "date",
+                "type": "date",
+                "required": true
+              }
+            ]
+          },
+          {
+            "name": "matching_difference",
+            "domain": "finance",
+            "is_document": false,
+            "fields": [
+              {
+                "name": "matching",
+                "type": "string",
+                "required": true
+              },
+              {
+                "name": "kind",
+                "type": "string",
+                "required": true
+              },
+              {
+                "name": "amount",
+                "type": "money",
+                "required": true
+              },
+              {
+                "name": "currency",
+                "type": "string",
+                "required": true
+              },
+              {
+                "name": "direction",
+                "type": "enum",
+                "values": [
+                  "short",
+                  "over"
+                ],
+                "required": true
+              },
+              {
+                "name": "account",
+                "type": "string",
+                "required": true
+              },
+              {
+                "name": "date",
+                "type": "date",
+                "required": true
+              }
+            ]
+          }
+        ],
         "rules": [
           {
-            "rule_id": "pay-sales-invoice",
-            "description": "an incoming bank line settles the sales invoice it names",
-            "priority": 300,
+            "rule_id": "bank-line",
+            "description": "every bank statement line becomes a bank line record, open for its amount",
+            "priority": 100,
             "spec": {
               "match": {
-                "event_type": "bank.statement.line",
-                "where": [
-                  {
-                    "path": "$.direction",
-                    "op": "eq",
-                    "value": "credit"
-                  }
-                ]
+                "event_type": "bank.statement.line"
               },
               "effect": {
-                "amend": {
-                  "type": "sales_invoice",
-                  "target": "=ref(sales_invoice, number, $.reference)",
-                  "set": {
-                    "status": "paid"
+                "object": {
+                  "type": "bank_line",
+                  "fields": {
+                    "date": "=$.date",
+                    "amount": "=$.amount",
+                    "currency": "=$.currency",
+                    "direction": "=$.direction",
+                    "reference": "=$.reference",
+                    "counterparty": "=$.counterparty",
+                    "counterparty_account": "=$.counterparty_account",
+                    "account": "=$.account",
+                    "open": "=$.amount",
+                    "status": "open"
                   }
                 }
               }
             }
           },
           {
-            "rule_id": "pay-purchase-invoice",
-            "description": "an outgoing bank line settles the purchase invoice it names",
+            "rule_id": "match-incoming-payments",
+            "description": "money in is matched against the open sales invoices of the party whose account it names, by the owner's policy",
             "priority": 300,
             "spec": {
               "match": {
-                "event_type": "bank.statement.line",
+                "event_type": "object.materialized",
                 "where": [
                   {
-                    "path": "$.direction",
+                    "path": "$.object_type",
+                    "op": "eq",
+                    "value": "bank_line"
+                  },
+                  {
+                    "path": "$.state.direction",
+                    "op": "eq",
+                    "value": "credit"
+                  }
+                ]
+              },
+              "effect": {
+                "matching": {
+                  "name": "incoming-payments",
+                  "trigger": "payment",
+                  "sides": [
+                    {
+                      "name": "payment",
+                      "type": "bank_line",
+                      "open": {
+                        "money": "open"
+                      },
+                      "currency": "currency",
+                      "date": "date",
+                      "reference": "reference"
+                    },
+                    {
+                      "name": "invoice",
+                      "type": "sales_invoice",
+                      "items": "=objects(sales_invoice, buyer, ref(company, iban, $.state.counterparty_account))",
+                      "open": {
+                        "money": "open"
+                      },
+                      "currency": "currency",
+                      "date": "issue_date",
+                      "reference": "number"
+                    }
+                  ],
+                  "policy": [
+                    {
+                      "strategy": "reference"
+                    },
+                    {
+                      "strategy": "reference",
+                      "tolerance": {
+                        "money": "0.02"
+                      },
+                      "difference_account": "755"
+                    },
+                    {
+                      "strategy": "exact"
+                    },
+                    {
+                      "strategy": "subset",
+                      "max_items": 4
+                    },
+                    {
+                      "strategy": "reference",
+                      "partial": true
+                    },
+                    {
+                      "strategy": "oldest_first"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "rule_id": "match-outgoing-payments",
+            "description": "money out is matched against the open purchase invoices of the party whose account it names, by the owner's policy",
+            "priority": 300,
+            "spec": {
+              "match": {
+                "event_type": "object.materialized",
+                "where": [
+                  {
+                    "path": "$.object_type",
+                    "op": "eq",
+                    "value": "bank_line"
+                  },
+                  {
+                    "path": "$.state.direction",
                     "op": "eq",
                     "value": "debit"
                   }
                 ]
               },
               "effect": {
+                "matching": {
+                  "name": "outgoing-payments",
+                  "trigger": "payment",
+                  "sides": [
+                    {
+                      "name": "payment",
+                      "type": "bank_line",
+                      "open": {
+                        "money": "open"
+                      },
+                      "currency": "currency",
+                      "date": "date",
+                      "reference": "reference"
+                    },
+                    {
+                      "name": "invoice",
+                      "type": "purchase_invoice",
+                      "items": "=objects(purchase_invoice, supplier, ref(company, iban, $.state.counterparty_account))",
+                      "open": {
+                        "money": "open"
+                      },
+                      "currency": "currency",
+                      "date": "invoice_date",
+                      "reference": "number"
+                    }
+                  ],
+                  "policy": [
+                    {
+                      "strategy": "reference"
+                    },
+                    {
+                      "strategy": "exact"
+                    },
+                    {
+                      "strategy": "subset",
+                      "max_items": 4
+                    },
+                    {
+                      "strategy": "reference",
+                      "partial": true
+                    },
+                    {
+                      "strategy": "oldest_first"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "rule_id": "settle-sales-invoice",
+            "description": "a match moves the open amount of each sales invoice it allocated; paid when nothing stays open",
+            "priority": 310,
+            "spec": {
+              "match": {
+                "event_type": "objects.matched",
+                "where": [
+                  {
+                    "path": "$.matching",
+                    "op": "eq",
+                    "value": "incoming-payments"
+                  }
+                ]
+              },
+              "effect": {
+                "amend": {
+                  "type": "sales_invoice",
+                  "each": "=$.sides.invoice[*]",
+                  "target": "=$.line.object_id",
+                  "set": {
+                    "open": "=$.line.open_after.money",
+                    "status": "=if($.line.open_after.money = 0, \"paid\", \"open\")"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "rule_id": "settle-purchase-invoice",
+            "description": "a match moves the open amount of each purchase invoice it allocated; paid when nothing stays open",
+            "priority": 310,
+            "spec": {
+              "match": {
+                "event_type": "objects.matched",
+                "where": [
+                  {
+                    "path": "$.matching",
+                    "op": "eq",
+                    "value": "outgoing-payments"
+                  }
+                ]
+              },
+              "effect": {
                 "amend": {
                   "type": "purchase_invoice",
-                  "target": "=ref(purchase_invoice, number, $.reference)",
+                  "each": "=$.sides.invoice[*]",
+                  "target": "=$.line.object_id",
                   "set": {
-                    "status": "paid"
+                    "open": "=$.line.open_after.money",
+                    "status": "=if($.line.open_after.money = 0, \"paid\", \"open\")"
                   }
+                }
+              }
+            }
+          },
+          {
+            "rule_id": "settle-bank-line",
+            "description": "a match moves the open amount of the bank line; settled when nothing stays open",
+            "priority": 310,
+            "spec": {
+              "match": {
+                "event_type": "objects.matched",
+                "where": [
+                  {
+                    "path": "$.sides.payment[0]",
+                    "op": "exists"
+                  }
+                ]
+              },
+              "effect": {
+                "amend": {
+                  "type": "bank_line",
+                  "each": "=$.sides.payment[*]",
+                  "target": "=$.line.object_id",
+                  "set": {
+                    "open": "=$.line.open_after.money",
+                    "status": "=if($.line.open_after.money = 0, \"settled\", \"open\")"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "rule_id": "record-settlement",
+            "description": "a settlement per invoice a match allocated: the payment, the document, the amount, the date",
+            "priority": 320,
+            "spec": {
+              "match": {
+                "event_type": "objects.matched",
+                "where": [
+                  {
+                    "path": "$.sides.invoice[0]",
+                    "op": "exists"
+                  }
+                ]
+              },
+              "effect": {
+                "object": {
+                  "type": "settlement",
+                  "each": "=$.sides.invoice[*]",
+                  "fields": {
+                    "payment": "=$.doc.trigger.object_id",
+                    "document_type": "=$.line.object_type",
+                    "document_id": "=$.line.object_id",
+                    "amount": "=$.line.allocated.money",
+                    "date": "=$.root.date"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "rule_id": "record-difference",
+            "description": "a tolerated difference becomes a matching difference record",
+            "priority": 320,
+            "spec": {
+              "match": {
+                "event_type": "objects.matched",
+                "where": [
+                  {
+                    "path": "$.differences[0]",
+                    "op": "exists"
+                  }
+                ]
+              },
+              "effect": {
+                "object": {
+                  "type": "matching_difference",
+                  "each": "=$.differences[*]",
+                  "fields": {
+                    "matching": "=$.doc.matching",
+                    "kind": "=$.line.kind",
+                    "amount": "=$.line.amount",
+                    "currency": "=$.line.currency",
+                    "direction": "=$.line.direction",
+                    "account": "=$.line.account",
+                    "date": "=$.root.date"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "rule_id": "post-short-difference",
+            "description": "a short difference posts in pl-stat: debit the difference account, credit 201",
+            "priority": 330,
+            "spec": {
+              "match": {
+                "event_type": "object.materialized",
+                "where": [
+                  {
+                    "path": "$.object_type",
+                    "op": "eq",
+                    "value": "matching_difference"
+                  },
+                  {
+                    "path": "$.state.direction",
+                    "op": "eq",
+                    "value": "short"
+                  }
+                ]
+              },
+              "effect": {
+                "postings": {
+                  "book": "pl-stat",
+                  "currency": "=$.state.currency",
+                  "lines": [
+                    {
+                      "account": "=$.state.account",
+                      "debit": "=$.state.amount"
+                    },
+                    {
+                      "account": "201",
+                      "credit": "=$.state.amount"
+                    }
+                  ]
                 }
               }
             }
@@ -601,9 +1129,10 @@
         "warrant": {
           "basis": "practice",
           "citations": [
-            "rozliczenie należności i zobowiązań z wyciągu bankowego po numerze faktury"
+            "rozliczanie wpłat z wyciągu bankowego: po numerze faktury w tytule, potem po kwocie, kilka faktur jedną wpłatą, wpłata częściowa rozlicza najstarsze należności",
+            "różnice groszowe odpisuje się w koszty finansowe w ramach uproszczeń dopuszczonych polityką rachunkowości (ustawa o rachunkowości art. 4 ust. 4)"
           ],
-          "scope": "any market"
+          "scope": "PL"
         }
       }
     },
