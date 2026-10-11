@@ -1832,9 +1832,14 @@ owner's policy, both personas DONE as JSON and as documents; FX and
 netting — the converter as a clause of the structure (read in the
 trigger's currency at the settlement date's rate, written back in each
 item's own, the rate's move an `fx` difference up or down), netting as a
-structure with nothing new in the engine. Next in order: three-way with
-the PZ, intercompany, the grid notion, the host proposing strategies and
-the Poland pack's default policy as drafts with warrants.
+structure with nothing new in the engine; N sides — three-way (order
+lines, two receipts, the invoice line; quantity allocated, price compared
+within two percent, the variance posted) and intercompany as the
+generality test (a payment settling our receivable and their payable at
+once, the elimination's evidence), the sides' declared `join` the one
+addition. Next in order: the grid notion over the remainder, the host
+proposing strategies, and the Poland pack's default policy as drafts with
+warrants.
 
 ## Language decisions with a recorded destination
 

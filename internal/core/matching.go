@@ -89,6 +89,11 @@ type MatchingSide struct {
 	// Items is the keyed read of this side's candidates, absent on the
 	// trigger side (its one item is the object that fired the rule).
 	Items string `json:"items,omitempty"`
+	// Join narrows the candidates to those agreeing with the trigger on
+	// these fields — candidate field → trigger field (the order's lines of
+	// the same item, the group's documents of the same seller): the keys
+	// that join candidates, beyond the one the read is keyed by.
+	Join map[string]string `json:"join,omitempty"`
 	// Open maps each allocated measure to the field holding the item's open
 	// portion — money or a quantity, declared amendable, because the match's
 	// consequence is an amendment of it. Every side declares the same
@@ -282,6 +287,9 @@ func (m *MatchingTemplate) validate(rule Match) error {
 	if trigger.Items != "" {
 		return fmt.Errorf("the trigger side %q reads no items — its one item is the object that fired the rule", trigger.Name)
 	}
+	if len(trigger.Join) > 0 {
+		return fmt.Errorf("the trigger side %q joins nothing — joins narrow the other sides to it", trigger.Name)
+	}
 	allocated := m.AllocatedMeasures()
 	for _, s := range m.Sides {
 		if s.Name == m.Trigger {
@@ -289,6 +297,11 @@ func (m *MatchingTemplate) validate(rule Match) error {
 		}
 		if s.Items == "" {
 			return fmt.Errorf("matching side %q needs an items read — the keyed objects(...) of its candidates", s.Name)
+		}
+		for cf, tf := range s.Join {
+			if cf == "" || tf == "" {
+				return fmt.Errorf("matching side %q: a join names a candidate field and a trigger field", s.Name)
+			}
 		}
 		t, err := ParseTemplate(s.Items)
 		if err != nil {
@@ -477,6 +490,20 @@ func (m *MatchingTemplate) Check(types Catalog) error {
 		t, _ := ParseTemplate(s.Items)
 		if err := t.f.CheckList(types, map[string]string{"$.state": trigger.Type}, s.Type); err != nil {
 			return fmt.Errorf("matching side %q items: %w", s.Name, err)
+		}
+		tt, _ := types(trigger.Type)
+		for cf, tf := range s.Join {
+			cfd, err := field("join", cf)
+			if err != nil {
+				return err
+			}
+			tfd, ok := tt.Field(tf)
+			if !ok {
+				return fmt.Errorf("matching side %q: join field %q is not a field of the trigger's %s", s.Name, tf, trigger.Type)
+			}
+			if cfd.Type != tfd.Type {
+				return fmt.Errorf("matching side %q: join %s (%s) with the trigger's %s (%s) — the fields differ in type", s.Name, cf, cfd.Type, tf, tfd.Type)
+			}
 		}
 	}
 	if m.Convert != nil {

@@ -270,7 +270,9 @@ against open invoices, receipts against orders, intercompany pairs). The rule ma
       {"strategy": "oldest_first"}]}}
 A side names its "type"; "items" is the keyed objects(...) read of its candidates, written
 against the trigger's state (the trigger side has none - its item is the object that
-fired); "open" maps each measure to the AMENDABLE field holding what is not yet allocated
+fired); "join": {"<candidate field>": "<trigger field>"} narrows them to those agreeing
+with the trigger (the order's lines of the same item: "join": {"item": "item"}); "open"
+maps each measure to the AMENDABLE field holding what is not yet allocated
 (every side declares the same measures); optional "compare" maps a measure to a field that
 must agree but is never consumed (a price); "currency" (when a measure is money), "date",
 and "reference" (needed by the reference strategy) name fields. Strategies are tried in

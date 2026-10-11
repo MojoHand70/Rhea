@@ -77,6 +77,17 @@ func (x *Executor) expandMatching(ctx context.Context, r core.Rule, payload any,
 		ids := make([]string, 0, len(reads))
 		open := 0
 		for i, rd := range reads {
+			// The join: a candidate that disagrees with the trigger on a
+			// joined field is not on this side at all.
+			joined := true
+			for cf, tf := range side.Join {
+				if fmt.Sprint(rd.State[cf]) != fmt.Sprint(state[tf]) {
+					joined = false
+				}
+			}
+			if !joined {
+				continue
+			}
 			it, err := itemOf(side, rd.ID, rd.State, kinds, i+1)
 			if err != nil {
 				return nil, nil, fmt.Errorf("matching %s: the %s %s: %w", tmpl.Name, side.Name, rd.ID, err)
@@ -88,6 +99,9 @@ func (x *Executor) expandMatching(ctx context.Context, r core.Rule, payload any,
 			}
 		}
 		inputs["candidates."+side.Name] = ids
+		for cf, tf := range side.Join {
+			inputs[fmt.Sprintf("join.%s.%s", side.Name, cf)] = state[tf]
+		}
 		// The read returns every object under the key, settled ones
 		// included (the key is one field; the VM's collection cap bounds
 		// the read itself); the side's cap bounds what the engine may

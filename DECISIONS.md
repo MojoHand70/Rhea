@@ -2132,3 +2132,34 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   kompensata: a `netting` document per allocated receivable, posting Wn 202 / Ma 201.
   The kodeks cywilny art. 498 warrant belongs to the pack draft when the pack ships it.
 - **The agent** reads the convert clause and the netting structure in its grammar.
+
+## 2026-10-11 — N sides: three-way with the PZ, intercompany as the generality test
+
+- **The join is the one thing the N-sided customers asked of the structure**: a side
+  keyed by the order alone returns every line of that order, so the candidates must
+  also agree with the trigger on the item. `join: {"<candidate field>": "<trigger
+  field>"}` on a side — the keys that join candidates beyond the one the read is keyed
+  by (DIRECTION, the brief's "which keys join candidates") — typed by the gate (both
+  fields exist, the same type), applied at firing (a candidate that disagrees is not on
+  the side at all), recorded as an input. No engine change.
+- **The fourth customer, three-way** (`TestMatchingThreeWay`): the purchase order's
+  lines, the receipts' lines (two PZ for one line) and the supplier's invoice lines,
+  headers from the facts and lines by cascade; the invoice line triggers; the order's
+  and the receipts' lines are read by the order and joined on the item; the quantity is
+  allocated (an `int` measure), the price compared within two percent (a `compare`
+  measure on the sides that carry it; receipts carry none); the exact step fails on the
+  receipts (60 and 40) and says so, the subset finds both; every line on every side
+  closes by the same `each` amendment; a `three_way_match` record per invoice line
+  (`$.sides.order[0].object_id` — an indexed path into the match); the price gap sits on
+  the order line in the event (`item` on the difference), becomes a `price_variance`
+  object with `amount` = per unit × the quantity allocated (a formula over the match's
+  numbers) and posts Wn 341 / Ma 300.
+- **The fifth customer, intercompany, the generality test** (`TestMatchingIntercompany`;
+  KK's note): Alfa's bank line from Beta settles Alfa's receivable and Beta's payable
+  at once — three sides from a different corner, the payer's documents keyed by the
+  payer and joined on us (`seller`/`supplier` = the line's `owner`), so Gamma's invoice
+  to Beta with the same number stays open; the match is the elimination's evidence, an
+  `intercompany_settlement` naming all three. Nothing was added to the engine. The
+  sides cross companies through refs at firing, as the partition note says; the company
+  key as a partition key (P3) will serialize there.
+- **The agent** reads `join` in its grammar.

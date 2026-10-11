@@ -707,3 +707,383 @@ func TestMatchingNetting(t *testing.T) {
 		t.Fatalf("three nettings (300, 200, 400) each posting Wn 202 / Ma 201: %d, %d", len(nettings), len(postings))
 	}
 }
+
+// The fourth customer: three-way — the purchase order, the receipts (PZ)
+// and the supplier's invoice, quantities allocated and prices compared
+// within a tolerance. The invoice line triggers; the order's lines and the
+// receipts' lines are keyed by the order and joined on the item; two
+// receipts sum to one invoice line; the price gap is recorded on the order
+// line and becomes a variance that posts. The engine knows N; the
+// structure is data.
+func TestMatchingThreeWay(t *testing.T) {
+	ctx := context.Background()
+	x := &exec.Executor{Store: storetest.New(t)}
+	line := func(name string, extra ...core.FieldDef) core.ObjectType {
+		fields := append([]core.FieldDef{
+			{Name: "order", Type: "ref<purchase_order>", Required: true},
+			{Name: "item", Type: "ref<item>", Required: true},
+			{Name: "qty", Type: "int", Required: true},
+			{Name: "open_qty", Type: "int", Required: true},
+			{Name: "date", Type: "date", Required: true},
+			{Name: "status", Type: "enum", Required: true, Values: []string{"open", "closed"}}}, extra...)
+		return core.ObjectType{Name: name, Version: 1, Domain: "purchasing", Fields: fields,
+			Lifecycle: &core.LifecycleDef{Field: "status", Transitions: map[string][]string{"open": {"open", "closed"}}},
+			Amendable: []string{"open_qty"}}
+	}
+	header := func(name, numberField string) core.ObjectType {
+		return core.ObjectType{Name: name, Version: 1, Domain: "purchasing", IsDocument: true, LabelField: numberField,
+			Fields: []core.FieldDef{
+				{Name: numberField, Type: "string", Required: true},
+				{Name: "order", Type: "ref<purchase_order>"},
+				{Name: "date", Type: "date", Required: true}}}
+	}
+	for _, ot := range []core.ObjectType{
+		{Name: "item", Version: 1, Domain: "warehouse", LabelField: "sku", Fields: []core.FieldDef{{Name: "sku", Type: "string", Required: true}}},
+		{Name: "account", Version: 1, Domain: "finance", LabelField: "code", Fields: []core.FieldDef{{Name: "code", Type: "string", Required: true}}},
+		{Name: "posting", Version: 3, Domain: "finance", Fields: []core.FieldDef{
+			{Name: "entry", Type: "string", Required: true}, {Name: "line", Type: "int", Required: true},
+			{Name: "book", Type: "string", Required: true}, {Name: "account", Type: "ref<account>", Required: true},
+			{Name: "side", Type: "enum", Values: []string{"debit", "credit"}, Required: true},
+			{Name: "amount", Type: "money", Required: true}, {Name: "currency", Type: "string", Required: true},
+			{Name: "date", Type: "date", Required: true}}},
+		{Name: "purchase_order", Version: 1, Domain: "purchasing", IsDocument: true, LabelField: "number",
+			Fields: []core.FieldDef{{Name: "number", Type: "string", Required: true}, {Name: "date", Type: "date", Required: true}}},
+		line("po_line", core.FieldDef{Name: "unit_price", Type: "money", Required: true}),
+		header("pz", "supplier_document"),
+		line("pz_line", core.FieldDef{Name: "document", Type: "ref<pz>", Required: true}),
+		header("purchase_invoice", "number"),
+		line("invoice_line", core.FieldDef{Name: "document", Type: "ref<purchase_invoice>", Required: true},
+			core.FieldDef{Name: "unit_price", Type: "money", Required: true}),
+		{Name: "three_way_match", Version: 1, Domain: "purchasing", Fields: []core.FieldDef{
+			{Name: "invoice_line", Type: "ref<invoice_line>", Required: true},
+			{Name: "order_line", Type: "ref<po_line>", Required: true},
+			{Name: "qty", Type: "int", Required: true},
+			{Name: "date", Type: "date", Required: true}}},
+		{Name: "price_variance", Version: 1, Domain: "purchasing", Fields: []core.FieldDef{
+			{Name: "order_line", Type: "ref<po_line>", Required: true},
+			{Name: "per_unit", Type: "money", Required: true},
+			{Name: "amount", Type: "money", Required: true},
+			{Name: "direction", Type: "enum", Required: true, Values: []string{"short", "over"}},
+			{Name: "date", Type: "date", Required: true}}},
+	} {
+		if err := x.Store.InsertObjectType(ctx, ot); err != nil {
+			t.Fatal(err)
+		}
+	}
+	submit := func(dedup, evType, date, payload string) {
+		t.Helper()
+		if _, err := x.Store.AppendEvent(ctx, core.Event{Kind: core.KindRaw, Type: evType, OccurredAt: date,
+			Payload: []byte(payload), DedupKey: dedup}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	activate := func(id string, priority int, spec core.RuleSpec) {
+		t.Helper()
+		if _, err := x.Store.InsertRuleVersion(ctx, core.Rule{ID: id, Status: core.StatusDraft, Priority: priority,
+			EffectiveFrom: "2026-01-01", CreatedBy: "test", Description: id, Spec: spec}); err != nil {
+			t.Fatal(err)
+		}
+		if _, _, procErrs, err := x.ApproveRule(ctx, id, "krzysztof", "2026-09-30"); err != nil {
+			t.Fatal(err)
+		} else if len(procErrs) > 0 {
+			t.Fatalf("approve %s: %v", id, procErrs)
+		}
+	}
+	cascade := func(typ string) core.Match {
+		return core.Match{EventType: core.EventObjectMaterialized, Where: []core.Condition{{Path: "$.object_type", Op: "eq", Value: typ}}}
+	}
+	activate("register-item", 10, core.RuleSpec{Match: core.Match{EventType: "item.created"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "item", Fields: map[string]string{"sku": "=$.sku"}}}})
+	activate("register-account", 10, core.RuleSpec{Match: core.Match{EventType: "account.created"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "account", Fields: map[string]string{"code": "=$.code"}}}})
+	// Documents with lines: a header from the fact, its lines by cascade.
+	activate("book-order", 20, core.RuleSpec{Match: core.Match{EventType: "purchase.order.placed"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "purchase_order", Fields: map[string]string{"number": "=$.number", "date": "=$.date"}}}})
+	activate("order-lines", 21, core.RuleSpec{Match: cascade("purchase_order"),
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "po_line", Each: "=$.root.lines[*]", Fields: map[string]string{
+			"order": "=$.doc.object_id", "item": "=ref(item, sku, $.line.item)", "qty": "=$.line.qty", "open_qty": "=$.line.qty",
+			"unit_price": "=$.line.price", "date": "=$.root.date", "status": "open"}}}})
+	activate("book-pz", 20, core.RuleSpec{Match: core.Match{EventType: "delivery.received"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "pz", Fields: map[string]string{"supplier_document": "=$.document",
+			"order": "=ref(purchase_order, number, $.order)", "date": "=$.date"}}}})
+	activate("pz-lines", 21, core.RuleSpec{Match: cascade("pz"),
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "pz_line", Each: "=$.root.lines[*]", Fields: map[string]string{
+			"document": "=$.doc.object_id", "order": "=$.doc.state.order", "item": "=ref(item, sku, $.line.item)",
+			"qty": "=$.line.qty", "open_qty": "=$.line.qty", "date": "=$.root.date", "status": "open"}}}})
+	activate("book-invoice", 20, core.RuleSpec{Match: core.Match{EventType: "purchase.invoice.received"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "purchase_invoice", Fields: map[string]string{"number": "=$.number",
+			"order": "=ref(purchase_order, number, $.order)", "date": "=$.date"}}}})
+	activate("invoice-lines", 21, core.RuleSpec{Match: cascade("purchase_invoice"),
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "invoice_line", Each: "=$.root.lines[*]", Fields: map[string]string{
+			"document": "=$.doc.object_id", "order": "=$.doc.state.order", "item": "=ref(item, sku, $.line.item)",
+			"qty": "=$.line.qty", "open_qty": "=$.line.qty", "unit_price": "=$.line.price", "date": "=$.root.date", "status": "open"}}}})
+	// The structure: three sides, the quantity allocated, the price compared
+	// within two percent, the difference to the variance account.
+	threeWay := core.RuleSpec{Match: cascade("invoice_line"),
+		Effect: core.Effect{Matching: &core.MatchingTemplate{Name: "three-way", Trigger: "invoice",
+			Sides: []core.MatchingSide{
+				{Name: "invoice", Type: "invoice_line", Open: map[string]string{"qty": "open_qty"},
+					Compare: map[string]string{"price": "unit_price"}, Date: "date"},
+				{Name: "order", Type: "po_line", Items: "=objects(po_line, order, $.state.order)", Join: map[string]string{"item": "item"},
+					Open: map[string]string{"qty": "open_qty"}, Compare: map[string]string{"price": "unit_price"}, Date: "date"},
+				{Name: "receipt", Type: "pz_line", Items: "=objects(pz_line, order, $.state.order)", Join: map[string]string{"item": "item"},
+					Open: map[string]string{"qty": "open_qty"}, Date: "date"}},
+			Policy: []core.MatchingStep{
+				{Strategy: "exact", TolerancePercent: map[string]string{"price": "2"}, DifferenceAccount: "341"},
+				{Strategy: "subset", MaxItems: 4, TolerancePercent: map[string]string{"price": "2"}, DifferenceAccount: "341"}}}}}
+	activate("three-way-match", 30, threeWay)
+	onMatch := core.Match{EventType: core.EventObjectsMatched, Where: []core.Condition{{Path: "$.matching", Op: "eq", Value: "three-way"}}}
+	for _, side := range []struct{ name, typ string }{{"invoice", "invoice_line"}, {"order", "po_line"}, {"receipt", "pz_line"}} {
+		activate("close-"+side.name, 40, core.RuleSpec{Match: onMatch, Effect: core.Effect{Amend: &core.AmendTemplate{Type: side.typ,
+			Each: "=$.sides." + side.name + "[*]", Target: "=$.line.object_id", Set: map[string]string{"open_qty": "=$.line.open_after.qty",
+				"status": `=if($.line.open_after.qty = 0, "closed", "open")`}}}})
+	}
+	activate("record-three-way", 40, core.RuleSpec{Match: onMatch, Effect: core.Effect{Object: core.ObjectTemplate{Type: "three_way_match",
+		Fields: map[string]string{"invoice_line": "=$.trigger.object_id", "order_line": "=$.sides.order[0].object_id",
+			"qty": "=$.sides.invoice[0].allocated.qty", "date": "=$.root.date"}}}})
+	activate("record-variance", 40, core.RuleSpec{Match: core.Match{EventType: core.EventObjectsMatched, Where: []core.Condition{
+		{Path: "$.matching", Op: "eq", Value: "three-way"}, {Path: "$.differences[0]", Op: "exists"}}},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "price_variance", Each: "=$.differences[*]", Fields: map[string]string{
+			"order_line": "=$.line.item", "per_unit": "=$.line.amount",
+			"amount":    "=round($.line.amount * $.doc.sides.invoice[0].allocated.qty / 100, 2, half_up)",
+			"direction": "=$.line.direction", "date": "=$.root.date"}}}})
+	// The supplier invoiced above the order's price: Wn 341 / Ma 300.
+	activate("post-variance", 50, core.RuleSpec{Match: cascade("price_variance"),
+		Effect: core.Effect{Postings: &core.PostingsTemplate{Currency: "PLN", Lines: []core.PostingLine{
+			{Account: "341", Debit: "=$.state.amount"}, {Account: "300", Credit: "=$.state.amount"}}}}})
+
+	submit("w", "item.created", "2026-09-01", `{"sku":"W"}`)
+	submit("v", "item.created", "2026-09-01", `{"sku":"V"}`)
+	for _, a := range []string{"300", "341"} {
+		submit("acc-"+a, "account.created", "2026-09-01", `{"code":"`+a+`"}`)
+	}
+	submit("po1", "purchase.order.placed", "2026-09-01", `{"number":"PO/1","date":"2026-09-01","lines":[{"item":"W","qty":100,"price":"10.00"},{"item":"V","qty":100,"price":"5.00"}]}`)
+	submit("pz1", "delivery.received", "2026-09-05", `{"document":"WZ 1","order":"PO/1","date":"2026-09-05","lines":[{"item":"W","qty":60},{"item":"V","qty":100}]}`)
+	submit("pz2", "delivery.received", "2026-09-08", `{"document":"WZ 2","order":"PO/1","date":"2026-09-08","lines":[{"item":"W","qty":40}]}`)
+	if _, errs := x.ProcessPending(ctx); len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	// The invoice: W at 10.20 (within two percent of 10.00), V at 5.00.
+	submit("inv1", "purchase.invoice.received", "2026-09-20", `{"number":"INV/1","order":"PO/1","date":"2026-09-20","lines":[{"item":"W","qty":100,"price":"10.20"},{"item":"V","qty":100,"price":"5.00"}]}`)
+	if _, errs := x.ProcessPending(ctx); len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	closed := func(typ string) int {
+		t.Helper()
+		objs, _ := x.Store.ObjectsByType(ctx, typ)
+		n := 0
+		for _, o := range objs {
+			if o.State["status"] == "closed" && o.State["open_qty"].(float64) == 0 {
+				n++
+			}
+		}
+		return n
+	}
+	if closed("po_line") != 2 || closed("pz_line") != 3 || closed("invoice_line") != 2 {
+		t.Fatalf("every line closed: orders %d, receipts %d, invoice %d", closed("po_line"), closed("pz_line"), closed("invoice_line"))
+	}
+	matches, _ := x.Store.ObjectsByType(ctx, "three_way_match")
+	if len(matches) != 2 {
+		t.Fatalf("one three-way match per invoice line: %d", len(matches))
+	}
+	variances, _ := x.Store.ObjectsByType(ctx, "price_variance")
+	if len(variances) != 1 || variances[0].State["per_unit"].(float64) != 20 || variances[0].State["amount"].(float64) != 2000 || variances[0].State["direction"] != "over" {
+		t.Fatalf("W invoiced 0.20 above the order on 100 units: %v", variances)
+	}
+	postings, _ := x.Store.ObjectsByType(ctx, "posting")
+	if len(postings) != 2 || postings[0].State["amount"].(float64) != 2000 {
+		t.Fatalf("Wn 341 / Ma 300 20.00: %v", postings)
+	}
+	derived, _ := x.Store.EventsByKind(ctx, core.KindDerived)
+	var ms []core.MatchedObjects
+	for _, ev := range derived {
+		if ev.Type == core.EventObjectsMatched {
+			var m core.MatchedObjects
+			json.Unmarshal(ev.Payload, &m)
+			ms = append(ms, m)
+		}
+	}
+	// W: the exact step fails on the receipts (60 and 40), the subset finds
+	// both; the join kept V's lines off W's sides.
+	w := ms[0]
+	if w.Strategy != "subset" || len(w.Sides["order"]) != 1 || len(w.Sides["receipt"]) != 2 || w.Sides["receipt"][0].Allocated["qty"].(float64) != 60 {
+		t.Fatalf("W's match: %+v", w)
+	}
+	if !strings.Contains(w.Tried[0].Reason, "no single item on receipt opens at 100 (2 candidates)") {
+		t.Fatalf("the exact step explains the receipts: %q", w.Tried[0].Reason)
+	}
+	if ids, _ := w.Inputs["candidates.order"].([]any); len(ids) != 1 || w.Inputs["join.order.item"] == nil {
+		t.Fatalf("the join narrows the order's lines to W's: %v", w.Inputs)
+	}
+	if ms[1].Strategy != "exact" || len(ms[1].Differences) != 0 {
+		t.Fatalf("V's match: %+v", ms[1])
+	}
+}
+
+// The fifth customer, the generality test: intercompany settlement for
+// group consolidation (KK, 2026-10-11) — three sides from a different
+// corner, nothing added to the engine. Alfa's bank line from Beta settles
+// Alfa's receivable and Beta's payable at once: the match is the
+// elimination's evidence. The sides cross companies through refs at
+// firing, as the brief's partition note says.
+func TestMatchingIntercompany(t *testing.T) {
+	ctx := context.Background()
+	x, _ := bankWorld(t)
+	for _, ot := range []core.ObjectType{
+		{Name: "purchase_invoice", Version: 1, Domain: "finance", IsDocument: true, LabelField: "number",
+			Fields: []core.FieldDef{
+				{Name: "number", Type: "string", Required: true},
+				{Name: "invoice_date", Type: "date", Required: true},
+				{Name: "supplier", Type: "ref<company>", Required: true},
+				{Name: "owner", Type: "ref<company>", Required: true},
+				{Name: "gross", Type: "money", Required: true},
+				{Name: "currency", Type: "string", Required: true},
+				{Name: "open", Type: "money", Required: true},
+				{Name: "status", Type: "enum", Required: true, Values: []string{"open", "paid"}}},
+			Lifecycle: &core.LifecycleDef{Field: "status", Transitions: map[string][]string{"open": {"open", "paid"}}},
+			Amendable: []string{"open"}},
+		{Name: "bank_line", Version: 2, Domain: "finance", LabelField: "reference",
+			Fields: []core.FieldDef{
+				{Name: "date", Type: "date", Required: true},
+				{Name: "amount", Type: "money", Required: true},
+				{Name: "currency", Type: "string", Required: true},
+				{Name: "reference", Type: "string", Required: true},
+				{Name: "counterparty_account", Type: "string", Required: true},
+				{Name: "owner", Type: "ref<company>", Required: true},
+				{Name: "open", Type: "money", Required: true},
+				{Name: "status", Type: "enum", Required: true, Values: []string{"open", "settled"}}},
+			Lifecycle: &core.LifecycleDef{Field: "status", Transitions: map[string][]string{"open": {"open", "settled"}}},
+			Amendable: []string{"open"}},
+		{Name: "sales_invoice", Version: 2, Domain: "finance", IsDocument: true, LabelField: "number",
+			Fields: []core.FieldDef{
+				{Name: "number", Type: "string", Required: true},
+				{Name: "issue_date", Type: "date", Required: true},
+				{Name: "seller", Type: "ref<company>", Required: true},
+				{Name: "buyer", Type: "ref<company>", Required: true},
+				{Name: "gross", Type: "money", Required: true},
+				{Name: "currency", Type: "string", Required: true},
+				{Name: "open", Type: "money", Required: true},
+				{Name: "status", Type: "enum", Required: true, Values: []string{"open", "paid"}}},
+			Lifecycle: &core.LifecycleDef{Field: "status", Transitions: map[string][]string{"open": {"open", "paid"}}},
+			Amendable: []string{"open"}},
+		{Name: "intercompany_settlement", Version: 1, Domain: "group", Fields: []core.FieldDef{
+			{Name: "payment", Type: "ref<bank_line>", Required: true},
+			{Name: "receivable", Type: "ref<sales_invoice>", Required: true},
+			{Name: "payable", Type: "ref<purchase_invoice>", Required: true},
+			{Name: "amount", Type: "money", Required: true},
+			{Name: "date", Type: "date", Required: true}}},
+	} {
+		if err := x.Store.InsertObjectType(ctx, ot); err != nil {
+			t.Fatal(err)
+		}
+	}
+	submit := func(dedup, evType, date, payload string) {
+		t.Helper()
+		if _, err := x.Store.AppendEvent(ctx, core.Event{Kind: core.KindRaw, Type: evType, OccurredAt: date,
+			Payload: []byte(payload), DedupKey: dedup}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	activate := func(id string, priority int, spec core.RuleSpec) {
+		t.Helper()
+		if _, err := x.Store.InsertRuleVersion(ctx, core.Rule{ID: id, Status: core.StatusDraft, Priority: priority,
+			EffectiveFrom: "2026-01-01", CreatedBy: "test", Description: id, Spec: spec}); err != nil {
+			t.Fatal(err)
+		}
+		if _, _, procErrs, err := x.ApproveRule(ctx, id, "krzysztof", "2026-09-30"); err != nil {
+			t.Fatal(err)
+		} else if len(procErrs) > 0 {
+			t.Fatalf("approve %s: %v", id, procErrs)
+		}
+	}
+	activate("register-company", 10, core.RuleSpec{Match: core.Match{EventType: "company.registered"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "company", Fields: map[string]string{"name": "=$.name", "iban": "=$.iban"}}}})
+	activate("book-sales-invoice", 20, core.RuleSpec{Match: core.Match{EventType: "sales.invoice.issued"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "sales_invoice", Fields: map[string]string{"number": "=$.number",
+			"issue_date": "=$.issue_date", "seller": "=ref(company, iban, $.seller_iban)", "buyer": "=ref(company, iban, $.buyer_iban)",
+			"gross": "=$.gross", "currency": "=$.currency", "open": "=$.gross", "status": "open"}}}})
+	activate("book-purchase-invoice", 20, core.RuleSpec{Match: core.Match{EventType: "purchase.invoice.received"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "purchase_invoice", Fields: map[string]string{"number": "=$.number",
+			"invoice_date": "=$.invoice_date", "supplier": "=ref(company, iban, $.supplier_iban)", "owner": "=ref(company, iban, $.owner_iban)",
+			"gross": "=$.gross", "currency": "=$.currency", "open": "=$.gross", "status": "open"}}}})
+	activate("bank-line", 20, core.RuleSpec{Match: core.Match{EventType: "bank.statement.line"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "bank_line", Fields: map[string]string{"date": "=$.date", "amount": "=$.amount",
+			"currency": "=$.currency", "reference": "=$.reference", "counterparty_account": "=$.counterparty_account",
+			"owner": "=ref(company, iban, $.account)", "open": "=$.amount", "status": "open"}}}})
+	// Three sides: the payment, our receivable from the payer, the payer's
+	// payable to us — the payer's documents keyed by the payer, joined on us.
+	activate("intercompany-settlement", 30, core.RuleSpec{
+		Match: core.Match{EventType: core.EventObjectMaterialized, Where: []core.Condition{{Path: "$.object_type", Op: "eq", Value: "bank_line"}}},
+		Effect: core.Effect{Matching: &core.MatchingTemplate{Name: "intercompany", Trigger: "payment",
+			Sides: []core.MatchingSide{
+				{Name: "payment", Type: "bank_line", Open: map[string]string{"money": "open"}, Currency: "currency", Date: "date", Reference: "reference"},
+				{Name: "receivable", Type: "sales_invoice", Items: "=objects(sales_invoice, buyer, ref(company, iban, $.state.counterparty_account))",
+					Join: map[string]string{"seller": "owner"}, Open: map[string]string{"money": "open"}, Currency: "currency", Date: "issue_date", Reference: "number"},
+				{Name: "payable", Type: "purchase_invoice", Items: "=objects(purchase_invoice, owner, ref(company, iban, $.state.counterparty_account))",
+					Join: map[string]string{"supplier": "owner"}, Open: map[string]string{"money": "open"}, Currency: "currency", Date: "invoice_date", Reference: "number"}},
+			Policy: []core.MatchingStep{{Strategy: "reference"}, {Strategy: "exact"}}}}})
+	onMatch := core.Match{EventType: core.EventObjectsMatched, Where: []core.Condition{{Path: "$.matching", Op: "eq", Value: "intercompany"}}}
+	for _, side := range []struct{ name, typ, done string }{{"payment", "bank_line", "settled"}, {"receivable", "sales_invoice", "paid"}, {"payable", "purchase_invoice", "paid"}} {
+		activate("settle-"+side.name, 40, core.RuleSpec{Match: onMatch, Effect: core.Effect{Amend: &core.AmendTemplate{Type: side.typ,
+			Each: "=$.sides." + side.name + "[*]", Target: "=$.line.object_id", Set: map[string]string{"open": "=$.line.open_after.money",
+				"status": `=if($.line.open_after.money = 0, "` + side.done + `", "open")`}}}})
+	}
+	activate("record-elimination", 40, core.RuleSpec{Match: onMatch, Effect: core.Effect{Object: core.ObjectTemplate{Type: "intercompany_settlement",
+		Fields: map[string]string{"payment": "=$.trigger.object_id", "receivable": "=$.sides.receivable[0].object_id",
+			"payable": "=$.sides.payable[0].object_id", "amount": "=$.sides.payment[0].allocated.money", "date": "=$.root.date"}}}})
+
+	submit("alfa", "company.registered", "2026-09-01", `{"name":"Alfa","iban":"PL10"}`)
+	submit("beta", "company.registered", "2026-09-01", `{"name":"Beta","iban":"PL20"}`)
+	submit("gamma", "company.registered", "2026-09-01", `{"name":"Gamma","iban":"PL30"}`)
+	// Alfa sells to Beta; Beta books the purchase; Gamma also invoices Beta with the same number.
+	submit("a1", "sales.invoice.issued", "2026-09-02", `{"number":"FV/A1","issue_date":"2026-09-02","seller_iban":"PL10","buyer_iban":"PL20","gross":"1000.00","currency":"PLN"}`)
+	submit("g1", "sales.invoice.issued", "2026-09-02", `{"number":"FV/A1","issue_date":"2026-09-02","seller_iban":"PL30","buyer_iban":"PL20","gross":"1000.00","currency":"PLN"}`)
+	submit("b1", "purchase.invoice.received", "2026-09-05", `{"number":"FV/A1","invoice_date":"2026-09-05","supplier_iban":"PL10","owner_iban":"PL20","gross":"1000.00","currency":"PLN"}`)
+	submit("b1g", "purchase.invoice.received", "2026-09-05", `{"number":"FV/A1","invoice_date":"2026-09-05","supplier_iban":"PL30","owner_iban":"PL20","gross":"1000.00","currency":"PLN"}`)
+	if _, errs := x.ProcessPending(ctx); len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	// Beta pays Alfa, naming the invoice: one match, three sides, Gamma's
+	// documents kept off by the join.
+	submit("l1", "bank.statement.line", "2026-09-10", `{"date":"2026-09-10","amount":"1000.00","currency":"PLN","reference":"FV/A1","counterparty_account":"PL20","account":"PL10"}`)
+	if _, errs := x.ProcessPending(ctx); len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	settlements, _ := x.Store.ObjectsByType(ctx, "intercompany_settlement")
+	if len(settlements) != 1 || settlements[0].State["amount"].(float64) != 100000 {
+		t.Fatalf("the elimination's evidence: %v", settlements)
+	}
+	paid := func(typ, number, sellerIBAN string) string {
+		t.Helper()
+		objs, _ := x.Store.ObjectsByType(ctx, typ)
+		for _, o := range objs {
+			if o.State["number"] == number {
+				party := o.State["seller"]
+				if typ == "purchase_invoice" {
+					party = o.State["supplier"]
+				}
+				ids, _ := x.Store.FindObjectIDsByField(ctx, "company", "iban", sellerIBAN)
+				if party == ids[0] {
+					return o.State["status"].(string)
+				}
+			}
+		}
+		return "?"
+	}
+	if paid("sales_invoice", "FV/A1", "PL10") != "paid" || paid("purchase_invoice", "FV/A1", "PL10") != "paid" {
+		t.Fatal("Alfa's receivable and Beta's payable from Alfa settle together")
+	}
+	if paid("sales_invoice", "FV/A1", "PL30") != "open" || paid("purchase_invoice", "FV/A1", "PL30") != "open" {
+		t.Fatal("Gamma's documents, same number, same buyer, stay open: the join kept them off")
+	}
+	derived, _ := x.Store.EventsByKind(ctx, core.KindDerived)
+	for _, ev := range derived {
+		if ev.Type == core.EventObjectsMatched {
+			var m core.MatchedObjects
+			json.Unmarshal(ev.Payload, &m)
+			if len(m.Sides) != 3 || m.Strategy != "reference" || len(m.Sides["receivable"]) != 1 || len(m.Sides["payable"]) != 1 {
+				t.Fatalf("three sides by reference: %+v", m)
+			}
+		}
+	}
+}
