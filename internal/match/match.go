@@ -125,23 +125,50 @@ type Problem struct {
 	Measures    []Measure
 	Policy      []Step
 	Budget      int // subset search node budget; zero means DefaultBudget
+	// Convert compares money across currencies; nil means every item is
+	// in the trigger's currency or excluded.
+	Convert *Converter
+}
+
+// Converter is the FX clause as the engine sees it: Rate gives the rate
+// from one currency to another at a date (1 when they are the same);
+// Round rounds an amount to the money's places by the declared method.
+// Every candidate's open is read in the trigger's currency at the rate of
+// its settlement date — the trigger's date when DateSide is the trigger's
+// side, the candidate's own date when it is on DateSide, the trigger's
+// otherwise — and every allocation is written back in the item's own
+// currency. An item's worth in the functional currency at its own date
+// and at its settlement date differ by the rate's move: recorded as an
+// "fx" difference, "up" or "down", against the matching account.
+type Converter struct {
+	Functional      string
+	DateSide        string
+	Rate            func(from, to, date string) (*big.Rat, error)
+	Round           func(*big.Rat) *big.Rat
+	RateUpAccount   string
+	RateDownAccount string
 }
 
 // Allocation is what a match did to one item: the amount taken per
-// allocated measure, and the open portion before and after.
+// allocated measure, and the open portion before and after — in the item's
+// own currency; Equivalent is the same allocation in the trigger's
+// currency when the structure converts.
 type Allocation struct {
 	ID         string
 	Allocated  map[string]*big.Rat
 	OpenBefore map[string]*big.Rat
 	OpenAfter  map[string]*big.Rat
+	Equivalent map[string]*big.Rat
 }
 
 // Difference is an amount a match absorbed: a tolerated gap between a side's
-// allocation and the trigger's (Item empty), or a compared measure's gap on
-// one item. Amount is positive; Direction says which way: "short" when the
-// trigger brought less than the side settles, "over" when more.
+// allocation and the trigger's (Item empty), a compared measure's gap on
+// one item, or an item's rate difference. Amount is positive; Direction
+// says which way: "short" when the trigger brought less than the side
+// settles, "over" when more; "up" when an item's rate rose between its own
+// date and its settlement, "down" when it fell.
 type Difference struct {
-	Kind      string // "tolerance"
+	Kind      string // "tolerance" | "fx"
 	Measure   string
 	Side      string
 	Item      string
@@ -177,6 +204,10 @@ func Solve(p Problem) (Result, bool, error) {
 	if err := p.validate(); err != nil {
 		return Result{}, false, err
 	}
+	original, err := p.convert()
+	if err != nil {
+		return Result{}, false, err
+	}
 	var tried []Attempt
 	for i, step := range p.Policy {
 		r, reason := p.run(step)
@@ -186,9 +217,134 @@ func Solve(p Problem) (Result, bool, error) {
 		}
 		tried = append(tried, Attempt{Step: i + 1, Strategy: step.Strategy, Found: true})
 		r.Step, r.Strategy, r.Tried = i+1, step.Strategy, tried
+		if err := p.restore(r, original); err != nil {
+			return Result{}, false, err
+		}
 		return *r, true, nil
 	}
 	return Result{Tried: tried}, false, nil
+}
+
+// settleDate is the date whose rate settles an item.
+func (p Problem) settleDate(side string, it Item) string {
+	if p.Convert.DateSide == p.TriggerSide || side != p.Convert.DateSide {
+		return p.Trigger.Date
+	}
+	return it.Date
+}
+
+// convert is the pre-pass: with a converter, every candidate's open money
+// is replaced by its equivalent in the trigger's currency, so the
+// strategies compare like with like. The originals come back for restore.
+func (p *Problem) convert() (map[string]Item, error) {
+	if p.Convert == nil {
+		return nil, nil
+	}
+	m := p.allocated()[0].Name
+	original := map[string]Item{}
+	// The caller's sides stay as they are: the converted view is the
+	// engine's own copy.
+	sides := make([]Side, len(p.Sides))
+	for si, side := range p.Sides {
+		sides[si] = Side{Name: side.Name, Items: make([]Item, len(side.Items))}
+		for ii, it := range side.Items {
+			original[it.ID] = it
+			sides[si].Items[ii] = it
+			if it.Currency == p.Trigger.Currency || it.Open[m] == nil {
+				continue
+			}
+			rate, err := p.Convert.Rate(it.Currency, p.Trigger.Currency, p.settleDate(side.Name, it))
+			if err != nil {
+				return nil, err
+			}
+			sides[si].Items[ii] = Item{ID: it.ID, Open: map[string]*big.Rat{m: new(big.Rat).Mul(it.Open[m], rate)},
+				Compare: it.Compare, Currency: p.Trigger.Currency, Date: it.Date, Reference: it.Reference, Seq: it.Seq}
+		}
+	}
+	p.Sides = sides
+	return original, nil
+}
+
+// restore is the post-pass: allocations found in the trigger's currency
+// are written back in each item's own currency — a whole item takes its
+// own open exactly, a partial one the rounded equivalent — the equivalent
+// kept beside them, and the rate differences are recorded.
+func (p Problem) restore(r *Result, original map[string]Item) error {
+	if p.Convert == nil {
+		return nil
+	}
+	m := p.allocated()[0].Name
+	c := p.Convert
+	sideOf := map[string]string{p.Trigger.ID: p.TriggerSide}
+	for _, side := range p.Sides {
+		for _, it := range side.Items {
+			sideOf[it.ID] = side.Name
+		}
+	}
+	latestDateSide := p.Trigger.Date // for the trigger's own settlement when DateSide is elsewhere
+	for _, a := range r.Sides[c.DateSide] {
+		if o, ok := original[a.ID]; ok && o.Date > latestDateSide {
+			latestDateSide = o.Date
+		}
+	}
+	for name, allocs := range r.Sides {
+		for i := range allocs {
+			a := &allocs[i]
+			o, converted := original[a.ID]
+			if !converted {
+				o = p.Trigger
+			}
+			if converted && o.Currency != p.Trigger.Currency {
+				equivalent := a.Allocated[m]
+				var own *big.Rat
+				if a.OpenAfter[m].Sign() == 0 {
+					own = new(big.Rat).Set(o.Open[m]) // whole: its own open, exactly
+				} else {
+					ratio := new(big.Rat).Quo(o.Open[m], a.OpenBefore[m]) // 1 / rate
+					own = c.Round(new(big.Rat).Mul(equivalent, ratio))
+				}
+				a.Equivalent = map[string]*big.Rat{m: equivalent}
+				a.Allocated = map[string]*big.Rat{m: own}
+				a.OpenBefore = map[string]*big.Rat{m: new(big.Rat).Set(o.Open[m])}
+				a.OpenAfter = map[string]*big.Rat{m: new(big.Rat).Sub(o.Open[m], own)}
+			}
+			// The rate difference: what the allocated amount was worth in
+			// the functional currency at the item's own date against its
+			// settlement date.
+			if o.Currency == c.Functional {
+				continue
+			}
+			settleDate := p.settleDate(name, o)
+			if !converted && c.DateSide != p.TriggerSide {
+				settleDate = latestDateSide
+			}
+			var settled *big.Rat
+			if p.Trigger.Currency == c.Functional && converted {
+				settled = a.Equivalent[m] // what was actually allocated, exactly
+			} else {
+				rate, err := c.Rate(o.Currency, c.Functional, settleDate)
+				if err != nil {
+					return err
+				}
+				settled = c.Round(new(big.Rat).Mul(a.Allocated[m], rate))
+			}
+			booked, err := c.Rate(o.Currency, c.Functional, o.Date)
+			if err != nil {
+				return err
+			}
+			bookedValue := c.Round(new(big.Rat).Mul(a.Allocated[m], booked))
+			if d := new(big.Rat).Sub(settled, bookedValue); d.Sign() != 0 {
+				dir, account := "up", c.RateUpAccount
+				if d.Sign() < 0 {
+					dir, account, d = "down", c.RateDownAccount, d.Neg(d)
+				}
+				r.Differences = append(r.Differences, Difference{Kind: "fx", Measure: m, Side: name, Item: a.ID,
+					Amount: d, Direction: dir, Account: account})
+			}
+		}
+		r.Sides[name] = allocs
+	}
+	return nil
 }
 
 func (p Problem) validate() error {
@@ -210,6 +366,14 @@ func (p Problem) validate() error {
 	for _, m := range allocated {
 		if p.Trigger.Open[m] == nil {
 			return fmt.Errorf("the trigger has no open %s", m)
+		}
+	}
+	if c := p.Convert; c != nil {
+		if len(allocated) != 1 || !p.measure(allocated[0]).Money {
+			return fmt.Errorf("a converter works on one allocated money measure")
+		}
+		if c.Rate == nil || c.Round == nil {
+			return fmt.Errorf("a converter needs a rate source and a rounding")
 		}
 	}
 	for i, s := range p.Policy {
@@ -383,7 +547,7 @@ func (p Problem) exclude(it Item, step Step) string {
 		if v == nil || v.Sign() <= 0 {
 			return "nothing open"
 		}
-		if m.Money && it.Currency != p.Trigger.Currency {
+		if m.Money && it.Currency != p.Trigger.Currency && p.Convert == nil {
 			return fmt.Sprintf("in %s, the %s in %s", it.Currency, p.TriggerSide, p.Trigger.Currency)
 		}
 	}

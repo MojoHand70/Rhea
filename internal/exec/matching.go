@@ -123,8 +123,60 @@ func (x *Executor) expandMatching(ctx context.Context, r core.Rule, payload any,
 		}
 		policy = append(policy, step)
 	}
-	result, found, err := match.Solve(match.Problem{TriggerSide: tmpl.Trigger, Trigger: triggerItem,
-		Sides: sides, Measures: measures, Policy: policy})
+	problem := match.Problem{TriggerSide: tmpl.Trigger, Trigger: triggerItem, Sides: sides, Measures: measures, Policy: policy}
+	if c := tmpl.Convert; c != nil {
+		// Rates are master data, as postings' convert reads them: the
+		// fx_rate for (from, to, date) by its code, or the inverse pair
+		// inverted; a missing rate refuses the firing into the worklist —
+		// unexplainable beats guessed. Every rate read is an input.
+		memo := map[string]*big.Rat{}
+		problem.Convert = &match.Converter{Functional: c.Functional, DateSide: c.DateSide,
+			RateUpAccount: c.RateUpAccount, RateDownAccount: c.RateDownAccount,
+			Round: func(r *big.Rat) *big.Rat { return core.RoundDecimal(r, 2, c.Rounding) },
+			Rate: func(from, to, date string) (*big.Rat, error) {
+				if from == to {
+					return big.NewRat(1, 1), nil
+				}
+				key := from + "/" + to + "/" + date
+				if r, ok := memo[key]; ok {
+					return r, nil
+				}
+				read := func(code string) (*big.Rat, bool, error) {
+					ids, err := lookup(FXRateObjectType, "code", code)
+					if err != nil || len(ids) != 1 {
+						return nil, false, err
+					}
+					state, ok, err := get(ids[0])
+					if err != nil || !ok {
+						return nil, false, err
+					}
+					text, _ := state["rate"].(string)
+					r, err := core.ParseDecimal(text)
+					if err != nil || r.Sign() <= 0 {
+						return nil, false, fmt.Errorf("fx_rate %s: %q is not a positive decimal", code, text)
+					}
+					inputs["rate "+code] = text
+					return r, true, nil
+				}
+				r, ok, err := read(key)
+				if err != nil {
+					return nil, err
+				}
+				if !ok {
+					inv, ok, err := read(to + "/" + from + "/" + date)
+					if err != nil {
+						return nil, err
+					}
+					if !ok {
+						return nil, fmt.Errorf("no fx_rate for %s/%s on %s", from, to, date)
+					}
+					r = new(big.Rat).Inv(inv)
+				}
+				memo[key] = r
+				return r, nil
+			}}
+	}
+	result, found, err := match.Solve(problem)
 	if err != nil {
 		return nil, nil, fmt.Errorf("matching %s: %w", tmpl.Name, err)
 	}
@@ -171,6 +223,14 @@ func (x *Executor) expandMatching(ctx context.Context, r core.Rule, payload any,
 			if side.Currency != "" {
 				alloc.Currency, _ = st[side.Currency].(string)
 			}
+			if a.Equivalent != nil {
+				alloc.Equivalent, alloc.EquivalentCurrency = map[string]any{}, triggerItem.Currency
+				for m, v := range a.Equivalent {
+					if alloc.Equivalent[m], err = encode(v, kinds[m]); err != nil {
+						return nil, nil, err
+					}
+				}
+			}
 			alloc.Date, _ = st[side.Date].(string)
 			if side.Reference != "" {
 				alloc.Reference, _ = st[side.Reference].(string)
@@ -187,6 +247,9 @@ func (x *Executor) expandMatching(ctx context.Context, r core.Rule, payload any,
 			Amount: amount, Direction: d.Direction, Account: d.Account}
 		if kinds[d.Measure] == "money" {
 			md.Currency = triggerItem.Currency
+			if d.Kind == "fx" {
+				md.Currency = tmpl.Convert.Functional
+			}
 		}
 		if d.Account != "" {
 			// The account the difference goes to must exist: a declared

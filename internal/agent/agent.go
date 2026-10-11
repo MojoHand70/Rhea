@@ -281,6 +281,13 @@ order and the first feasible wins: "reference" (the items the trigger's referenc
 Any step may add "tolerance" or "tolerance_percent" per measure with a "difference_account"
 (the difference is absorbed and recorded against it) and "within_days". The policy is the
 company's choice: the order and the bounds are what the question says, nothing more.
+Sides in different currencies take a "convert" clause beside "policy": {"functional": "PLN",
+"date_side": "payment", "rounding": "half_up", "rate_up_account": "750", "rate_down_account":
+"755"} - every candidate is read in the trigger's currency at the fx_rate of the item on
+date_side's date, allocations are written back in each item's own currency, and the rate's
+move since the item's own date is a difference of kind "fx", direction "up" or "down", in the
+functional currency. Netting (kompensata) needs no clause: a structure whose trigger is our
+purchase invoice and whose other side is the same party's open sales invoices.
 The outcome is ONE event, "objects.matched": {"matching": <name>, "strategy", "step",
 "trigger": {"side", "object_id"}, "kinds": {<measure>: money|int|decimal},
 "sides": {<side>: [{"object_id", "object_type", "allocated": {<measure>: amount},

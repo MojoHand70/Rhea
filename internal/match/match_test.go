@@ -1,6 +1,7 @@
 package match
 
 import (
+	"fmt"
 	"math/big"
 	"reflect"
 	"strings"
@@ -290,4 +291,78 @@ func TestProblemsAreValidated(t *testing.T) {
 	if ok || r.Tried[0].Reason != "the payment has nothing open" {
 		t.Fatalf("got %v %v", ok, r.Tried)
 	}
+}
+
+// A converter: an EUR invoice against a PLN payment, compared at the rate
+// of the payment's date, allocated back in each item's own currency, the
+// rate's move between the invoice's date and its settlement recorded.
+func TestConverter(t *testing.T) {
+	rates := map[string]string{"EUR/PLN/2026-09-02": "4.30", "EUR/PLN/2026-09-21": "4.3215"}
+	conv := &Converter{Functional: "PLN", DateSide: "payment", RateUpAccount: "750", RateDownAccount: "755",
+		Rate: func(from, to, date string) (*big.Rat, error) {
+			if from == to {
+				return big.NewRat(1, 1), nil
+			}
+			if r, ok := rates[from+"/"+to+"/"+date]; ok {
+				return rat(r), nil
+			}
+			if r, ok := rates[to+"/"+from+"/"+date]; ok {
+				return new(big.Rat).Inv(rat(r)), nil
+			}
+			return nil, fmt.Errorf("no rate %s/%s on %s", from, to, date)
+		},
+		Round: func(r *big.Rat) *big.Rat { return roundHalfUp(r) }}
+	eur := func(id, date, open string) Item {
+		it := item(id, date, open, "", 1)
+		it.Currency = "EUR"
+		return it
+	}
+	p := Problem{TriggerSide: "payment", Trigger: item("L", "2026-09-21", "4321.50", "", 9),
+		Sides:    []Side{{Name: "invoice", Items: []Item{eur("FV/E1", "2026-09-02", "1000.00")}}},
+		Measures: []Measure{money("money")}, Policy: []Step{{Strategy: Exact}, {Strategy: OldestFirst}}, Convert: conv}
+	r, ok := solve(t, p)
+	if !ok || r.Strategy != Exact {
+		t.Fatalf("1000 EUR at 4.3215 is 4321.50 PLN: %v %v", ok, r.Tried)
+	}
+	inv := r.Sides["invoice"][0]
+	if inv.Allocated["money"].FloatString(2) != "1000.00" || inv.OpenAfter["money"].Sign() != 0 || inv.Equivalent["money"].FloatString(2) != "4321.50" {
+		t.Fatalf("the invoice settles in its own currency: %+v", inv)
+	}
+	if got, after := amount(r.Sides["payment"], "L"); got != "4321.50" || after != "0.00" {
+		t.Fatalf("the payment: %s open %s", got, after)
+	}
+	// Booked at 4.30 (4300.00), settled at 4.3215 (4321.50): the rate went up by 21.50.
+	if len(r.Differences) != 1 || r.Differences[0].Kind != "fx" || r.Differences[0].Amount.FloatString(2) != "21.50" ||
+		r.Differences[0].Direction != "up" || r.Differences[0].Account != "750" || r.Differences[0].Item != "FV/E1" {
+		t.Fatalf("the rate difference: %+v", r.Differences)
+	}
+	// A part payment: 2000 PLN is 462.80 EUR at the payment's rate, rounded as declared.
+	p.Trigger = item("L2", "2026-09-21", "2000.00", "", 9)
+	r, ok = solve(t, p)
+	if !ok || r.Strategy != OldestFirst {
+		t.Fatalf("partial: %v %v", ok, r.Tried)
+	}
+	inv = r.Sides["invoice"][0]
+	if inv.Allocated["money"].FloatString(2) != "462.80" || inv.OpenAfter["money"].FloatString(2) != "537.20" || inv.Equivalent["money"].FloatString(2) != "2000.00" {
+		t.Fatalf("partial in EUR: %+v", inv)
+	}
+	// settled: the 2000.00 PLN actually allocated; booked: 462.80 × 4.30 = 1990.04
+	if r.Differences[0].Amount.FloatString(2) != "9.96" || r.Differences[0].Direction != "up" {
+		t.Fatalf("partial rate difference: %+v", r.Differences)
+	}
+	// No rate: the firing fails, never guesses.
+	p.Trigger = item("L3", "2026-09-22", "100.00", "", 9)
+	if _, _, err := Solve(p); err == nil || !strings.Contains(err.Error(), "no rate EUR/PLN on 2026-09-22") {
+		t.Fatalf("missing rate: %v", err)
+	}
+}
+
+func roundHalfUp(r *big.Rat) *big.Rat {
+	scaled := new(big.Rat).Mul(r, big.NewRat(100, 1))
+	q := new(big.Int).Quo(scaled.Num(), scaled.Denom())
+	rem := new(big.Int).Mod(scaled.Num(), scaled.Denom())
+	if new(big.Int).Mul(rem, big.NewInt(2)).Cmp(scaled.Denom()) >= 0 {
+		q.Add(q, big.NewInt(1))
+	}
+	return new(big.Rat).SetFrac(q, big.NewInt(100))
 }

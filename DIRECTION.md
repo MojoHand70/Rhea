@@ -1828,10 +1828,13 @@ agent taught; the persona scene — the simulated customers pay in every way
 the policy names (named, exact, several at once, two grosz short, a named
 part, an unnamed part the policy reads as the oldest), the generator
 predicts the settlement without any rule, the interview answers carry the
-owner's policy, both personas DONE as JSON and as documents. Next in
-order: the Poland pack's default policy as drafts with warrants, FX and
-netting, three-way with the PZ, intercompany, the grid notion, the host
-proposing strategies.
+owner's policy, both personas DONE as JSON and as documents; FX and
+netting — the converter as a clause of the structure (read in the
+trigger's currency at the settlement date's rate, written back in each
+item's own, the rate's move an `fx` difference up or down), netting as a
+structure with nothing new in the engine. Next in order: three-way with
+the PZ, intercompany, the grid notion, the host proposing strategies and
+the Poland pack's default policy as drafts with warrants.
 
 ## Language decisions with a recorded destination
 

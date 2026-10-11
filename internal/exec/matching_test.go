@@ -82,7 +82,7 @@ func bankWorld(t *testing.T) (*exec.Executor, core.Catalog) {
 				{Name: "kind", Type: "string", Required: true},
 				{Name: "amount", Type: "money", Required: true},
 				{Name: "currency", Type: "string", Required: true},
-				{Name: "direction", Type: "enum", Required: true, Values: []string{"short", "over"}},
+				{Name: "direction", Type: "enum", Required: true, Values: []string{"short", "over", "up", "down"}},
 				{Name: "account", Type: "string", Required: true},
 				{Name: "date", Type: "date", Required: true}}},
 	}
@@ -438,4 +438,272 @@ func TestMatchingBankStory(t *testing.T) {
 		t.Fatalf("the dry run: changed %d, added %d, FV/4 paid %v", len(diff.Changed), len(diff.Added), paid)
 	}
 	expect("FV/4", "open", 12300)
+}
+
+// The second customer: an EUR invoice paid in PLN. The structure converts
+// at the rate of the payment's date (convert's rate source), the invoice
+// settles in EUR, the payment in PLN, and the rate's move since the invoice
+// was booked becomes an fx difference that posts — a gain on a receivable
+// when the rate went up. Replay reproduces it without a rate in sight.
+func TestMatchingFX(t *testing.T) {
+	ctx := context.Background()
+	x, _ := bankWorld(t)
+	if err := x.Store.InsertObjectType(ctx, core.ObjectType{Name: "fx_rate", Version: 1, Domain: "finance", LabelField: "code",
+		Fields: []core.FieldDef{
+			{Name: "code", Type: "string", Required: true},
+			{Name: "base", Type: "string", Required: true},
+			{Name: "quote", Type: "string", Required: true},
+			{Name: "date", Type: "date", Required: true},
+			{Name: "rate", Type: "string", Required: true}}}); err != nil {
+		t.Fatal(err)
+	}
+	submit := func(dedup, evType, date, payload string) {
+		t.Helper()
+		if _, err := x.Store.AppendEvent(ctx, core.Event{Kind: core.KindRaw, Type: evType, OccurredAt: date,
+			Payload: []byte(payload), DedupKey: dedup}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	activate := func(id string, priority int, spec core.RuleSpec) {
+		t.Helper()
+		if _, err := x.Store.InsertRuleVersion(ctx, core.Rule{ID: id, Status: core.StatusDraft, Priority: priority,
+			EffectiveFrom: "2026-01-01", CreatedBy: "test", Description: id, Spec: spec}); err != nil {
+			t.Fatal(err)
+		}
+		if _, _, procErrs, err := x.ApproveRule(ctx, id, "krzysztof", "2026-09-30"); err != nil {
+			t.Fatal(err)
+		} else if len(procErrs) > 0 {
+			t.Fatalf("approve %s: %v", id, procErrs)
+		}
+	}
+	activate("register-company", 10, core.RuleSpec{Match: core.Match{EventType: "company.registered"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "company", Fields: map[string]string{"name": "=$.name", "iban": "=$.iban"}}}})
+	activate("register-account", 10, core.RuleSpec{Match: core.Match{EventType: "account.created"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "account", Fields: map[string]string{"code": "=$.code", "name": "=$.name"}}}})
+	activate("register-fx-rate", 10, core.RuleSpec{Match: core.Match{EventType: "fx.rate.published"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "fx_rate", Fields: map[string]string{"code": "=$.code", "base": "=$.base",
+			"quote": "=$.quote", "date": "=$.date", "rate": "=$.rate"}}}})
+	activate("book-sales-invoice", 20, core.RuleSpec{Match: core.Match{EventType: "sales.invoice.issued"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "sales_invoice", Fields: map[string]string{"number": "=$.number",
+			"issue_date": "=$.issue_date", "buyer": "=ref(company, iban, $.buyer_iban)", "gross": "=$.gross", "currency": "=$.currency",
+			"open": "=$.gross", "status": "open"}}}})
+	activate("bank-line", 20, core.RuleSpec{Match: core.Match{EventType: "bank.statement.line"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "bank_line", Fields: map[string]string{"date": "=$.date", "amount": "=$.amount",
+			"currency": "=$.currency", "reference": "=$.reference", "counterparty_account": "=$.counterparty_account",
+			"open": "=$.amount", "status": "open"}}}})
+	spec := incomingPayments()
+	spec.Effect.Matching.Convert = &core.MatchingConvert{Functional: "PLN", DateSide: "payment", Rounding: "half_up",
+		RateUpAccount: "750", RateDownAccount: "755"}
+	activate("match-incoming-payments", 30, spec)
+	onMatch := core.Match{EventType: core.EventObjectsMatched, Where: []core.Condition{{Path: "$.matching", Op: "eq", Value: "incoming-payments"}}}
+	activate("settle-invoice", 40, core.RuleSpec{Match: onMatch, Effect: core.Effect{Amend: &core.AmendTemplate{Type: "sales_invoice",
+		Each: "=$.sides.invoice[*]", Target: "=$.line.object_id", Set: map[string]string{"open": "=$.line.open_after.money",
+			"status": `=if($.line.open_after.money = 0, "paid", "open")`}}}})
+	activate("settle-line", 40, core.RuleSpec{Match: onMatch, Effect: core.Effect{Amend: &core.AmendTemplate{Type: "bank_line",
+		Each: "=$.sides.payment[*]", Target: "=$.line.object_id", Set: map[string]string{"open": "=$.line.open_after.money",
+			"status": `=if($.line.open_after.money = 0, "settled", "open")`}}}})
+	activate("record-difference", 40, core.RuleSpec{Match: core.Match{EventType: core.EventObjectsMatched, Where: []core.Condition{
+		{Path: "$.matching", Op: "eq", Value: "incoming-payments"}, {Path: "$.differences[0]", Op: "exists"}}},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "matching_difference", Each: "=$.differences[*]", Fields: map[string]string{
+			"matching": "=$.doc.matching", "kind": "=$.line.kind", "amount": "=$.line.amount", "currency": "=$.line.currency",
+			"direction": "=$.line.direction", "account": "=$.line.account", "date": "=$.root.date"}}}})
+	// A receivable settled at a higher rate: the gain credits 750 and the
+	// receivable's PLN value grows to meet the cash — Wn 201 / Ma 750.
+	activate("post-rate-up", 50, core.RuleSpec{Match: core.Match{EventType: core.EventObjectMaterialized, Where: []core.Condition{
+		{Path: "$.object_type", Op: "eq", Value: "matching_difference"}, {Path: "$.state.direction", Op: "eq", Value: "up"}}},
+		Effect: core.Effect{Postings: &core.PostingsTemplate{Currency: "=$.state.currency", Lines: []core.PostingLine{
+			{Account: "201", Debit: "=$.state.amount"}, {Account: "=$.state.account", Credit: "=$.state.amount"}}}}})
+
+	submit("nova", "company.registered", "2026-09-01", `{"name":"Nova","iban":"PL60"}`)
+	for _, a := range [][2]string{{"201", "Należności"}, {"750", "Przychody finansowe"}, {"755", "Koszty finansowe"}} {
+		submit("acc-"+a[0], "account.created", "2026-09-01", `{"code":"`+a[0]+`","name":"`+a[1]+`"}`)
+	}
+	submit("nbp-0902", "fx.rate.published", "2026-09-02", `{"code":"EUR/PLN/2026-09-02","base":"EUR","quote":"PLN","date":"2026-09-02","rate":"4.30"}`)
+	submit("nbp-0921", "fx.rate.published", "2026-09-21", `{"code":"EUR/PLN/2026-09-21","base":"EUR","quote":"PLN","date":"2026-09-21","rate":"4.3215"}`)
+	submit("fve1", "sales.invoice.issued", "2026-09-02", `{"number":"FV/E1","issue_date":"2026-09-02","buyer_iban":"PL60","gross":"1000.00","currency":"EUR"}`)
+	if _, errs := x.ProcessPending(ctx); len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	// 1000 EUR at the payment date's 4.3215 is exactly 4321.50 PLN.
+	submit("l1", "bank.statement.line", "2026-09-21", `{"date":"2026-09-21","amount":"4321.50","currency":"PLN","reference":"przelew","counterparty_account":"PL60"}`)
+	if _, errs := x.ProcessPending(ctx); len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	ids, _ := x.Store.FindObjectIDsByField(ctx, "sales_invoice", "number", "FV/E1")
+	inv, _ := x.Store.GetObject(ctx, ids[0])
+	if inv.State["status"] != "paid" || inv.State["open"].(float64) != 0 {
+		t.Fatalf("the EUR invoice: %v", inv.State)
+	}
+	diffs, _ := x.Store.ObjectsByType(ctx, "matching_difference")
+	if len(diffs) != 1 || diffs[0].State["kind"] != "fx" || diffs[0].State["amount"].(float64) != 2150 ||
+		diffs[0].State["direction"] != "up" || diffs[0].State["currency"] != "PLN" || diffs[0].State["account"] != "750" {
+		t.Fatalf("the rate difference as an object: %v", diffs)
+	}
+	postings, _ := x.Store.ObjectsByType(ctx, "posting")
+	if len(postings) != 2 || postings[0].State["amount"].(float64) != 2150 || postings[0].State["currency"] != "PLN" {
+		t.Fatalf("Wn 201 / Ma 750 21.50: %v", postings)
+	}
+	derived, _ := x.Store.EventsByKind(ctx, core.KindDerived)
+	var m core.MatchedObjects
+	for _, ev := range derived {
+		if ev.Type == core.EventObjectsMatched {
+			json.Unmarshal(ev.Payload, &m)
+		}
+	}
+	a := m.Sides["invoice"][0]
+	if a.Currency != "EUR" || a.Allocated["money"].(float64) != 100000 || a.Equivalent["money"].(float64) != 432150 || a.EquivalentCurrency != "PLN" {
+		t.Fatalf("the invoice's allocation in EUR with its PLN equivalent: %+v", a)
+	}
+	if m.Inputs["rate EUR/PLN/2026-09-21"] != "4.3215" || m.Inputs["rate EUR/PLN/2026-09-02"] != "4.30" {
+		t.Fatalf("the rates read are inputs: %v", m.Inputs)
+	}
+	// No rate for the day: the line waits in the worklist, nothing guessed.
+	submit("l2", "bank.statement.line", "2026-09-22", `{"date":"2026-09-22","amount":"10.00","currency":"PLN","reference":"przelew","counterparty_account":"PL60"}`)
+	submit("fve2", "sales.invoice.issued", "2026-09-02", `{"number":"FV/E2","issue_date":"2026-09-02","buyer_iban":"PL60","gross":"10.00","currency":"EUR"}`)
+	_, errs := x.ProcessPending(ctx)
+	if len(errs) != 1 || !strings.Contains(errs[0].Error(), "no fx_rate for EUR/PLN on 2026-09-22") {
+		t.Fatalf("missing rate: %v", errs)
+	}
+	before, _ := x.Store.AllObjects(ctx)
+	if _, err := x.Replay(ctx); err != nil {
+		t.Fatal(err)
+	}
+	after, _ := x.Store.AllObjects(ctx)
+	if !reflect.DeepEqual(before, after) {
+		t.Fatal("replay does not reproduce the converted match")
+	}
+}
+
+// The third customer: netting per saldo (kompensata) for a party who is
+// both customer and supplier. Nothing new in the engine — a structure whose
+// trigger is our purchase invoice and whose other side is the same party's
+// open sales invoices; the match is the netting document and posts
+// Wn 202 / Ma 201.
+func TestMatchingNetting(t *testing.T) {
+	ctx := context.Background()
+	x, _ := bankWorld(t)
+	for _, ot := range []core.ObjectType{
+		{Name: "purchase_invoice", Version: 1, Domain: "finance", IsDocument: true, LabelField: "number",
+			Fields: []core.FieldDef{
+				{Name: "number", Type: "string", Required: true},
+				{Name: "invoice_date", Type: "date", Required: true},
+				{Name: "supplier", Type: "ref<company>", Required: true},
+				{Name: "gross", Type: "money", Required: true},
+				{Name: "currency", Type: "string", Required: true},
+				{Name: "open", Type: "money", Required: true},
+				{Name: "status", Type: "enum", Required: true, Values: []string{"open", "paid"}}},
+			Lifecycle: &core.LifecycleDef{Field: "status", Transitions: map[string][]string{"open": {"open", "paid"}}},
+			Amendable: []string{"open"}},
+		{Name: "netting", Version: 1, Domain: "finance", IsDocument: true,
+			Fields: []core.FieldDef{
+				{Name: "payable", Type: "ref<purchase_invoice>", Required: true},
+				{Name: "receivable", Type: "ref<sales_invoice>", Required: true},
+				{Name: "amount", Type: "money", Required: true},
+				{Name: "date", Type: "date", Required: true}}},
+	} {
+		if err := x.Store.InsertObjectType(ctx, ot); err != nil {
+			t.Fatal(err)
+		}
+	}
+	submit := func(dedup, evType, date, payload string) {
+		t.Helper()
+		if _, err := x.Store.AppendEvent(ctx, core.Event{Kind: core.KindRaw, Type: evType, OccurredAt: date,
+			Payload: []byte(payload), DedupKey: dedup}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	activate := func(id string, priority int, spec core.RuleSpec) {
+		t.Helper()
+		if _, err := x.Store.InsertRuleVersion(ctx, core.Rule{ID: id, Status: core.StatusDraft, Priority: priority,
+			EffectiveFrom: "2026-01-01", CreatedBy: "test", Description: id, Spec: spec}); err != nil {
+			t.Fatal(err)
+		}
+		if _, _, procErrs, err := x.ApproveRule(ctx, id, "krzysztof", "2026-09-30"); err != nil {
+			t.Fatal(err)
+		} else if len(procErrs) > 0 {
+			t.Fatalf("approve %s: %v", id, procErrs)
+		}
+	}
+	activate("register-company", 10, core.RuleSpec{Match: core.Match{EventType: "company.registered"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "company", Fields: map[string]string{"name": "=$.name", "iban": "=$.iban"}}}})
+	activate("register-account", 10, core.RuleSpec{Match: core.Match{EventType: "account.created"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "account", Fields: map[string]string{"code": "=$.code", "name": "=$.name"}}}})
+	activate("book-sales-invoice", 20, core.RuleSpec{Match: core.Match{EventType: "sales.invoice.issued"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "sales_invoice", Fields: map[string]string{"number": "=$.number",
+			"issue_date": "=$.issue_date", "buyer": "=ref(company, iban, $.buyer_iban)", "gross": "=$.gross", "currency": "=$.currency",
+			"open": "=$.gross", "status": "open"}}}})
+	activate("book-purchase-invoice", 20, core.RuleSpec{Match: core.Match{EventType: "purchase.invoice.received"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "purchase_invoice", Fields: map[string]string{"number": "=$.number",
+			"invoice_date": "=$.invoice_date", "supplier": "=ref(company, iban, $.supplier_iban)", "gross": "=$.gross", "currency": "=$.currency",
+			"open": "=$.gross", "status": "open"}}}})
+	// The structure: our payable against the same party's open receivables.
+	activate("net-with-receivables", 30, core.RuleSpec{
+		Match: core.Match{EventType: core.EventObjectMaterialized, Where: []core.Condition{{Path: "$.object_type", Op: "eq", Value: "purchase_invoice"}}},
+		Effect: core.Effect{Matching: &core.MatchingTemplate{Name: "netting", Trigger: "payable",
+			Sides: []core.MatchingSide{
+				{Name: "payable", Type: "purchase_invoice", Open: map[string]string{"money": "open"}, Currency: "currency", Date: "invoice_date", Reference: "number"},
+				{Name: "receivable", Type: "sales_invoice", Items: "=objects(sales_invoice, buyer, $.state.supplier)",
+					Open: map[string]string{"money": "open"}, Currency: "currency", Date: "issue_date", Reference: "number"}},
+			Policy: []core.MatchingStep{{Strategy: "exact"}, {Strategy: "subset"}, {Strategy: "oldest_first"}}}}})
+	onNetting := core.Match{EventType: core.EventObjectsMatched, Where: []core.Condition{{Path: "$.matching", Op: "eq", Value: "netting"}}}
+	activate("settle-receivable", 40, core.RuleSpec{Match: onNetting, Effect: core.Effect{Amend: &core.AmendTemplate{Type: "sales_invoice",
+		Each: "=$.sides.receivable[*]", Target: "=$.line.object_id", Set: map[string]string{"open": "=$.line.open_after.money",
+			"status": `=if($.line.open_after.money = 0, "paid", "open")`}}}})
+	activate("settle-payable", 40, core.RuleSpec{Match: onNetting, Effect: core.Effect{Amend: &core.AmendTemplate{Type: "purchase_invoice",
+		Each: "=$.sides.payable[*]", Target: "=$.line.object_id", Set: map[string]string{"open": "=$.line.open_after.money",
+			"status": `=if($.line.open_after.money = 0, "paid", "open")`}}}})
+	activate("record-netting", 40, core.RuleSpec{Match: onNetting, Effect: core.Effect{Object: core.ObjectTemplate{Type: "netting",
+		Each: "=$.sides.receivable[*]", Fields: map[string]string{"payable": "=$.doc.trigger.object_id", "receivable": "=$.line.object_id",
+			"amount": "=$.line.allocated.money", "date": "=$.root.invoice_date"}}}})
+	activate("post-netting", 50, core.RuleSpec{Match: core.Match{EventType: core.EventObjectMaterialized,
+		Where: []core.Condition{{Path: "$.object_type", Op: "eq", Value: "netting"}}},
+		Effect: core.Effect{Postings: &core.PostingsTemplate{Currency: "PLN", Lines: []core.PostingLine{
+			{Account: "202", Debit: "=$.state.amount"}, {Account: "201", Credit: "=$.state.amount"}}}}})
+
+	submit("delta", "company.registered", "2026-09-01", `{"name":"Delta","iban":"PL70"}`)
+	for _, a := range [][2]string{{"201", "Należności"}, {"202", "Zobowiązania"}} {
+		submit("acc-"+a[0], "account.created", "2026-09-01", `{"code":"`+a[0]+`","name":"`+a[1]+`"}`)
+	}
+	submit("fv1", "sales.invoice.issued", "2026-09-02", `{"number":"FV/1","issue_date":"2026-09-02","buyer_iban":"PL70","gross":"300.00","currency":"PLN"}`)
+	submit("fv2", "sales.invoice.issued", "2026-09-03", `{"number":"FV/2","issue_date":"2026-09-03","buyer_iban":"PL70","gross":"200.00","currency":"PLN"}`)
+	// Their invoice for 500: nets against both of ours.
+	submit("p1", "purchase.invoice.received", "2026-09-10", `{"number":"D/1","invoice_date":"2026-09-10","supplier_iban":"PL70","gross":"500.00","currency":"PLN"}`)
+	if _, errs := x.ProcessPending(ctx); len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	status := func(typ, number string) (string, float64) {
+		t.Helper()
+		ids, _ := x.Store.FindObjectIDsByField(ctx, typ, "number", number)
+		o, err := x.Store.GetObject(ctx, ids[0])
+		if err != nil {
+			t.Fatal(err)
+		}
+		return o.State["status"].(string), o.State["open"].(float64)
+	}
+	for _, n := range []string{"FV/1", "FV/2"} {
+		if st, open := status("sales_invoice", n); st != "paid" || open != 0 {
+			t.Fatalf("%s after the netting: %s %v", n, st, open)
+		}
+	}
+	if st, open := status("purchase_invoice", "D/1"); st != "paid" || open != 0 {
+		t.Fatalf("D/1 after the netting: %s %v", st, open)
+	}
+	// A bigger receivable, a smaller payable: the payable nets whole, the
+	// receivable stays open for the rest.
+	submit("fv3", "sales.invoice.issued", "2026-09-12", `{"number":"FV/3","issue_date":"2026-09-12","buyer_iban":"PL70","gross":"1000.00","currency":"PLN"}`)
+	submit("p2", "purchase.invoice.received", "2026-09-15", `{"number":"D/2","invoice_date":"2026-09-15","supplier_iban":"PL70","gross":"400.00","currency":"PLN"}`)
+	if _, errs := x.ProcessPending(ctx); len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	if st, open := status("sales_invoice", "FV/3"); st != "open" || open != 60000 {
+		t.Fatalf("FV/3 after the second netting: %s %v", st, open)
+	}
+	if st, _ := status("purchase_invoice", "D/2"); st != "paid" {
+		t.Fatalf("D/2: %s", st)
+	}
+	nettings, _ := x.Store.ObjectsByType(ctx, "netting")
+	postings, _ := x.Store.ObjectsByType(ctx, "posting")
+	if len(nettings) != 3 || len(postings) != 6 {
+		t.Fatalf("three nettings (300, 200, 400) each posting Wn 202 / Ma 201: %d, %d", len(nettings), len(postings))
+	}
 }

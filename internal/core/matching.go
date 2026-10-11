@@ -56,6 +56,28 @@ type MatchingTemplate struct {
 	Trigger string         `json:"trigger"`
 	Sides   []MatchingSide `json:"sides"`
 	Policy  []MatchingStep `json:"policy"`
+	// Convert lets the sides carry different currencies: the FX precedent
+	// of postings' convert, as a clause of the structure.
+	Convert *MatchingConvert `json:"convert,omitempty"`
+}
+
+// MatchingConvert compares money across currencies. Every candidate's open
+// amount is read in the trigger's currency at the fx_rate of the settlement
+// date — the date of the item on DateSide: the trigger's own when it is
+// that side (a payment against invoices), each candidate's own otherwise
+// (an invoice against the payments waiting for it) — and every allocation
+// is written back in the item's own currency, rounded as declared. The
+// difference between what an item was worth in the functional currency at
+// its own date and at its settlement date (różnice kursowe) is recorded
+// against RateUpAccount when the rate rose and RateDownAccount when it
+// fell; whether that is a gain or a loss depends on the side — the rules
+// that post it know.
+type MatchingConvert struct {
+	Functional      string `json:"functional"`
+	DateSide        string `json:"date_side"`
+	Rounding        string `json:"rounding"`
+	RateUpAccount   string `json:"rate_up_account"`
+	RateDownAccount string `json:"rate_down_account"`
 }
 
 // MatchingSide declares one side: the object type, how its candidates are
@@ -156,6 +178,10 @@ type MatchAllocation struct {
 	Currency   string         `json:"currency,omitempty"`
 	Date       string         `json:"date,omitempty"`
 	Reference  string         `json:"reference,omitempty"`
+	// Equivalent is the allocation read in the trigger's currency, when the
+	// structure converts: what the match compared.
+	Equivalent         map[string]any `json:"equivalent,omitempty"`
+	EquivalentCurrency string         `json:"equivalent_currency,omitempty"`
 }
 
 // MatchDifference is an amount a match absorbed, positive, with its
@@ -301,6 +327,23 @@ func (m *MatchingTemplate) validate(rule Match) error {
 	if len(m.Policy) == 0 {
 		return fmt.Errorf("matching.policy is empty — at least one strategy")
 	}
+	if c := m.Convert; c != nil {
+		if c.Functional == "" {
+			return fmt.Errorf("matching.convert needs the functional currency")
+		}
+		if _, ok := m.Side(c.DateSide); !ok {
+			return fmt.Errorf("matching.convert.date_side %q is not a declared side", c.DateSide)
+		}
+		if !IsRoundingMethod(c.Rounding) {
+			return fmt.Errorf("matching.convert.rounding must be declared; %q is not an admitted method", c.Rounding)
+		}
+		if c.RateUpAccount == "" || c.RateDownAccount == "" {
+			return fmt.Errorf("matching.convert needs rate_up_account and rate_down_account — a rate difference has a home")
+		}
+		if len(allocated) != 1 {
+			return fmt.Errorf("matching.convert works on one allocated money measure, the structure has %d", len(allocated))
+		}
+	}
 	compared := m.ComparedMeasures()
 	for i, st := range m.Policy {
 		at := fmt.Sprintf("matching.policy step %d", i+1)
@@ -436,6 +479,11 @@ func (m *MatchingTemplate) Check(types Catalog) error {
 			return fmt.Errorf("matching side %q items: %w", s.Name, err)
 		}
 	}
+	if m.Convert != nil {
+		if kinds[m.AllocatedMeasures()[0]] != "money" {
+			return fmt.Errorf("matching.convert works on money; %q is %s", m.AllocatedMeasures()[0], kinds[m.AllocatedMeasures()[0]])
+		}
+	}
 	return nil
 }
 
@@ -468,3 +516,10 @@ func ParseDecimal(s string) (*big.Rat, error) { return parseDecimal(s) }
 // CanonicalDecimal renders an exact rational as the shortest decimal that
 // represents it, or fails when none does.
 func CanonicalDecimal(r *big.Rat) (string, error) { return canonical(r) }
+
+// RoundDecimal rounds an exact rational to the given places by an admitted
+// method — the one place a kernel method may lose precision, declared.
+func RoundDecimal(r *big.Rat, places int, method string) *big.Rat { return roundRat(r, places, method) }
+
+// IsRoundingMethod reports whether a method is admitted.
+func IsRoundingMethod(m string) bool { return slices.Contains(RoundingMethods, m) }

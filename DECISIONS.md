@@ -2093,3 +2093,42 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   is symmetric; a live run over the voices with the model drafting the matching
   bundle — the agent knows the effect, the measurement is owed with the twelve-run
   round.
+
+## 2026-10-11 — FX and netting: the converter is a clause of the structure; netting is a structure
+
+- **The second customer, an EUR invoice paid in PLN** (`TestMatchingFX`, `TestConverter`):
+  the structure gains `convert` — `{functional, date_side, rounding, rate_up_account,
+  rate_down_account}`, the FX precedent of postings' `convert` as a clause. The engine
+  runs it as a pre-pass and a post-pass around the unchanged strategies: every candidate's
+  open money is read in the trigger's currency at the fx_rate of the settlement date —
+  the date of the item on `date_side`: the trigger's own when it is that side (a payment
+  against invoices), each candidate's own when it is on that side (an invoice against the
+  payments waiting for it) — so exact, subset, reference and oldest first compare like
+  with like; then every allocation is written back in the item's own currency (a whole
+  item takes its own open exactly, a partial one the rounded equivalent, by the declared
+  method), with the equivalent kept beside it in the event (`equivalent`,
+  `equivalent_currency`). The rate's move between an item's own date and its settlement
+  — what the allocated amount was worth in the functional currency then and now — is an
+  `fx` difference, `up` or `down`, against the matching account; whether that is a gain
+  or a loss depends on the side, and the rules that post it know (a receivable settled at
+  a higher rate: Wn 201 / Ma 750). Rates are master data read as postings read them
+  (`fx_rate` by code, the inverse pair inverted), every rate read is an input of the
+  match, and a missing rate refuses the firing into the worklist — unexplainable beats
+  guessed, as E3 decided. 1000 EUR at 4.3215 is 4321.50 PLN exactly; a 2000 PLN part is
+  462.80 EUR, its settled value the 2000.00 actually allocated, its booked value
+  1990.04 at 4.30, the difference 9.96 up. Replay reproduces the converted match without
+  a rate in sight.
+- **The converter works on one allocated money measure** (the structure declares no
+  other), and when `date_side` is not the trigger's side and the trigger converts, its
+  settlement date is the latest allocated item's on that side — a simplification named
+  here, enough for two sides, revisited if a three-sided FX structure ever needs more.
+- **Solve never mutates its problem**: the converted view is the engine's own copy — a
+  bug the converter test caught on its second solve.
+- **The third customer, netting per saldo** (`TestMatchingNetting`): nothing new in the
+  engine. A structure whose trigger is our purchase invoice and whose other side is the
+  same party's open sales invoices (`objects(sales_invoice, buyer, $.state.supplier)`),
+  with exact, subset and oldest first: their 500 nets against our 300 and 200; a 400
+  payable against a 1000 receivable nets whole and leaves 600 open. The match is the
+  kompensata: a `netting` document per allocated receivable, posting Wn 202 / Ma 201.
+  The kodeks cywilny art. 498 warrant belongs to the pack draft when the pack ships it.
+- **The agent** reads the convert clause and the netting structure in its grammar.
