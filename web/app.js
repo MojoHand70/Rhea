@@ -311,6 +311,50 @@ function renderCalc(calc) {
   });
 }
 
+/* A match explains itself the same way: the strategy that found it, every
+   item on every side with what was allocated and what stays open, every
+   difference absorbed and where it went, and every step tried before — all
+   baked into the event at firing. Amounts render by the measure's kind. */
+function matchAmount(kinds, measure, v, currency) {
+  if (kinds && kinds[measure] === "money" && typeof v === "number") {
+    return (v / 100).toFixed(2) + (currency ? " " + currency : "");
+  }
+  return String(v);
+}
+function renderMatched(m) {
+  const lines = [el("div", { class: "explain-line" },
+    `matched by ${m.strategy} (step ${m.step} of ${m.matching})`)];
+  for (const [side, items] of Object.entries(m.sides || {})) {
+    for (const it of items) {
+      const parts = Object.keys(it.allocated || {}).map(k =>
+        `${matchAmount(m.kinds, k, it.allocated[k], it.currency)} allocated, ` +
+        `${matchAmount(m.kinds, k, it.open_after[k], it.currency)} open`).join("; ");
+      lines.push(el("div", { class: "explain-line" }, `${side}: `,
+        el("a", { href: "#", title: it.object_id, onclick: (e) => {
+          e.preventDefault(); openExplain({ object: it.object_id });
+        } }, it.reference || it.object_id),
+        el("span", { class: "hint" }, ` ${it.date || ""} — ${parts}`)));
+    }
+  }
+  for (const d of (m.differences || [])) {
+    lines.push(el("div", { class: "explain-line" },
+      `${d.kind}: ${matchAmount(m.kinds, d.measure, d.amount, d.currency)} ${d.direction}` +
+      (d.account ? ` → ${d.account}` : "") + (d.item ? ` on ${d.item}` : "")));
+  }
+  lines.push(...renderTried(m.tried));
+  return lines;
+}
+function renderTried(tried) {
+  return (tried || []).filter(a => !a.found).map(a =>
+    el("div", { class: "explain-line hint" }, `step ${a.step} ${a.strategy}: ${a.reason}`));
+}
+function renderUnmatched(u) {
+  const lines = [el("div", { class: "explain-line" }, `unmatched by ${u.matching}` +
+    (u.reason ? ` — ${u.reason}` : ""))];
+  lines.push(...renderTried(u.tried));
+  return lines;
+}
+
 function openExplain(q) {
   const key = q.object ? `explain:o:${q.object}` : `explain:e:${q.event}`;
   const title = q.object ? `Why ${q.object}` : `Why event #${q.event}`;
@@ -358,6 +402,8 @@ function openExplain(q) {
           el("span", { class: "hint" }, ` ${a.object_type}: ${delta}`)));
         head.append(...renderCalc(a.calc));
       }
+      if (n.matched) head.append(...renderMatched(n.matched));
+      if (n.unmatched) head.append(...renderUnmatched(n.unmatched));
       if (n.payload) {
         head.append(...payloadFiles(n.payload),
           el("details", {}, el("summary", {}, "the fact"),

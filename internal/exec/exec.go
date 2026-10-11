@@ -71,14 +71,19 @@ func (x *Executor) ProcessPending(ctx context.Context) (int, []error) {
 }
 
 // chainNode is one would-be consequence in a cascade chain: a
-// materialization or an amendment, the rule that produced it, and which
-// chain entry's derived event caused it (-1 is the root raw event). Nodes
-// book in chain order. Amendments end their branch: nothing fires on them.
+// materialization, an amendment, or a match (found or not), the rule that
+// produced it, and which chain entry's derived event caused it (-1 is the
+// root raw event). Nodes book in chain order. Amendments end their branch:
+// nothing fires on them. A match is a chain point like a materialization:
+// the rules that explain it (amendments of open amounts, settlements,
+// differences) fire on its event in the next generation.
 type chainNode struct {
-	mat   core.MaterializedObject
-	amend *core.AmendedObject
-	rule  core.Rule
-	cause int
+	mat       core.MaterializedObject
+	amend     *core.AmendedObject
+	matched   *core.MatchedObjects
+	unmatched *core.UnmatchedObjects
+	rule      core.Rule
+	cause     int
 	// booked is the derived event already in the log for this node: a
 	// prior firing replayed into a backfill chain, never written again.
 	booked int64
@@ -87,10 +92,12 @@ type chainNode struct {
 // priorFiring is one consequence already in the log, keyed in Prior by the
 // point in a chain it fired at: the root event's id, or the causing object's.
 type priorFiring struct {
-	ruleID  string
-	version int
-	eventID int64
-	mat     *core.MaterializedObject // nil for an amendment
+	ruleID    string
+	version   int
+	eventID   int64
+	mat       *core.MaterializedObject // nil for an amendment or a match
+	matched   *core.MatchedObjects
+	unmatched *core.UnmatchedObjects
 }
 
 // Prior is a root event's existing derivations, by chain point. A backfill
@@ -99,10 +106,13 @@ type priorFiring struct {
 type Prior map[string][]priorFiring
 
 // objectID names the object this node touches — the unit the same-id
-// conflict guard speaks about, for both kinds of consequence.
+// conflict guard speaks about — or, for a match, its chain point.
 func (n chainNode) objectID() string {
 	if n.amend != nil {
 		return n.amend.ObjectID
+	}
+	if n.matched != nil || n.unmatched != nil {
+		return n.idBase()
 	}
 	return n.mat.ObjectID
 }
@@ -112,6 +122,68 @@ func (n chainNode) objectType() string {
 		return n.amend.ObjectType
 	}
 	return n.mat.ObjectType
+}
+
+// idBase is the chain point cascaded firings build their ids on: the
+// materialized object's id, or for a match the structure's name qualified
+// by the trigger — rooted, like every id, in the root event through the
+// trigger's own id.
+func (n chainNode) idBase() string {
+	switch {
+	case n.matched != nil:
+		return MatchIDBase(n.matched.Matching, n.matched.Trigger.ObjectID)
+	case n.unmatched != nil:
+		return MatchIDBase(n.unmatched.Matching, n.unmatched.Trigger.ObjectID)
+	}
+	return n.mat.ObjectID
+}
+
+// MatchIDBase is the chain point of one match: ids of the objects a match
+// causes (settlements, differences) build on it, so one structure firing on
+// one trigger mints them once and reproducibly.
+func MatchIDBase(matching, triggerID string) string { return matching + "-" + triggerID }
+
+// derivedType is the event a node emits for the next generation.
+func (n chainNode) derivedType() string {
+	switch {
+	case n.matched != nil:
+		return core.EventObjectsMatched
+	case n.unmatched != nil:
+		return core.EventObjectsUnmatched
+	}
+	return core.EventObjectMaterialized
+}
+
+// derivedPayload is what the next generation's rules see: the
+// materialization or the match as it will be written to the log, plus,
+// under "root", the fact that started the chain (read-only, never written).
+func (n chainNode) derivedPayload(root any) (map[string]any, error) {
+	var evPayload map[string]any
+	switch {
+	case n.matched != nil || n.unmatched != nil:
+		var v any = n.matched
+		if n.unmatched != nil {
+			v = n.unmatched
+		}
+		// The event's own encoding, decoded as every payload is: what a
+		// rule reads is exactly what the log will hold.
+		b, err := json.Marshal(v)
+		if err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(b, &evPayload); err != nil {
+			return nil, err
+		}
+	default:
+		evPayload = map[string]any{
+			"object_id":    n.mat.ObjectID,
+			"object_type":  n.mat.ObjectType,
+			"type_version": n.mat.TypeVersion,
+			"state":        n.mat.State,
+		}
+	}
+	evPayload["root"] = root
+	return evPayload, nil
 }
 
 // maxCascadeDepth caps chain generations — the loop guard for cascaded rules,
@@ -168,7 +240,13 @@ func (x *Executor) evaluate(ctx context.Context, ev core.Event, rules []core.Rul
 func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []core.Rule, payload any, base core.Lookup, baseGet core.Getter, prior Prior) ([]chainNode, error) {
 	var nodes []chainNode
 	owner := map[string]string{} // object id → rule that claimed it
-	visible := 0                 // how many nodes earlier generations contributed
+	// born marks objects materialized in this chain and not yet amended in
+	// it: a later generation may amend what an earlier one materialized (a
+	// bank line born, matched and settled by one fact) — a sequence, not a
+	// fight. Two materializations or two amendments of one object in one
+	// chain remain the conflict a human decides.
+	born := map[string]bool{}
+	visible := 0 // how many nodes earlier generations contributed
 	lookup := func(typ, field string, value any) ([]string, error) {
 		ids, err := base(typ, field, value)
 		if err != nil {
@@ -218,7 +296,7 @@ func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []cor
 	fire := func(ev core.Event, evPayload any, cause int) error {
 		idBase := fmt.Sprintf("%d", root.ID)
 		if cause >= 0 {
-			idBase = nodes[cause].mat.ObjectID
+			idBase = nodes[cause].idBase()
 		}
 		// What already fired here is replayed from the log, never expanded
 		// again: its state is baked, and re-judging an old amendment against
@@ -226,12 +304,17 @@ func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []cor
 		fired := map[string]bool{}
 		for _, p := range prior[idBase] {
 			fired[p.ruleID] = true
-			if p.mat == nil {
-				continue // amendments end their branch: nothing cascades from them
+			switch {
+			case p.mat != nil:
+				owner[p.mat.ObjectID], born[p.mat.ObjectID] = p.ruleID, true
+				nodes = append(nodes, chainNode{mat: *p.mat, cause: cause, booked: p.eventID,
+					rule: core.Rule{ID: p.ruleID, Version: p.version}})
+			case p.matched != nil || p.unmatched != nil:
+				nodes = append(nodes, chainNode{matched: p.matched, unmatched: p.unmatched, cause: cause,
+					booked: p.eventID, rule: core.Rule{ID: p.ruleID, Version: p.version}})
+			default:
+				// amendments end their branch: nothing cascades from them
 			}
-			owner[p.mat.ObjectID] = p.ruleID
-			nodes = append(nodes, chainNode{mat: *p.mat, cause: cause, booked: p.eventID,
-				rule: core.Rule{ID: p.ruleID, Version: p.version}})
 		}
 		for _, r := range rules {
 			if fired[r.ID] {
@@ -244,16 +327,26 @@ func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []cor
 			if !ok {
 				continue
 			}
+			if r.Spec.Effect.Matching != nil {
+				m, u, err := x.expandMatching(ctx, r, evPayload, lookup, get)
+				if err != nil {
+					return fmt.Errorf("rule %s v%d: %w", r.ID, r.Version, err)
+				}
+				nodes = append(nodes, chainNode{matched: m, unmatched: u, rule: r, cause: cause})
+				continue
+			}
 			if r.Spec.Effect.Amend != nil {
-				am, err := x.expandAmend(ctx, r, evPayload, lookup, get)
+				ams, err := x.expandAmend(ctx, r, evPayload, lookup, get)
 				if err != nil {
 					return err
 				}
-				if prev, clash := owner[am.ObjectID]; clash {
-					return fmt.Errorf("rules %s and %s both touch %s in one chain — conflicting rules need a human", prev, r.ID, am.ObjectID)
+				for _, am := range ams {
+					if prev, clash := owner[am.ObjectID]; clash && !born[am.ObjectID] {
+						return fmt.Errorf("rules %s and %s both touch %s in one chain — conflicting rules need a human", prev, r.ID, am.ObjectID)
+					}
+					owner[am.ObjectID], born[am.ObjectID] = r.ID, false
+					nodes = append(nodes, chainNode{amend: am, rule: r, cause: cause})
 				}
-				owner[am.ObjectID] = r.ID
-				nodes = append(nodes, chainNode{amend: am, rule: r, cause: cause})
 				continue
 			}
 			mats, err := x.expandEffect(ctx, root, idBase, r, evPayload, lookup, get)
@@ -264,7 +357,7 @@ func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []cor
 				if prev, clash := owner[m.ObjectID]; clash {
 					return fmt.Errorf("rules %s and %s both materialize %s — conflicting rules need a human", prev, r.ID, m.ObjectID)
 				}
-				owner[m.ObjectID] = r.ID
+				owner[m.ObjectID], born[m.ObjectID] = r.ID, true
 				nodes = append(nodes, chainNode{mat: m, rule: r, cause: cause})
 			}
 		}
@@ -287,21 +380,18 @@ func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []cor
 				continue // amendments end their branch: nothing fires on them
 			}
 			derived := core.Event{
-				Kind: core.KindDerived, Type: core.EventObjectMaterialized,
+				Kind: core.KindDerived, Type: n.derivedType(),
 				OccurredAt: root.OccurredAt, // business date is inherited down the chain
 				RuleID:     n.rule.ID, RuleVersion: n.rule.Version,
 			}
-			// What a cascade rule sees is the materialization itself, shaped
-			// exactly as it will be written to the log — plus, under "root",
-			// the fact that started the chain (read-only, never written into
-			// the derived event): a document's lines live in the delivery,
-			// not in the PZ header that cascades them (KK, 2026-10-08).
-			evPayload := map[string]any{
-				"object_id":    n.mat.ObjectID,
-				"object_type":  n.mat.ObjectType,
-				"type_version": n.mat.TypeVersion,
-				"state":        n.mat.State,
-				"root":         payload,
+			// What a cascade rule sees is the materialization (or the match)
+			// itself, shaped exactly as it will be written to the log — plus,
+			// under "root", the fact that started the chain (read-only, never
+			// written into the derived event): a document's lines live in the
+			// delivery, not in the PZ header that cascades them (KK, 2026-10-08).
+			evPayload, err := n.derivedPayload(payload)
+			if err != nil {
+				return nil, err
 			}
 			if err := fire(derived, evPayload, i); err != nil {
 				return nil, err
@@ -354,6 +444,34 @@ func (x *Executor) book(ctx context.Context, root core.Event, nodes []chainNode)
 		cause := root.ID
 		if n.cause >= 0 {
 			cause = ids[n.cause]
+		}
+		if n.matched != nil || n.unmatched != nil {
+			// A match is one event, baked: the allocations and differences
+			// as the engine found them. It touches no object itself — the
+			// rules that explain it do, in the nodes that follow.
+			var v any = n.matched
+			if n.unmatched != nil {
+				v = n.unmatched
+			}
+			matchPayload, err := json.Marshal(v)
+			if err != nil {
+				return err
+			}
+			id, err := store.AppendEvent(ctx, tx, core.Event{
+				Kind:         core.KindDerived,
+				Type:         n.derivedType(),
+				OccurredAt:   root.OccurredAt,
+				Payload:      matchPayload,
+				CauseEventID: &cause,
+				RuleID:       n.rule.ID,
+				RuleVersion:  n.rule.Version,
+				Actor:        "kernel",
+			})
+			if err != nil {
+				return err
+			}
+			ids[i] = id
+			continue
 		}
 		if n.amend != nil {
 			amendPayload, err := json.Marshal(n.amend)
@@ -408,7 +526,7 @@ func (x *Executor) book(ctx context.Context, root core.Event, nodes []chainNode)
 	// naming the touched types, delivered only if this transaction commits.
 	touched, seen := []string{}, map[string]bool{}
 	for _, n := range nodes {
-		if n.booked != 0 {
+		if n.booked != 0 || n.matched != nil || n.unmatched != nil {
 			continue
 		}
 		if !seen[n.objectType()] {
@@ -508,14 +626,16 @@ func (x *Executor) expandEffect(ctx context.Context, root core.Event, idBase str
 	return mats, nil
 }
 
-// expandAmend turns a matched amend rule into the delta it applies: target
+// expandAmend turns a matched amend rule into the deltas it applies: target
 // resolved and vouched (the object exists, and identity is typed by
 // construction — <type>-… — so the id itself is the type check), values
 // baked in the payload's canonical encoding, and the lifecycle law enforced
 // where the kernel knows the current status: a Set touching the declared
 // lifecycle field must move along a declared transition, judged the way
-// balance is judged — at expansion, before anything books.
-func (x *Executor) expandAmend(ctx context.Context, r core.Rule, payload any, lookup core.Lookup, get core.Getter) (*core.AmendedObject, error) {
+// balance is judged — at expansion, before anything books. With Each, one
+// delta per element of the fan-out, templates evaluating against {doc, line,
+// n} as an object fan-out's do: the items a match allocated, each moved.
+func (x *Executor) expandAmend(ctx context.Context, r core.Rule, payload any, lookup core.Lookup, get core.Getter) ([]*core.AmendedObject, error) {
 	tmpl := r.Spec.Effect.Amend
 	objType, err := x.objectType(ctx, tmpl.Type)
 	if err != nil {
@@ -527,6 +647,48 @@ func (x *Executor) expandAmend(ctx context.Context, r core.Rule, payload any, lo
 	}).Validate(&objType); err != nil {
 		return nil, fmt.Errorf("rule %s v%d: %w", r.ID, r.Version, err)
 	}
+	if tmpl.Each == "" {
+		am, err := x.amendOne(ctx, r, objType, payload, lookup, get)
+		if err != nil {
+			return nil, err
+		}
+		return []*core.AmendedObject{am}, nil
+	}
+	t, err := core.ParseTemplate(tmpl.Each)
+	if err != nil {
+		return nil, fmt.Errorf("rule %s v%d each: %w", r.ID, r.Version, err)
+	}
+	v, err := t.Eval(payload, core.FieldDef{}, nil)
+	if err != nil {
+		return nil, fmt.Errorf("rule %s v%d each: %w", r.ID, r.Version, err)
+	}
+	arr, ok := v.([]any)
+	if !ok {
+		return nil, fmt.Errorf("rule %s v%d each: %s is not an array", r.ID, r.Version, tmpl.Each)
+	}
+	if len(arr) == 0 {
+		return nil, fmt.Errorf("rule %s v%d each: %s matched no elements", r.ID, r.Version, tmpl.Each)
+	}
+	out := make([]*core.AmendedObject, 0, len(arr))
+	for i, el := range arr {
+		scope := map[string]any{"doc": payload, "line": el, "n": i + 1}
+		if m, ok := payload.(map[string]any); ok {
+			if root, ok := m["root"]; ok {
+				scope["root"] = root
+			}
+		}
+		am, err := x.amendOne(ctx, r, objType, scope, lookup, get)
+		if err != nil {
+			return nil, fmt.Errorf("line %d: %w", i+1, err)
+		}
+		out = append(out, am)
+	}
+	return out, nil
+}
+
+// amendOne expands one amendment against one scope.
+func (x *Executor) amendOne(ctx context.Context, r core.Rule, objType core.ObjectType, payload any, lookup core.Lookup, get core.Getter) (*core.AmendedObject, error) {
+	tmpl := r.Spec.Effect.Amend
 	env := x.env(ctx, payload, lookup, get)
 	t, err := core.ParseTemplate(tmpl.Target)
 	if err != nil {
@@ -576,6 +738,9 @@ func (x *Executor) expandAmend(ctx context.Context, r core.Rule, payload any, lo
 	// Consent was judged per field by Validate; the lifecycle field, when the
 	// type has one, additionally moves only along a declared transition. An
 	// enrichment-only type (amendable fields, no lifecycle) has no law to apply.
+	// A status set to what it already is is a transition like any other: a
+	// type that lets an open invoice stay open under a partial payment
+	// declares open → open (DECISIONS 2026-10-11, the matching attempt).
 	lc := objType.Lifecycle
 	if lc == nil {
 		return &core.AmendedObject{ObjectID: id, ObjectType: tmpl.Type, Set: set, Calc: calc}, nil

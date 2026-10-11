@@ -172,6 +172,7 @@ func (c ChannelSpec) validate(a Activity) error {
 // speak in.
 func ReservedEventType(t string) bool {
 	return t == EventObjectMaterialized || t == EventObjectAmended ||
+		t == EventObjectsMatched || t == EventObjectsUnmatched ||
 		strings.HasPrefix(t, "rule.") || strings.HasPrefix(t, "activity.") ||
 		strings.HasPrefix(t, "bundle.") || strings.HasPrefix(t, "backfill.")
 }

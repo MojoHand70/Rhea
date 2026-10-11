@@ -1871,11 +1871,12 @@ evidence in `internal/exec/case_test.go`.
   itself does not materialize. A paid invoice never leaves the key either, so the
   ambiguity is permanent. The side must be keyed by party and filtered by openness
   — a collection, not a lookup.
-- **A partial payment fails on the lifecycle.** One named invoice's open amount moves
-  by amendment, but the same rule cannot say "paid when nothing stays open, else
-  unchanged": `open → open` is not a declared transition, and nothing half-applies,
-  so the whole payment is refused. Across invoices (the remainder settling the next
-  oldest) there is no vocabulary at all: an amendment has exactly one target.
+- **A partial payment fails across invoices.** One named invoice's open amount moves
+  by amendment, and "paid when nothing stays open, else as it is" is the type's to
+  consent to — a lifecycle that declares `open → open` admits it, as data (with the
+  lifecycle as the personas declare it, `open → paid` only, the whole payment is
+  refused and nothing half-applies). What no data expresses is the remainder
+  settling the next oldest invoice: an amendment has exactly one target.
 - **A tolerance fails on the posting line.** The two-grosz difference needs a line
   that exists only when there is a difference; lines are not conditional and amounts
   must be positive, so the rule books a short payment and refuses every exact one
@@ -1885,10 +1886,11 @@ evidence in `internal/exec/case_test.go`.
 - **Verdict: `matching` is a closed-class effect**, as `book`, `convert` and `amend`
   were — a kernel method with N sides and a declared structure, strategies as named
   standards ordered by a policy that is data (DIRECTION, the matching brief). The
-  attempt also names two small generalizations the consequences of a match need in
+  attempt also names one small generalization the consequences of a match need in
   the ordinary language: an amendment over a fan-out (`each` on amend — one event
-  that moves N objects), and a set of the lifecycle field to its current value being
-  no move at all, not a refused transition.
+  that moves N objects). The amendment law itself stands: a status set to what it
+  already is is a transition the type declares, never a kernel exception — a second
+  resolution of a resolved case still waits for a person.
 - **The effect is spelled `matching`, not `match`.** A rule already has a `match`
   (its predicate); one word with two meanings in one JSON object is a trap for the
   author and the reader. `matching` sits beside `postings` — a noun for the engine's
@@ -1955,3 +1957,90 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   settled by one closure; the random draws come in the same order, so every generated
   persona is byte-for-byte what it was.
 
+
+## 2026-10-11 — the matching engine's core: N sides, a declared structure, strategies as data
+
+- **One engine, pure** (`internal/match`): a Problem is the trigger item, the other
+  sides' candidates, the measures and the policy; Solve runs the steps in order and
+  the first feasible match wins. Numbers are exact rationals; nothing is a float.
+  Every search is bounded: the side cap (`core.DefaultMatchingCap` = 200 open
+  candidates; above it "a person decides"), the subset size cap (`max_items`, default
+  4, at most 8) and a node budget (100 000; above it the step says "above its cap" and
+  the policy moves on). The same problem always yields the same result: candidates
+  are ordered by date then log order, a subset is the fewest items first and among
+  those the oldest first, exact takes the oldest agreeing item.
+- **Four strategies, standards with names**: `reference` (the items the trigger's
+  reference names as whole tokens — "FV/1" is not named by "FV/12"; feasible when
+  their open amounts agree, or with `partial` whenever something is named: a short
+  payment settles part, an over-payment keeps its rest open on the line), `exact`
+  (one item per side agreeing on every allocated measure), `subset` (the fewest items
+  summing to the trigger), `oldest_first` (the trigger settles the earliest open
+  items as far as it reaches; one allocated measure). Parameters any step may take:
+  `tolerance` and `tolerance_percent` per measure with a `difference_account` (the
+  difference is absorbed and recorded, positive, with a direction: "short" when the
+  trigger brought less than the side settles, "over" when more), `within_days`.
+  Deferred, named: `proportional` allocation (largest remainder) when a customer
+  asks; FX converters and netting are the next step of the session.
+- **The structure is the template** (`core.MatchingTemplate`, effect `matching`):
+  a name (what the match event carries, so consequence rules key on it and two
+  triggers over one structure share them), the trigger side, N sides — each a type,
+  an `items` read (a keyed `objects(...)` written against the trigger's state; the
+  trigger side has none), `open` per allocated measure (an amendable field: the
+  match's consequence is an amendment), optional `compare` per compared measure (a
+  price: must agree, never consumed), `currency`, `date`, `reference`, `cap` — and the
+  policy. Measures are inferred from the fields: every side declares the same
+  allocated measures; a measure is money, int or decimal, the same on every side. The
+  rule's match must be `object.materialized` where `$.object_type` is the trigger's
+  type; one rule per trigger side (the late-sides case is a second rule over the same
+  name, written against its own trigger). Two gates: `Validate` (shape, strategies,
+  parameters, the trigger named in the match) and `Check` (types, field kinds,
+  amendability, the items read a collection of the side's type).
+- **The outcome is one event, baked.** `objects.matched` carries the name, the
+  strategy and step, the trigger, the measures' kinds, every item on every side with
+  `allocated`, `open_before`, `open_after` (money as minor units), currency, date and
+  reference, every difference with its kind, side, amount, direction, currency and
+  account (resolved at firing: a declared account must exist), every step tried, and
+  the inputs the engine read (the candidates per side — every object under the key,
+  settled ones included — and the tolerances). `objects.unmatched` carries every step
+  tried with its reason, or the one reason no step could run: a side above its cap, a
+  side that cannot be read (a payer no company carries the account of — the line
+  materializes and waits; its own chain is never held hostage by the match).
+- **Ordinary rules explain the match.** A match is a chain point like a
+  materialization: rules matching `objects.matched` (where `$.matching` eq the name)
+  fire in the next generation. The open amounts move by `amend` with `each` over
+  `$.sides.<side>[*]` — the one generalization the attempt named: one event that
+  moves N objects, `target` and `set` evaluating against {doc, line, n, root}. The
+  settlement is an `object` with `each` over the same items; the differences are
+  objects with `each` over `$.differences[*]` (guarded by `$.differences[0]` exists,
+  since an empty fan-out is a rule error) that a cascade posts. A status set to what
+  it already is is a transition the type declares (`open → open` under a part
+  payment), never a kernel exception. An amendment of an object materialized
+  earlier in the same chain is a sequence, not a fight: the conflict guard now
+  admits exactly that (a bank line born, matched and settled by one fact) and still
+  refuses two materializations or two amendments of one object in one chain.
+- **Replay never re-matches**: the match events touch no object; the amendments and
+  materializations they caused are baked, and replay re-applies them. The
+  simulator shares the path verbatim (`SimulateEvents` shows an invoice paid and the
+  settlement added, nothing booked); backfill replays prior match events as chain
+  points, so consequences approved later reach old matches through the gate.
+  Ids of what a match causes build on `<name>-<trigger id>`, rooted like every id.
+- **The walk shows it**: `/api/explain` carries `matched` / `unmatched` on the node
+  and the shell renders the strategy, every item with allocated and open, every
+  difference, every step tried before. The agent's grammar gains EFFECT 4 with the
+  bank story and its consequence rules.
+- **First customer passes** (`TestMatchingBankStory`): by reference; exact keyed by
+  the payer (Orion's identical 123.00 is no candidate — the attempt's ambiguity is
+  gone); three invoices at once, the fewest that explain 750.00; two grosz short
+  within the tolerance, the difference as an object posting Wn 755 / Ma 201; a part
+  payment oldest first leaving 400.00 open, settled exactly later; a payer who owes
+  nothing unmatched with every step's reason; an unknown payer's line open, its chain
+  intact; replay identical; the dry run shared. `TestMatchingGate` pins the refusals.
+- **A named limit**: a side's read is one field, so it returns a customer's whole
+  history under the key and the engine filters the open ones; the VM's collection cap
+  (1000) bounds the read. When a customer's history outgrows it, the keyed-open read
+  (a two-field key, or an open-items projection) is the scale item — paid then.
+- **KK, during the session**: each company has its own payment-matching policy —
+  which is what the policy being data on the company's rule gives; the pack only
+  proposes. And intercompany matching for group consolidation is one of the
+  important kinds — the brief lists it among the three-sided structures; it becomes
+  this session's generality customer (customer 5), not an afterthought.

@@ -1,0 +1,322 @@
+// The matching effect's firing path (DIRECTION 2026-10-11, the matching
+// brief; DECISIONS 2026-10-11, the attempt). A matching rule fires on the
+// materialization of its trigger side's object; the kernel reads the other
+// sides' candidates by key through the chain-visible world, builds the
+// engine's problem, runs the policy, and bakes the outcome into one derived
+// event — objects.matched with every allocation and difference, or
+// objects.unmatched with every step tried and why. The engine is pure
+// (internal/match); this file is the wiring: fields to measures, amounts to
+// exact rationals and back to the boundary encoding, accounts resolved.
+// Replay never re-matches: the amendments a match causes are baked events.
+package exec
+
+import (
+	"context"
+	"fmt"
+	"math/big"
+	"sort"
+
+	"rhea/internal/core"
+	"rhea/internal/match"
+)
+
+// expandMatching runs one matching rule on the materialization payload it
+// matched. Exactly one of the two results is non-nil on success.
+func (x *Executor) expandMatching(ctx context.Context, r core.Rule, payload any, lookup core.Lookup, get core.Getter) (*core.MatchedObjects, *core.UnmatchedObjects, error) {
+	tmpl := r.Spec.Effect.Matching
+	pm, _ := payload.(map[string]any)
+	objectID, _ := pm["object_id"].(string)
+	objectType, _ := pm["object_type"].(string)
+	state, _ := pm["state"].(map[string]any)
+	triggerSide, _ := tmpl.Side(tmpl.Trigger)
+	if objectID == "" || state == nil || objectType != triggerSide.Type {
+		return nil, nil, fmt.Errorf("matching %s is triggered by a %s, not by %q", tmpl.Name, triggerSide.Type, objectType)
+	}
+	env := x.env(ctx, payload, lookup, get)
+	kinds, err := tmpl.MeasureKinds(env.Types)
+	if err != nil {
+		return nil, nil, fmt.Errorf("matching %s: %w", tmpl.Name, err)
+	}
+	var measures []match.Measure
+	for _, name := range tmpl.AllocatedMeasures() {
+		measures = append(measures, match.Measure{Name: name, Allocated: true, Money: kinds[name] == "money", Places: places(kinds[name])})
+	}
+	for _, name := range tmpl.ComparedMeasures() {
+		measures = append(measures, match.Measure{Name: name, Money: kinds[name] == "money", Places: places(kinds[name])})
+	}
+	trigger := core.MatchTrigger{Side: tmpl.Trigger, ObjectID: objectID, ObjectType: objectType}
+	triggerItem, err := itemOf(triggerSide, objectID, state, kinds, 0)
+	if err != nil {
+		return nil, nil, fmt.Errorf("matching %s: the %s %s: %w", tmpl.Name, triggerSide.Name, objectID, err)
+	}
+	inputs := map[string]any{}
+	typeOf := map[string]string{triggerSide.Name: triggerSide.Type}
+	var sides []match.Side
+	for _, side := range tmpl.Sides {
+		if side.Name == tmpl.Trigger {
+			continue
+		}
+		typeOf[side.Name] = side.Type
+		t, err := core.ParseTemplate(side.Items)
+		if err != nil {
+			return nil, nil, fmt.Errorf("matching %s side %s: %w", tmpl.Name, side.Name, err)
+		}
+		reads, in, err := t.Objects(payload, env)
+		if err != nil {
+			// A side that cannot be read — a payer no company carries the
+			// account of, a key above the collection cap — has no
+			// candidates: the trigger stays open for the person, and the
+			// log says why. Its own materialization is never held hostage.
+			return nil, &core.UnmatchedObjects{Matching: tmpl.Name, Trigger: trigger, Inputs: inputs,
+				Reason: fmt.Sprintf("%s cannot be read: %v", side.Name, err)}, nil
+		}
+		for k, v := range in {
+			inputs[k] = v
+		}
+		s := match.Side{Name: side.Name}
+		ids := make([]string, 0, len(reads))
+		open := 0
+		for i, rd := range reads {
+			it, err := itemOf(side, rd.ID, rd.State, kinds, i+1)
+			if err != nil {
+				return nil, nil, fmt.Errorf("matching %s: the %s %s: %w", tmpl.Name, side.Name, rd.ID, err)
+			}
+			s.Items = append(s.Items, it)
+			ids = append(ids, rd.ID)
+			if isOpen(it) {
+				open++
+			}
+		}
+		inputs["candidates."+side.Name] = ids
+		// The read returns every object under the key, settled ones
+		// included (the key is one field; the VM's collection cap bounds
+		// the read itself); the side's cap bounds what the engine may
+		// search — the open ones. Above it the items go to the person,
+		// never to a long search: the trigger stays open, the log says why.
+		capacity := side.Cap
+		if capacity <= 0 {
+			capacity = core.DefaultMatchingCap
+		}
+		if open > capacity {
+			return nil, &core.UnmatchedObjects{Matching: tmpl.Name, Trigger: trigger, Inputs: inputs,
+				Reason: fmt.Sprintf("%s holds %d open candidates, above the cap of %d — a person decides", side.Name, open, capacity)}, nil
+		}
+		sides = append(sides, s)
+	}
+	var policy []match.Step
+	for i, st := range tmpl.Policy {
+		step := match.Step{Strategy: st.Strategy, DifferenceAccount: st.DifferenceAccount,
+			WithinDays: st.WithinDays, MaxItems: st.MaxItems, Partial: st.Partial}
+		if len(st.Tolerance) > 0 {
+			step.Tolerance = map[string]*big.Rat{}
+			for m, v := range st.Tolerance {
+				step.Tolerance[m], _ = core.ParseDecimal(v)
+				inputs[fmt.Sprintf("step %d tolerance.%s", i+1, m)] = v
+			}
+		}
+		if len(st.TolerancePercent) > 0 {
+			step.TolerancePercent = map[string]*big.Rat{}
+			for m, v := range st.TolerancePercent {
+				step.TolerancePercent[m], _ = core.ParseDecimal(v)
+				inputs[fmt.Sprintf("step %d tolerance_percent.%s", i+1, m)] = v
+			}
+		}
+		policy = append(policy, step)
+	}
+	result, found, err := match.Solve(match.Problem{TriggerSide: tmpl.Trigger, Trigger: triggerItem,
+		Sides: sides, Measures: measures, Policy: policy})
+	if err != nil {
+		return nil, nil, fmt.Errorf("matching %s: %w", tmpl.Name, err)
+	}
+	if !found {
+		return nil, &core.UnmatchedObjects{Matching: tmpl.Name, Trigger: trigger, Tried: attempts(result.Tried), Inputs: inputs}, nil
+	}
+	out := &core.MatchedObjects{Matching: tmpl.Name, Strategy: result.Strategy, Step: result.Step,
+		Trigger: trigger, Kinds: kinds, Sides: map[string][]core.MatchAllocation{}, Differences: []core.MatchDifference{},
+		Tried: attempts(result.Tried), Inputs: inputs}
+	states := map[string]map[string]any{objectID: state}
+	for _, s := range sides {
+		for _, it := range s.Items {
+			states[it.ID] = nil // read lazily below through get, which sees the chain
+		}
+	}
+	sideNames := make([]string, 0, len(result.Sides))
+	for name := range result.Sides {
+		sideNames = append(sideNames, name)
+	}
+	sort.Strings(sideNames)
+	for _, name := range sideNames {
+		side, _ := tmpl.Side(name)
+		for _, a := range result.Sides[name] {
+			st := states[a.ID]
+			if st == nil {
+				st, _, err = get(a.ID)
+				if err != nil {
+					return nil, nil, err
+				}
+			}
+			alloc := core.MatchAllocation{ObjectID: a.ID, ObjectType: typeOf[name],
+				Allocated: map[string]any{}, OpenBefore: map[string]any{}, OpenAfter: map[string]any{}}
+			for m := range a.Allocated {
+				if alloc.Allocated[m], err = encode(a.Allocated[m], kinds[m]); err != nil {
+					return nil, nil, fmt.Errorf("matching %s: %s allocated %s: %w", tmpl.Name, a.ID, m, err)
+				}
+				if alloc.OpenBefore[m], err = encode(a.OpenBefore[m], kinds[m]); err != nil {
+					return nil, nil, err
+				}
+				if alloc.OpenAfter[m], err = encode(a.OpenAfter[m], kinds[m]); err != nil {
+					return nil, nil, err
+				}
+			}
+			if side.Currency != "" {
+				alloc.Currency, _ = st[side.Currency].(string)
+			}
+			alloc.Date, _ = st[side.Date].(string)
+			if side.Reference != "" {
+				alloc.Reference, _ = st[side.Reference].(string)
+			}
+			out.Sides[name] = append(out.Sides[name], alloc)
+		}
+	}
+	for _, d := range result.Differences {
+		amount, err := encode(d.Amount, kinds[d.Measure])
+		if err != nil {
+			return nil, nil, fmt.Errorf("matching %s: difference on %s: %w", tmpl.Name, d.Measure, err)
+		}
+		md := core.MatchDifference{Kind: d.Kind, Measure: d.Measure, Side: d.Side, Item: d.Item,
+			Amount: amount, Direction: d.Direction, Account: d.Account}
+		if kinds[d.Measure] == "money" {
+			md.Currency = triggerItem.Currency
+		}
+		if d.Account != "" {
+			// The account the difference goes to must exist: a declared
+			// home, resolved now so the posting rule that reads the code
+			// cannot find it missing later.
+			if _, err := core.ResolveRef(lookup, "account", "code", d.Account); err != nil {
+				return nil, nil, fmt.Errorf("matching %s: difference_account %s: %w", tmpl.Name, d.Account, err)
+			}
+		}
+		out.Differences = append(out.Differences, md)
+	}
+	return out, nil, nil
+}
+
+// isOpen reports whether an item still has something to allocate on every
+// measure — the candidates the engine searches.
+func isOpen(it match.Item) bool {
+	for _, v := range it.Open {
+		if v == nil || v.Sign() <= 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func attempts(tried []match.Attempt) []core.MatchAttempt {
+	out := make([]core.MatchAttempt, 0, len(tried))
+	for _, a := range tried {
+		out = append(out, core.MatchAttempt{Step: a.Step, Strategy: a.Strategy, Found: a.Found, Reason: a.Reason})
+	}
+	return out
+}
+
+// itemOf reads one object's state into an engine item by the side's
+// declared fields and the measures' kinds.
+func itemOf(side core.MatchingSide, id string, state map[string]any, kinds map[string]string, seq int) (match.Item, error) {
+	it := match.Item{ID: id, Open: map[string]*big.Rat{}, Seq: seq}
+	for m, field := range side.Open {
+		v, err := amountOf(state[field], kinds[m])
+		if err != nil {
+			return it, fmt.Errorf("field %s: %w", field, err)
+		}
+		it.Open[m] = v
+	}
+	for m, field := range side.Compare {
+		if _, present := state[field]; !present {
+			continue
+		}
+		v, err := amountOf(state[field], kinds[m])
+		if err != nil {
+			return it, fmt.Errorf("field %s: %w", field, err)
+		}
+		if it.Compare == nil {
+			it.Compare = map[string]*big.Rat{}
+		}
+		it.Compare[m] = v
+	}
+	if side.Currency != "" {
+		it.Currency, _ = state[side.Currency].(string)
+	}
+	it.Date, _ = state[side.Date].(string)
+	if it.Date == "" {
+		return it, fmt.Errorf("field %s: no date", side.Date)
+	}
+	if side.Reference != "" {
+		it.Reference, _ = state[side.Reference].(string)
+	}
+	return it, nil
+}
+
+// amountOf reads a stored amount by its field kind: money as minor units
+// (a number in state, a decimal string at the boundary), int as a whole
+// number, decimal as its string.
+func amountOf(v any, kind string) (*big.Rat, error) {
+	switch n := v.(type) {
+	case nil:
+		return nil, fmt.Errorf("is missing")
+	case string:
+		if kind == "money" {
+			minor, err := core.ParseMoney(n)
+			if err != nil {
+				return nil, err
+			}
+			return big.NewRat(minor, 100), nil
+		}
+		return core.ParseDecimal(n)
+	case float64:
+		if n != float64(int64(n)) {
+			return nil, fmt.Errorf("%v is not a whole number", n)
+		}
+		return scaled(int64(n), kind), nil
+	case int64:
+		return scaled(n, kind), nil
+	case int:
+		return scaled(int64(n), kind), nil
+	}
+	return nil, fmt.Errorf("%v (%T) is not an amount", v, v)
+}
+
+func scaled(n int64, kind string) *big.Rat {
+	if kind == "money" {
+		return big.NewRat(n, 100)
+	}
+	return new(big.Rat).SetInt64(n)
+}
+
+// encode renders an exact amount in the boundary encoding of its kind.
+func encode(r *big.Rat, kind string) (any, error) {
+	switch kind {
+	case "money":
+		minor := new(big.Rat).Mul(r, big.NewRat(100, 1))
+		if !minor.IsInt() {
+			return nil, fmt.Errorf("%s does not fit a money field", r.RatString())
+		}
+		return minor.Num().Int64(), nil
+	case "int":
+		if !r.IsInt() {
+			return nil, fmt.Errorf("%s is not a whole number", r.RatString())
+		}
+		return r.Num().Int64(), nil
+	}
+	return core.CanonicalDecimal(r)
+}
+
+func places(kind string) int {
+	switch kind {
+	case "money":
+		return 2
+	case "int":
+		return 0
+	}
+	return -1
+}

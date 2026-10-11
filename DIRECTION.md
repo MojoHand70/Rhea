@@ -1801,6 +1801,33 @@ strategies are standards with names, ordered by a policy that is data;
 every match is a baked, explained event; what the engine cannot settle
 is a person's grid, and the person's pairing is the same event.*
 
+**KK, 2026-10-11, during the session.** Two notes. *Each company can
+have a different policy for payment matching* — which is exactly what
+the policy being data on the company's own rule gives: the order of
+strategies, the tolerance, the difference account and the time window
+are the rule's, the Poland pack proposes a default with its warrant, and
+the owner overrides it in the interview. And *intercompany matching for
+group consolidation is one of the important kinds* — it is one of the
+three-sided structures above (our purchase invoice, their sales invoice,
+the group's settlement), keyed across company refs with the document
+number as the reference and the group currency through the converter;
+the match event is the elimination's evidence. It is the generality
+customer of this session (customer 5), not an afterthought.
+
+**Shipped 2026-10-11, the first steps** (see DECISIONS, "the matching
+attempt" and "the matching engine's core"): the attempt — by reference
+carries, exact fails on the one-field key, a partial on the allocation
+across invoices, a tolerance on the conditional posting line, a subset
+and N sides have no vocabulary; the engine's core — a pure engine with N
+sides, the structure and the policy as the `matching` effect (spelled so
+because a rule already has a `match`), four strategies (reference, exact,
+subset, oldest first) with tolerance and a time window, one baked event
+per match or non-match, consequences as ordinary rules (`each` on amend
+earned), replay and simulation sharing the path, the walk showing it, the
+agent taught. Next in order: the persona scene and the Poland pack's
+default policy, FX and netting, three-way with the PZ, intercompany, the
+grid notion, the host proposing strategies.
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
@@ -1883,8 +1910,9 @@ is a person's grid, and the person's pairing is the same event.*
   matching brief above): a deterministic engine, total and bounded, with
   the structure (sides, measures, converters, tolerances, keys) and the
   policy (an ordered list of named strategies) as data; every match a
-  baked, explained event; the grid is the remainder. Earns a closed-class
-  effect by the attempt; a dedicated session.
+  baked, explained event; the grid is the remainder. Earned the
+  closed-class effect `matching` by the attempt (DECISIONS 2026-10-11);
+  the engine's core shipped the same day; a dedicated session.
 - **The company key is the partition key** (KK, 2026-10-08, "Scale and
   security are welded"). The one scale item that is cheap now and
   expensive later: the company ref promoted from payload field to a key

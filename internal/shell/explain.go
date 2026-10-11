@@ -48,6 +48,11 @@ type explainNode struct {
 	// Amend is what this event moved, when it is an amendment: the object
 	// and the baked delta — the walk answers "why is it what it is now".
 	Amend *explainAmend `json:"amend,omitempty"`
+	// Matched is a match as the engine found it: the strategy, every item
+	// on every side with its allocation, the differences absorbed; Unmatched
+	// every step tried and why it found nothing. Baked at firing, shown.
+	Matched   *core.MatchedObjects   `json:"matched,omitempty"`
+	Unmatched *core.UnmatchedObjects `json:"unmatched,omitempty"`
 	// Payload rides only on the raw root: the fact everything explains.
 	Payload  json.RawMessage `json:"payload,omitempty"`
 	Children []*explainNode  `json:"children"`
@@ -211,6 +216,18 @@ func (s *Server) buildExplainTree(ctx context.Context, ix *chainIndex, root core
 					}
 				}
 				n.Amend = ea
+			}
+		}
+		switch ev.Type {
+		case core.EventObjectsMatched:
+			var m core.MatchedObjects
+			if json.Unmarshal(ev.Payload, &m) == nil {
+				n.Matched = &m
+			}
+		case core.EventObjectsUnmatched:
+			var u core.UnmatchedObjects
+			if json.Unmarshal(ev.Payload, &u) == nil {
+				n.Unmatched = &u
 			}
 		}
 		for _, c := range ix.children[ev.ID] {

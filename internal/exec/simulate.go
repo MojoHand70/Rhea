@@ -248,6 +248,9 @@ func (x *Executor) simulate(ctx context.Context, rules []core.Rule, extra []core
 				continue
 			}
 			for _, n := range nodes {
+				if n.matched != nil || n.unmatched != nil {
+					continue // a match touches no object; the rules that explain it do
+				}
 				if n.amend != nil {
 					// The simulated world amends in memory the way the live
 					// path amends the cache; the object exists — expansion

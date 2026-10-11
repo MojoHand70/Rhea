@@ -216,11 +216,13 @@ func TestMatchingAttempt(t *testing.T) {
 	}
 
 	// 3. A partial payment: one named invoice's open amount can move by an
-	// amendment reading through the link — but the status cannot be left
-	// where it is: open → open is not a declared transition, so the one
-	// rule cannot say "paid when nothing stays open, else unchanged". And
-	// across invoices — the remainder settling the next oldest — there is
-	// no vocabulary: an amendment has exactly one target.
+	// amendment reading through the link — but with the lifecycle as
+	// declared (open → paid) the status cannot be left where it is. That
+	// much is the type's to consent to, as data: a lifecycle that declares
+	// open → open admits "paid when nothing stays open, else as it is".
+	// What no data expresses is the allocation across invoices — the
+	// remainder settling the next oldest: an amendment has exactly one
+	// target.
 	activate("pay-part-by-reference", 25, core.RuleSpec{
 		Match: onBankLine(core.Condition{Path: "$.state.reference", Op: "eq", Value: "FV/1"}),
 		Effect: core.Effect{Amend: &core.AmendTemplate{Type: "sales_invoice",

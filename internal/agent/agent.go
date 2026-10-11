@@ -139,7 +139,7 @@ const ruleShape = `{
       "event_type": "<event type>",
       "where": [ {"path": "$.field", "op": "eq|ne|exists|gt|lt", "value": ...} ]
     },
-    "effect": { exactly ONE of "object", "postings", "amend" - see below }
+    "effect": { exactly ONE of "object", "postings", "amend", "matching" - see below }
   }
 }
 
@@ -252,6 +252,54 @@ rule posts it, another raises a follow-up case. Amendments end chains: never mat
 "object.materialized" with a status set later by an amendment never fires. React to
 the raw event instead (complaint.withdrawn), and find the object through what the
 event names.
+
+EFFECT 4 - "matching": match the object that just materialized against other sides
+under a structure and an ordered policy - the kernel's matching engine (bank lines
+against open invoices, receipts against orders, intercompany pairs). The rule matches
+"object.materialized" of the trigger side's type:
+  "effect": {"matching": {"name": "incoming-payments", "trigger": "payment",
+    "sides": [
+      {"name": "payment", "type": "bank_line", "open": {"money": "open"},
+       "currency": "currency", "date": "date", "reference": "reference"},
+      {"name": "invoice", "type": "sales_invoice",
+       "items": "=objects(sales_invoice, buyer, ref(company, iban, $.state.counterparty_account))",
+       "open": {"money": "open"}, "currency": "currency", "date": "issue_date", "reference": "number"}],
+    "policy": [{"strategy": "reference"}, {"strategy": "exact"},
+      {"strategy": "subset", "max_items": 4},
+      {"strategy": "exact", "tolerance": {"money": "0.02"}, "difference_account": "755"},
+      {"strategy": "oldest_first"}]}}
+A side names its "type"; "items" is the keyed objects(...) read of its candidates, written
+against the trigger's state (the trigger side has none - its item is the object that
+fired); "open" maps each measure to the AMENDABLE field holding what is not yet allocated
+(every side declares the same measures); optional "compare" maps a measure to a field that
+must agree but is never consumed (a price); "currency" (when a measure is money), "date",
+and "reference" (needed by the reference strategy) name fields. Strategies are tried in
+order and the first feasible wins: "reference" (the items the trigger's reference names;
+"partial": true settles what it can), "exact" (one item agreeing on every measure),
+"subset" (the fewest items summing to the trigger, "max_items" up to 8), "oldest_first"
+(settles the earliest open items as far as the trigger reaches; the remainder stays open).
+Any step may add "tolerance" or "tolerance_percent" per measure with a "difference_account"
+(the difference is absorbed and recorded against it) and "within_days". The policy is the
+company's choice: the order and the bounds are what the question says, nothing more.
+The outcome is ONE event, "objects.matched": {"matching": <name>, "strategy", "step",
+"trigger": {"side", "object_id"}, "kinds": {<measure>: money|int|decimal},
+"sides": {<side>: [{"object_id", "object_type", "allocated": {<measure>: amount},
+"open_before": {...}, "open_after": {...}, "currency", "date", "reference"}]},
+"differences": [{"kind", "measure", "side", "amount", "direction": short|over, "currency",
+"account"}], "tried": [...]}; money amounts in it are minor units. It changes nothing by
+itself: ordinary rules in the SAME answer explain it, matching "objects.matched" with
+"where": [{"path": "$.matching", "op": "eq", "value": <name>}] -
+  the open amounts move by an amendment over the items:
+  {"amend": {"type": "sales_invoice", "each": "=$.sides.invoice[*]", "target": "=$.line.object_id",
+    "set": {"open": "=$.line.open_after.money",
+            "status": "=if($.line.open_after.money = 0, \"paid\", \"open\")"}}}
+  (a type whose invoices may stay open under a part payment declares the transition
+  open -> open); a settlement object per item the same way ("object" with "each":
+  "=$.sides.invoice[*]", "payment": "=$.doc.trigger.object_id", "amount":
+  "=$.line.allocated.money", "date": "=$.root.date"); the differences as objects
+  ("each": "=$.differences[*]", with "where": [{"path": "$.differences[0]", "op": "exists"}])
+  that a cascade posts. When no step fits, the kernel emits "objects.unmatched" with every
+  step's reason, and the item stays open for a person.
 
 A follow-up points at exactly the thing that caused it: a case raised from a complaint
 carries "complaint": "=$.object_id", and a later event naming only the complaint's number

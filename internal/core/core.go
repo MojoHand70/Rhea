@@ -260,13 +260,16 @@ type Condition struct {
 }
 
 // Effect is what a firing rule does: materialize one object, post one
-// balanced journal entry (the double-entry sub-language, SPEC M1), or amend
+// balanced journal entry (the double-entry sub-language, SPEC M1), amend
 // an existing object's declared lifecycle (the amendment, DECISIONS
-// 2026-10-05). Exactly one of the three; Object's zero value means absent.
+// 2026-10-05), or match the materialized object against other sides under
+// a declared structure and policy (the matching engine, DECISIONS
+// 2026-10-11). Exactly one of the four; Object's zero value means absent.
 type Effect struct {
 	Object   ObjectTemplate    `json:"object,omitempty"`
 	Postings *PostingsTemplate `json:"postings,omitempty"`
 	Amend    *AmendTemplate    `json:"amend,omitempty"`
+	Matching *MatchingTemplate `json:"matching,omitempty"`
 }
 
 // AmendTemplate moves an existing object: Target resolves the object's id
@@ -275,9 +278,14 @@ type Effect struct {
 // The amended type must declare a lifecycle — amendment is consent-based —
 // and a Set touching the lifecycle field must move along a declared
 // transition. An amendment whose target does not exist is a rule error and
-// the event waits in the worklist; nothing half-applies.
+// the event waits in the worklist; nothing half-applies. With Each set — a
+// "=$.path" fan-out into an array — the rule amends one object per element
+// (the items a match allocated), Target and Set evaluating against
+// {"doc": <the event payload>, "line": <the element>, "n": <1-based>} as an
+// object fan-out does: one event that moves N objects.
 type AmendTemplate struct {
 	Type   string            `json:"type"`
+	Each   string            `json:"each,omitempty"`
 	Target string            `json:"target"`
 	Set    map[string]string `json:"set"`
 }
@@ -369,14 +377,20 @@ func (s RuleSpec) Validate(target *ObjectType) error {
 	if s.Effect.Amend != nil {
 		effects++
 	}
+	if s.Effect.Matching != nil {
+		effects++
+	}
 	if effects > 1 {
-		return fmt.Errorf("effect has more than one of object/postings/amend; a rule does one")
+		return fmt.Errorf("effect has more than one of object/postings/amend/matching; a rule does one")
 	}
 	if s.Effect.Postings != nil {
 		return s.Effect.Postings.validate()
 	}
 	if s.Effect.Amend != nil {
 		return s.Effect.Amend.validate(target)
+	}
+	if s.Effect.Matching != nil {
+		return s.Effect.Matching.validate(s.Match)
 	}
 	if s.Effect.Object.Type == "" {
 		return fmt.Errorf("effect.object.type is required")
@@ -453,6 +467,15 @@ func checkFieldTemplate(target *ObjectType, name, tmpl string) error {
 func (a *AmendTemplate) validate(target *ObjectType) error {
 	if a.Type == "" {
 		return fmt.Errorf("amend.type is required")
+	}
+	if a.Each != "" {
+		et, err := ParseTemplate(a.Each)
+		if err != nil {
+			return fmt.Errorf("amend.each: %w", err)
+		}
+		if et.kind != "path" {
+			return fmt.Errorf("amend.each wants a =$.path fan-out, got %q", a.Each)
+		}
 	}
 	pt, err := ParseTemplate(a.Target)
 	if err != nil {
@@ -613,6 +636,12 @@ func (s RuleSpec) Check(types Catalog) error {
 	if s.Effect.Amend != nil {
 		name = s.Effect.Amend.Type
 	}
+	if s.Effect.Matching != nil {
+		if err := s.Validate(nil); err != nil {
+			return err
+		}
+		return s.Effect.Matching.Check(types)
+	}
 	if name != "" {
 		t, ok := types(name)
 		if !ok {
@@ -665,7 +694,7 @@ func (s RuleSpec) TypedPrefixes() map[string]string {
 	for _, c := range s.Match.Where {
 		if c.Path == "$.object_type" && c.Op == "eq" {
 			if t, ok := c.Value.(string); ok {
-				if s.Effect.Object.Each != "" {
+				if s.Effect.Object.Each != "" || (s.Effect.Amend != nil && s.Effect.Amend.Each != "") {
 					return map[string]string{"$.doc.state": t}
 				}
 				return map[string]string{"$.state": t}

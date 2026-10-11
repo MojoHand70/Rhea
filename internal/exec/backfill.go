@@ -142,13 +142,28 @@ func priorOf(root core.Event, chain []core.Event) (Prior, error) {
 			key = objectOf[*d.CauseEventID]
 		}
 		p := priorFiring{ruleID: d.RuleID, version: d.RuleVersion, eventID: d.ID}
-		if d.Type == core.EventObjectMaterialized {
+		switch d.Type {
+		case core.EventObjectMaterialized:
 			var m core.MaterializedObject
 			if err := json.Unmarshal(d.Payload, &m); err != nil {
 				return nil, fmt.Errorf("derived event %d: %w", d.ID, err)
 			}
 			p.mat = &m
 			objectOf[d.ID] = m.ObjectID
+		case core.EventObjectsMatched:
+			var m core.MatchedObjects
+			if err := json.Unmarshal(d.Payload, &m); err != nil {
+				return nil, fmt.Errorf("derived event %d: %w", d.ID, err)
+			}
+			p.matched = &m
+			objectOf[d.ID] = MatchIDBase(m.Matching, m.Trigger.ObjectID)
+		case core.EventObjectsUnmatched:
+			var u core.UnmatchedObjects
+			if err := json.Unmarshal(d.Payload, &u); err != nil {
+				return nil, fmt.Errorf("derived event %d: %w", d.ID, err)
+			}
+			p.unmatched = &u
+			objectOf[d.ID] = MatchIDBase(u.Matching, u.Trigger.ObjectID)
 		}
 		prior[key] = append(prior[key], p)
 	}
@@ -162,7 +177,7 @@ func (x *Executor) backfillDiff(ctx context.Context, chains []BackfillChain) (Si
 	added := map[string]int{}
 	for _, c := range chains {
 		for _, n := range c.nodes {
-			if n.booked != 0 {
+			if n.booked != 0 || n.matched != nil || n.unmatched != nil {
 				continue
 			}
 			if n.amend == nil {

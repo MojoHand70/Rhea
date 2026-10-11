@@ -1319,6 +1319,28 @@ func (f *Formula) Check(types Catalog, typed map[string]string, fd FieldDef) err
 	return fitsField(result, fd)
 }
 
+// CheckList re-runs the static checker and requires the result to be a
+// collection of objects of the named type — what a matching side's items
+// read must yield.
+func (f *Formula) CheckList(types Catalog, typed map[string]string, objType string) error {
+	env := &checkEnv{types: types, typed: typed, vars: map[string]ty{}}
+	result, err := env.check(f.tree, false)
+	if err != nil {
+		return err
+	}
+	if result.kind == KAny {
+		return nil
+	}
+	if result.kind != KList || (result.typ != "" && result.typ != objType) {
+		got := result.kind.String()
+		if result.typ != "" {
+			got += " of " + result.typ
+		}
+		return fmt.Errorf("want a collection of %s objects (objects(%s, field, value)), got %s", objType, objType, got)
+	}
+	return nil
+}
+
 // fitsField judges a static result against the field it feeds.
 func fitsField(r ty, fd FieldDef) error {
 	if r.kind == KAny || fd.Type == "" {

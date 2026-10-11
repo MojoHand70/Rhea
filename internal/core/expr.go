@@ -186,6 +186,39 @@ func (t Template) Evaluate(payload any, fd FieldDef, env *Env) (any, *Calc, erro
 	return out, &Calc{Formula: t.raw, Inputs: inputs}, nil
 }
 
+// ObjectRead is one object a collection read returned: its id and its
+// state as read.
+type ObjectRead struct {
+	ID    string
+	State map[string]any
+}
+
+// Objects evaluates a template that reads a collection of objects — an
+// objects(...) read, perhaps filtered — and returns them in log order with
+// the inputs the read recorded. Any other result is refused: a matching
+// side is a collection of objects, nothing else.
+func (t Template) Objects(payload any, env *Env) ([]ObjectRead, map[string]any, error) {
+	if t.kind == "literal" {
+		return nil, nil, fmt.Errorf("%q is not a read of objects", t.raw)
+	}
+	v, inputs, err := t.f.run(payload, env)
+	if err != nil {
+		return nil, nil, err
+	}
+	if v.Kind != KList {
+		return nil, nil, fmt.Errorf("want a collection of objects, got a %s", v.Kind)
+	}
+	out := make([]ObjectRead, 0, len(v.List))
+	for _, el := range v.List {
+		state, ok := el.Raw.(map[string]any)
+		if el.Kind != KObject || !ok {
+			return nil, nil, fmt.Errorf("want a collection of objects, got a list of %s", el.Kind)
+		}
+		out = append(out, ObjectRead{ID: el.Origin, State: state})
+	}
+	return out, inputs, nil
+}
+
 // Check runs the typed static check of a formula template against the field
 // it feeds, with a catalog and the typed payload prefixes of its rule.
 func (t Template) Check(types Catalog, typed map[string]string, fd FieldDef) error {
