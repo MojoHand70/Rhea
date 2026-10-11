@@ -1844,3 +1844,13 @@ evidence in `internal/exec/case_test.go`.
   `rejestr-vat-zakupu`, the sales register mirrored on the owner. No "paid" rules in the
   pack: the base invoice types carry no status yet; the personas' bundles add it, and the
   base seed will when the matching grid lands.
+- **Live, 2026-10-11, documents in** (`rhea eval -documents-in -months 1 -v`, one run per
+  persona, scripted voice, claude-sonnet-4-6): Helios 6 of 6 questions approved on the
+  first draft, 29 intake facts, residue 0, state matches; Nordwind 9 of 9, 52 facts,
+  residue 0, state matches. Both DONE, no re-asks. The reader's extra fields (the
+  document's VAT and gross, the hash, the KSeF reference, the direction) did not distract
+  the author. One run each is the gate for the default, not the all-or-nothing verdict:
+  that verdict stays a round of twelve runs over the voices, to be run before the demo.
+- **Documents in is now the default** for a persona: `rhea eval PERSONA` and `rhea sim
+  -play PERSONA` feed the KSeF invoices and the bank statements as files; `-documents-in=false`
+  plays the JSON facts, which the reference test still proves separately.

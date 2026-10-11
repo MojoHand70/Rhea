@@ -371,7 +371,7 @@ func main() {
 
 	case "eval":
 		fs := flag.NewFlagSet("eval", flag.ExitOnError)
-		docsIn := fs.Bool("documents-in", false, "feed a persona's KSeF invoices and bank statements as files through the document door and the readers, not as JSON facts")
+		docsIn := fs.Bool("documents-in", true, "persona only: feed the KSeF invoices and bank statements as files through the document door and the readers (=false: as JSON facts)")
 		verbose := fs.Bool("v", false, "print every draft the agent proposed, refused ones included")
 		learn := fs.Bool("network", false, "draw on what Rhea learned, then publish each run's explanations")
 		voice := fs.Int("voice", 0, "persona only: run the k-th paraphrase of the interview (0: as scripted)")
@@ -504,7 +504,7 @@ func main() {
 		out := fs.String("corpus", "", "write the compiled corpus to this file")
 		play := fs.Bool("play", false, "submit the persona's documents into THIS installation through the door, for a live demo")
 		docDir := fs.String("documents", "", "write the persona's documents — KSeF invoices as FA XML, bank statements as MT940 — under this directory")
-		docsIn := fs.Bool("documents-in", false, "with -play or -corpus: feed KSeF invoices and bank statements as files through the document door and the readers, not as JSON facts")
+		docsIn := fs.Bool("documents-in", true, "with -play or -corpus: feed the KSeF invoices and bank statements as files through the document door and the readers (=false: as JSON facts)")
 		fs.Parse(os.Args[2:])
 		if fs.NArg() != 1 {
 			log.Fatal("usage: rhea sim [-months N] [-paraphrase N] [-voice N] [-corpus FILE] [-documents DIR] [-play] PERSONA")
