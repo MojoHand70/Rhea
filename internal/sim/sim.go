@@ -454,7 +454,8 @@ func (g *gen) purchaseInvoice(date time.Time, sup Party, net int64, forDocument 
 	number := fmt.Sprintf("%s/%d/%d", strings.ToUpper(sup.Name[:3]), g.purchaseNo, date.Year())
 	payload := map[string]any{"number": number,
 		"supplier": sup.Name, "supplier_nip": sup.VATID, "buyer_nip": g.p.Company.VATID, "invoice_date": ymd(date),
-		"net": core.FormatMoney(net), "vat_rate": rate.Code, "currency": "PLN"}
+		"net": core.FormatMoney(net), "vat": core.FormatMoney(vat), "gross": core.FormatMoney(net + vat),
+		"vat_rate": rate.Code, "currency": "PLN", "market": "pl"}
 	if forDocument != "" {
 		payload["for_document"] = forDocument
 	}

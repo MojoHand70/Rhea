@@ -98,7 +98,7 @@ func TestM3PolandPack(t *testing.T) {
 		t.Fatal(err)
 	}
 	if sum.Types != 14 || sum.Views != 6 || sum.Rules != 7 || sum.Activities != 1 || sum.Events != 31 || sum.Skipped != 0 ||
-		sum.Bundle != "pack-pl-v9" {
+		sum.Bundle != "pack-pl-v10" {
 		t.Fatalf("first load: %+v", sum)
 	}
 	// Idempotent: a reload changes nothing.
@@ -126,7 +126,7 @@ func TestM3PolandPack(t *testing.T) {
 	// Approving the pack's bundle IS the installation: its types, views and
 	// rules activate together, and the chart of accounts and the VAT rates
 	// materialize from the waiting events.
-	post("/api/bundles/pack-pl-v9/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-pl-v10/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {
 		t.Fatalf("worklist not cleared after approvals: %d", len(wl))
 	}
@@ -218,7 +218,7 @@ func TestM3PolandPack(t *testing.T) {
 	post("/api/events", map[string]any{
 		"event_type": "purchase.invoice.received", "occurred_at": "2026-09-22", "dedup_key": "fab-1",
 		"payload": map[string]any{
-			"number": "FAB/1/2026", "invoice_date": "2026-09-22",
+			"number": "FAB/1/2026", "invoice_date": "2026-09-22", "market": "pl",
 			"supplier_nip": "5260001246", "buyer_nip": "5250001111", "supplier": "Nabywca S.A.",
 			"net": "500.00", "vat": "115.00", "gross": "615.00", "vat_rate": "23", "currency": "PLN",
 		},

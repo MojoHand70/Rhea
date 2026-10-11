@@ -125,7 +125,7 @@ func TestCohabitation(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	for _, id := range []string{"pack-pl-v9", "pack-de-v3"} {
+	for _, id := range []string{"pack-pl-v10", "pack-de-v3"} {
 		post("/api/bundles/"+id+"/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	}
 	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {
@@ -228,9 +228,9 @@ func TestCohabitation(t *testing.T) {
 	}
 	get("/api/views/trial-balance", &tb)
 	want := map[string][3]string{
-		"201":  {"pl-stat", "2275.50", "0.00"},    // 1230.00 + 246.00×4.25
-		"700":  {"pl-stat", "0.00", "1850.00"},    // 1000.00 + 200.00×4.25
-		"222":  {"pl-stat", "0.00", "425.50"},     // 230.00 + 46.00×4.25
+		"201":  {"pl-stat", "2275.50", "0.00"}, // 1230.00 + 246.00×4.25
+		"700":  {"pl-stat", "0.00", "1850.00"}, // 1000.00 + 200.00×4.25
+		"222":  {"pl-stat", "0.00", "425.50"},  // 230.00 + 46.00×4.25
 		"1400": {"de-stat", "595.00", "0.00"},
 		"8400": {"de-stat", "0.00", "500.00"},
 		"1776": {"de-stat", "0.00", "95.00"},
@@ -280,7 +280,32 @@ func TestCohabitation(t *testing.T) {
 	if resp["booked"].(float64) != 0 {
 		t.Fatalf("marketless invoice booked: %v", resp)
 	}
-	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 2 { // fv-a3 (locked) + fv-x (unroutable)
+
+	// A purchase invoice belongs to the buyer's market, as a sales invoice
+	// to the seller's: Alfa's supplier invoice is the Polish pack's to book,
+	// Beta's is not — it waits in the worklist for a German purchase side.
+	purchase := func(dedup, date, market, supplier, buyer, number string) float64 {
+		var resp map[string]any
+		post("/api/events", map[string]any{
+			"event_type": "purchase.invoice.received", "occurred_at": date, "dedup_key": dedup,
+			"payload": map[string]any{
+				"number": number, "invoice_date": date, "market": market, "supplier": "Dostawca",
+				"supplier_nip": supplier, "buyer_nip": buyer,
+				"net": "100.00", "vat": "23.00", "gross": "123.00", "vat_rate": "23", "currency": "PLN",
+			},
+		}, &resp)
+		return resp["booked"].(float64)
+	}
+	if purchase("fz-a1", "2026-10-05", "pl", "5260001246", "5250001111", "FZ 1/10/2026") != 1 {
+		t.Fatal("alfa's purchase invoice not booked")
+	}
+	if purchase("er-b1", "2026-10-06", "de", "DE123456789", "DE811111111", "ER 2026-001") != 0 {
+		t.Fatal("the Polish pack booked beta's purchase invoice")
+	}
+	if pis, _ := s.ObjectsByType(ctx, "purchase_invoice"); len(pis) != 1 || pis[0].RuleID != "pl-book-purchase-invoice" {
+		t.Fatalf("purchase invoices = %d", len(pis))
+	}
+	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 3 { // fv-a3 (locked) + fv-x (unroutable) + er-b1 (no German purchase side)
 		t.Fatalf("worklist = %d", len(wl))
 	}
 

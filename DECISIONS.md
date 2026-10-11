@@ -1936,4 +1936,15 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   reads (KSeF is the Polish system, and the inbound channel reads what is addressed to
   a Polish buyer); the generator stamps its purchase facts likewise, the German
   supplier's included, since Nordwind buys for its Polish books.
+- **The two purchase rules guard on the market, like the sales rules; the pack is v10.**
+  Without the guard a two-market installation had the Polish pack claim a German
+  subsidiary's supplier invoice — posting it into `pl-stat` or parking it on a failed
+  lookup. The cohabitation test now books Alfa's supplier invoice and leaves Beta's in
+  the worklist, where a German purchase side will find it.
+- **One shape for `purchase.invoice.received`.** The generator's JSON fact carried the
+  net and the rate only; the KSeF reader hands the document's own VAT and gross, and
+  the pack trusts those — so an invoice in the first shape parked in the worklist on a
+  missing field. The generator now emits `vat`, `gross` and `market` too, and the JSON
+  path and the document path give the same event. A persona's own rules still compute
+  the VAT from the net; the eval checks they agree with the document.
 

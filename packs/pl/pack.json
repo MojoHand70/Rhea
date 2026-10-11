@@ -1,6 +1,6 @@
 {
   "pack": "pl",
-  "version": 9,
+  "version": 10,
   "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane",
   "requires": [
     "company",
@@ -1064,7 +1064,14 @@
       "description": "Faktura zakupu z KSeF staje się dokumentem purchase_invoice: dostawca i nabywca po NIP, kwoty takie, jak podaje dokument",
       "spec": {
         "match": {
-          "event_type": "purchase.invoice.received"
+          "event_type": "purchase.invoice.received",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            }
+          ]
         },
         "effect": {
           "object": {
@@ -1091,7 +1098,14 @@
       "description": "Faktura zakupu księguje się: Wn 300 netto, Wn 221 VAT naliczony / Ma 202 brutto",
       "spec": {
         "match": {
-          "event_type": "purchase.invoice.received"
+          "event_type": "purchase.invoice.received",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            }
+          ]
         },
         "effect": {
           "postings": {
