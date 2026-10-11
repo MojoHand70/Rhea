@@ -1854,3 +1854,42 @@ evidence in `internal/exec/case_test.go`.
 - **Documents in is now the default** for a persona: `rhea eval PERSONA` and `rhea sim
   -play PERSONA` feed the KSeF invoices and the bank statements as files; `-documents-in=false`
   plays the JSON facts, which the reference test still proves separately.
+
+## 2026-10-11 — the matching attempt: by reference carries, everything else fails as data
+
+- **The attempt** (`TestMatchingAttempt`, kept as executable evidence): the bank story
+  with what exists — rules, lookups, folds, amendments, postings — and the places it
+  must fail, per the brief. Six customers: by reference, by exact amount, a partial
+  payment, a tolerance, a subset that sums, a match across N sides.
+- **By reference carries** — the rule of today, the personas' bank-payments bundle: a
+  line naming an invoice amends it to paid, and a read through the link even moves
+  the open amount (`ref(sales_invoice, number, $.state.reference).open - $.state.amount`).
+- **By exact amount fails on the key.** A lookup keys on one field, so "the open
+  invoice of this customer with this amount" can only be said as "any invoice with
+  this amount". It works once, by luck; the moment another customer owes the same
+  123.00 the lookup is ambiguous, and atomicity makes the gap total: the bank line
+  itself does not materialize. A paid invoice never leaves the key either, so the
+  ambiguity is permanent. The side must be keyed by party and filtered by openness
+  — a collection, not a lookup.
+- **A partial payment fails on the lifecycle.** One named invoice's open amount moves
+  by amendment, but the same rule cannot say "paid when nothing stays open, else
+  unchanged": `open → open` is not a declared transition, and nothing half-applies,
+  so the whole payment is refused. Across invoices (the remainder settling the next
+  oldest) there is no vocabulary at all: an amendment has exactly one target.
+- **A tolerance fails on the posting line.** The two-grosz difference needs a line
+  that exists only when there is a difference; lines are not conditional and amounts
+  must be positive, so the rule books a short payment and refuses every exact one
+  ("amount must be positive, got 0").
+- **A subset that sums and a match across N sides cannot even be attempted:** no
+  fold enumerates subsets, and no effect touches N objects by an allocation.
+- **Verdict: `matching` is a closed-class effect**, as `book`, `convert` and `amend`
+  were — a kernel method with N sides and a declared structure, strategies as named
+  standards ordered by a policy that is data (DIRECTION, the matching brief). The
+  attempt also names two small generalizations the consequences of a match need in
+  the ordinary language: an amendment over a fan-out (`each` on amend — one event
+  that moves N objects), and a set of the lifecycle field to its current value being
+  no move at all, not a refused transition.
+- **The effect is spelled `matching`, not `match`.** A rule already has a `match`
+  (its predicate); one word with two meanings in one JSON object is a trap for the
+  author and the reader. `matching` sits beside `postings` — a noun for the engine's
+  work, as `postings` is for the ledger's.
