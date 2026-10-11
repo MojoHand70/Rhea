@@ -173,6 +173,7 @@ func (c ChannelSpec) validate(a Activity) error {
 func ReservedEventType(t string) bool {
 	return t == EventObjectMaterialized || t == EventObjectAmended ||
 		t == EventObjectsMatched || t == EventObjectsUnmatched ||
+		strings.HasPrefix(t, "matching.") ||
 		strings.HasPrefix(t, "rule.") || strings.HasPrefix(t, "activity.") ||
 		strings.HasPrefix(t, "bundle.") || strings.HasPrefix(t, "backfill.")
 }
@@ -637,6 +638,18 @@ func BuiltinActivities() []Activity {
 					Confidence: ConfidenceSpec{Policy: ConfidenceExact},
 					Events:     []string{EventDayOpened, EventMonthOpened, "schedule.fired"},
 				},
+			},
+		},
+		{
+			Name: "pair_items", Domain: "system",
+			Description: "Pair by hand what no strategy settled: one item of the trigger side and the items it settles on the other sides, under a matching rule's structure. The kernel runs the same engine on the selection and emits the same objects.matched event the policy would — explained the same way, whoever made it. Recorded as matching.paired.",
+			Spec: ActivitySpec{
+				Inputs: []FieldDef{
+					{Name: "pairing", Type: "json", Required: true}, // {"matching": <rule id>, "trigger": <object id>, "items": [<object id>, …]}
+					{Name: "occurred_at", Type: "date"},
+				},
+				Emits: EventMatchingPaired,
+				Who:   []string{"human"},
 			},
 		},
 		{

@@ -1837,9 +1837,12 @@ lines, two receipts, the invoice line; quantity allocated, price compared
 within two percent, the variance posted) and intercompany as the
 generality test (a payment settling our receivable and their payable at
 once, the elimination's evidence), the sides' declared `join` the one
-addition. Next in order: the grid notion over the remainder, the host
-proposing strategies, and the Poland pack's default policy as drafts with
-warrants.
+addition; the grid — the `matching` notion over the remainder, every
+side's open items with why the policy left each trigger item, and the
+pairing verb running the same engine on a person's selection into the
+same event. Next in order: the host proposing strategies (after a person
+has paired the same way twice, behind the gate), the Poland pack's
+default policy as drafts with warrants, unpairing as a correcting event.
 
 ## Language decisions with a recorded destination
 

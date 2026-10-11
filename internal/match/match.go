@@ -40,9 +40,14 @@ const (
 	// reaches; the last may be partial and the remainder stays open. One
 	// allocated measure.
 	OldestFirst = "oldest_first"
+	// Selected: a person's pairing — the sides hold exactly the items the
+	// person chose. One allocated measure allocates them oldest first as
+	// far as the trigger reaches; several require the selection to agree
+	// with the trigger exactly. Never a policy's step: the verb's.
+	Selected = "selected"
 )
 
-// Strategies lists the admitted strategy names.
+// Strategies lists the strategy names a policy may declare.
 var Strategies = []string{Reference, Exact, Subset, OldestFirst}
 
 // Known reports whether a strategy name is admitted.
@@ -377,7 +382,7 @@ func (p Problem) validate() error {
 		}
 	}
 	for i, s := range p.Policy {
-		if !Known(s.Strategy) {
+		if !Known(s.Strategy) && s.Strategy != Selected {
 			return fmt.Errorf("step %d: unknown strategy %q", i+1, s.Strategy)
 		}
 		if (s.Strategy == OldestFirst || (s.Strategy == Reference && s.Partial)) && len(allocated) != 1 {
@@ -507,6 +512,26 @@ func (p Problem) run(step Step) (*Result, string) {
 			sums := sumOpen(cands, p.allocated())
 			if sums[m].Cmp(matched[m]) < 0 {
 				matched[m] = sums[m]
+			}
+			selected[side.Name] = cands
+		}
+	case Selected:
+		for _, side := range p.Sides {
+			cands, excluded := p.candidates(side, step)
+			if len(cands) == 0 {
+				return nil, p.nothing(side, step, cands, excluded, "nothing open among the chosen")
+			}
+			sums := sumOpen(cands, p.allocated())
+			if len(p.allocated()) == 1 {
+				partial = true
+				m := p.allocated()[0].Name
+				if sums[m].Cmp(matched[m]) < 0 {
+					matched[m] = sums[m]
+				}
+			} else if !p.agree(step, sums, p.Trigger.Open) {
+				m := p.allocated()[0]
+				return nil, fmt.Sprintf("the chosen items on %s do not add up: %s against the %s's %s",
+					side.Name, p.show(m, sums[m.Name]), p.TriggerSide, p.show(m, p.Trigger.Open[m.Name]))
 			}
 			selected[side.Name] = cands
 		}

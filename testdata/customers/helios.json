@@ -606,7 +606,7 @@
       }
     },
     {
-      "answer": "Every bank statement line becomes a bank line record (the type bank_line): date, amount, currency, direction, the title as its reference, the counterparty and its account, our account; its open amount starts at the amount, and its status starts open and moves to settled when nothing stays open. Money in is matched against the open sales invoices of the customer whose account it comes from, in this order: the invoice the title names; the named invoice up to 0.02 short or over, the difference written off to 755; an invoice of exactly that amount; the fewest invoices that add up to it, at most 4; the named invoice in part; otherwise the oldest open invoices as far as the money reaches. Money out is matched the same way against the open purchase invoices of the supplier whose account it goes to, without the tolerance. A match moves the open amounts of the invoices and of the line by what was allocated - paid, or settled, when nothing stays open - and records a settlement per invoice (the payment, the document type and id, the amount, the date). A tolerated difference becomes a matching difference record (kind, amount, currency, direction, account, date), and a short one is posted in the book pl-stat: debit the difference account, credit 201.",
+      "answer": "Every bank statement line becomes a bank line record (the type bank_line): date, amount, currency, direction, the title as its reference, the counterparty and its account, our account; its open amount starts at the amount, and its status starts open and moves to settled when nothing stays open. Money in is matched against the open sales invoices of the customer whose account it comes from, in this order: the invoice the title names; the named invoice up to 0.02 short or over, the difference written off to 755; an invoice of exactly that amount; the fewest invoices that add up to it, at most 4; the named invoice in part; otherwise the oldest open invoices as far as the money reaches. Money out is matched the same way against the open purchase invoices of the supplier whose account it goes to, without the tolerance. A match moves the open amounts of the invoices and of the line by what was allocated - paid, or settled, when nothing stays open - and records a settlement per invoice (the payment, the document type and id, the amount, the date). A tolerated difference becomes a matching difference record (kind, amount, currency, direction, account, date), and a short one is posted in the book pl-stat: debit the difference account, credit 201. What no step settles is shown side by side — the open lines and the open invoices — for a person to pair.",
       "mode": "bundle",
       "reference": {
         "bundle_id": "bank-payments",
@@ -1133,7 +1133,29 @@
             "różnice groszowe odpisuje się w koszty finansowe w ramach uproszczeń dopuszczonych polityką rachunkowości (ustawa o rachunkowości art. 4 ust. 4)"
           ],
           "scope": "PL"
-        }
+        },
+        "view_defs": [
+          {
+            "view_id": "incoming-payments-grid",
+            "notion": "matching",
+            "title": "Incoming payments to match",
+            "domain": "finance",
+            "function": "matching",
+            "spec": {
+              "rule": "match-incoming-payments"
+            }
+          },
+          {
+            "view_id": "outgoing-payments-grid",
+            "notion": "matching",
+            "title": "Outgoing payments to match",
+            "domain": "finance",
+            "function": "matching",
+            "spec": {
+              "rule": "match-outgoing-payments"
+            }
+          }
+        ]
       }
     },
     {

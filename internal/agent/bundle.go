@@ -210,7 +210,13 @@ func (b *BundleDraft) Validate(catalog []core.ObjectType) error {
 			return fmt.Errorf("view %s proposed twice", v.ID)
 		}
 		seen["view:"+v.ID] = true
-		if err := validateView(v, overlay); err != nil {
+		var matching []string
+		for _, r := range b.Rules {
+			if r.Spec.Effect.Matching != nil {
+				matching = append(matching, r.RuleID)
+			}
+		}
+		if err := validateView(v, overlay, matching); err != nil {
 			return err
 		}
 	}
@@ -233,7 +239,7 @@ func (b *BundleDraft) Validate(catalog []core.ObjectType) error {
 
 // validateView checks a list or detail view against the type it shows: the
 // notions an agent may author, every field one the type declares.
-func validateView(v core.ViewDef, types []core.ObjectType) error {
+func validateView(v core.ViewDef, types []core.ObjectType, matchingRules []string) error {
 	if v.ID == "" || v.Title == "" || v.Domain == "" || v.Function == "" {
 		return fmt.Errorf("view needs view_id, title, domain and function")
 	}
@@ -241,9 +247,18 @@ func validateView(v core.ViewDef, types []core.ObjectType) error {
 		ObjectType string             `json:"object_type"`
 		Columns    []core.ColumnSpec  `json:"columns"`
 		Sections   []core.SectionSpec `json:"sections"`
+		Rule       string             `json:"rule"`
 	}
 	if err := json.Unmarshal(v.Spec, &spec); err != nil {
 		return fmt.Errorf("view %s spec: %w", v.ID, err)
+	}
+	// The grid names a matching rule of the same answer; the rule's
+	// structure says what the sides are, so there is nothing else to check.
+	if v.Notion == "matching" {
+		if !slices.Contains(matchingRules, spec.Rule) {
+			return fmt.Errorf("view %s: a matching view names a matching rule of this bundle, not %q", v.ID, spec.Rule)
+		}
+		return nil
 	}
 	i := slices.IndexFunc(types, func(t core.ObjectType) bool { return t.Name == spec.ObjectType })
 	if i < 0 {

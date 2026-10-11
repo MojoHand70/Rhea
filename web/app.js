@@ -225,6 +225,7 @@ function openView(viewId, title, objectId) {
       case "detail": return renderDetail(data);
       case "analysis": return renderAnalysis(data);
       case "scheduling": return renderScheduling(data);
+      case "matching": return renderMatching(data);
       default: return [el("p", { class: "hint" }, `Notion ${data.view.notion} not renderable.`)];
     }
   }, true); // view tabs are live: projections re-render them in place
@@ -1177,6 +1178,57 @@ function renderScheduling(d) {
     out.push(el("div", { class: "sched-day" },
       el("h3", {}, "undated"), ...d.undated.map(item)));
   }
+  return out;
+}
+
+/* The matching notion (DIRECTION 2026-10-11): what no strategy settled, N
+   sides side by side — every open item of every side, each trigger item
+   saying why the policy left it. A person picks one trigger item and the
+   items it settles, and pairs: the same engine runs on the selection and
+   emits the same event the policy would, explained the same way. */
+function renderMatching(d) {
+  const out = [el("h1", {}, d.view.title),
+    el("p", { class: "hint" },
+      `What no step of ${d.matching} settled. Pick one ${d.trigger} and the items it settles on the other sides, then pair.`)];
+  const chosen = { trigger: null, items: new Set() };
+  const grid = el("div", { class: "match-grid" });
+  for (const side of d.sides) {
+    const col = el("div", { class: "match-side" },
+      el("h3", {}, `${side.name}`, el("span", { class: "hint" }, ` ${side.type}${side.trigger ? " · pick one" : ""}`)));
+    col.append(el("div", { class: "match-item match-head" }, el("span", {}),
+      ...side.columns.map(c => el("span", { class: "match-cell" }, c.label))));
+    if (!side.items.length) col.append(el("p", { class: "hint" }, "nothing open"));
+    for (const it of side.items) {
+      const box = el("input", { type: side.trigger ? "radio" : "checkbox", name: side.trigger ? "trigger" : side.name,
+        onchange: (e) => {
+          if (side.trigger) chosen.trigger = it.object_id;
+          else if (e.target.checked) chosen.items.add(it.object_id);
+          else chosen.items.delete(it.object_id);
+        } });
+      const row = el("label", { class: "match-item", title: it.object_id }, box,
+        ...side.columns.map(c => el("span", { class: "match-cell" }, (it.cells[c.field] || {}).v || "")),
+        it.detail ? el("a", { href: "#", class: "hint", onclick: (e) => {
+          e.preventDefault(); openView(it.detail, "Detail", it.object_id);
+        } }, "open") : "");
+      col.append(row);
+      if (it.why && it.why.length) col.append(el("div", { class: "hint match-why" }, it.why.join(" · ")));
+    }
+    grid.append(col);
+  }
+  const btn = el("button", { onclick: async () => {
+    if (!chosen.trigger || !chosen.items.size) { toast(`Pick one ${d.trigger} and at least one item to settle.`, true); return; }
+    btn.disabled = true;
+    try {
+      const res = await api(`/api/activities/${encodeURIComponent(d.verb)}/trigger`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inputs: { pairing: { matching: d.rule, trigger: chosen.trigger, items: [...chosen.items] } } }),
+      });
+      toast(`Paired: event #${res.event_id}, booked ${res.booked}.` + (res.errors ? ` Worklist: ${res.errors}` : ""));
+      openView(d.view.view_id, d.view.title);
+    } catch (e) { toast(e.message, true); }
+    btn.disabled = false;
+  } }, "Pair");
+  out.push(grid, el("div", { class: "row", style: "margin-top:12px" }, btn));
   return out;
 }
 

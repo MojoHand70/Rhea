@@ -141,6 +141,14 @@ tr.diff-changed .k { color: var(--warn); }
 #toast.error { border-color: var(--danger); }
 
 /* scheduling: the time axis, days in order, overdue reads as overdue */
+/* the matching grid: N sides side by side, each a column of open items */
+.match-grid { display: flex; gap: var(--space-4); align-items: flex-start; overflow-x: auto; }
+.match-side { flex: 1 1 0; min-width: 260px; }
+.match-side h3 { font-size: var(--text-sm); text-transform: uppercase; margin: 0 0 var(--space-2); }
+.match-item { display: flex; gap: var(--space-2); align-items: center; padding: 2px 0; cursor: pointer; }
+.match-item.match-head { color: var(--text-muted); font-size: var(--text-xs); cursor: default; }
+.match-cell { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.match-why { margin: 0 0 var(--space-2) 24px; }
 .sched-day { margin-bottom: var(--space-4); max-width: var(--measure-form); }
 .sched-day h3 { font-size: var(--text-sm); text-transform: uppercase;
                 letter-spacing: var(--tracking-wide); color: var(--text-muted);

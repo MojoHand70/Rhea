@@ -213,6 +213,8 @@ func (s *Server) handleView(w http.ResponseWriter, r *http.Request) {
 		s.serveAnalysis(ctx, w, vd)
 	case "scheduling":
 		s.serveScheduling(ctx, w, vd)
+	case "matching":
+		s.serveMatching(ctx, w, vd)
 	default:
 		writeErr(w, 400, fmt.Errorf("notion %q not renderable", vd.Notion))
 	}

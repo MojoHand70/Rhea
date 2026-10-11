@@ -211,6 +211,21 @@ type MatchAttempt struct {
 	Reason   string `json:"reason,omitempty"`
 }
 
+// MatchingSpec: spec of a `matching` notion (the grid, DIRECTION 2026-10-11):
+// the N-sided view of what no strategy settled — every side's open items,
+// side by side — with the pairing verb. Rule names the matching rule whose
+// structure says what the sides are; the view adds no opinion of its own.
+type MatchingSpec struct {
+	Rule string `json:"rule"`
+}
+
+// EventMatchingPaired is the raw event the pairing verb appends: a person's
+// selection of one trigger item and the items it settles on the other
+// sides. The kernel reacts by running the same engine on the selection and
+// emitting the same objects.matched event the policy would — one fact,
+// explained the same way, whoever made it.
+const EventMatchingPaired = "matching.paired"
+
 // Side finds a declared side by name.
 func (m *MatchingTemplate) Side(name string) (MatchingSide, bool) {
 	for _, s := range m.Sides {

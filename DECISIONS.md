@@ -2163,3 +2163,36 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   sides cross companies through refs at firing, as the partition note says; the company
   key as a partition key (P3) will serialize there.
 - **The agent** reads `join` in its grammar.
+
+## 2026-10-11 — the grid: the remainder is a view, and a person's pairing is the same event
+
+- **The `matching` notion** (`core.MatchingSpec{rule}`, `shell/matching.go`, the schema's
+  notion CHECK): the N-sided view of what no strategy settled. The view names a matching
+  rule; the rule's structure says what the sides are and which fields matter — the
+  label, the reference, the date, what is open, its currency, what is compared — so the
+  view adds no opinion of its own, and reconciliation, bank matching and intercompany
+  matching are one notion (the growth plan's count). Every side lists its items with
+  something open; a trigger item still open carries why the policy left it, from the
+  latest `objects.unmatched` for it, step by step. Typed cells as every view's.
+- **The pairing verb** `pair_items` (a builtin, `matching.paired`, a `pairing` JSON input
+  `{matching, trigger, items}`): the kernel's reaction runs the matching rule's structure
+  on the person's selection under the engine's `selected` strategy — never a policy's
+  step: the chosen items oldest first as far as the trigger reaches when one measure is
+  allocated, exact agreement when several — and books the same chain the policy would
+  have: the `objects.matched` event (strategy `selected`, step 0, the structure as its
+  rule), then the rules that explain it, in the transaction that appends the pairing.
+  One fact, explained the same way, whoever made it: the walk shows the person as the
+  root's actor and the structure as the match's rule. A pairing that names nothing on a
+  side, or a trigger of the wrong kind, is refused before anything is appended; the
+  `matching.` namespace is the kernel's (reserved, never residue). The chain gained a
+  seed — a first node the root carries — and booking inside a caller's transaction.
+- **The grid in the shell**: N columns, one per side, a radio on the trigger side and
+  checkboxes on the others, the why beside an open trigger item, one button. The
+  bundle gate admits a matching view that names a matching rule of the same answer;
+  both personas' bank bundles carry the incoming and outgoing grids and stay DONE
+  (`TestMatchingGridAndPairing`, `TestPersonaReference…`).
+- **Named, not done here**: unpairing — a correcting event that restores the open
+  amounts, explained by the same rules with the allocations negated and the
+  differences' directions flipped (the lifecycle then declares `paid → open` as
+  consent); a write-off verb for a difference a person accepts; the host proposing a
+  strategy after a person has paired the same way twice.

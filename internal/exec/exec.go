@@ -216,7 +216,7 @@ func (x *Executor) evaluate(ctx context.Context, ev core.Event, rules []core.Rul
 		}
 		return o.State, true, nil
 	}
-	nodes, err := x.expandChain(ctx, ev, rules, payload, lookup, get, nil)
+	nodes, err := x.expandChain(ctx, ev, rules, payload, lookup, get, nil, nil)
 	if err != nil {
 		return false, err
 	}
@@ -237,8 +237,14 @@ func (x *Executor) evaluate(ctx context.Context, ev core.Event, rules []core.Rul
 // plus the chain's earlier generations — the receipt's movement is visible to
 // the valuation rule — never their own siblings. Shared verbatim by the live
 // path and the simulator, so a dry run cannot drift from reality.
-func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []core.Rule, payload any, base core.Lookup, baseGet core.Getter, prior Prior) ([]chainNode, error) {
+func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []core.Rule, payload any, base core.Lookup, baseGet core.Getter, prior Prior, seed *chainNode) ([]chainNode, error) {
 	var nodes []chainNode
+	// A seed is a first node the root already carries — a person's
+	// pairing, run by the kernel before the rules — from which the
+	// generations cascade as from any firing.
+	if seed != nil {
+		nodes = append(nodes, *seed)
+	}
 	owner := map[string]string{} // object id → rule that claimed it
 	// born marks objects materialized in this chain and not yet amended in
 	// it: a later generation may amend what an earlier one materialized (a
@@ -434,7 +440,15 @@ func (x *Executor) book(ctx context.Context, root core.Event, nodes []chainNode)
 		return err
 	}
 	defer tx.Rollback(ctx)
+	if err := x.bookTx(ctx, tx, root, nodes); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
 
+// bookTx is book inside a transaction the caller owns — a verb's reaction
+// books the chain its own event seeds, in the transaction that appends it.
+func (x *Executor) bookTx(ctx context.Context, tx store.Querier, root core.Event, nodes []chainNode) error {
 	ids := make([]int64, len(nodes))
 	for i, n := range nodes {
 		if n.booked != 0 {
@@ -534,10 +548,7 @@ func (x *Executor) book(ctx context.Context, root core.Event, nodes []chainNode)
 			touched = append(touched, n.objectType())
 		}
 	}
-	if err := store.NotifyProjection(ctx, tx, strings.Join(touched, ",")); err != nil {
-		return err
-	}
-	return tx.Commit(ctx)
+	return store.NotifyProjection(ctx, tx, strings.Join(touched, ","))
 }
 
 // expandEffect turns a matched rule into the objects it materializes, using

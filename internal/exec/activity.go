@@ -276,6 +276,64 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 		out.backfill = &plan
 		return nil, nil
 
+	case core.EventMatchingPaired:
+		// The pairing verb (DIRECTION 2026-10-11, the grid): the kernel runs
+		// the matching rule's structure on the person's selection and books
+		// the same chain the policy would have — the match, then the rules
+		// that explain it — in the transaction that appends the pairing.
+		var p struct {
+			Matching string   `json:"matching"`
+			Trigger  string   `json:"trigger"`
+			Items    []string `json:"items"`
+		}
+		if err := json.Unmarshal(ev.Payload, &p); err != nil {
+			return nil, err
+		}
+		if p.Matching == "" || p.Trigger == "" || len(p.Items) == 0 {
+			return nil, fmt.Errorf("a pairing names the matching rule, the trigger item and the items it settles")
+		}
+		rules, err := x.Store.ActiveRules(ctx)
+		if err != nil {
+			return nil, err
+		}
+		var rule *core.Rule
+		for i := range rules {
+			if rules[i].ID == p.Matching {
+				rule = &rules[i]
+			}
+		}
+		if rule == nil || rule.Spec.Effect.Matching == nil {
+			return nil, fmt.Errorf("no active matching rule %q", p.Matching)
+		}
+		lookup := func(typ, field string, value any) ([]string, error) {
+			return x.Store.FindObjectIDsByField(ctx, typ, field, fmt.Sprintf("%v", value))
+		}
+		get := func(id string) (map[string]any, bool, error) {
+			o, err := x.Store.GetObject(ctx, id)
+			if err != nil {
+				return nil, false, nil
+			}
+			return o.State, true, nil
+		}
+		matched, err := x.pairSelection(ctx, *rule, p.Trigger, p.Items, lookup, get)
+		if err != nil {
+			return nil, err
+		}
+		var payload any
+		if err := json.Unmarshal(ev.Payload, &payload); err != nil {
+			return nil, err
+		}
+		seed := chainNode{matched: matched, rule: *rule, cause: -1}
+		nodes, err := x.expandChain(ctx, *ev, rules, payload, lookup, get, nil, &seed)
+		if err != nil {
+			return nil, err
+		}
+		return func(tx store.Querier) error {
+			root := *ev
+			root.ID = out.EventID
+			return x.bookTx(ctx, tx, root, nodes)
+		}, nil
+
 	case "bundle.rejected":
 		var p struct {
 			BundleID   string `json:"bundle_id"`

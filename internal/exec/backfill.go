@@ -95,14 +95,14 @@ func (x *Executor) PlanBackfill(ctx context.Context, date string) (BackfillPlan,
 			continue
 		}
 		root, forwarded := ev, ""
-		nodes, err := x.expandChain(ctx, root, rules, payload, lookup, get, prior)
+		nodes, err := x.expandChain(ctx, root, rules, payload, lookup, get, prior, nil)
 		var locked *PeriodLockedError
 		if errors.As(err, &locked) {
 			// Never into a closed period: offered forward, dated on the
 			// backfill, still caused by the original fact.
 			forwarded = locked.Error()
 			root.OccurredAt = date
-			nodes, err = x.expandChain(ctx, root, rules, payload, lookup, get, prior)
+			nodes, err = x.expandChain(ctx, root, rules, payload, lookup, get, prior, nil)
 		}
 		if err != nil {
 			plan.Errors = append(plan.Errors, fmt.Sprintf("event %d: %v", ev.ID, err))

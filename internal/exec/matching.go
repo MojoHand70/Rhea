@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"math/big"
 	"sort"
+	"strings"
 
 	"rhea/internal/core"
 	"rhea/internal/match"
@@ -37,26 +38,17 @@ func (x *Executor) expandMatching(ctx context.Context, r core.Rule, payload any,
 	if err != nil {
 		return nil, nil, fmt.Errorf("matching %s: %w", tmpl.Name, err)
 	}
-	var measures []match.Measure
-	for _, name := range tmpl.AllocatedMeasures() {
-		measures = append(measures, match.Measure{Name: name, Allocated: true, Money: kinds[name] == "money", Places: places(kinds[name])})
-	}
-	for _, name := range tmpl.ComparedMeasures() {
-		measures = append(measures, match.Measure{Name: name, Money: kinds[name] == "money", Places: places(kinds[name])})
-	}
 	trigger := core.MatchTrigger{Side: tmpl.Trigger, ObjectID: objectID, ObjectType: objectType}
 	triggerItem, err := itemOf(triggerSide, objectID, state, kinds, 0)
 	if err != nil {
 		return nil, nil, fmt.Errorf("matching %s: the %s %s: %w", tmpl.Name, triggerSide.Name, objectID, err)
 	}
 	inputs := map[string]any{}
-	typeOf := map[string]string{triggerSide.Name: triggerSide.Type}
 	var sides []match.Side
 	for _, side := range tmpl.Sides {
 		if side.Name == tmpl.Trigger {
 			continue
 		}
-		typeOf[side.Name] = side.Type
 		t, err := core.ParseTemplate(side.Items)
 		if err != nil {
 			return nil, nil, fmt.Errorf("matching %s side %s: %w", tmpl.Name, side.Name, err)
@@ -117,6 +109,120 @@ func (x *Executor) expandMatching(ctx context.Context, r core.Rule, payload any,
 		}
 		sides = append(sides, s)
 	}
+	problem := match.Problem{TriggerSide: tmpl.Trigger, Trigger: triggerItem, Sides: sides,
+		Measures: measuresOf(tmpl, kinds), Policy: policySteps(tmpl, inputs),
+		Convert: converterOf(tmpl, lookup, get, inputs)}
+	result, found, err := match.Solve(problem)
+	if err != nil {
+		return nil, nil, fmt.Errorf("matching %s: %w", tmpl.Name, err)
+	}
+	if !found {
+		return nil, &core.UnmatchedObjects{Matching: tmpl.Name, Trigger: trigger, Tried: attempts(result.Tried), Inputs: inputs}, nil
+	}
+	m, err := bakeMatch(tmpl, trigger, triggerItem, result, kinds, map[string]map[string]any{objectID: state}, inputs, lookup, get)
+	if err != nil {
+		return nil, nil, err
+	}
+	return m, nil, nil
+}
+
+// pairSelection runs a matching rule's structure on a person's selection
+// (the pair_items verb): the trigger item and exactly the items chosen on
+// the other sides, under the Selected strategy — never the policy. The
+// event it yields is the policy's, explained the same way.
+func (x *Executor) pairSelection(ctx context.Context, r core.Rule, triggerID string, itemIDs []string, lookup core.Lookup, get core.Getter) (*core.MatchedObjects, error) {
+	tmpl := r.Spec.Effect.Matching
+	if tmpl == nil {
+		return nil, fmt.Errorf("rule %s is not a matching rule", r.ID)
+	}
+	env := x.env(ctx, nil, lookup, get)
+	kinds, err := tmpl.MeasureKinds(env.Types)
+	if err != nil {
+		return nil, fmt.Errorf("matching %s: %w", tmpl.Name, err)
+	}
+	triggerSide, _ := tmpl.Side(tmpl.Trigger)
+	state, ok, err := get(triggerID)
+	if err != nil {
+		return nil, err
+	}
+	if !ok || !strings.HasPrefix(triggerID, triggerSide.Type+"-") {
+		return nil, fmt.Errorf("matching %s: %q is not a %s — the trigger side is %s", tmpl.Name, triggerID, triggerSide.Type, triggerSide.Name)
+	}
+	trigger := core.MatchTrigger{Side: tmpl.Trigger, ObjectID: triggerID, ObjectType: triggerSide.Type}
+	triggerItem, err := itemOf(triggerSide, triggerID, state, kinds, 0)
+	if err != nil {
+		return nil, fmt.Errorf("matching %s: the %s %s: %w", tmpl.Name, triggerSide.Name, triggerID, err)
+	}
+	states := map[string]map[string]any{triggerID: state}
+	bySide := map[string]*match.Side{}
+	var sides []match.Side
+	inputs := map[string]any{"selection": itemIDs}
+	for i, id := range itemIDs {
+		st, ok, err := get(id)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, fmt.Errorf("matching %s: no object %q among the chosen", tmpl.Name, id)
+		}
+		var side *core.MatchingSide
+		for j := range tmpl.Sides {
+			if tmpl.Sides[j].Name != tmpl.Trigger && strings.HasPrefix(id, tmpl.Sides[j].Type+"-") {
+				side = &tmpl.Sides[j]
+			}
+		}
+		if side == nil {
+			return nil, fmt.Errorf("matching %s: %q is on no side but the trigger's", tmpl.Name, id)
+		}
+		it, err := itemOf(*side, id, st, kinds, i+1)
+		if err != nil {
+			return nil, fmt.Errorf("matching %s: the %s %s: %w", tmpl.Name, side.Name, id, err)
+		}
+		states[id] = st
+		if bySide[side.Name] == nil {
+			bySide[side.Name] = &match.Side{Name: side.Name}
+		}
+		bySide[side.Name].Items = append(bySide[side.Name].Items, it)
+	}
+	for _, side := range tmpl.Sides {
+		if side.Name == tmpl.Trigger {
+			continue
+		}
+		s := bySide[side.Name]
+		if s == nil {
+			return nil, fmt.Errorf("matching %s: nothing chosen on %s", tmpl.Name, side.Name)
+		}
+		sides = append(sides, *s)
+	}
+	problem := match.Problem{TriggerSide: tmpl.Trigger, Trigger: triggerItem, Sides: sides,
+		Measures: measuresOf(tmpl, kinds), Policy: []match.Step{{Strategy: match.Selected}},
+		Convert: converterOf(tmpl, lookup, get, inputs)}
+	result, found, err := match.Solve(problem)
+	if err != nil {
+		return nil, fmt.Errorf("matching %s: %w", tmpl.Name, err)
+	}
+	if !found {
+		return nil, fmt.Errorf("matching %s: the selection pairs nothing — %s", tmpl.Name, result.Tried[0].Reason)
+	}
+	result.Step = 0 // a person's, not a policy step's
+	return bakeMatch(tmpl, trigger, triggerItem, result, kinds, states, inputs, lookup, get)
+}
+
+// measuresOf lists the structure's measures for the engine.
+func measuresOf(tmpl *core.MatchingTemplate, kinds map[string]string) []match.Measure {
+	var measures []match.Measure
+	for _, name := range tmpl.AllocatedMeasures() {
+		measures = append(measures, match.Measure{Name: name, Allocated: true, Money: kinds[name] == "money", Places: places(kinds[name])})
+	}
+	for _, name := range tmpl.ComparedMeasures() {
+		measures = append(measures, match.Measure{Name: name, Money: kinds[name] == "money", Places: places(kinds[name])})
+	}
+	return measures
+}
+
+// policySteps turns the declared policy into the engine's steps, recording
+// every tolerance as an input.
+func policySteps(tmpl *core.MatchingTemplate, inputs map[string]any) []match.Step {
 	var policy []match.Step
 	for i, st := range tmpl.Policy {
 		step := match.Step{Strategy: st.Strategy, DifferenceAccount: st.DifferenceAccount,
@@ -137,74 +243,78 @@ func (x *Executor) expandMatching(ctx context.Context, r core.Rule, payload any,
 		}
 		policy = append(policy, step)
 	}
-	problem := match.Problem{TriggerSide: tmpl.Trigger, Trigger: triggerItem, Sides: sides, Measures: measures, Policy: policy}
-	if c := tmpl.Convert; c != nil {
-		// Rates are master data, as postings' convert reads them: the
-		// fx_rate for (from, to, date) by its code, or the inverse pair
-		// inverted; a missing rate refuses the firing into the worklist —
-		// unexplainable beats guessed. Every rate read is an input.
-		memo := map[string]*big.Rat{}
-		problem.Convert = &match.Converter{Functional: c.Functional, DateSide: c.DateSide,
-			RateUpAccount: c.RateUpAccount, RateDownAccount: c.RateDownAccount,
-			Round: func(r *big.Rat) *big.Rat { return core.RoundDecimal(r, 2, c.Rounding) },
-			Rate: func(from, to, date string) (*big.Rat, error) {
-				if from == to {
-					return big.NewRat(1, 1), nil
+	return policy
+}
+
+// converterOf builds the engine's converter from the structure's clause:
+// rates are master data, as postings' convert reads them — the fx_rate for
+// (from, to, date) by its code, or the inverse pair inverted; a missing
+// rate refuses the firing into the worklist (unexplainable beats guessed).
+// Every rate read is an input. Nil without a clause.
+func converterOf(tmpl *core.MatchingTemplate, lookup core.Lookup, get core.Getter, inputs map[string]any) *match.Converter {
+	c := tmpl.Convert
+	if c == nil {
+		return nil
+	}
+	memo := map[string]*big.Rat{}
+	return &match.Converter{Functional: c.Functional, DateSide: c.DateSide,
+		RateUpAccount: c.RateUpAccount, RateDownAccount: c.RateDownAccount,
+		Round: func(r *big.Rat) *big.Rat { return core.RoundDecimal(r, 2, c.Rounding) },
+		Rate: func(from, to, date string) (*big.Rat, error) {
+			if from == to {
+				return big.NewRat(1, 1), nil
+			}
+			key := from + "/" + to + "/" + date
+			if r, ok := memo[key]; ok {
+				return r, nil
+			}
+			read := func(code string) (*big.Rat, bool, error) {
+				ids, err := lookup(FXRateObjectType, "code", code)
+				if err != nil || len(ids) != 1 {
+					return nil, false, err
 				}
-				key := from + "/" + to + "/" + date
-				if r, ok := memo[key]; ok {
-					return r, nil
+				state, ok, err := get(ids[0])
+				if err != nil || !ok {
+					return nil, false, err
 				}
-				read := func(code string) (*big.Rat, bool, error) {
-					ids, err := lookup(FXRateObjectType, "code", code)
-					if err != nil || len(ids) != 1 {
-						return nil, false, err
-					}
-					state, ok, err := get(ids[0])
-					if err != nil || !ok {
-						return nil, false, err
-					}
-					text, _ := state["rate"].(string)
-					r, err := core.ParseDecimal(text)
-					if err != nil || r.Sign() <= 0 {
-						return nil, false, fmt.Errorf("fx_rate %s: %q is not a positive decimal", code, text)
-					}
-					inputs["rate "+code] = text
-					return r, true, nil
+				text, _ := state["rate"].(string)
+				r, err := core.ParseDecimal(text)
+				if err != nil || r.Sign() <= 0 {
+					return nil, false, fmt.Errorf("fx_rate %s: %q is not a positive decimal", code, text)
 				}
-				r, ok, err := read(key)
+				inputs["rate "+code] = text
+				return r, true, nil
+			}
+			r, ok, err := read(key)
+			if err != nil {
+				return nil, err
+			}
+			if !ok {
+				inv, ok, err := read(to + "/" + from + "/" + date)
 				if err != nil {
 					return nil, err
 				}
 				if !ok {
-					inv, ok, err := read(to + "/" + from + "/" + date)
-					if err != nil {
-						return nil, err
-					}
-					if !ok {
-						return nil, fmt.Errorf("no fx_rate for %s/%s on %s", from, to, date)
-					}
-					r = new(big.Rat).Inv(inv)
+					return nil, fmt.Errorf("no fx_rate for %s/%s on %s", from, to, date)
 				}
-				memo[key] = r
-				return r, nil
-			}}
-	}
-	result, found, err := match.Solve(problem)
-	if err != nil {
-		return nil, nil, fmt.Errorf("matching %s: %w", tmpl.Name, err)
-	}
-	if !found {
-		return nil, &core.UnmatchedObjects{Matching: tmpl.Name, Trigger: trigger, Tried: attempts(result.Tried), Inputs: inputs}, nil
-	}
+				r = new(big.Rat).Inv(inv)
+			}
+			memo[key] = r
+			return r, nil
+		}}
+}
+
+// bakeMatch encodes the engine's result as the event the log will hold:
+// every allocation in its measure's boundary encoding, every difference with
+// its home resolved (a declared account must exist), every input.
+func bakeMatch(tmpl *core.MatchingTemplate, trigger core.MatchTrigger, triggerItem match.Item, result match.Result, kinds map[string]string,
+	states map[string]map[string]any, inputs map[string]any, lookup core.Lookup, get core.Getter) (*core.MatchedObjects, error) {
 	out := &core.MatchedObjects{Matching: tmpl.Name, Strategy: result.Strategy, Step: result.Step,
 		Trigger: trigger, Kinds: kinds, Sides: map[string][]core.MatchAllocation{}, Differences: []core.MatchDifference{},
 		Tried: attempts(result.Tried), Inputs: inputs}
-	states := map[string]map[string]any{objectID: state}
-	for _, s := range sides {
-		for _, it := range s.Items {
-			states[it.ID] = nil // read lazily below through get, which sees the chain
-		}
+	typeOf := map[string]string{}
+	for _, s := range tmpl.Sides {
+		typeOf[s.Name] = s.Type
 	}
 	sideNames := make([]string, 0, len(result.Sides))
 	for name := range result.Sides {
@@ -216,22 +326,24 @@ func (x *Executor) expandMatching(ctx context.Context, r core.Rule, payload any,
 		for _, a := range result.Sides[name] {
 			st := states[a.ID]
 			if st == nil {
+				var err error
 				st, _, err = get(a.ID)
 				if err != nil {
-					return nil, nil, err
+					return nil, err
 				}
 			}
 			alloc := core.MatchAllocation{ObjectID: a.ID, ObjectType: typeOf[name],
 				Allocated: map[string]any{}, OpenBefore: map[string]any{}, OpenAfter: map[string]any{}}
+			var err error
 			for m := range a.Allocated {
 				if alloc.Allocated[m], err = encode(a.Allocated[m], kinds[m]); err != nil {
-					return nil, nil, fmt.Errorf("matching %s: %s allocated %s: %w", tmpl.Name, a.ID, m, err)
+					return nil, fmt.Errorf("matching %s: %s allocated %s: %w", tmpl.Name, a.ID, m, err)
 				}
 				if alloc.OpenBefore[m], err = encode(a.OpenBefore[m], kinds[m]); err != nil {
-					return nil, nil, err
+					return nil, err
 				}
 				if alloc.OpenAfter[m], err = encode(a.OpenAfter[m], kinds[m]); err != nil {
-					return nil, nil, err
+					return nil, err
 				}
 			}
 			if side.Currency != "" {
@@ -241,7 +353,7 @@ func (x *Executor) expandMatching(ctx context.Context, r core.Rule, payload any,
 				alloc.Equivalent, alloc.EquivalentCurrency = map[string]any{}, triggerItem.Currency
 				for m, v := range a.Equivalent {
 					if alloc.Equivalent[m], err = encode(v, kinds[m]); err != nil {
-						return nil, nil, err
+						return nil, err
 					}
 				}
 			}
@@ -255,7 +367,7 @@ func (x *Executor) expandMatching(ctx context.Context, r core.Rule, payload any,
 	for _, d := range result.Differences {
 		amount, err := encode(d.Amount, kinds[d.Measure])
 		if err != nil {
-			return nil, nil, fmt.Errorf("matching %s: difference on %s: %w", tmpl.Name, d.Measure, err)
+			return nil, fmt.Errorf("matching %s: difference on %s: %w", tmpl.Name, d.Measure, err)
 		}
 		md := core.MatchDifference{Kind: d.Kind, Measure: d.Measure, Side: d.Side, Item: d.Item,
 			Amount: amount, Direction: d.Direction, Account: d.Account}
@@ -270,12 +382,12 @@ func (x *Executor) expandMatching(ctx context.Context, r core.Rule, payload any,
 			// home, resolved now so the posting rule that reads the code
 			// cannot find it missing later.
 			if _, err := core.ResolveRef(lookup, "account", "code", d.Account); err != nil {
-				return nil, nil, fmt.Errorf("matching %s: difference_account %s: %w", tmpl.Name, d.Account, err)
+				return nil, fmt.Errorf("matching %s: difference_account %s: %w", tmpl.Name, d.Account, err)
 			}
 		}
 		out.Differences = append(out.Differences, md)
 	}
-	return out, nil, nil
+	return out, nil
 }
 
 // isOpen reports whether an item still has something to allocate on every
