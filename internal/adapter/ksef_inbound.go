@@ -91,7 +91,10 @@ func (k KSeFInbound) Pass(ctx context.Context, reads Reads) ([]core.Event, error
 			"number": inv.Number, "supplier": inv.SellerName, "supplier_nip": inv.SellerCountry + inv.SellerNIP,
 			"invoice_date": inv.IssueDate, "net": core.FormatMoney(inv.Net), "vat": core.FormatMoney(inv.VAT),
 			"gross": core.FormatMoney(inv.Gross), "currency": inv.Currency, "document": hash,
-			"buyer_nip": "PL" + inv.BuyerNIP,
+			"market": "pl",
+		}
+		if inv.BuyerNIP != "" {
+			fact["buyer_nip"] = inv.BuyerCountry + inv.BuyerNIP
 		}
 		if inv.RateCode != "" {
 			fact["vat_rate"] = inv.RateCode
@@ -137,7 +140,7 @@ var ksefRefPattern = regexp.MustCompile(`^\d{10}-\d{8}-[0-9A-F]{12}-[0-9A-F]{2}$
 type Invoice struct {
 	Number, IssueDate                    string
 	SellerNIP, SellerName, SellerCountry string
-	BuyerNIP                             string
+	BuyerNIP, BuyerCountry               string // the country defaults to PL, as the seller's does
 	Currency                             string
 	Net, VAT, Gross                      int64
 	RateCode                             string // the one VAT rate, or "" when the invoice mixes rates
@@ -223,7 +226,8 @@ func ParseFA(b []byte) (Invoice, error) {
 		Number: strings.TrimSpace(f.Body.Number), IssueDate: strings.TrimSpace(f.Body.IssueDate),
 		SellerNIP: strings.TrimSpace(f.Seller.NIP), SellerName: strings.TrimSpace(f.Seller.Name),
 		SellerCountry: strings.TrimSpace(f.Seller.Country), BuyerNIP: strings.TrimSpace(f.Buyer.NIP),
-		Currency: strings.TrimSpace(f.Body.Currency), WZ: f.Body.WZ,
+		BuyerCountry: strings.TrimSpace(f.Buyer.Country),
+		Currency:     strings.TrimSpace(f.Body.Currency), WZ: f.Body.WZ,
 		Term: strings.TrimSpace(f.Body.Term), Account: strings.TrimSpace(f.Body.Account),
 	}
 	switch {
@@ -239,6 +243,9 @@ func ParseFA(b []byte) (Invoice, error) {
 	}
 	if inv.SellerCountry == "" {
 		inv.SellerCountry = "PL"
+	}
+	if inv.BuyerCountry == "" {
+		inv.BuyerCountry = "PL"
 	}
 	slots := []struct{ net, vat, code string }{
 		{f.Body.Net1, f.Body.VAT1, "23"}, {f.Body.Net2, f.Body.VAT2, "8"}, {f.Body.Net3, f.Body.VAT3, "5"},

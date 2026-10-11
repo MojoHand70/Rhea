@@ -1925,4 +1925,15 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   that door that is not a statement becomes `document.unreadable` with the reason
   ("the file starts with …, not :20:"). A statement that came through another door is
   that door's business.
+- **The buyer's NIP carries the buyer's country.** The KSeF reader wrote "PL" in front
+  of whatever the buyer's NIP was, and a bare "PL" when there was none. Now the prefix
+  is the buyer's `KodKraju` (PL when the document names none, as for the seller), and an
+  invoice without a buyer NIP carries no `buyer_nip` at all — the lookup then fails on
+  a missing field, not on a made-up one.
+- **A purchase invoice is stamped with its market: the buyer's.** On a sales invoice
+  the market is the seller's — the book it lands in; on a purchase invoice it is the
+  buyer's, for the same reason. The KSeF reader stamps `market: pl` on every invoice it
+  reads (KSeF is the Polish system, and the inbound channel reads what is addressed to
+  a Polish buyer); the generator stamps its purchase facts likewise, the German
+  supplier's included, since Nordwind buys for its Polish books.
 

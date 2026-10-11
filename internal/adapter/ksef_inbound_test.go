@@ -103,7 +103,8 @@ func TestKSeFInboundReadsTheStore(t *testing.T) {
 		if ev.ActivityName != "ksef_inbound" || ev.Actor != "adapter:ksef_inbound" || ev.OccurredAt != fact.OccurredAt ||
 			m["document"] != hash || m["net"] != fact.Payload["net"] || m["supplier_nip"] != fact.Payload["supplier_nip"] ||
 			m["supplier"] != fact.Payload["supplier"] || m["invoice_date"] != fact.Payload["invoice_date"] ||
-			m["vat_rate"] != fact.Payload["vat_rate"] || m["currency"] != "PLN" ||
+			m["vat_rate"] != fact.Payload["vat_rate"] || m["currency"] != "PLN" || m["market"] != "pl" ||
+			m["buyer_nip"] != fact.Payload["buyer_nip"] ||
 			m["ksef_ref"] != strings.TrimSuffix(filepath.Base(d.Path), ".xml") {
 			t.Fatalf("read %v, generated %v (event %+v)", m, fact.Payload, ev)
 		}
@@ -151,6 +152,39 @@ func TestKSeFInboundReadsTheStore(t *testing.T) {
 	if o, _ := s.GetObject(ctx, ids[0]); o.State["status"] != "received" {
 		t.Fatalf("lying.xml status = %v", o.State["status"])
 	}
+
+	// The buyer's NIP carries the buyer's own country, and is absent when
+	// the document names none — never a bare "PL".
+	deBuyer := inBuyer(ksef[0].Bytes, "<KodKraju>PL</KodKraju>", "<KodKraju>DE</KodKraju>")
+	noBuyer := inBuyer(ksef[0].Bytes, "<NIP>5260301234</NIP>", "")
+	receive(t, x, "de-buyer.xml", "application/xml", "ksef", "2026-01-23", deBuyer)
+	receive(t, x, "no-buyer.xml", "application/xml", "ksef", "2026-01-23", noBuyer)
+	if res, err := adapter.Run(ctx, s, x, adapter.KSeFInbound{}); err != nil || res.Submitted != 4 {
+		t.Fatalf("buyer pass = %+v, %v", res, err)
+	}
+	raws, _ = s.EventsByKind(ctx, core.KindRaw)
+	factOf := func(hash string) map[string]any {
+		for _, ev := range raws {
+			var m map[string]any
+			if ev.Type == "purchase.invoice.received" && jsonUnmarshal(ev.Payload, &m) == nil && m["document"] == hash {
+				return m
+			}
+		}
+		t.Fatalf("no invoice fact names %s", hash)
+		return nil
+	}
+	if m := factOf(core.HashBytes(deBuyer)); m["buyer_nip"] != "DE5260301234" || m["market"] != "pl" {
+		t.Fatalf("German buyer = %v", m)
+	}
+	if m := factOf(core.HashBytes(noBuyer)); m["buyer_nip"] != nil {
+		t.Fatalf("no buyer NIP, yet buyer_nip = %v", m["buyer_nip"])
+	}
+}
+
+// inBuyer edits the buyer party (Podmiot2) of a Faktura, leaving the seller alone.
+func inBuyer(b []byte, from, to string) []byte {
+	i := bytes.Index(b, []byte("<Podmiot2>"))
+	return append(append([]byte{}, b[:i]...), bytes.Replace(b[i:], []byte(from), []byte(to), 1)...)
 }
 
 // ParseFA on the generator's file agrees with the generator.
@@ -172,7 +206,7 @@ func TestParseFA(t *testing.T) {
 		fact := f.Events[d.Events[0]]
 		net, _ := core.ParseMoney(fact.Payload["net"].(string))
 		if inv.Net != net || inv.Net+inv.VAT != inv.Gross || inv.RateCode != "23" || inv.Number != fact.Payload["number"] ||
-			"PL"+inv.SellerNIP != fact.Payload["supplier_nip"] || inv.BuyerNIP != "5260301234" || len(inv.Lines) == 0 {
+			"PL"+inv.SellerNIP != fact.Payload["supplier_nip"] || inv.BuyerNIP != "5260301234" || inv.BuyerCountry != "PL" || len(inv.Lines) == 0 {
 			t.Fatalf("%s: %+v vs %v", d.Path, inv, fact.Payload)
 		}
 	}
