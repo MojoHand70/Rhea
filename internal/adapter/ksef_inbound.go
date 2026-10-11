@@ -91,6 +91,7 @@ func (k KSeFInbound) Pass(ctx context.Context, reads Reads) ([]core.Event, error
 			"number": inv.Number, "supplier": inv.SellerName, "supplier_nip": inv.SellerCountry + inv.SellerNIP,
 			"invoice_date": inv.IssueDate, "net": core.FormatMoney(inv.Net), "vat": core.FormatMoney(inv.VAT),
 			"gross": core.FormatMoney(inv.Gross), "currency": inv.Currency, "document": hash,
+			"buyer_nip": "PL" + inv.BuyerNIP,
 		}
 		if inv.RateCode != "" {
 			fact["vat_rate"] = inv.RateCode

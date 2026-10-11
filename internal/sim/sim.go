@@ -21,6 +21,7 @@ import (
 	"math/rand/v2"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -264,6 +265,7 @@ type gen struct {
 
 	salesNo, deliveryNo, purchaseNo, complaintNo int
 	sales                                        []saleFact
+	purchases                                    []purchaseFact
 	salesNet, salesVAT, purchaseVAT, pzValue     int64
 	pzLines, movesIn, movesOut, resolved         int
 	levels                                       []levelFact
@@ -275,6 +277,14 @@ type saleFact struct {
 	gross    int64
 	paid     bool
 	customer string
+}
+
+type purchaseFact struct {
+	number   string
+	date     time.Time
+	gross    int64
+	paid     bool
+	supplier Party
 }
 
 type levelFact struct{ book, counted int }
@@ -441,14 +451,16 @@ func (g *gen) purchaseInvoice(date time.Time, sup Party, net int64, forDocument 
 	g.purchaseNo++
 	rate := g.p.VATRates[0]
 	vat := halfUp(net*int64(rate.Percent), 100)
-	payload := map[string]any{"number": fmt.Sprintf("%s/%d/%d", strings.ToUpper(sup.Name[:3]), g.purchaseNo, date.Year()),
-		"supplier": sup.Name, "supplier_nip": sup.VATID, "invoice_date": ymd(date),
+	number := fmt.Sprintf("%s/%d/%d", strings.ToUpper(sup.Name[:3]), g.purchaseNo, date.Year())
+	payload := map[string]any{"number": number,
+		"supplier": sup.Name, "supplier_nip": sup.VATID, "buyer_nip": g.p.Company.VATID, "invoice_date": ymd(date),
 		"net": core.FormatMoney(net), "vat_rate": rate.Code, "currency": "PLN"}
 	if forDocument != "" {
 		payload["for_document"] = forDocument
 	}
 	g.emit("purchase.invoice.received", ymd(date), payload)
 	g.purchaseVAT += vat
+	g.purchases = append(g.purchases, purchaseFact{number: number, date: date, gross: net + vat, supplier: sup})
 	g.counts["purchase_invoice"]++
 }
 
@@ -487,11 +499,22 @@ func (g *gen) stockCounts() {
 	}
 }
 
-// payments: a share of sales invoices is paid, by a bank line naming the
-// invoice, some days after issue and inside the period.
+// payments: a share of sales invoices is paid to us, and a share of purchase
+// invoices is paid by us, each by a bank line naming the invoice, some days
+// after issue and inside the period. A line says what a statement says:
+// the direction, the account, the counterparty and its account.
 func (g *gen) payments() {
 	end, _ := time.Parse("2006-01", g.p.From)
 	end = end.AddDate(0, g.p.Months, -1)
+	customers := map[string]Party{}
+	for _, c := range g.p.Customers {
+		customers[c.Name] = c
+	}
+	line := func(date time.Time, gross int64, direction, reference string, who Party) {
+		g.emit("bank.statement.line", ymd(date), map[string]any{"date": ymd(date), "amount": core.FormatMoney(gross),
+			"currency": "PLN", "direction": direction, "reference": reference, "counterparty": who.Name,
+			"counterparty_account": iban(who), "account": iban(g.p.Company)})
+	}
 	for i := range g.sales {
 		s := &g.sales[i]
 		if g.pick(100) >= g.p.Volume.PaidShare {
@@ -502,8 +525,19 @@ func (g *gen) payments() {
 			continue
 		}
 		s.paid = true
-		g.emit("bank.statement.line", ymd(paid), map[string]any{"date": ymd(paid), "amount": core.FormatMoney(s.gross),
-			"currency": "PLN", "reference": s.number, "counterparty": s.customer})
+		line(paid, s.gross, "credit", s.number, customers[s.customer])
+	}
+	for i := range g.purchases {
+		pf := &g.purchases[i]
+		if g.pick(100) >= g.p.Volume.PaidShare {
+			continue
+		}
+		paid := pf.date.AddDate(0, 0, 3+g.pick(max(1, g.p.Volume.PaymentDays+10)))
+		if paid.After(end) {
+			continue
+		}
+		pf.paid = true
+		line(paid, pf.gross, "debit", pf.number, pf.supplier)
 	}
 }
 
@@ -533,6 +567,15 @@ func (g *gen) facts() Facts {
 	}
 	if paid > 0 {
 		f.Where = append(f.Where, eval.Where{Type: "sales_invoice", Field: "status", Value: "paid", Count: paid})
+	}
+	paidPurchases := 0
+	for _, pf := range g.purchases {
+		if pf.paid {
+			paidPurchases++
+		}
+	}
+	if paidPurchases > 0 {
+		f.Where = append(f.Where, eval.Where{Type: "purchase_invoice", Field: "status", Value: "paid", Count: paidPurchases})
 	}
 	postings := 0
 	for kind, lines := range g.p.Postings {
@@ -591,7 +634,7 @@ func Compile(p Persona, voices *Voices, voice int) (eval.Corpus, Facts, error) {
 // Readers names the channel that reads each document source a persona can
 // emit. A source without a reader stays JSON through the open door —
 // exactly "what no channel reads yet".
-var Readers = map[string]string{"ksef": "ksef_inbound"}
+var Readers = map[string]string{"ksef": "ksef_inbound", "bank": "bank_mt940"}
 
 // CompileDocuments compiles with the documents of the named sources fed as
 // files instead of the facts they carry — documents in, state out
@@ -605,13 +648,14 @@ func CompileDocuments(p Persona, voices *Voices, voice int, sources []string) (e
 	c := eval.Corpus{Name: network.SyntheticPrefix + p.Name, Seeds: p.Seeds, Packs: p.Packs, Expect: facts.Counts,
 		ExpectWhere: facts.Where, ExpectSum: facts.Sums}
 	covered := map[int]bool{}
-	readers := map[string]bool{}
 	for _, src := range sources {
 		reader, ok := Readers[src]
 		if !ok {
 			return eval.Corpus{}, Facts{}, fmt.Errorf("no reader for %q documents yet — they stay JSON", src)
 		}
-		readers[reader] = true
+		if !slices.Contains(c.Readers, reader) {
+			c.Readers = append(c.Readers, reader) // in the order given: invoices before the lines that pay them
+		}
 		for _, d := range facts.Documents {
 			if d.Source != src {
 				continue
@@ -623,10 +667,6 @@ func CompileDocuments(p Persona, voices *Voices, voice int, sources []string) (e
 			}
 		}
 	}
-	for name := range readers {
-		c.Readers = append(c.Readers, name)
-	}
-	sort.Strings(c.Readers)
 	if len(c.Files) > 0 {
 		c.Expect = make(map[string]int, len(facts.Counts)+1)
 		for k, v := range facts.Counts {

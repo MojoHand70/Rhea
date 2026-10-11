@@ -100,14 +100,29 @@ func TestFactsAreConsistent(t *testing.T) {
 	if sums["pz_line.value"] != core.FormatMoney(pzValue) || sums["sales_invoice.vat"] == "" || sums["stock_level.book"] == "" {
 		t.Fatalf("sums = %v", sums)
 	}
-	paid := 0
+	// Every bank line pays exactly one invoice: money in a sales invoice,
+	// money out a purchase invoice.
+	paidSales, paidPurchases := 0, 0
 	for _, w := range f.Where {
 		if w.Type == "sales_invoice" && w.Value == "paid" {
-			paid = w.Count
+			paidSales = w.Count
+		}
+		if w.Type == "purchase_invoice" && w.Value == "paid" {
+			paidPurchases = w.Count
 		}
 	}
-	if paid != kinds["bank.statement.line"] || paid == 0 {
-		t.Fatalf("paid %d, bank lines %d", paid, kinds["bank.statement.line"])
+	credits, debits := 0, 0
+	for _, ev := range f.Events {
+		if ev.EventType == "bank.statement.line" {
+			if ev.Payload["direction"] == "debit" {
+				debits++
+			} else {
+				credits++
+			}
+		}
+	}
+	if paidSales != credits || paidPurchases != debits || paidSales == 0 || paidPurchases == 0 {
+		t.Fatalf("paid sales %d vs credits %d, paid purchases %d vs debits %d", paidSales, credits, paidPurchases, debits)
 	}
 	if kinds["stock.counted"] != 2*len(p.Locations)*3 {
 		t.Fatalf("stock counts %d", kinds["stock.counted"])

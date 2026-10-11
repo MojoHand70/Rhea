@@ -1549,7 +1549,17 @@ store into `purchase.invoice.received` naming the file, refuses a document
 that contradicts itself into the worklist, and marks the document read;
 declared by `packs/pl/ksef-inbound.json`; the eval installs packs, receives
 files and runs readers, and both personas reach DONE with documents in.
-Left for later: the Poland pack's purchase-side drafts.
+**Step 5 shipped 2026-10-11** (DECISIONS, "the bank reader and
+reconciliation by rule"): `bank_mt940` reads statements into
+`bank.statement.line` with direction, accounts and the raw `:86:`, refuses
+a statement whose balances do not add up; the generator pays purchase
+invoices; the interviews split money in from money out; the Poland pack
+(v9) books the purchase invoice from the document's own VAT, posts Wn 300 /
+Wn 221 / Ma 202 and shows the purchase VAT register. **Phase 1's exit holds
+on the bench**: a KSeF invoice and its bank payment flow in as files, book
+with correct VAT, and reconcile by rule, both personas DONE on the
+reference answers. Next: the live run with the model, documents in, then
+documents-in as the default.
 
 One line: *a channel is who reads the document and how sure they are;
 the file is the fact and the reading has an author; the registry is an

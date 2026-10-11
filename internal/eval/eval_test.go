@@ -117,13 +117,26 @@ func TestPersonaReferenceIsDoneWithDocuments(t *testing.T) {
 				t.Fatal(err)
 			}
 			p.Months = 2
-			c, facts, err := sim.CompileDocuments(p, nil, 0, []string{"ksef"})
+			c, facts, err := sim.CompileDocuments(p, nil, 0, []string{"ksef", "bank"})
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(c.Files) == 0 || len(c.Readers) != 1 || c.Readers[0] != "ksef_inbound" || len(c.Packs) != 2 ||
-				c.Expect["received_document"] != len(c.Files) || len(c.Events)+len(c.Files) != len(facts.Events) {
-				t.Fatalf("corpus: %d files, readers %v, packs %v, events %d of %d", len(c.Files), c.Readers, c.Packs, len(c.Events), len(facts.Events))
+			covered := 0
+			for _, d := range facts.Documents {
+				covered += len(d.Events)
+			}
+			if len(c.Files) == 0 || len(c.Readers) != 2 || c.Readers[0] != "ksef_inbound" || c.Readers[1] != "bank_mt940" ||
+				len(c.Packs) != 3 || c.Expect["received_document"] != len(c.Files) || len(c.Events)+covered != len(facts.Events) {
+				t.Fatalf("corpus: %d files, readers %v, packs %v, events %d + %d of %d", len(c.Files), c.Readers, c.Packs, len(c.Events), covered, len(facts.Events))
+			}
+			paidPurchases := false
+			for _, w := range c.ExpectWhere {
+				if w.Type == "purchase_invoice" && w.Value == "paid" && w.Count > 0 {
+					paidPurchases = true
+				}
+			}
+			if !paidPurchases {
+				t.Fatal("the story pays no purchase invoice")
 			}
 			s := storetest.New(t)
 			recorded := &agent.Agent{Complete: func(ctx context.Context, system, user string) (string, error) {

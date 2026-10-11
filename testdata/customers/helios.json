@@ -15,7 +15,8 @@
   ],
   "packs": [
     "../../packs/common/documents.json",
-    "../../packs/pl/ksef-inbound.json"
+    "../../packs/pl/ksef-inbound.json",
+    "../../packs/pl/bank-mt940.json"
   ],
   "seed": 11,
   "from": "2026-01",
@@ -385,7 +386,7 @@
       }
     },
     {
-      "answer": "A supplier's invoice becomes a purchase invoice document (the type purchase_invoice): number, invoice date, the supplier found by NIP, our own company as the owner, the net amount, the currency and the VAT rate code. VAT is the net times the rate's percent divided by 100, rounded half up to the grosz, and gross is net plus VAT. Each purchase invoice is posted in the book pl-stat: debit 402 with the net, debit 221 with the VAT, credit 202 with the gross.",
+      "answer": "A supplier's invoice becomes a purchase invoice document (the type purchase_invoice): number, invoice date, the supplier found by NIP, our own company as the owner, the net amount, the currency and the VAT rate code. VAT is the net times the rate's percent divided by 100, rounded half up to the grosz, and gross is net plus VAT; the status starts open and can later move to paid. Each purchase invoice is posted in the book pl-stat: debit 402 with the net, debit 221 with the VAT, credit 202 with the gross.",
       "mode": "bundle",
       "reference": {
         "bundle_id": "purchase-invoices",
@@ -441,8 +442,25 @@
                 "name": "currency",
                 "type": "string",
                 "required": true
+              },
+              {
+                "name": "status",
+                "type": "enum",
+                "required": true,
+                "values": [
+                  "open",
+                  "paid"
+                ]
               }
-            ]
+            ],
+            "lifecycle": {
+              "field": "status",
+              "transitions": {
+                "open": [
+                  "paid"
+                ]
+              }
+            }
           }
         ],
         "rules": [
@@ -466,7 +484,8 @@
                     "vat": "=round($.net * ref(vat_rate, code, $.vat_rate).percent / 100, 2, half_up)",
                     "gross": "=$.net + round($.net * ref(vat_rate, code, $.vat_rate).percent / 100, 2, half_up)",
                     "vat_rate": "=ref(vat_rate, code, $.vat_rate)",
-                    "currency": "=$.currency"
+                    "currency": "=$.currency",
+                    "status": "open"
                   }
                 }
               }
@@ -520,19 +539,26 @@
       }
     },
     {
-      "answer": "A bank statement line whose reference names one of our sales invoice numbers marks that sales invoice as paid.",
+      "answer": "An incoming bank statement line (money in) whose reference names one of our sales invoice numbers marks that sales invoice as paid; an outgoing line (money out) whose reference names one of our purchase invoice numbers marks that purchase invoice as paid.",
       "mode": "bundle",
       "reference": {
         "bundle_id": "bank-payments",
-        "description": "A bank line naming a sales invoice marks it paid.",
+        "description": "Bank lines settle the invoices they name: money in pays a sales invoice, money out pays a purchase invoice.",
         "rules": [
           {
             "rule_id": "pay-sales-invoice",
-            "description": "a bank line settles the invoice it names",
+            "description": "an incoming bank line settles the sales invoice it names",
             "priority": 300,
             "spec": {
               "match": {
-                "event_type": "bank.statement.line"
+                "event_type": "bank.statement.line",
+                "where": [
+                  {
+                    "path": "$.direction",
+                    "op": "eq",
+                    "value": "credit"
+                  }
+                ]
               },
               "effect": {
                 "amend": {
@@ -544,12 +570,38 @@
                 }
               }
             }
+          },
+          {
+            "rule_id": "pay-purchase-invoice",
+            "description": "an outgoing bank line settles the purchase invoice it names",
+            "priority": 300,
+            "spec": {
+              "match": {
+                "event_type": "bank.statement.line",
+                "where": [
+                  {
+                    "path": "$.direction",
+                    "op": "eq",
+                    "value": "debit"
+                  }
+                ]
+              },
+              "effect": {
+                "amend": {
+                  "type": "purchase_invoice",
+                  "target": "=ref(purchase_invoice, number, $.reference)",
+                  "set": {
+                    "status": "paid"
+                  }
+                }
+              }
+            }
           }
         ],
         "warrant": {
           "basis": "practice",
           "citations": [
-            "rozliczenie należności z wyciągu bankowego po numerze faktury"
+            "rozliczenie należności i zobowiązań z wyciągu bankowego po numerze faktury"
           ],
           "scope": "any market"
         }

@@ -290,10 +290,6 @@ func (g *gen) statements(events []Event) []Document {
 			byMonth[ev.OccurredAt[:7]] = append(byMonth[ev.OccurredAt[:7]], i)
 		}
 	}
-	customers := map[string]Party{}
-	for _, c := range g.p.Customers {
-		customers[c.Name] = c
-	}
 	account := iban(g.p.Company)
 	balance := StatementOpening
 	var out []Document
@@ -315,8 +311,13 @@ func (g *gen) statements(events []Event) []Document {
 			day, _ := time.Parse("2006-01-02", ev.OccurredAt)
 			ref, _ := ev.Payload["reference"].(string)
 			who, _ := ev.Payload["counterparty"].(string)
-			w(":61:%s%sC%sNTRFNONREF//%d", day.Format("060102"), day.Format("0102"), mt940Amount(amount), n+1)
-			w(":86:PRZELEW PRZYCHODZACY|%s|%s|%s", ref, who, iban(customers[who]))
+			whoAccount, _ := ev.Payload["counterparty_account"].(string)
+			mark, kind := "C", "PRZELEW PRZYCHODZACY"
+			if ev.Payload["direction"] == "debit" {
+				mark, kind, amount = "D", "PRZELEW WYCHODZACY", -amount
+			}
+			w(":61:%s%s%s%sNTRFNONREF//%d", day.Format("060102"), day.Format("0102"), mark, mt940Amount(absMinor(amount)), n+1)
+			w(":86:%s|%s|%s|%s", kind, ref, who, whoAccount)
 			balance += amount
 		}
 		w(":62F:%s", mt940Balance(balance, last))
@@ -328,6 +329,13 @@ func (g *gen) statements(events []Event) []Document {
 		})
 	}
 	return out
+}
+
+func absMinor(n int64) int64 {
+	if n < 0 {
+		return -n
+	}
+	return n
 }
 
 // mt940Amount writes minor units the way the format does: a comma decimal.

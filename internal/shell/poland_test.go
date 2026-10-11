@@ -90,15 +90,15 @@ func TestM3PolandPack(t *testing.T) {
 	}
 	post("/api/bundles/pack-common-people-v1/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 
-	// Load the pack: 14 types, 5 views, 5 draft rules, one channel (the KSeF
+	// Load the pack: 14 types, 6 views, 7 draft rules, one channel (the KSeF
 	// adapter's door, a draft like any verb), 31 master-data events.
 	packPath := filepath.Join("..", "..", "packs", "pl", "pack.json")
 	sum, err := pack.Load(ctx, s, packPath, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 14 || sum.Views != 5 || sum.Rules != 5 || sum.Activities != 1 || sum.Events != 31 || sum.Skipped != 0 ||
-		sum.Bundle != "pack-pl-v8" {
+	if sum.Types != 14 || sum.Views != 6 || sum.Rules != 7 || sum.Activities != 1 || sum.Events != 31 || sum.Skipped != 0 ||
+		sum.Bundle != "pack-pl-v9" {
 		t.Fatalf("first load: %+v", sum)
 	}
 	// Idempotent: a reload changes nothing.
@@ -106,7 +106,7 @@ func TestM3PolandPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Skipped != 56 || sum.Bundle != "" {
+	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Skipped != 59 || sum.Bundle != "" {
 		t.Fatalf("reload: %+v", sum)
 	}
 
@@ -126,7 +126,7 @@ func TestM3PolandPack(t *testing.T) {
 	// Approving the pack's bundle IS the installation: its types, views and
 	// rules activate together, and the chart of accounts and the VAT rates
 	// materialize from the waiting events.
-	post("/api/bundles/pack-pl-v8/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-pl-v9/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {
 		t.Fatalf("worklist not cleared after approvals: %d", len(wl))
 	}
@@ -209,6 +209,46 @@ func TestM3PolandPack(t *testing.T) {
 	}
 	if seen != 3 {
 		t.Fatalf("trial balance missing pack accounts: %+v", tb.Rows)
+	}
+
+	// The purchase side (DIRECTION 2026-10-10, step 5): a supplier's invoice
+	// as the KSeF reader hands it — the document's own VAT and gross — is a
+	// purchase_invoice document and a three-line entry, Wn 300 / Wn 221 /
+	// Ma 202, and the purchase VAT register shows it.
+	post("/api/events", map[string]any{
+		"event_type": "purchase.invoice.received", "occurred_at": "2026-09-22", "dedup_key": "fab-1",
+		"payload": map[string]any{
+			"number": "FAB/1/2026", "invoice_date": "2026-09-22",
+			"supplier_nip": "5260001246", "buyer_nip": "5250001111", "supplier": "Nabywca S.A.",
+			"net": "500.00", "vat": "115.00", "gross": "615.00", "vat_rate": "23", "currency": "PLN",
+		},
+	}, &resp)
+	if resp["booked"].(float64) != 1 || resp["errors"] != nil {
+		t.Fatalf("purchase invoice: %v", resp)
+	}
+	get("/api/views/trial-balance", &tb)
+	wantPurchase := map[string][2]string{"300": {"500.00", "0.00"}, "221": {"115.00", "0.00"}, "202": {"0.00", "615.00"}}
+	seen = 0
+	for _, r := range cellVals(tb.Rows) {
+		if w, ok := wantPurchase[r[1]]; ok {
+			if r[0] != "pl-stat" || r[3] != w[0] || r[4] != w[1] {
+				t.Fatalf("account %s: book %s debit %s credit %s, want pl-stat %v", r[1], r[0], r[3], r[4], w)
+			}
+			seen++
+		}
+	}
+	if seen != 3 {
+		t.Fatalf("trial balance missing the purchase entry: %+v", tb.Rows)
+	}
+	var purchases struct {
+		Rows [][]cell `json:"rows"`
+	}
+	get("/api/views/rejestr-vat-zakupu", &purchases)
+	if len(purchases.Rows) != 1 {
+		t.Fatalf("purchase VAT register = %+v", purchases.Rows)
+	}
+	if r := cellVals(purchases.Rows)[0]; r[0] != "2026-09" || r[1] != "23" || r[2] != "500.00" || r[3] != "115.00" || r[4] != "615.00" {
+		t.Fatalf("purchase register row = %v", r)
 	}
 
 	// The VAT register aggregates by month and rate.

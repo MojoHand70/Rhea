@@ -1803,3 +1803,44 @@ evidence in `internal/exec/case_test.go`.
   reference rules of the personas book them today; the pack's drafts with warrants come
   when the pack gains its purchase side, with the VAT purchase register), and the default
   of documents-in for `rhea eval` — flipped after one live run proves it.
+
+## 2026-10-11 — the bank reader and reconciliation by rule: Phase 1's exit, on the bench
+
+- **`bank_mt940` is the second reader** (`internal/adapter/mt940.go`): every entry of a
+  stored statement becomes one `bank.statement.line` — value date, amount (never
+  negative) with `direction` credit or debit, the title as `reference`, the counterparty
+  and its account, our account, the statement number, the line number, the `:86:` text
+  raw, and `document` (the file's hash) — plus a `document.read`. The reader checks the
+  statement against itself (opening plus credits minus debits is the closing) and reports
+  a contradiction as `document.unreadable`. It understands one `:86:` dialect, sim-bank
+  (`kind|title|counterparty|account`); any other bank's line becomes the title whole,
+  nothing guessed — a real bank's dialect is a second parser behind the same channel.
+  Declared by `packs/pl/bank-mt940.json`; `rhea pass bank_mt940`.
+- **The generator pays both ways.** A share of purchase invoices is paid by us (debit
+  lines naming the supplier's invoice), beside the customers' payments; every bank line
+  carries direction, accounts and counterparty; statements carry the debits. The expected
+  state gains "purchase invoice paid". Both personas' interviews say so: the purchase
+  invoice has a status (open → paid), and the bank answer distinguishes money in (pays a
+  sales invoice) from money out (pays a purchase invoice) — two rules with a `where` on
+  direction, because one rule for both would fail its lookup on the other side's lines.
+  The KSeF reader and the generator now name the buyer (`buyer_nip`) on a purchase
+  invoice, so the owner is a lookup like the supplier.
+- **Readers run in the order the sources are given** (`ksef`, then `bank`): invoices
+  before the lines that pay them. `rhea eval -documents-in` and `rhea sim -play
+  -documents-in` feed both.
+- **Phase 1's exit holds on the bench:** a KSeF invoice and its bank payment flow in as
+  files, book with the document's VAT, and reconcile by rule — both personas DONE on the
+  reference answers with documents in (`TestPersonaReferenceIsDoneWithDocuments`). The
+  live proof (the model drafting from the paraphrased answers, documents in) is the next
+  measurement; documents-in becomes the default after it.
+- **Matching is by reference only.** A line that names no invoice stays in the worklist;
+  matching by amount and counterparty over the open invoices (the fold under the cap)
+  arrives with the matching grid in Phase 2, where a person pairs what rules cannot.
+- **The Poland pack gains its purchase side (v9)**: `pl-book-purchase-invoice` (supplier
+  and owner by NIP lookup, amounts as the document states them — the KSeF reader hands
+  the document's own VAT and gross, so the pack trusts the document, as the sales side
+  trusts the KSeF sales invoice), `pl-post-purchase-invoice` (Wn 300 net, Wn 221 input
+  VAT, Ma 202 gross, converted like the sales entry) and the analysis view
+  `rejestr-vat-zakupu`, the sales register mirrored on the owner. No "paid" rules in the
+  pack: the base invoice types carry no status yet; the personas' bundles add it, and the
+  base seed will when the matching grid lands.

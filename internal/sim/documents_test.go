@@ -132,6 +132,9 @@ func TestDocumentsCarryTheFacts(t *testing.T) {
 					if err != nil {
 						t.Fatalf("%s: amount %q: %v", d.Path, amt, err)
 					}
+					if ln[14] == 'D' {
+						v = -v
+					}
 					sum += v
 				}
 			}
@@ -142,10 +145,14 @@ func TestDocumentsCarryTheFacts(t *testing.T) {
 			for _, i := range d.Events {
 				ev := f.Events[i]
 				v, _ := core.ParseMoney(ev.Payload["amount"].(string))
+				kind := "PRZELEW PRZYCHODZACY"
+				if ev.Payload["direction"] == "debit" {
+					v, kind = -v, "PRZELEW WYCHODZACY"
+				}
 				fromEvents += v
 				ref := ev.Payload["reference"].(string)
 				who := ev.Payload["counterparty"].(string)
-				if !strings.Contains(text, ":86:PRZELEW PRZYCHODZACY|"+ref+"|"+who+"|") {
+				if !strings.Contains(text, ":86:"+kind+"|"+ref+"|"+who+"|"+ev.Payload["counterparty_account"].(string)) {
 					t.Fatalf("%s: no :86: line for %s from %s", d.Path, ref, who)
 				}
 				if ev.OccurredAt[:7] != d.Date[:7] {
@@ -184,12 +191,16 @@ func TestDocumentsCarryTheFacts(t *testing.T) {
 	if ksef != polish || polish == 0 || foreign == 0 {
 		t.Fatalf("ksef documents %d, polish invoices %d, foreign %d", ksef, polish, foreign)
 	}
-	// Balances carry: the last closing is the opening plus every credit.
+	// Balances carry: the last closing is the opening plus every credit
+	// minus every debit.
 	last := f.Documents[len(f.Documents)-1]
 	var credits int64
 	for _, ev := range f.Events {
 		if ev.EventType == "bank.statement.line" {
 			v, _ := core.ParseMoney(ev.Payload["amount"].(string))
+			if ev.Payload["direction"] == "debit" {
+				v = -v
+			}
 			credits += v
 		}
 	}

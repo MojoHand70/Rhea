@@ -1,0 +1,35 @@
+{
+  "pack": "pl-bank-mt940",
+  "version": 1,
+  "description": "Kanał bankowy: wyciągi MT940 z magazynu dokumentów — każda pozycja staje się zdarzeniem bank.statement.line wskazującym plik; linia :86: zachowana w oryginale",
+  "requires": ["received_document"],
+  "warrant": {
+    "basis": "practice",
+    "citations": [
+      "eksport MT940 oferuje każdy polski bank; jest wspólnym mianownikiem importu wyciągów w systemach księgowych",
+      "pole :86: każdy bank zapisuje inaczej; czytnik zachowuje je w oryginale przy każdej pozycji i rozumie jeden dialekt — inny bank to drugi parser za tym samym kanałem, w nowej wersji"
+    ],
+    "scope": "pl"
+  },
+  "activities": [
+    {
+      "name": "bank_mt940",
+      "domain": "finance",
+      "description": "Odczyt wyciągów bankowych MT940: każda pozycja (data, kwota, kierunek, tytuł, kontrahent) staje się zdarzeniem bank.statement.line; wyciąg, który sam sobie przeczy (saldo początkowe + pozycje ≠ saldo końcowe) — document.unreadable do skrzynki",
+      "spec": {
+        "inputs": [],
+        "emits": "bank.statement.line",
+        "who": ["adapter"],
+        "channel": {
+          "adapter": "bank_mt940",
+          "code_version": 1,
+          "format": "MT940 z magazynu dokumentów; dialekt :86: sim-bank (rodzaj|tytuł|kontrahent|rachunek), oryginał zachowany",
+          "identity": "skrót pliku i numer pozycji na wyciągu",
+          "confidence": {"policy": "exact"},
+          "events": ["bank.statement.line", "document.read", "document.unreadable"],
+          "volume": "documents"
+        }
+      }
+    }
+  ]
+}

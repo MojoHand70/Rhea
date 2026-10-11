@@ -1,6 +1,6 @@
 {
   "pack": "pl",
-  "version": 8,
+  "version": 9,
   "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane",
   "requires": [
     "company",
@@ -857,6 +857,44 @@
           }
         ]
       }
+    },
+    {
+      "view_id": "rejestr-vat-zakupu",
+      "version": 1,
+      "notion": "analysis",
+      "title": "Rejestr VAT zakupu",
+      "domain": "finance",
+      "function": "vat",
+      "spec": {
+        "sql": "SELECT month, rate, n AS net, v AS vat, g AS gross FROM (SELECT substr(json_extract_string(i.state,'$.invoice_date'),1,7) AS month, json_extract_string(r.state,'$.code') AS rate, SUM(CAST(json_extract(i.state,'$.net') AS BIGINT)) AS n, SUM(CAST(json_extract(i.state,'$.vat') AS BIGINT)) AS v, SUM(CAST(json_extract(i.state,'$.gross') AS BIGINT)) AS g FROM objects i JOIN objects r ON json_extract_string(i.state,'$.vat_rate') = r.object_id JOIN objects c ON json_extract_string(i.state,'$.owner') = c.object_id WHERE c.object_type = 'company' AND json_extract_string(c.state,'$.country') = 'PL' AND i.object_type = 'purchase_invoice' AND r.object_type = 'vat_rate' GROUP BY 1, 2) ORDER BY month, rate",
+        "columns": [
+          {
+            "field": "month",
+            "label": "Miesiąc",
+            "type": "string"
+          },
+          {
+            "field": "rate",
+            "label": "Stawka",
+            "type": "string"
+          },
+          {
+            "field": "net",
+            "label": "Netto",
+            "type": "money"
+          },
+          {
+            "field": "vat",
+            "label": "VAT",
+            "type": "money"
+          },
+          {
+            "field": "gross",
+            "label": "Brutto",
+            "type": "money"
+          }
+        ]
+      }
     }
   ],
   "rules": [
@@ -1014,6 +1052,70 @@
               "ksef_ref": "=$.ksef_ref",
               "upo": "=$.upo",
               "date": "=$.date"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-book-purchase-invoice",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Faktura zakupu z KSeF staje się dokumentem purchase_invoice: dostawca i nabywca po NIP, kwoty takie, jak podaje dokument",
+      "spec": {
+        "match": {
+          "event_type": "purchase.invoice.received"
+        },
+        "effect": {
+          "object": {
+            "type": "purchase_invoice",
+            "fields": {
+              "number": "=$.number",
+              "invoice_date": "=$.invoice_date",
+              "supplier": "=ref(company, vat_id, $.supplier_nip)",
+              "owner": "=ref(company, vat_id, $.buyer_nip)",
+              "net": "=$.net",
+              "vat": "=$.vat",
+              "gross": "=$.gross",
+              "vat_rate": "=ref(vat_rate, code, $.vat_rate)",
+              "currency": "=$.currency"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-post-purchase-invoice",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Faktura zakupu księguje się: Wn 300 netto, Wn 221 VAT naliczony / Ma 202 brutto",
+      "spec": {
+        "match": {
+          "event_type": "purchase.invoice.received"
+        },
+        "effect": {
+          "postings": {
+            "currency": "=$.currency",
+            "lines": [
+              {
+                "account": "300",
+                "debit": "=$.net"
+              },
+              {
+                "account": "221",
+                "debit": "=$.vat"
+              },
+              {
+                "account": "202",
+                "credit": "=$.gross"
+              }
+            ],
+            "book": "pl-stat",
+            "convert": {
+              "to": "PLN",
+              "date": "=$.invoice_date",
+              "rounding": "half_up",
+              "rounding_account": "756"
             }
           }
         }
