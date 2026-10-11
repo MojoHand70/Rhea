@@ -1647,6 +1647,160 @@ One line: *the concierge remembers everything, as facts with a date and
 a status; a correction retires what it corrects; and the one place a
 memory could lie — in the author's eyes — is pinned by a test.*
 
+## Matching: a deterministic engine with N sides, as a kernel method (KK, 2026-10-11)
+
+KK's call, after the bank channel landed and the matching grid came up
+next: matching is one of the crucial components of any business system
+and a very difficult domain — by exact amount, by amount and reference,
+partially, 1:1, 1:n, n:1, n:n, accrued in time, per saldo, three-way,
+with FX, with tolerance, and more modes than anyone lists up front.
+*"We need to design a deterministic matching engine, which Rhea will use
+as a tool."* And, from experience: *three-way matching happens in many
+circumstances, not only order and receipt — the skeleton must be
+generic.* Agreed: this is the biggest member of the family the
+arithmetic brief named — standards with names, as kernel methods
+parameterized by rules, which the model composes and never authors —
+and it earns a primitive and **a dedicated session**. This section is
+the handover that session starts from: constraints, a skeleton and an
+order of work, not a design.
+
+**Prior art to read first.** In the repo: the arithmetic brief above
+(folds under a cap, kernel methods callable from a formula, "the
+restriction is the feature"); `convert` on postings (a method in the
+kernel, parameters as rule data, declared rounding, a difference to a
+named account — the FX precedent); `amend` and the lifecycle (open
+amounts move by provenanced events); `each` (fan-out); the bank reader
+and the KSeF reader (the two sides as they arrive today); the Poland
+pack's `settlement`, `bank_operation` and `contractor` types; the
+warehouse pack's PZ and lines; the growth plan's "matching grid" row.
+Outside: how the big systems name the standards — clearing with
+tolerance groups, residual and partial items, clearing differences
+(SAP); settlement and the settle-by-priority rules (Dynamics); Comarch's
+rozliczenia and kompensaty; the Polish statutes behind the names —
+różnice kursowe (ustawa o rachunkowości art. 30), kompensata
+(kodeks cywilny art. 498). Read them for the vocabulary and the
+warrants, not the architecture.
+
+**The skeleton.** One engine, N sides, a declared structure.
+
+1. *A side* is a keyed, capped collection of items: objects of one type,
+   each carrying a vector of measures (money in a currency, quantity in
+   a unit, a count), a date, the references it names, a party, and its
+   *open* portion — what is not yet allocated. The bank lines of one
+   account, the open invoices of one counterparty, the receipts of one
+   purchase order.
+2. *A structure* says how the sides relate: which measures must agree
+   across which sides (the payment's money against the invoice's gross;
+   the receipt's quantity against the order's; the invoice's price
+   against the order's), through which converters (an FX rate at a
+   date, a unit conversion), within which tolerances (an amount, a
+   percentage, a number of days), and which keys join candidates (the
+   party, the currency, a reference). Two sides is the common case;
+   three is order, receipt and invoice, but also invoice, bank line and
+   the factoring house's settlement; payroll, transfers and the ZUS
+   declaration; a customs declaration, the supplier's invoice and the
+   carrier's; our purchase invoice, their sales invoice and the group's
+   settlement. Four is order, delivery note, invoice, payment. The
+   engine knows N; the structure is data.
+3. *Strategies* are the search procedures that propose matches under a
+   structure — the standards with names, each deterministic and total:
+   by reference (a shared key); exact (the vectors agree); subset sum
+   (one item against a subset of the other side under a size cap,
+   nested across sides under the same cap); oldest first with partial
+   allocation (an item settles the earliest open items as far as it
+   reaches, the remainder stays open); proportional allocation; within
+   a time window; tolerance (a difference up to a bound is absorbed to
+   a declared account); FX (measures converted at the rate of a
+   declared date, the difference to a declared account); netting per
+   saldo (two sides of the same party with opposite signs read as one).
+   A *policy* is an ordered list of strategies with their parameters,
+   bound to a structure. The first feasible match wins; the order is
+   the company's choice, shipped as pack defaults with warrants.
+4. *The outcome is events, baked.* Every match is one event naming the
+   items on every side, the amount allocated per item and measure, the
+   residual left open, every difference with its kind (tolerance, FX,
+   rounding) and its account, and the strategy that found it. Ordinary
+   rules explain it: the items' open amounts move by amendment, the
+   settlement object materializes, the differences post. Replay never
+   re-matches. A wrong match is undone by a correcting event that
+   restores the open amounts, never by deletion; period locks apply.
+5. *The remainder is the grid.* What no strategy settles is the N-sided
+   view for a person; the pairing verb runs the same engine on the
+   person's selection and emits the same event. One fact, explained the
+   same way, whoever made it. The host proposes a strategy after a
+   person has paired the same way twice — behind the gate.
+
+**What the invariants demand.**
+
+1. *No floats* (invariant 6): exact rationals inside, declared rounding
+   wherever an allocation or a conversion can lose precision; money
+   stays int64 minor units in the events.
+2. *Total and bounded* (security rule 1, scale rule 2): keyed sides,
+   a cap per side and a subset size cap per policy, declared on the
+   rule; above the cap the items go to the person, never to a long
+   search. Cost is paid once at firing.
+3. *Baked at firing* (scale rule 3): the engine runs inside rule
+   expansion, like a formula; replay reads.
+4. *Every allocation explained* (invariant 5): strategy, items, measures,
+   tolerances used, rate used — in the event, shown by the walk.
+5. *Append-only* (invariant 1): open amounts are state moved by
+   events; unmatching is a correcting event.
+6. *The two welding questions.* Partition: a side never crosses
+   companies — intercompany matching crosses through refs at firing, as
+   E4's mirror did, and serializes there. Containment: the policy is
+   data the agent may compose and the gate approves; the engine is
+   kernel code; no strategy is ever expressed as a loop in data.
+7. *Late sides.* The payment can arrive before the invoice. A policy
+   fires on the arrival of any side's item and reads the other sides'
+   open items by key, so the match happens when the last side arrives;
+   a scheduled re-run (a clock-fired rule) catches what a late
+   correction reopened.
+
+**What earns the primitive — the attempt.** The ladder's rule: try it
+with what exists first. By reference and by exact amount already work as
+rules with a lookup. Write the bank story with rules and folds and let
+it fail where it must: a subset that sums, a partial allocation that
+leaves a residual, a difference booked to an account, a match that
+spans N sides. Record the attempt in DECISIONS; the failure is the proof
+that `match` is a closed-class effect, as postings, `convert` and
+`amend` were.
+
+**First customers, in the order the demo needs them.**
+
+1. A bank line against sales and purchase invoices: by reference (the
+   rule of today), then exact amount, then subset sum for a customer who
+   pays three invoices at once, then oldest first for a part payment,
+   then a two-grosz tolerance to a declared account.
+2. The same with FX: an EUR invoice paid in PLN, the difference to
+   755/756 at the rate of the payment date — `convert`'s rate source,
+   `convert`'s rounding.
+3. Netting per saldo for a party who is both customer and supplier.
+4. Three-way: the purchase order (when it arrives), the PZ and the
+   supplier's invoice, quantities and prices with tolerances — the
+   warehouse pack's customer.
+5. The generality test: one more three-way from a different corner
+   (invoice, bank line, a factoring settlement, or payroll, transfers
+   and the declaration), chosen so the structure is reused and nothing
+   is added to the engine.
+
+**Not questions for KK** ("Rhea suggests standards"): which strategies
+in which order a Polish company runs, the tolerance bound, the
+difference accounts, the time window. The pack proposes the standard
+with its warrant; the client overrides.
+
+**Order of work for the session.** The attempt; the engine's core
+(sides, structure, two-way with reference, exact, subset, partial,
+tolerance; the match event; open amounts; the settlement object); FX
+and netting; N sides with the three-way PZ customer; the grid notion
+over the remainder; the host proposing strategies — the last with the
+interview loop. The eval gains a persona scene per strategy; the
+simulated customer pays in every way the strategies name.
+
+One line: *matching is one engine with N sides and a declared structure;
+strategies are standards with names, ordered by a policy that is data;
+every match is a baked, explained event; what the engine cannot settle
+is a person's grid, and the person's pairing is the same event.*
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
@@ -1725,6 +1879,12 @@ memory could lie — in the author's eyes — is pinned by a test.*
   intercompany as cascade across company refs, FX in the arithmetic
   sub-language. A falsifiability test of the M2 kind: zero kernel changes.
   Planned (2026-10-04): the enterprise-structure ladder above, E1–E5.
+- **Matching is a kernel method with N sides** (KK, 2026-10-11, the
+  matching brief above): a deterministic engine, total and bounded, with
+  the structure (sides, measures, converters, tolerances, keys) and the
+  policy (an ordered list of named strategies) as data; every match a
+  baked, explained event; the grid is the remainder. Earns a closed-class
+  effect by the attempt; a dedicated session.
 - **The company key is the partition key** (KK, 2026-10-08, "Scale and
   security are welded"). The one scale item that is cheap now and
   expensive later: the company ref promoted from payload field to a key
