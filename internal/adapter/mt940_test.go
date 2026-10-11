@@ -33,7 +33,10 @@ func TestMT940ReadsTheStore(t *testing.T) {
 		t.Fatalf("approve: %v %v", err, errs)
 	}
 
-	p, _, _ := sim.Load(filepath.Join("..", "..", "testdata", "customers", "nordwind.json"))
+	p, _, err := sim.Load(filepath.Join("..", "..", "testdata", "customers", "nordwind.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
 	p.Months = 2
 	f, err := sim.Generate(p)
 	if err != nil {
@@ -115,6 +118,39 @@ func TestMT940ReadsTheStore(t *testing.T) {
 	if !ok || !bytes.Contains(ev.Payload, []byte("contradicts itself")) {
 		t.Fatalf("unreadable = %+v", ev)
 	}
+
+	// A file through the bank door that is no statement is reported, not
+	// skipped; a statement through another door is not this channel's.
+	receive(t, x, "export.csv", "text/csv", "bank", "2026-03-01", []byte("date,amount\n2026-01-02,10.00\n"))
+	forwarded := bytes.Replace(statements[1].Bytes, []byte(":20:STMT"), []byte(":20:FWD"), 1)
+	receive(t, x, "forwarded.sta", "text/plain", "email", "2026-03-01", forwarded)
+	res, err = adapter.Run(ctx, s, x, adapter.MT940{Today: func() string { return "2026-03-02" }})
+	if err != nil || res.Submitted != 1 {
+		t.Fatalf("csv pass = %+v, %v", res, err)
+	}
+	ev, ok, _ = s.LatestEventOfType(ctx, adapter.EventDocumentUnreadable)
+	if !ok || !bytes.Contains(ev.Payload, []byte("not an MT940 statement")) || !bytes.Contains(ev.Payload, []byte("export.csv")) {
+		t.Fatalf("unreadable = %+v", ev)
+	}
+
+	// Two months in one file: the lines number through the file, the read
+	// is dated by the last closing balance.
+	two := append(append([]byte{}, statements[0].Bytes...), statements[1].Bytes...)
+	receive(t, x, "q1.sta", "text/plain", "bank", "2026-03-01", two)
+	res, err = adapter.Run(ctx, s, x, adapter.MT940{})
+	if err != nil || res.Submitted != lines+1 || res.Booked != 1 {
+		t.Fatalf("two-statement pass = %+v, %v (lines %d)", res, err, lines)
+	}
+	read, ok, _ := s.LatestEventOfType(ctx, adapter.EventDocumentRead)
+	if !ok || read.OccurredAt != statements[1].Date || !bytes.Contains(read.Payload, []byte(core.HashBytes(two))) {
+		t.Fatalf("read = %+v, want dated %s", read, statements[1].Date)
+	}
+	last, _, _ := s.LatestEventOfType(ctx, "bank.statement.line")
+	var m map[string]any
+	jsonUnmarshal(last.Payload, &m)
+	if m["line"] != float64(lines) || m["statement"] != "2/2026" {
+		t.Fatalf("last line = %v, want line %d of statement 2/2026", m, lines)
+	}
 }
 
 func TestParseMT940(t *testing.T) {
@@ -125,10 +161,11 @@ func TestParseMT940(t *testing.T) {
 	if !adapter.IsMT940([]byte(text)) || adapter.IsMT940([]byte("<Faktura/>")) {
 		t.Fatal("IsMT940")
 	}
-	st, err := adapter.ParseMT940([]byte(text))
-	if err != nil {
-		t.Fatal(err)
+	sts, err := adapter.ParseMT940([]byte(text))
+	if err != nil || len(sts) != 1 {
+		t.Fatal(err, len(sts))
 	}
+	st := sts[0]
 	if st.Account != "PL61109010140000071219812874" || st.Number != "1/2026" || st.Currency != "PLN" ||
 		st.Opening != 1_000_000 || st.Closing != 886_285 || st.From != "2026-01-01" || st.To != "2026-01-31" || len(st.Lines) != 2 {
 		t.Fatalf("statement = %+v", st)
@@ -144,5 +181,62 @@ func TestParseMT940(t *testing.T) {
 	}
 	if _, err := adapter.ParseMT940([]byte(strings.Replace(text, "8862,85", "8862,86", 1))); err == nil || !strings.Contains(err.Error(), "contradicts") {
 		t.Fatalf("a wrong closing balance parsed: %v", err)
+	}
+}
+
+// A real bank's export: a SWIFT header, several statements in one file,
+// a statement over two balance pages, a one-decimal amount, a reversal,
+// and a free-text :86: that happens to contain a bar.
+func TestParseMT940Pages(t *testing.T) {
+	text := "{1:F01BANKPLPWAXXX0000000000}{2:O9400000260301BANKPLPWAXXX00000000002603010000N}{4:\r\n:940:\r\n" +
+		":20:STMT202601\r\n:25:PL61109010140000071219812874\r\n:28C:1/1\r\n:60F:C260101PLN10000,00\r\n" +
+		":61:2601190119C362,85NTRFNONREF//1\r\n:86:PRZELEW PRZYCHODZACY|FS 6/2026|Mazowiecka Hurtownia S.A.|PL10105000997603123456789123\r\n" +
+		":62M:C260115PLN10362,85\r\n-\r\n" +
+		":20:STMT202601\r\n:25:PL61109010140000071219812874\r\n:28C:1/2\r\n:60M:C260115PLN10362,85\r\n" +
+		":61:2601200120D1500,5NTRFNONREF//2\r\n:86:TRANSFER | ref FAB/1/2026\r\n" +
+		":62F:C260131PLN8862,35\r\n-\r\n" +
+		":20:STMT202602\r\n:25:PL61109010140000071219812874\r\n:28C:2/1\r\n:60F:C260201PLN8862,35\r\n" +
+		":61:2602030203RD1500,5NTRFNONREF//3\r\n:86:PRZELEW PRZYCHODZACY|ZWROT FAB/1/2026|Fabryka Sp. z o.o.|PL10105000997603123456789123\r\n" +
+		":62F:C260228PLN10362,85\r\n-}\r\n{5:{CHK:000000000000}}\r\n"
+	if !adapter.IsMT940([]byte(text)) {
+		t.Fatal("IsMT940 refuses a SWIFT header")
+	}
+	sts, err := adapter.ParseMT940([]byte(text))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sts) != 3 {
+		t.Fatalf("%d statements, want 3 (one per :20:)", len(sts))
+	}
+	jan, page2, feb := sts[0], sts[1], sts[2]
+	if jan.Number != "1/1" || jan.Opening != 1_000_000 || jan.Closing != 1_036_285 || jan.To != "2026-01-15" || len(jan.Lines) != 1 {
+		t.Fatalf("page 1 = %+v", jan)
+	}
+	if page2.Number != "1/2" || page2.Opening != 1_036_285 || page2.Closing != 886_235 || len(page2.Lines) != 1 {
+		t.Fatalf("page 2 = %+v", page2)
+	}
+	// "1500,5" is 1500.50; a bar in another bank's text does not make it the dialect.
+	if l := page2.Lines[0]; l.Amount != 150050 || l.Direction != "debit" || l.Reversal ||
+		l.Reference != "TRANSFER | ref FAB/1/2026" || l.Counterparty != "" {
+		t.Fatalf("line = %+v", l)
+	}
+	// A reversed debit comes back as a credit and says it is a reversal.
+	if l := feb.Lines[0]; l.Amount != 150050 || l.Direction != "credit" || !l.Reversal || l.Reference != "ZWROT FAB/1/2026" {
+		t.Fatalf("reversal = %+v", l)
+	}
+
+	for _, bad := range []struct{ name, from, to, reason string }{
+		{"a page opening elsewhere than the last closed", ":60M:C260115PLN10362,85", ":60M:C260115PLN10362,86", "opens at"},
+		{"an entry after the closing balance", ":62F:C260228PLN10362,85\r\n", ":62F:C260228PLN10362,85\r\n:61:2602040204C1,00NTRFNONREF//4\r\n", "outside a balance page"},
+		{"a statement never closed", ":62F:C260228PLN10362,85\r\n", "", "needs :25:, :60F: and :62F:"},
+		{"a wrong page total", "8862,35", "8862,36", "contradicts itself"},
+	} {
+		_, err := adapter.ParseMT940([]byte(strings.Replace(text, bad.from, bad.to, 1)))
+		if err == nil || !strings.Contains(err.Error(), bad.reason) {
+			t.Errorf("%s: %v", bad.name, err)
+		}
+	}
+	if _, err := adapter.ParseMT940([]byte(":25:PL61109010140000071219812874\r\n:20:X\r\n")); err == nil || !strings.Contains(err.Error(), "not an MT940 statement") {
+		t.Errorf("a file starting elsewhere than :20: parsed: %v", err)
 	}
 }

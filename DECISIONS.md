@@ -1893,3 +1893,36 @@ evidence in `internal/exec/case_test.go`.
   (its predicate); one word with two meanings in one JSON object is a trap for the
   author and the reader. `matching` sits beside `postings` — a noun for the engine's
   work, as `postings` is for the ledger's.
+
+## 2026-10-11 — the review of step 5: what the bank reader owed a real bank
+
+The code review of the step-5 commit found fifteen things; the twelve that needed no
+decision are fixed here, the rest (stale voices, the registers in foreign currency, a
+"paid" rule in the pack) wait for a word from KK.
+
+- **A file holds several statements, a statement holds several pages.** The reader
+  read a file as exactly one statement and overwrote the balances as it went, so a
+  bank's quarterly export, or a month split over pages (`:62M:`/`:60M:`), was refused as
+  "contradicts itself". Now every `:20:` is a statement, every balance page is checked
+  on its own (opening plus entries equals closing), a page must open where the page
+  before closed, and an entry outside a page is an error. The line numbers run through
+  the file (the dedup key is file and line), the read is dated by the last closing.
+- **A SWIFT header is not a reason to skip the file.** `{1:…}` block lines, a `:940:`
+  line and the `-}` terminator are dropped; the first tag must still be `:20:`.
+- **An amount pads to two decimals.** The format allows `1500,5`; the money parser does
+  not. One helper reads every amount, balances and entries alike.
+- **A reversal says so.** `RC`/`RD` in `:61:` kept only its direction's effect; the line
+  now carries `reversal: true` (absent otherwise, so every existing event is unchanged),
+  so a rule can tell a bounced transfer from a payment. The field is on the event, not
+  in the channel pack, which stays at version 1.
+- **The dialect needs a known kind in front.** Any `|` in `:86:` made the reader guess
+  the sim-bank layout; a foreign bank's "TRANSFER | ref FAB/1/2026" lost its first half.
+  Now only four fields behind `PRZELEW PRZYCHODZACY`/`PRZELEW WYCHODZACY` are the
+  dialect; everything else is the title whole, one line.
+- **The bank channel reads the bank door.** The pass fetched every received text file
+  from every source to sniff it, and left a bank-sourced file that was no statement
+  received forever, told to no one. Now it reads only `source = bank`; a file through
+  that door that is not a statement becomes `document.unreadable` with the reason
+  ("the file starts with …, not :20:"). A statement that came through another door is
+  that door's business.
+
