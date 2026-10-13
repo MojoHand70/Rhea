@@ -180,7 +180,7 @@ func (c ChannelSpec) validate(a Activity) error {
 func ReservedEventType(t string) bool {
 	return t == EventObjectMaterialized || t == EventObjectAmended ||
 		t == EventObjectsMatched || t == EventObjectsUnmatched ||
-		strings.HasPrefix(t, "matching.") || strings.HasPrefix(t, "reading.") ||
+		strings.HasPrefix(t, "matching.") || strings.HasPrefix(t, "reading.") || strings.HasPrefix(t, "host.") ||
 		strings.HasPrefix(t, "rule.") || strings.HasPrefix(t, "activity.") ||
 		strings.HasPrefix(t, "bundle.") || strings.HasPrefix(t, "backfill.")
 }
@@ -690,6 +690,19 @@ func BuiltinActivities() []Activity {
 				},
 				Emits: EventDocumentReadingConfirmed,
 				Who:   []string{"human"},
+			},
+		},
+		{
+			Name: "host_said", Domain: "system",
+			Description: "What the host said: the words it phrased for a narrative view, logged as a fact so it never repeats itself and so what was said can be read back. The agent speaks through this door; the words it says never carry a number the facts did not.",
+			Spec: ActivitySpec{
+				Inputs: []FieldDef{
+					{Name: "view", Type: "string", Required: true},
+					{Name: "text", Type: "string", Required: true},
+					{Name: "occurred_at", Type: "date"},
+				},
+				Emits: EventHostSaid,
+				Who:   []string{"agent"},
 			},
 		},
 		{

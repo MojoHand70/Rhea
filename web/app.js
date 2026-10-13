@@ -226,6 +226,7 @@ function openView(viewId, title, objectId) {
       case "analysis": return renderAnalysis(data);
       case "scheduling": return renderScheduling(data);
       case "matching": return renderMatching(data);
+      case "narrative": return renderNarrative(data);
       default: return [el("p", { class: "hint" }, `Notion ${data.view.notion} not renderable.`)];
     }
   }, true); // view tabs are live: projections re-render them in place
@@ -1252,6 +1253,31 @@ function renderMatching(d) {
     btn.disabled = false;
   } }, "Pair");
   out.push(grid, el("div", { class: "row", style: "margin-top:12px" }, btn));
+  return out;
+}
+
+/* The narrative notion (DIRECTION 2026-10-10, the concierge): the host's
+   words on the facts the kernel computed, fresh each time and logged; when
+   the host is silent, why; and the facts themselves beneath, each a view. */
+function renderNarrative(d) {
+  const out = [el("h1", {}, d.view.title)];
+  if (d.said) {
+    for (const para of d.said.split(/\n\s*\n/)) out.push(el("p", { class: "narrative" }, para));
+    out.push(el("p", { class: "hint" }, `said ${d.today}` + (d.said_event ? ` · event #${d.said_event}` : "")));
+  } else {
+    out.push(el("p", { class: "hint" }, d.silent || "the host has nothing to say"));
+  }
+  for (const f of (d.facts || [])) {
+    out.push(el("h3", {}, f.as || f.title));
+    if (f.kind === "analysis") {
+      const data = f.data || {};
+      out.push(...renderAnalysis({ view: { title: "" }, columns: data.columns || [], rows: data.rows || [] }).slice(1));
+    } else if (f.kind === "matching") {
+      for (const side of (f.data.sides || [])) {
+        out.push(el("p", {}, `${side.name}: ${side.items.length} open`));
+      }
+    }
+  }
   return out;
 }
 

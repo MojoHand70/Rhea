@@ -1,7 +1,7 @@
 {
   "pack": "pl",
-  "version": 11,
-  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami",
+  "version": 12,
+  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami; poranek: gospodarz mówi, co zaksięgowano i co czeka, z faktów, które policzyło jądro",
   "requires": [
     "company",
     "account",
@@ -1233,6 +1233,35 @@
       "function": "rozrachunki",
       "spec": {
         "rule": "pl-match-outgoing"
+      }
+    },
+    {
+      "view_id": "poranek",
+      "version": 1,
+      "notion": "narrative",
+      "title": "Poranek",
+      "domain": "finance",
+      "function": "briefing",
+      "spec": {
+        "facts": [
+          {
+            "view": "rejestr-vat-sprzedazy",
+            "as": "sprzedaż tego miesiąca (rejestr VAT)"
+          },
+          {
+            "view": "rejestr-vat-zakupu",
+            "as": "zakupy tego miesiąca (rejestr VAT)"
+          },
+          {
+            "view": "wplaty-do-rozliczenia",
+            "as": "wpłaty bez rozliczenia"
+          },
+          {
+            "view": "wyplaty-do-rozliczenia",
+            "as": "wypłaty bez rozliczenia"
+          }
+        ],
+        "voice": "Po polsku, krótko, jak najlepszy concierge: co jest zaksięgowane, co czeka na decyzję właściciela. Bez powitań z szablonu."
       }
     }
   ],

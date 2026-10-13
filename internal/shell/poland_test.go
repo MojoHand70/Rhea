@@ -92,15 +92,15 @@ func TestM3PolandPack(t *testing.T) {
 
 	// Load the pack: 18 types (the invoices with their open amounts, the
 	// bank operation, the matching difference, the company's account), 8
-	// views (the two grids among them), 23 draft rules, one channel (the
+	// views (the two grids and the briefing among them), 23 draft rules, one channel (the
 	// KSeF adapter's door, a draft like any verb), 31 master-data events.
 	packPath := filepath.Join("..", "..", "packs", "pl", "pack.json")
 	sum, err := pack.Load(ctx, s, packPath, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 18 || sum.Views != 8 || sum.Rules != 23 || sum.Activities != 1 || sum.Events != 31 || sum.Skipped != 0 ||
-		sum.Bundle != "pack-pl-v11" {
+	if sum.Types != 18 || sum.Views != 9 || sum.Rules != 23 || sum.Activities != 1 || sum.Events != 31 || sum.Skipped != 0 ||
+		sum.Bundle != "pack-pl-v12" {
 		t.Fatalf("first load: %+v", sum)
 	}
 	// Idempotent: a reload changes nothing.
@@ -108,7 +108,7 @@ func TestM3PolandPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Skipped != 81 || sum.Bundle != "" {
+	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Skipped != 82 || sum.Bundle != "" {
 		t.Fatalf("reload: %+v", sum)
 	}
 
@@ -128,7 +128,7 @@ func TestM3PolandPack(t *testing.T) {
 	// Approving the pack's bundle IS the installation: its types, views and
 	// rules activate together, and the chart of accounts and the VAT rates
 	// materialize from the waiting events.
-	post("/api/bundles/pack-pl-v11/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-pl-v12/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {
 		t.Fatalf("worklist not cleared after approvals: %d", len(wl))
 	}
@@ -325,6 +325,20 @@ func TestM3PolandPack(t *testing.T) {
 	if len(grid.Sides) != 2 || grid.Sides[0].Name != "payment" || len(grid.Sides[0].Items) != 1 || len(grid.Sides[0].Items[0].Why) != 6 ||
 		!strings.Contains(grid.Sides[0].Items[0].Why[5], "oldest_first: nothing open on invoice") {
 		t.Fatalf("the grid: %+v", grid)
+	}
+
+	// The briefing: the pack's narrative view draws on the registers and the
+	// grids; with no host in this test the facts speak for themselves.
+	var briefing struct {
+		Silent string `json:"silent"`
+		Facts  []struct {
+			As   string `json:"as"`
+			Kind string `json:"kind"`
+		} `json:"facts"`
+	}
+	get("/api/views/poranek", &briefing)
+	if !strings.Contains(briefing.Silent, "could not speak") || len(briefing.Facts) != 4 || briefing.Facts[2].Kind != "matching" || briefing.Facts[0].As != "sprzedaż tego miesiąca (rejestr VAT)" {
+		t.Fatalf("the briefing: %+v", briefing)
 	}
 
 	// The VAT register aggregates by month and rate.

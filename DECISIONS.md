@@ -2474,3 +2474,32 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   a fact no rule explains waits in its own company's worklist; replay keeps the key.
   History from before the key, and facts appended without a scope, carry none and
   show in every scoped read's complement — the whole-log read.
+
+## 2026-10-13 — the briefing: the narrative notion, the host's words as facts
+
+- **The narrative notion** (`core.NarrativeSpec{facts, voice}`, `shell/narrative.go`): the
+  concierge's first scenario (DIRECTION 2026-10-10), with its five parts as data. The
+  trigger is the person opening the view; the facts are the views the spec names —
+  analysis tables and matching grids, computed by the kernel as every view is; the
+  host is the agent, handed the facts as JSON, the owner's voice, the date and what it
+  said before, and asked to phrase them in a few sentences (`agent.Narrate`,
+  `NarrateSystem`); what it says is logged through the `host_said` door (a builtin the
+  agent speaks through, `host.said` in a kernel namespace, never residue), so the next
+  words know the last — never a templated welcome. The shell shows the words, then
+  the facts beneath, each as its own view.
+- **The host never computes a number.** Every number in its words is checked against
+  the facts digit for digit (separators dropped, "1 234,56" is "1234.56", small
+  counts and dates' parts pass); a foreign number refuses the words — they are not
+  logged, the view says why, and the facts speak alone. The model's text is data,
+  validated, as every other output of it (invariant 3). Without an agent, or when it
+  fails, the view is silent and the facts are shown: the briefing degrades to the
+  tables, never to a template.
+- **The pack ships "Poranek"** (pl v12): the sales and purchase VAT registers and the
+  two grids, in Polish, "jak najlepszy concierge". The story test reads it without a
+  host; `TestBriefing` reads it with one: the words from the facts, logged by the
+  agent; the second time told what it said; computed numbers refused and not logged;
+  silence without a host.
+- **Named, not done**: the queue notion ("what to do today": open cases ranked by a
+  formula) and the hotspot rules in the pack — the next two scenarios; the briefing as
+  a scene in the personas' day (the eval asking the view and checking the host's
+  numbers against the facts), with the live measurement of the host's words.

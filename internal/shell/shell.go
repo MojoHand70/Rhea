@@ -17,7 +17,6 @@ import (
 	"rhea/internal/core"
 	"rhea/internal/exec"
 	"rhea/internal/network"
-	"rhea/internal/project"
 	"rhea/internal/store"
 	"rhea/web"
 )
@@ -236,6 +235,8 @@ func (s *Server) handleView(w http.ResponseWriter, r *http.Request) {
 		s.serveScheduling(ctx, w, vd)
 	case "matching":
 		s.serveMatching(ctx, w, vd)
+	case "narrative":
+		s.serveNarrative(ctx, w, vd)
 	default:
 		writeErr(w, 400, fmt.Errorf("notion %q not renderable", vd.Notion))
 	}
@@ -444,48 +445,16 @@ func (s *Server) serveAnalysis(ctx context.Context, w http.ResponseWriter, vd *c
 		writeErr(w, 500, err)
 		return
 	}
-	// The read side is derived state: rebuild from the log so it is always
-	// fresh. At M0 scale this is cheap.
-	if _, err := project.Rebuild(ctx, s.Store, s.DuckPath); err != nil {
-		writeErr(w, 500, err)
-		return
-	}
-	cols, rows, err := project.Query(ctx, s.DuckPath, spec.SQL)
+	// The read side is derived state: rebuilt from the log so it is always
+	// fresh. At M0 scale this is cheap. Columns pair up with the spec's
+	// declarations by position; a declared money column arrives from DuckDB
+	// as minor units (BIGINT, invariant 6) and crosses as the decimal string.
+	cols, rows, err := s.analysisData(ctx, spec)
 	if err != nil {
 		writeErr(w, 500, err)
 		return
 	}
-	// Columns pair up with the spec's declarations by position; the SQL name
-	// is the fallback. A declared money column arrives from DuckDB as minor
-	// units (BIGINT, invariant 6) and crosses as the decimal string.
-	outCols := make([]columnOut, len(cols))
-	for i, c := range cols {
-		outCols[i] = columnOut{Field: c, Label: c}
-		if i < len(spec.Columns) {
-			sc := spec.Columns[i]
-			if sc.Field != "" {
-				outCols[i].Field = sc.Field
-			}
-			if sc.Label != "" {
-				outCols[i].Label = sc.Label
-			}
-			outCols[i].Type = sc.Type
-		}
-	}
-	outRows := make([][]cellOut, len(rows))
-	for i, r := range rows {
-		outRows[i] = make([]cellOut, len(r))
-		for j, v := range r {
-			if outCols[j].Type == "money" && v != "" {
-				if minor, err := strconv.ParseInt(v, 10, 64); err == nil {
-					outRows[i][j] = cellOut{V: core.FormatMoney(minor)}
-					continue
-				}
-			}
-			outRows[i][j] = cellOut{V: v}
-		}
-	}
-	writeJSON(w, 200, map[string]any{"view": vd, "columns": outCols, "rows": outRows})
+	writeJSON(w, 200, map[string]any{"view": vd, "columns": cols, "rows": rows})
 }
 
 // --- live screens -----------------------------------------------------------
@@ -697,3 +666,5 @@ func (s *Server) handleSubmit(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, 200, resp)
 }
+
+func parseInt(v string) (int64, error) { return strconv.ParseInt(v, 10, 64) }

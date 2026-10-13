@@ -37,15 +37,23 @@ type matchingSide struct {
 }
 
 func (s *Server) serveMatching(ctx context.Context, w http.ResponseWriter, vd *core.ViewDef) {
+	data, err := s.matchingData(ctx, vd)
+	if err != nil {
+		writeErr(w, 400, err)
+		return
+	}
+	writeJSON(w, 200, data)
+}
+
+// matchingData computes a matching view: the sides and their open items.
+func (s *Server) matchingData(ctx context.Context, vd *core.ViewDef) (map[string]any, error) {
 	var spec core.MatchingSpec
 	if err := json.Unmarshal(vd.Spec, &spec); err != nil {
-		writeErr(w, 500, err)
-		return
+		return nil, err
 	}
 	rules, err := s.Store.ActiveRules(ctx)
 	if err != nil {
-		writeErr(w, 500, err)
-		return
+		return nil, err
 	}
 	var rule *core.Rule
 	for i := range rules {
@@ -54,32 +62,27 @@ func (s *Server) serveMatching(ctx context.Context, w http.ResponseWriter, vd *c
 		}
 	}
 	if rule == nil {
-		writeErr(w, 400, fmt.Errorf("view %s: no active matching rule %q", vd.ID, spec.Rule))
-		return
+		return nil, fmt.Errorf("view %s: no active matching rule %q", vd.ID, spec.Rule)
 	}
 	tmpl := rule.Spec.Effect.Matching
 	vds, err := s.effectiveViewDefs(ctx)
 	if err != nil {
-		writeErr(w, 500, err)
-		return
+		return nil, err
 	}
 	detailFor := detailViewByType(vds)
 	why, err := s.unmatchedReasons(ctx, tmpl.Name)
 	if err != nil {
-		writeErr(w, 500, err)
-		return
+		return nil, err
 	}
 	var sides []matchingSide
 	for _, side := range tmpl.Sides {
 		ot, err := s.Store.GetObjectType(ctx, side.Type)
 		if err != nil {
-			writeErr(w, 500, err)
-			return
+			return nil, err
 		}
 		objs, err := s.Store.ObjectsByType(ctx, side.Type)
 		if err != nil {
-			writeErr(w, 500, err)
-			return
+			return nil, err
 		}
 		// The columns the structure names, in a fixed order: the label,
 		// the reference, the date, what is open, its currency, what is
@@ -138,10 +141,10 @@ func (s *Server) serveMatching(ctx context.Context, w http.ResponseWriter, vd *c
 		}
 		sides = append(sides, out)
 	}
-	writeJSON(w, 200, map[string]any{
+	return map[string]any{
 		"view": vd, "rule": rule.ID, "matching": tmpl.Name, "trigger": tmpl.Trigger,
 		"verb": "pair_items", "sides": sides,
-	})
+	}, nil
 }
 
 // unmatchedReasons indexes the latest objects.unmatched of one structure by

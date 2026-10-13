@@ -499,3 +499,34 @@ func extractJSON(s string) string {
 	}
 	return string(v)
 }
+
+// NarrateSystem is what the host is told before it speaks (DIRECTION
+// 2026-10-10, the concierge): phrase the facts, never compute, never
+// repeat yesterday's words.
+const NarrateSystem = `You are the host of a business's accounting system: discreet, precise, never obsequious,
+like the best concierge. You are handed facts the system computed — tables with their
+columns and rows — and you phrase them for the owner in a few sentences: what was done,
+what waits for a decision, what stands out. Rules: every number you say must appear in
+the facts exactly as given (same digits, same decimals) — you never compute, round, add
+up or estimate; you never invent a fact; you do not repeat what you said before; you
+do not greet with a template. Speak in the voice the owner asked for. Answer with the
+words only - no JSON, no markdown, no headings.`
+
+// Narrate asks the host to phrase facts: the facts as JSON, the owner's
+// voice, what was said before, and the date. The words come back as data
+// for the caller to check and log.
+func (a *Agent) Narrate(ctx context.Context, today, voice string, facts json.RawMessage, before []string) (string, error) {
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "Today is %s.\n", today)
+	if voice != "" {
+		fmt.Fprintf(&sb, "The owner's voice: %s\n", voice)
+	}
+	if len(before) > 0 {
+		sb.WriteString("\nWhat you said before (do not repeat it):\n")
+		for _, b := range before {
+			fmt.Fprintf(&sb, "- %s\n", b)
+		}
+	}
+	fmt.Fprintf(&sb, "\nThe facts:\n%s\n\nSpeak.", facts)
+	return a.Complete(ctx, NarrateSystem, sb.String())
+}

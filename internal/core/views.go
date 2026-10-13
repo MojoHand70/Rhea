@@ -69,3 +69,28 @@ func DerivedDetailView(t ObjectType) ViewDef {
 		Spec: spec,
 	}
 }
+
+// NarrativeSpec: spec of a `narrative` notion (DIRECTION 2026-10-10, "The host
+// is a concierge": the briefing). Facts names the views the host speaks
+// from — analysis views and matching grids, computed by the kernel — and
+// Voice is the owner's instruction on how to speak (the language, the
+// length, the manner). The host phrases the facts fresh each time and never
+// computes a number: every number in its words must be one the facts
+// carry, or the words are refused and the facts are shown alone. Its words
+// are logged through the host_said door, so it never repeats itself.
+type NarrativeSpec struct {
+	Facts []NarrativeFact `json:"facts"`
+	Voice string          `json:"voice,omitempty"`
+}
+
+// NarrativeFact is one view a narrative draws on, under the name the host
+// may call it by.
+type NarrativeFact struct {
+	View string `json:"view"`
+	As   string `json:"as,omitempty"`
+}
+
+// EventHostSaid is the raw event the host_said door appends: what the host
+// said, on which view, on what facts — the host's words as facts in the
+// log (never a templated welcome: the next words know the last).
+const EventHostSaid = "host.said"

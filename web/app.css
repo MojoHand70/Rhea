@@ -141,6 +141,7 @@ tr.diff-changed .k { color: var(--warn); }
 #toast.error { border-color: var(--danger); }
 
 /* scheduling: the time axis, days in order, overdue reads as overdue */
+.narrative { max-width: var(--measure-form); font-size: var(--text-md, 1rem); line-height: 1.5; }
 /* the matching grid: N sides side by side, each a column of open items */
 .match-grid { display: flex; gap: var(--space-4); align-items: flex-start; overflow-x: auto; }
 .match-side { flex: 1 1 0; min-width: 260px; }

@@ -1880,6 +1880,13 @@ context every store call carries, from the shell's request or the CLI's
 environment; scoped reads see one company, unscoped reads the log;
 enforcement still out, as the note says.
 
+**The briefing shipped 2026-10-13** (DECISIONS, "the briefing"): the
+narrative notion — the kernel's facts, the host's words in the owner's
+voice, logged through the host's door so it never repeats itself, every
+number checked against the facts, silence instead of a template when
+there is no host; the Poland pack's "Poranek". The host speaks (the
+third part of "the host remembers"); the queue and the hotspots follow.
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
