@@ -1858,8 +1858,11 @@ of 8 runs, 59 of 60 answers right on the first draft, the matching
 bundle right in every voice); the two debts — the standing test that the
 overruled rule never returns (a correction's reason on the record, shown
 to the author), and the FA(3) check against the published schema (one
-slot wrong, fixed). Owed next: the three-run round over the voices, the
-one-sided time window when a customer asks.
+slot wrong, fixed); the three-run round over the voices — 24 of 24 runs
+DONE across both personas, 175 of 180 answers right on the first draft,
+every re-ask fixed, the matching bundle right every time it was drafted.
+Owed next: the bundle-envelope habit on long answers (a prompt fix,
+measured), the one-sided time window when a customer asks.
 
 ## Language decisions with a recorded destination
 

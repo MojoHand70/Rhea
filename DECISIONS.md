@@ -2397,5 +2397,14 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   run: the model wrote two company rules, one for a registration with an account and
   one without, and the dry run refused them for materializing the same company —
   the conflict guard doing its job, the re-ask fixing it. The matching bundle was right
-  on the first draft in all twelve runs. Nordwind's round follows.
+  on the first draft in all twelve runs.
+- **Nordwind: DONE in every run, 12 of 12; first draft right on 104 of 108, 4 re-asked
+  and all fixed.** Three of the four were the bank answer in one voice — the longest
+  answer of the interview — coming back as a bundle without its id and description,
+  refused by the gate's first check and fixed on the re-ask; the fourth the PZ answer
+  once. Nothing wrong in substance: the matching policy was composed right every time
+  it was drafted. **The round, both personas: 24 of 24 runs DONE, 175 of 180 answers
+  right on the first draft, every re-ask fixed.** The one author habit this round
+  caught: a long answer sometimes loses the bundle's envelope — the next prompt fix,
+  measured before it is kept.
 
