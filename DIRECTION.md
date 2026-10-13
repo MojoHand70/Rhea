@@ -1850,10 +1850,11 @@ with its cash postings, the account as an enrichment, the two matching
 rules, their consequences, the two grids) — the story test pays an
 invoice through it; unpairing as a correcting event — a reversal the same
 rules explain, open amounts restored, differences flipped, never a
-deletion. Owed next: the live run with the model drafting the matching
-bundle from the paraphrased answers (with the twelve-run round), the
-market stamp on a channel's events (so the bank rule can guard as the
-others do), the one-sided time window when a customer asks.
+deletion; the market stamp — a channel declares the market of the pack
+that declares it and the runner stamps every fact it appends, so the
+bank rule guards as the others do. Owed next: the live run with the
+model drafting the matching bundle from the paraphrased answers (with
+the twelve-run round), the one-sided time window when a customer asks.
 
 ## Language decisions with a recorded destination
 

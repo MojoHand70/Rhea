@@ -77,6 +77,13 @@ type ChannelSpec struct {
 	// batched and its residue counted by shape — the high-volume treatment,
 	// declared now, honored as the treatment lands.
 	Volume string `json:"volume,omitempty"`
+	// Market is the market whose facts the channel delivers — the pack's,
+	// since the pack declares the channel. The runner stamps it into every
+	// payload the channel appends that carries none, so a pack's rules can
+	// guard on it the way they guard on a document's own market (the E2
+	// lesson): provenance of the raw side, declared as data, never a
+	// reader's guess. Empty: the channel's facts say their market themselves.
+	Market string `json:"market,omitempty"`
 }
 
 // ConfidenceSpec says how sure a channel's reader is.

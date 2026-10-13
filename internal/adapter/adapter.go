@@ -23,6 +23,7 @@ package adapter
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
 
@@ -169,6 +170,13 @@ func Run(ctx context.Context, s *store.Store, x *exec.Executor, a Adapter) (Resu
 		events[i].Kind = core.KindRaw
 		events[i].Actor = "adapter:" + a.Name()
 		events[i].ActivityName, events[i].ActivityVersion = ch.Name, ch.Version
+		if ch.Spec.Channel.Market != "" {
+			stamped, err := withMarket(events[i].Payload, ch.Spec.Channel.Market)
+			if err != nil {
+				return res, fmt.Errorf("channel %s v%d: %s event: %w", ch.Name, ch.Version, events[i].Type, err)
+			}
+			events[i].Payload = stamped
+		}
 	}
 	res.Events = events
 	if res.Submitted, res.Duplicates, err = s.AppendEvents(ctx, events); err != nil {
@@ -178,4 +186,19 @@ func Run(ctx context.Context, s *store.Store, x *exec.Executor, a Adapter) (Resu
 		res.Booked, res.Errors = x.ProcessPending(ctx)
 	}
 	return res, nil
+}
+
+// withMarket stamps the channel's market into a payload that names none:
+// the market is provenance of the raw side, declared on the channel by the
+// pack that declares it, never a reader's guess.
+func withMarket(payload json.RawMessage, market string) (json.RawMessage, error) {
+	var m map[string]any
+	if err := json.Unmarshal(payload, &m); err != nil {
+		return nil, err
+	}
+	if _, has := m["market"]; has {
+		return payload, nil
+	}
+	m["market"] = market
+	return json.Marshal(m)
 }

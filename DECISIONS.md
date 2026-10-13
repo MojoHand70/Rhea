@@ -2311,3 +2311,19 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   its difference posted, undone — invoice and line open again, the negative
   settlement, the flipped difference and its opposite entry netting the postings to
   zero — then paired again by hand; replay identical.
+
+## 2026-10-13 — a channel stamps the market of the pack that declares it
+
+- **The gap** (named with pack v11): the bank line carries no market, `where` sees only
+  the payload, so the pack's bank-operation rule could not guard on the market the way
+  every other pack rule does since E2 — and a second market's bank pack would have
+  fired on every Polish line. The KSeF reader had side-stepped it by writing `market:
+  pl` into every invoice it reads, which is code knowing a market.
+- **The channel declares it.** `ChannelSpec.market` is the market whose facts the
+  channel delivers — the pack's, since the pack declares the channel — and the runner
+  stamps it into every event payload the channel appends that carries none, beside the
+  channel's name and version on the envelope: the market is provenance of the raw
+  side, declared as data, never guessed by a reader. The Polish channels declare `pl`;
+  the pack's bank-operation rule guards on it; the registry shows it. A line submitted
+  through the open door says its market itself, as the invoices in the story test do.
+

@@ -2,7 +2,9 @@
   "pack": "pl-bank-mt940",
   "version": 1,
   "description": "Kanał bankowy: wyciągi MT940 z magazynu dokumentów — każda pozycja staje się zdarzeniem bank.statement.line wskazującym plik; linia :86: zachowana w oryginale",
-  "requires": ["received_document"],
+  "requires": [
+    "received_document"
+  ],
   "warrant": {
     "basis": "practice",
     "citations": [
@@ -19,15 +21,24 @@
       "spec": {
         "inputs": [],
         "emits": "bank.statement.line",
-        "who": ["adapter"],
+        "who": [
+          "adapter"
+        ],
         "channel": {
           "adapter": "bank_mt940",
           "code_version": 1,
           "format": "MT940 z magazynu dokumentów; dialekt :86: sim-bank (rodzaj|tytuł|kontrahent|rachunek), oryginał zachowany",
           "identity": "skrót pliku i numer pozycji na wyciągu",
-          "confidence": {"policy": "exact"},
-          "events": ["bank.statement.line", "document.read", "document.unreadable"],
-          "volume": "documents"
+          "confidence": {
+            "policy": "exact"
+          },
+          "events": [
+            "bank.statement.line",
+            "document.read",
+            "document.unreadable"
+          ],
+          "volume": "documents",
+          "market": "pl"
         }
       }
     }

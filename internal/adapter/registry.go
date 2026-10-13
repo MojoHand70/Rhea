@@ -26,6 +26,7 @@ type ChannelStatus struct {
 	Confidence    core.ConfidenceSpec `json:"confidence"`
 	Events        []string            `json:"events"`
 	Volume        string              `json:"volume"`
+	Market        string              `json:"market,omitempty"`
 	Implemented   int                 `json:"implemented"` // code version the binary carries; 0 when none
 	State         string              `json:"state"`
 	EventsEmitted int                 `json:"events_emitted"`
@@ -79,7 +80,7 @@ func Registry(ctx context.Context, s *store.Store) (RegistryStatus, error) {
 		st := ChannelStatus{
 			Name: a.Name, Version: a.Version, Status: a.Status, Description: a.Description,
 			Adapter: ch.Adapter, CodeVersion: ch.CodeVersion, Format: ch.Format, Identity: ch.Identity,
-			Confidence: ch.Confidence, Events: ch.Events, Volume: ch.Volume, EventsEmitted: counts[a.Name],
+			Confidence: ch.Confidence, Events: ch.Events, Volume: ch.Volume, Market: ch.Market, EventsEmitted: counts[a.Name],
 		}
 		if len(st.Events) == 0 {
 			st.Events = []string{a.Spec.Emits}

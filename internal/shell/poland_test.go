@@ -261,7 +261,7 @@ func TestM3PolandPack(t *testing.T) {
 	// recorded. The same party, paid as a supplier, settles the purchase.
 	post("/api/events", map[string]any{
 		"event_type": "bank.statement.line", "occurred_at": "2026-09-25", "dedup_key": "wb-1",
-		"payload": map[string]any{"date": "2026-09-25", "amount": "1230.00", "currency": "PLN", "direction": "credit",
+		"payload": map[string]any{"date": "2026-09-25", "amount": "1230.00", "currency": "PLN", "direction": "credit", "market": "pl",
 			"reference": "zapłata FV 1/09/2026", "counterparty": "Nabywca S.A.",
 			"counterparty_account": "PL60102010260000042270201111", "account": "PL83101010230000261395100000"},
 	}, &resp)
@@ -270,7 +270,7 @@ func TestM3PolandPack(t *testing.T) {
 	}
 	post("/api/events", map[string]any{
 		"event_type": "bank.statement.line", "occurred_at": "2026-09-26", "dedup_key": "wb-2",
-		"payload": map[string]any{"date": "2026-09-26", "amount": "615.00", "currency": "PLN", "direction": "debit",
+		"payload": map[string]any{"date": "2026-09-26", "amount": "615.00", "currency": "PLN", "direction": "debit", "market": "pl",
 			"reference": "FAB/1/2026", "counterparty": "Nabywca S.A.",
 			"counterparty_account": "PL60102010260000042270201111", "account": "PL83101010230000261395100000"},
 	}, &resp)
@@ -306,7 +306,7 @@ func TestM3PolandPack(t *testing.T) {
 	// A payment nothing fits stays for the person, on the grid, with why.
 	post("/api/events", map[string]any{
 		"event_type": "bank.statement.line", "occurred_at": "2026-09-27", "dedup_key": "wb-3",
-		"payload": map[string]any{"date": "2026-09-27", "amount": "100.00", "currency": "PLN", "direction": "credit",
+		"payload": map[string]any{"date": "2026-09-27", "amount": "100.00", "currency": "PLN", "direction": "credit", "market": "pl",
 			"reference": "przelew", "counterparty": "Nabywca S.A.",
 			"counterparty_account": "PL60102010260000042270201111", "account": "PL83101010230000261395100000"},
 	}, &resp)

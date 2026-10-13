@@ -37,7 +37,8 @@
             "document.read",
             "document.unreadable"
           ],
-          "volume": "documents"
+          "volume": "documents",
+          "market": "pl"
         }
       }
     }

@@ -1544,10 +1544,17 @@
       "rule_id": "pl-bank-operation",
       "priority": 100,
       "effective_from": "2026-01-01",
-      "description": "Pozycja wyciągu bankowego staje się operacją bankową, otwartą na swoją kwotę",
+      "description": "Pozycja wyciągu bankowego staje się operacją bankową, otwartą na swoją kwotę (rynek pl: kanał bankowy pakietu stempluje go)",
       "spec": {
         "match": {
-          "event_type": "bank.statement.line"
+          "event_type": "bank.statement.line",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            }
+          ]
         },
         "effect": {
           "object": {
