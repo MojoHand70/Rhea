@@ -158,7 +158,22 @@ type MatchedObjects struct {
 	// the host learns from: after a person has paired the same way twice,
 	// the host proposes that standard as a step, behind the gate.
 	Standards []string `json:"standards,omitempty"`
+	// ReversalOf names the match this one undoes (the unpairing verb): the
+	// allocations negated, the open amounts restored, every difference's
+	// direction flipped — a correcting event the same rules explain, never
+	// a deletion. Reason is the person's.
+	ReversalOf int64  `json:"reversal_of,omitempty"`
+	Reason     string `json:"reason,omitempty"`
+	// Seq counts the matches this structure made on this trigger before
+	// this one — the policy's, pairings, reversals — so each match of a
+	// trigger's life is its own chain point and what it causes never
+	// collides with an earlier match's.
+	Seq int `json:"seq,omitempty"`
 }
+
+// StrategyReversal is the strategy a reversal carries: no search found it,
+// a person undid a match.
+const StrategyReversal = "reversal"
 
 // LearnedBundleID names the proposal the host makes when a person has paired
 // one structure the same way twice: one bundle per structure and standard,
@@ -235,6 +250,11 @@ type MatchingSpec struct {
 // emitting the same objects.matched event the policy would — one fact,
 // explained the same way, whoever made it.
 const EventMatchingPaired = "matching.paired"
+
+// EventMatchingUnpaired is the raw event the unpairing verb appends: a
+// person undoing one match, with a reason. The kernel reacts with the
+// reversal — an objects.matched that restores what the match allocated.
+const EventMatchingUnpaired = "matching.unpaired"
 
 // Side finds a declared side by name.
 func (m *MatchingTemplate) Side(name string) (MatchingSide, bool) {

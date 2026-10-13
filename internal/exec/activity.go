@@ -40,20 +40,47 @@ type Triggered struct {
 	Proposed *core.Bundle
 }
 
+// matchesOn counts the matches a structure made on a trigger so far — the
+// policy's, pairings and reversals alike — the next match's sequence.
+func matchesOn(derived []core.Event, matching, triggerID string) int {
+	n := 0
+	for _, ev := range derived {
+		if ev.Type != core.EventObjectsMatched {
+			continue
+		}
+		var m core.MatchedObjects
+		if json.Unmarshal(ev.Payload, &m) == nil && m.Matching == matching && m.Trigger.ObjectID == triggerID {
+			n++
+		}
+	}
+	return n
+}
+
+// withDate adds the business date to a verb's payload under "date" when the
+// inputs carry none: the fact a person's act makes is dated like a
+// document's, so rules reading $.root.date explain it the same way.
+func withDate(payload json.RawMessage, date string) (json.RawMessage, error) {
+	var m map[string]any
+	if err := json.Unmarshal(payload, &m); err != nil {
+		return nil, err
+	}
+	if _, has := m["date"]; has {
+		return payload, nil
+	}
+	m["date"] = date
+	return json.Marshal(m)
+}
+
 // learnedProposal decides, before the pairing is appended, whether the host
 // proposes a standard: one of the pairing's standards that the policy lacks,
 // that an earlier pairing of this structure was also explained by, and that
 // was never proposed before — a rejected proposal never returns. It returns
 // the write that drafts the rule's next version with the step appended,
 // bundled with a client warrant naming both pairings, or nil.
-func (x *Executor) learnedProposal(ctx context.Context, rule core.Rule, matched *core.MatchedObjects) (func(tx store.Querier, eventID int64) (*core.Bundle, error), error) {
+func (x *Executor) learnedProposal(ctx context.Context, rule core.Rule, matched *core.MatchedObjects, derived []core.Event) (func(tx store.Querier, eventID int64) (*core.Bundle, error), error) {
 	tmpl := rule.Spec.Effect.Matching
 	if len(matched.Standards) == 0 {
 		return nil, nil
-	}
-	derived, err := x.Store.EventsByKind(ctx, core.KindDerived)
-	if err != nil {
-		return nil, err
 	}
 	for _, standard := range matched.Standards {
 		if hasStandard(tmpl.Policy, standard) {
@@ -381,6 +408,14 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 		if p.Matching == "" || p.Trigger == "" || len(p.Items) == 0 {
 			return nil, fmt.Errorf("a pairing names the matching rule, the trigger item and the items it settles")
 		}
+		// A verb's fact carries its business date in the payload, as every
+		// document fact does: the rules that explain the match date the
+		// settlement by the root's date.
+		dated, err := withDate(ev.Payload, ev.OccurredAt)
+		if err != nil {
+			return nil, err
+		}
+		ev.Payload = dated
 		rules, err := x.Store.ActiveRules(ctx)
 		if err != nil {
 			return nil, err
@@ -408,6 +443,11 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 		if err != nil {
 			return nil, err
 		}
+		derived, err := x.Store.EventsByKind(ctx, core.KindDerived)
+		if err != nil {
+			return nil, err
+		}
+		matched.Seq = matchesOn(derived, matched.Matching, matched.Trigger.ObjectID)
 		// What the host learns: which named standards would have found this
 		// pairing over the sides as the policy reads them. After a person
 		// has paired the same way twice, the host proposes the standard as a
@@ -416,7 +456,7 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 		if matched.Standards, err = x.standardsFor(ctx, rule.Spec.Effect.Matching, matched, lookup, get); err != nil {
 			return nil, err
 		}
-		proposal, err := x.learnedProposal(ctx, *rule, matched)
+		proposal, err := x.learnedProposal(ctx, *rule, matched, derived)
 		if err != nil {
 			return nil, err
 		}
@@ -443,6 +483,85 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 				out.Proposed = b
 			}
 			return nil
+		}, nil
+
+	case core.EventMatchingUnpaired:
+		// The unpairing verb: one match undone by a correcting event the
+		// same rules explain. The reversal is seeded into the chain under
+		// the match's own rule version — the structure that explains both.
+		var p struct {
+			MatchEvent int64  `json:"match_event"`
+			Reason     string `json:"reason"`
+		}
+		if err := json.Unmarshal(ev.Payload, &p); err != nil {
+			return nil, err
+		}
+		orig, err := x.Store.GetEvent(ctx, p.MatchEvent)
+		if err != nil {
+			return nil, fmt.Errorf("no event #%d to unpair", p.MatchEvent)
+		}
+		if orig.Type != core.EventObjectsMatched {
+			return nil, fmt.Errorf("event #%d is a %s, not a match", p.MatchEvent, orig.Type)
+		}
+		var m core.MatchedObjects
+		if err := json.Unmarshal(orig.Payload, &m); err != nil {
+			return nil, err
+		}
+		if m.ReversalOf != 0 {
+			return nil, fmt.Errorf("event #%d is itself a reversal; pair again instead", p.MatchEvent)
+		}
+		if ev.Payload, err = withDate(ev.Payload, ev.OccurredAt); err != nil {
+			return nil, err
+		}
+		derived, err := x.Store.EventsByKind(ctx, core.KindDerived)
+		if err != nil {
+			return nil, err
+		}
+		for _, d := range derived {
+			if d.Type != core.EventObjectsMatched {
+				continue
+			}
+			var r core.MatchedObjects
+			if json.Unmarshal(d.Payload, &r) == nil && r.ReversalOf == p.MatchEvent {
+				return nil, fmt.Errorf("match #%d was already undone by event #%d", p.MatchEvent, d.ID)
+			}
+		}
+		rule, err := x.Store.GetRuleVersion(ctx, orig.RuleID, orig.RuleVersion)
+		if err != nil {
+			return nil, err
+		}
+		rules, err := x.Store.ActiveRules(ctx)
+		if err != nil {
+			return nil, err
+		}
+		lookup := func(typ, field string, value any) ([]string, error) {
+			return x.Store.FindObjectIDsByField(ctx, typ, field, fmt.Sprintf("%v", value))
+		}
+		get := func(id string) (map[string]any, bool, error) {
+			o, err := x.Store.GetObject(ctx, id)
+			if err != nil {
+				return nil, false, nil
+			}
+			return o.State, true, nil
+		}
+		reversal, err := reverseMatch(m, p.MatchEvent, p.Reason, get)
+		if err != nil {
+			return nil, fmt.Errorf("unpair #%d: %w", p.MatchEvent, err)
+		}
+		reversal.Seq = matchesOn(derived, m.Matching, m.Trigger.ObjectID)
+		var payload any
+		if err := json.Unmarshal(ev.Payload, &payload); err != nil {
+			return nil, err
+		}
+		seed := chainNode{matched: reversal, rule: rule, cause: -1}
+		nodes, err := x.expandChain(ctx, *ev, rules, payload, lookup, get, nil, &seed)
+		if err != nil {
+			return nil, fmt.Errorf("unpair #%d: %w", p.MatchEvent, err)
+		}
+		return func(tx store.Querier) error {
+			root := *ev
+			root.ID = out.EventID
+			return x.bookTx(ctx, tx, root, nodes)
 		}, nil
 
 	case "bundle.rejected":

@@ -131,7 +131,7 @@ func (n chainNode) objectType() string {
 func (n chainNode) idBase() string {
 	switch {
 	case n.matched != nil:
-		return MatchIDBase(n.matched.Matching, n.matched.Trigger.ObjectID)
+		return matchChainPoint(n.matched)
 	case n.unmatched != nil:
 		return MatchIDBase(n.unmatched.Matching, n.unmatched.Trigger.ObjectID)
 	}
@@ -140,8 +140,24 @@ func (n chainNode) idBase() string {
 
 // MatchIDBase is the chain point of one match: ids of the objects a match
 // causes (settlements, differences) build on it, so one structure firing on
-// one trigger mints them once and reproducibly.
+// one trigger mints them once and reproducibly. A reversal is its own
+// chain point, named by the match it undoes, so what it causes never
+// collides with what the match caused.
 func MatchIDBase(matching, triggerID string) string { return matching + "-" + triggerID }
+
+// matchChainPoint is a match event's chain point: the structure and the
+// trigger, then the match's sequence on that trigger when it is not the
+// first, then the event a reversal undoes.
+func matchChainPoint(m *core.MatchedObjects) string {
+	base := MatchIDBase(m.Matching, m.Trigger.ObjectID)
+	if m.Seq > 0 {
+		base = fmt.Sprintf("%s-%d", base, m.Seq)
+	}
+	if m.ReversalOf != 0 {
+		return fmt.Sprintf("%s-undo-%d", base, m.ReversalOf)
+	}
+	return base
+}
 
 // derivedType is the event a node emits for the next generation.
 func (n chainNode) derivedType() string {

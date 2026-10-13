@@ -209,6 +209,9 @@
             "unsettled",
             "settled",
             "private"
+          ],
+          "settled": [
+            "unsettled"
           ]
         }
       },
@@ -858,6 +861,9 @@
           "open": [
             "open",
             "paid"
+          ],
+          "paid": [
+            "open"
           ]
         }
       },
@@ -943,6 +949,9 @@
           "open": [
             "open",
             "paid"
+          ],
+          "paid": [
+            "open"
           ]
         }
       },
@@ -2042,6 +2051,45 @@
               },
               {
                 "account": "201",
+                "credit": "=$.state.amount"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-post-over-difference",
+      "priority": 330,
+      "effective_from": "2026-01-01",
+      "description": "Nadpłata w granicach tolerancji (lub cofnięta niedopłata) księguje się: Wn 201 / Ma 756",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "matching_difference"
+            },
+            {
+              "path": "$.state.direction",
+              "op": "eq",
+              "value": "over"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "=$.state.currency",
+            "lines": [
+              {
+                "account": "201",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "=$.state.account",
                 "credit": "=$.state.amount"
               }
             ]

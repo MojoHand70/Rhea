@@ -92,14 +92,14 @@ func TestM3PolandPack(t *testing.T) {
 
 	// Load the pack: 18 types (the invoices with their open amounts, the
 	// bank operation, the matching difference, the company's account), 8
-	// views (the two grids among them), 22 draft rules, one channel (the
+	// views (the two grids among them), 23 draft rules, one channel (the
 	// KSeF adapter's door, a draft like any verb), 31 master-data events.
 	packPath := filepath.Join("..", "..", "packs", "pl", "pack.json")
 	sum, err := pack.Load(ctx, s, packPath, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 18 || sum.Views != 8 || sum.Rules != 22 || sum.Activities != 1 || sum.Events != 31 || sum.Skipped != 0 ||
+	if sum.Types != 18 || sum.Views != 8 || sum.Rules != 23 || sum.Activities != 1 || sum.Events != 31 || sum.Skipped != 0 ||
 		sum.Bundle != "pack-pl-v11" {
 		t.Fatalf("first load: %+v", sum)
 	}
@@ -108,7 +108,7 @@ func TestM3PolandPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Skipped != 80 || sum.Bundle != "" {
+	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Skipped != 81 || sum.Bundle != "" {
 		t.Fatalf("reload: %+v", sum)
 	}
 

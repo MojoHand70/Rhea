@@ -1087,3 +1087,180 @@ func TestMatchingIntercompany(t *testing.T) {
 		}
 	}
 }
+
+// Unpairing (DIRECTION, the brief's invariant 5: "a wrong match is undone
+// by a correcting event that restores the open amounts, never by
+// deletion"). The unpairing verb seeds a reversal of the match — the
+// allocations negated, the open amounts as they are now before and
+// restored after, every difference flipped — into the chain under the
+// match's own rule, and the same rules explain it: the invoice and the
+// line open again (by the transition their types declare), a settlement
+// for the negative amount, the flipped difference posting the opposite
+// entry. Undone twice is refused; replay reproduces it.
+func TestMatchingUnpairing(t *testing.T) {
+	ctx := context.Background()
+	x, _ := bankWorld(t)
+	// The types consent to reopening.
+	for name, done := range map[string]string{"sales_invoice": "paid", "bank_line": "settled"} {
+		ot, _ := x.Store.GetObjectType(ctx, name)
+		ot.Version++
+		ot.Lifecycle.Transitions[done] = []string{"open"}
+		if err := x.Store.InsertObjectType(ctx, ot); err != nil {
+			t.Fatal(err)
+		}
+	}
+	submit := func(dedup, evType, date, payload string) {
+		t.Helper()
+		if _, err := x.Store.AppendEvent(ctx, core.Event{Kind: core.KindRaw, Type: evType, OccurredAt: date,
+			Payload: []byte(payload), DedupKey: dedup}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	activate := func(id string, priority int, spec core.RuleSpec) {
+		t.Helper()
+		if _, err := x.Store.InsertRuleVersion(ctx, core.Rule{ID: id, Status: core.StatusDraft, Priority: priority,
+			EffectiveFrom: "2026-01-01", CreatedBy: "test", Description: id, Spec: spec}); err != nil {
+			t.Fatal(err)
+		}
+		if _, _, procErrs, err := x.ApproveRule(ctx, id, "krzysztof", "2026-09-30"); err != nil {
+			t.Fatal(err)
+		} else if len(procErrs) > 0 {
+			t.Fatalf("approve %s: %v", id, procErrs)
+		}
+	}
+	activate("register-company", 10, core.RuleSpec{Match: core.Match{EventType: "company.registered"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "company", Fields: map[string]string{"name": "=$.name", "iban": "=$.iban"}}}})
+	activate("register-account", 10, core.RuleSpec{Match: core.Match{EventType: "account.created"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "account", Fields: map[string]string{"code": "=$.code", "name": "=$.name"}}}})
+	activate("book-sales-invoice", 20, core.RuleSpec{Match: core.Match{EventType: "sales.invoice.issued"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "sales_invoice", Fields: map[string]string{"number": "=$.number",
+			"issue_date": "=$.issue_date", "buyer": "=ref(company, iban, $.buyer_iban)", "gross": "=$.gross", "currency": "=$.currency",
+			"open": "=$.gross", "status": "open"}}}})
+	activate("bank-line", 20, core.RuleSpec{Match: core.Match{EventType: "bank.statement.line"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "bank_line", Fields: map[string]string{"date": "=$.date", "amount": "=$.amount",
+			"currency": "=$.currency", "reference": "=$.reference", "counterparty_account": "=$.counterparty_account",
+			"open": "=$.amount", "status": "open"}}}})
+	activate("match-incoming-payments", 30, incomingPayments())
+	onMatch := core.Match{EventType: core.EventObjectsMatched, Where: []core.Condition{{Path: "$.matching", Op: "eq", Value: "incoming-payments"}}}
+	activate("settle-invoice", 40, core.RuleSpec{Match: onMatch, Effect: core.Effect{Amend: &core.AmendTemplate{Type: "sales_invoice",
+		Each: "=$.sides.invoice[*]", Target: "=$.line.object_id", Set: map[string]string{"open": "=$.line.open_after.money",
+			"status": `=if($.line.open_after.money = 0, "paid", "open")`}}}})
+	activate("settle-line", 40, core.RuleSpec{Match: onMatch, Effect: core.Effect{Amend: &core.AmendTemplate{Type: "bank_line",
+		Each: "=$.sides.payment[*]", Target: "=$.line.object_id", Set: map[string]string{"open": "=$.line.open_after.money",
+			"status": `=if($.line.open_after.money = 0, "settled", "open")`}}}})
+	activate("record-settlement", 40, core.RuleSpec{Match: onMatch, Effect: core.Effect{Object: core.ObjectTemplate{Type: "settlement",
+		Each: "=$.sides.invoice[*]", Fields: map[string]string{"payment": "=$.doc.trigger.object_id", "invoice": "=$.line.object_id",
+			"amount": "=$.line.allocated.money", "date": "=$.root.date"}}}})
+	activate("record-difference", 40, core.RuleSpec{Match: core.Match{EventType: core.EventObjectsMatched, Where: []core.Condition{
+		{Path: "$.matching", Op: "eq", Value: "incoming-payments"}, {Path: "$.differences[0]", Op: "exists"}}},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "matching_difference", Each: "=$.differences[*]", Fields: map[string]string{
+			"matching": "=$.doc.matching", "kind": "=$.line.kind", "amount": "=$.line.amount", "currency": "=$.line.currency",
+			"direction": "=$.line.direction", "account": "=$.line.account", "date": "=$.root.date"}}}})
+	for _, dir := range []struct{ name, debit, credit string }{{"short", "=$.state.account", "201"}, {"over", "201", "=$.state.account"}} {
+		activate("post-"+dir.name+"-difference", 50, core.RuleSpec{Match: core.Match{EventType: core.EventObjectMaterialized, Where: []core.Condition{
+			{Path: "$.object_type", Op: "eq", Value: "matching_difference"}, {Path: "$.state.direction", Op: "eq", Value: dir.name}}},
+			Effect: core.Effect{Postings: &core.PostingsTemplate{Currency: "=$.state.currency", Lines: []core.PostingLine{
+				{Account: dir.debit, Debit: "=$.state.amount"}, {Account: dir.credit, Credit: "=$.state.amount"}}}}})
+	}
+	submit("nova", "company.registered", "2026-09-01", `{"name":"Nova","iban":"PL60"}`)
+	for _, a := range [][2]string{{"201", "Należności"}, {"755", "Koszty finansowe"}} {
+		submit("acc-"+a[0], "account.created", "2026-09-01", `{"code":"`+a[0]+`","name":"`+a[1]+`"}`)
+	}
+	submit("fv8", "sales.invoice.issued", "2026-09-09", `{"number":"FV/8","issue_date":"2026-09-09","buyer_iban":"PL60","gross":"99.99","currency":"PLN"}`)
+	// Two grosz short, within the tolerance: matched, the difference posted.
+	submit("l5", "bank.statement.line", "2026-09-16", `{"date":"2026-09-16","amount":"99.97","currency":"PLN","reference":"przelew","counterparty_account":"PL60"}`)
+	if _, errs := x.ProcessPending(ctx); len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	var matchID int64
+	derived, _ := x.Store.EventsByKind(ctx, core.KindDerived)
+	for _, ev := range derived {
+		if ev.Type == core.EventObjectsMatched {
+			matchID = ev.ID
+		}
+	}
+	state := func(typ string) map[string]any {
+		t.Helper()
+		objs, _ := x.Store.ObjectsByType(ctx, typ)
+		return objs[0].State
+	}
+	if state("sales_invoice")["status"] != "paid" || state("bank_line")["status"] != "settled" {
+		t.Fatal("the match did not settle")
+	}
+
+	// The person undoes it, with a reason.
+	res, err := x.TriggerActivity(ctx, "unpair_items", map[string]any{"match_event": matchID, "reason": "wrong customer"}, "shell:krzysztof", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Errors) > 0 {
+		t.Fatal(res.Errors)
+	}
+	inv, line := state("sales_invoice"), state("bank_line")
+	if inv["status"] != "open" || inv["open"].(float64) != 9999 || line["status"] != "open" || line["open"].(float64) != 9997 {
+		t.Fatalf("after the unpairing: invoice %v, line %v", inv, line)
+	}
+	settlements, _ := x.Store.ObjectsByType(ctx, "settlement")
+	if len(settlements) != 2 || settlements[1].State["amount"].(float64) != -9999 {
+		t.Fatalf("a settlement for the negative amount records the undoing: %v", settlements)
+	}
+	diffs, _ := x.Store.ObjectsByType(ctx, "matching_difference")
+	if len(diffs) != 2 || diffs[1].State["direction"] != "over" || diffs[1].State["amount"].(float64) != 2 {
+		t.Fatalf("the flipped difference: %v", diffs)
+	}
+	postings, _ := x.Store.ObjectsByType(ctx, "posting")
+	var net int64
+	for _, p := range postings {
+		amt := int64(p.State["amount"].(float64))
+		if p.State["side"] == "debit" {
+			net += amt
+		} else {
+			net -= amt
+		}
+	}
+	if len(postings) != 4 || net != 0 {
+		t.Fatalf("the opposite entry reverses the first: %d postings, net %d", len(postings), net)
+	}
+	// The reversal names what it undoes and who undid it.
+	var reversal core.MatchedObjects
+	var reversalEvent core.Event
+	derived, _ = x.Store.EventsByKind(ctx, core.KindDerived)
+	for _, ev := range derived {
+		if ev.Type == core.EventObjectsMatched && ev.ID != matchID {
+			json.Unmarshal(ev.Payload, &reversal)
+			reversalEvent = ev
+		}
+	}
+	if reversal.ReversalOf != matchID || reversal.Strategy != core.StrategyReversal || reversal.Reason != "wrong customer" ||
+		reversalEvent.RuleID != "match-incoming-payments" || *reversalEvent.CauseEventID != res.EventID {
+		t.Fatalf("the reversal: %+v caused by %v", reversal, reversalEvent.CauseEventID)
+	}
+	// Undone twice is refused; undoing a reversal is refused; a non-match is refused.
+	if _, err := x.TriggerActivity(ctx, "unpair_items", map[string]any{"match_event": matchID, "reason": "again"}, "shell:krzysztof", ""); err == nil || !strings.Contains(err.Error(), "already undone") {
+		t.Fatalf("twice: %v", err)
+	}
+	if _, err := x.TriggerActivity(ctx, "unpair_items", map[string]any{"match_event": reversalEvent.ID, "reason": "undo the undo"}, "shell:krzysztof", ""); err == nil || !strings.Contains(err.Error(), "itself a reversal") {
+		t.Fatalf("a reversal: %v", err)
+	}
+	if _, err := x.TriggerActivity(ctx, "unpair_items", map[string]any{"match_event": res.EventID, "reason": "x"}, "shell:krzysztof", ""); err == nil || !strings.Contains(err.Error(), "not a match") {
+		t.Fatalf("a non-match: %v", err)
+	}
+	// Pairing again by hand is the way forward: the same items, matched once more.
+	ids, _ := x.Store.FindObjectIDsByField(ctx, "sales_invoice", "number", "FV/8")
+	lines, _ := x.Store.ObjectsByType(ctx, "bank_line")
+	if _, err := x.TriggerActivity(ctx, "pair_items", map[string]any{"pairing": map[string]any{
+		"matching": "match-incoming-payments", "trigger": lines[0].ID, "items": []any{ids[0]}}}, "shell:krzysztof", ""); err != nil {
+		t.Fatal(err)
+	}
+	if inv := state("sales_invoice"); inv["open"].(float64) != 2 || inv["status"] != "open" {
+		t.Fatalf("paired again by hand, 99.97 of 99.99: %v", inv)
+	}
+	before, _ := x.Store.AllObjects(ctx)
+	if _, err := x.Replay(ctx); err != nil {
+		t.Fatal(err)
+	}
+	after, _ := x.Store.AllObjects(ctx)
+	if !reflect.DeepEqual(before, after) {
+		t.Fatal("replay does not reproduce the reversal")
+	}
+}

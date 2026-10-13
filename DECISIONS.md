@@ -2271,3 +2271,43 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
 - **Upgrading an installed pack** stays out of scope: the loader leaves known rule ids
   alone, so v11's reshaped booking rules reach a fresh installation only. The
   experiment reinstalls.
+
+## 2026-10-13 — unpairing: a correcting event the same rules explain
+
+- **The unpairing verb** `unpair_items` (a builtin, `matching.unpaired`, inputs: the
+  match event and a reason) undoes one match by a reversal: an `objects.matched` with
+  strategy `reversal`, `reversal_of` naming the match, the same structure and trigger,
+  every allocation negated with the open amount as it is now before and restored
+  after (later matches may have moved it), the equivalents negated, every difference
+  with its direction flipped (short ↔ over, up ↔ down). The kernel seeds it into the
+  chain under the match's own rule version — the structure that explains both — and
+  the rules that explained the match explain its undoing: the open amounts move back
+  by the same amendments, a settlement for the negative amount records the undoing,
+  the flipped difference posts the opposite entry (the pack gained
+  `pl-post-over-difference`, Wn 201 / Ma 756, which also books a tolerated overpayment).
+  Never a deletion: the match, the reversal and both sets of consequences stay in the
+  log; replay re-applies them in order.
+- **Consent as data, again**: an invoice open again after its match is undone is a
+  transition its type declares (`paid → open`, `settled → unsettled`), as the partial
+  payment's `open → open` was. The pack's types and the personas' declare it; the
+  personas' invoice answers say so.
+- **A trigger is matched more than once over its life** — the policy's match, undone,
+  then paired by hand — so a match's chain point is no longer one per structure and
+  trigger: the event carries its sequence on the trigger (`seq`, the matches before it),
+  and the chain point is `<structure>-<trigger>[-<seq>][-undo-<event>]`, so what each
+  match causes (settlements, differences) never collides with an earlier match's;
+  backfill keys prior firings the same way. The test's re-pairing found this as a
+  duplicate object id.
+  The match event now records which field holds each side's open amount
+  (`inputs["open.<side>.<measure>"]`), so a reversal reads the amounts as they are now
+  without the structure.
+- **A verb's fact is dated like a document's.** The pack's and the personas' settlement
+  rules date themselves by the root fact's `date`, and a pairing's or an unpairing's
+  event carried none — the grid test had not recorded a settlement, so it never showed.
+  Both verbs' payloads now carry `date`, the act's business date, beside the person's
+  inputs; a settlement made by hand is dated the day it was made.
+- **Refused**: undoing a match twice, undoing a reversal (pair again instead), undoing
+  an event that is not a match. `TestMatchingUnpairing`: a short payment matched with
+  its difference posted, undone — invoice and line open again, the negative
+  settlement, the flipped difference and its opposite entry netting the postings to
+  zero — then paired again by hand; replay identical.

@@ -324,7 +324,8 @@ function matchAmount(kinds, measure, v, currency) {
 }
 function renderMatched(m) {
   const lines = [el("div", { class: "explain-line" },
-    `matched by ${m.strategy} (step ${m.step} of ${m.matching})`)];
+    m.reversal_of ? `match #${m.reversal_of} undone (${m.matching})${m.reason ? " — " + m.reason : ""}`
+                  : `matched by ${m.strategy} (step ${m.step} of ${m.matching})`)];
   for (const [side, items] of Object.entries(m.sides || {})) {
     for (const it of items) {
       const parts = Object.keys(it.allocated || {}).map(k =>

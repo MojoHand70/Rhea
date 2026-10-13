@@ -653,6 +653,19 @@ func BuiltinActivities() []Activity {
 			},
 		},
 		{
+			Name: "unpair_items", Domain: "system",
+			Description: "Undo one match: the open amounts it took are restored and every difference it absorbed is reversed, by the same rules that explained the match — a correcting event in the log, never a deletion. Recorded as matching.unpaired with the reason.",
+			Spec: ActivitySpec{
+				Inputs: []FieldDef{
+					{Name: "match_event", Type: "int", Required: true}, // the objects.matched event to undo
+					{Name: "reason", Type: "string", Required: true},
+					{Name: "occurred_at", Type: "date"},
+				},
+				Emits: EventMatchingUnpaired,
+				Who:   []string{"human"},
+			},
+		},
+		{
 			Name: "draft_rule", Domain: "system",
 			Description: "Ask for a rule in plain language. Records the request as rule.draft_requested; the agent answers as an actor outside the kernel — a reaction must be deterministic, and drafting is not.",
 			Spec: ActivitySpec{

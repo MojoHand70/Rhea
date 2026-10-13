@@ -156,7 +156,7 @@ func priorOf(root core.Event, chain []core.Event) (Prior, error) {
 				return nil, fmt.Errorf("derived event %d: %w", d.ID, err)
 			}
 			p.matched = &m
-			objectOf[d.ID] = MatchIDBase(m.Matching, m.Trigger.ObjectID)
+			objectOf[d.ID] = matchChainPoint(&m)
 		case core.EventObjectsUnmatched:
 			var u core.UnmatchedObjects
 			if err := json.Unmarshal(d.Payload, &u); err != nil {

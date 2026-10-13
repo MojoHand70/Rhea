@@ -313,6 +313,93 @@ func (x *Executor) pairSelection(ctx context.Context, r core.Rule, triggerID str
 	return bakeMatch(tmpl, trigger, triggerItem, result, kinds, states, inputs, lookup, get)
 }
 
+// reverseMatch builds the correcting event for one match: the same
+// structure and trigger, every allocation negated with the open amounts as
+// they are now before and restored after, every difference with its
+// direction flipped. The rules that explained the match explain its
+// reversal the same way: open amounts move by the amendment, a settlement
+// for the negative amount records the undoing, the flipped difference
+// posts the opposite entry.
+func reverseMatch(m core.MatchedObjects, eventID int64, reason string, get core.Getter) (*core.MatchedObjects, error) {
+	out := &core.MatchedObjects{Matching: m.Matching, Strategy: core.StrategyReversal, Step: 0, Trigger: m.Trigger,
+		Kinds: m.Kinds, Sides: map[string][]core.MatchAllocation{}, Differences: []core.MatchDifference{},
+		ReversalOf: eventID, Reason: reason, Inputs: map[string]any{"reversal_of": eventID}}
+	negate := func(v any, kind string) (any, error) {
+		r, err := amountOf(v, kind)
+		if err != nil {
+			return nil, err
+		}
+		return encode(r.Neg(r), kind)
+	}
+	for name, allocs := range m.Sides {
+		for _, a := range allocs {
+			state, ok, err := get(a.ObjectID)
+			if err != nil {
+				return nil, err
+			}
+			if !ok {
+				return nil, fmt.Errorf("%s no longer exists", a.ObjectID)
+			}
+			r := core.MatchAllocation{ObjectID: a.ObjectID, ObjectType: a.ObjectType, Currency: a.Currency, Date: a.Date, Reference: a.Reference,
+				Allocated: map[string]any{}, OpenBefore: map[string]any{}, OpenAfter: map[string]any{}}
+			for measure, v := range a.Allocated {
+				kind := m.Kinds[measure]
+				if r.Allocated[measure], err = negate(v, kind); err != nil {
+					return nil, err
+				}
+				// The open amount as it is now — later matches may have moved
+				// it — and what it becomes with this match's share given back.
+				var now *big.Rat
+				field := openFieldOf(a, m, name, measure)
+				if field == "" {
+					return nil, fmt.Errorf("%s: no open field for %s", a.ObjectID, measure)
+				}
+				if state[field] == nil {
+					now = new(big.Rat)
+				} else if now, err = amountOf(state[field], kind); err != nil {
+					return nil, fmt.Errorf("%s: %w", a.ObjectID, err)
+				}
+				taken, err := amountOf(v, kind)
+				if err != nil {
+					return nil, err
+				}
+				if r.OpenBefore[measure], err = encode(now, kind); err != nil {
+					return nil, err
+				}
+				if r.OpenAfter[measure], err = encode(new(big.Rat).Add(now, taken), kind); err != nil {
+					return nil, err
+				}
+			}
+			if a.Equivalent != nil {
+				r.Equivalent, r.EquivalentCurrency = map[string]any{}, a.EquivalentCurrency
+				for measure, v := range a.Equivalent {
+					if r.Equivalent[measure], err = negate(v, m.Kinds[measure]); err != nil {
+						return nil, err
+					}
+				}
+			}
+			out.Sides[name] = append(out.Sides[name], r)
+		}
+	}
+	flip := map[string]string{"short": "over", "over": "short", "up": "down", "down": "up"}
+	for _, d := range m.Differences {
+		d.Direction = flip[d.Direction]
+		out.Differences = append(out.Differences, d)
+	}
+	return out, nil
+}
+
+// openFieldOf names the field an allocation's open amount lives in: the
+// match event does not carry the structure, so the caller records it in
+// Inputs as "open.<side>.<measure>" when it bakes the match; a match from
+// before that convention falls back to the one field named "open".
+func openFieldOf(a core.MatchAllocation, m core.MatchedObjects, side, measure string) string {
+	if f, ok := m.Inputs["open."+side+"."+measure].(string); ok {
+		return f
+	}
+	return "open"
+}
+
 // measuresOf lists the structure's measures for the engine.
 func measuresOf(tmpl *core.MatchingTemplate, kinds map[string]string) []match.Measure {
 	var measures []match.Measure
@@ -420,6 +507,9 @@ func bakeMatch(tmpl *core.MatchingTemplate, trigger core.MatchTrigger, triggerIt
 	typeOf := map[string]string{}
 	for _, s := range tmpl.Sides {
 		typeOf[s.Name] = s.Type
+		for measure, field := range s.Open {
+			inputs["open."+s.Name+"."+measure] = field
+		}
 	}
 	sideNames := make([]string, 0, len(result.Sides))
 	for name := range result.Sides {

@@ -1848,11 +1848,12 @@ the Poland pack's default policy shipped as drafts with a practice
 warrant (pack pl v11: open amounts on the invoices, the bank operation
 with its cash postings, the account as an enrichment, the two matching
 rules, their consequences, the two grids) — the story test pays an
-invoice through it. Owed next: unpairing as a correcting event, the live
-run with the model drafting the matching bundle from the paraphrased
-answers (with the twelve-run round), the market stamp on a channel's
-events (so the bank rule can guard as the others do), the one-sided time
-window when a customer asks.
+invoice through it; unpairing as a correcting event — a reversal the same
+rules explain, open amounts restored, differences flipped, never a
+deletion. Owed next: the live run with the model drafting the matching
+bundle from the paraphrased answers (with the twelve-run round), the
+market stamp on a channel's events (so the bank rule can guard as the
+others do), the one-sided time window when a customer asks.
 
 ## Language decisions with a recorded destination
 
