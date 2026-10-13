@@ -227,6 +227,7 @@ function openView(viewId, title, objectId) {
       case "scheduling": return renderScheduling(data);
       case "matching": return renderMatching(data);
       case "narrative": return renderNarrative(data);
+      case "queue": return renderQueue(data);
       default: return [el("p", { class: "hint" }, `Notion ${data.view.notion} not renderable.`)];
     }
   }, true); // view tabs are live: projections re-render them in place
@@ -1278,6 +1279,43 @@ function renderNarrative(d) {
       }
     }
   }
+  return out;
+}
+
+/* The queue notion (DIRECTION 2026-10-10, the concierge): what to do today.
+   The open items ranked by the view's formula, highest first, each with the
+   verbs that take it (the detail view's contextual verbs, inline), and the
+   approvals waiting at the gate above them. An item the formula could not
+   rank is still listed, last, with the reason where its rank would be. */
+function renderQueue(d) {
+  const out = [el("h1", {}, d.view.title)];
+  if ((d.approvals || []).length) {
+    out.push(el("h3", {}, `Waiting for your approval: ${d.approvals.length}`));
+    for (const b of d.approvals) {
+      out.push(el("div", { class: "match-item" },
+        el("a", { href: "#", onclick: (e) => { e.preventDefault(); openBundles(); } }, b.bundle_id),
+        el("span", { class: "hint" }, ` ${b.description}`)));
+    }
+  }
+  if (!(d.items || []).length) {
+    out.push(el("p", { class: "hint" }, `Nothing open today (${d.today}).`));
+    return out;
+  }
+  const cols = d.columns || [];
+  out.push(el("div", { class: "match-item match-head" }, el("span", { class: "match-cell" }, "rank"),
+    ...cols.map(c => el("span", { class: "match-cell" }, c.label)), el("span", { class: "match-cell" }, "")));
+  for (const it of d.items) {
+    const label = it.detail
+      ? el("a", { href: "#", onclick: (e) => { e.preventDefault(); openView(it.detail, "Detail", it.object_id); } }, it.label)
+      : el("span", {}, it.label);
+    out.push(el("div", { class: "match-item", title: it.object_id },
+      el("span", { class: "match-cell" + (it.problem ? " hint" : "") }, it.problem ? `unranked: ${it.problem}` : it.rank),
+      ...cols.map(c => el("span", { class: "match-cell" }, cellContent(it.cells[c.field] || { v: "" }, c.type))),
+      el("span", { class: "match-cell row" }, label,
+        ...(d.verbs || []).map(v => el("button", { title: v.description,
+          onclick: () => openVerbForm(v.name, { [v.ref_input]: it.object_id }) }, verbLabel(v.name))))));
+  }
+  out.push(el("p", { class: "hint" }, `ranked ${d.today}`));
   return out;
 }
 

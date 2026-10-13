@@ -92,15 +92,15 @@ func TestM3PolandPack(t *testing.T) {
 
 	// Load the pack: 18 types (the invoices with their open amounts, the
 	// bank operation, the matching difference, the company's account), 8
-	// views (the two grids and the briefing among them), 23 draft rules, one channel (the
+	// views (the two grids, the briefing and the two queues among them), 23 draft rules, one channel (the
 	// KSeF adapter's door, a draft like any verb), 31 master-data events.
 	packPath := filepath.Join("..", "..", "packs", "pl", "pack.json")
 	sum, err := pack.Load(ctx, s, packPath, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 18 || sum.Views != 9 || sum.Rules != 23 || sum.Activities != 1 || sum.Events != 31 || sum.Skipped != 0 ||
-		sum.Bundle != "pack-pl-v12" {
+	if sum.Types != 18 || sum.Views != 11 || sum.Rules != 23 || sum.Activities != 1 || sum.Events != 31 || sum.Skipped != 0 ||
+		sum.Bundle != "pack-pl-v13" {
 		t.Fatalf("first load: %+v", sum)
 	}
 	// Idempotent: a reload changes nothing.
@@ -108,7 +108,7 @@ func TestM3PolandPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Skipped != 82 || sum.Bundle != "" {
+	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Skipped != 84 || sum.Bundle != "" {
 		t.Fatalf("reload: %+v", sum)
 	}
 
@@ -128,7 +128,7 @@ func TestM3PolandPack(t *testing.T) {
 	// Approving the pack's bundle IS the installation: its types, views and
 	// rules activate together, and the chart of accounts and the VAT rates
 	// materialize from the waiting events.
-	post("/api/bundles/pack-pl-v12/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-pl-v13/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {
 		t.Fatalf("worklist not cleared after approvals: %d", len(wl))
 	}
@@ -192,6 +192,22 @@ func TestM3PolandPack(t *testing.T) {
 	}
 	if r := cellVals(list.Rows)[0]; r[0] != "FV 1/09/2026" || r[2] != "Nabywca S.A." || r[3] != "1000.00" || r[5] != "1230.00" {
 		t.Fatalf("invoice row = %v", r)
+	}
+
+	// The queue: the open receivable is what there is to chase today, ranked
+	// by how long it has been outstanding; the paid one is not in it.
+	var queue struct {
+		Items []struct {
+			Label string `json:"label"`
+			Rank  string `json:"rank"`
+		} `json:"items"`
+		Verbs []struct {
+			Name string `json:"name"`
+		} `json:"verbs"`
+	}
+	get("/api/views/naleznosci-do-pilnowania", &queue)
+	if len(queue.Items) != 1 || queue.Items[0].Label != "FV 1/09/2026" {
+		t.Fatalf("the queue: %+v", queue)
 	}
 
 	// The trial balance carries the entry on the Polish accounts.

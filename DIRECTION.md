@@ -1890,6 +1890,14 @@ number checked against the facts, silence instead of a template when
 there is no host; the Poland pack's "Poranek". The host speaks (the
 third part of "the host remembers"); the queue and the hotspots follow.
 
+**The queue shipped 2026-10-14** (DECISIONS, "the queue"): the queue notion
+— what is open as a condition on the object, how urgent as a formula on
+the object with today in it, the columns to show; the item's contextual
+verbs inline, prefilled; the approvals waiting at the gate above the
+items; an item the formula cannot rank listed last with the reason. The
+Poland pack's "Do zrobienia dziś" and "Należności do pilnowania". The
+hotspots follow: threshold rules raising cases that land in this queue.
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,

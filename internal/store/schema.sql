@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS activity (
 CREATE TABLE IF NOT EXISTS view_def (
     view_id    TEXT NOT NULL,
     version    INT NOT NULL,
-    notion     TEXT NOT NULL CHECK (notion IN ('list','detail','action','analysis','scheduling','matching','narrative')),
+    notion     TEXT NOT NULL CHECK (notion IN ('list','detail','action','analysis','scheduling','matching','narrative','queue')),
     title      TEXT NOT NULL,
     domain     TEXT NOT NULL,
     function   TEXT NOT NULL,
@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS view_def (
 -- with the full notion library.
 ALTER TABLE view_def DROP CONSTRAINT IF EXISTS view_def_notion_check;
 ALTER TABLE view_def ADD CONSTRAINT view_def_notion_check
-    CHECK (notion IN ('list','detail','action','analysis','scheduling','matching','narrative'));
+    CHECK (notion IN ('list','detail','action','analysis','scheduling','matching','narrative','queue'));
 
 -- Definitions under the gate (DECISIONS 2026-10-08, the bundle): object
 -- types and views gain the lifecycle rules and activities have. Their version

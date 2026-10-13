@@ -1,7 +1,7 @@
 {
   "pack": "pl",
-  "version": 12,
-  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami; poranek: gospodarz mówi, co zaksięgowano i co czeka, z faktów, które policzyło jądro",
+  "version": 13,
+  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami; poranek: gospodarz mówi, co zaksięgowano i co czeka, z faktów, które policzyło jądro; dziś: otwarte zadania i należności w kolejności pilności, z zatwierdzeniami, które czekają",
   "requires": [
     "company",
     "account",
@@ -1262,6 +1262,60 @@
           }
         ],
         "voice": "Po polsku, krótko, jak najlepszy concierge: co jest zaksięgowane, co czeka na decyzję właściciela. Bez powitań z szablonu."
+      }
+    },
+    {
+      "view_id": "do-zrobienia",
+      "version": 1,
+      "notion": "queue",
+      "title": "Do zrobienia dziś",
+      "domain": "finance",
+      "function": "briefing",
+      "spec": {
+        "object_type": "task",
+        "where": [
+          {
+            "path": "$.state.status",
+            "op": "eq",
+            "value": "open"
+          }
+        ],
+        "rank": "=($.today - $.state.due_date) * 10 + if($.state.priority = 'critical', 30, if($.state.priority = 'high', 20, if($.state.priority = 'medium', 10, 0)))",
+        "columns": [
+          "title",
+          "due_date",
+          "priority",
+          "category",
+          "assignee"
+        ],
+        "approvals": true
+      }
+    },
+    {
+      "view_id": "naleznosci-do-pilnowania",
+      "version": 1,
+      "notion": "queue",
+      "title": "Należności do pilnowania",
+      "domain": "finance",
+      "function": "briefing",
+      "spec": {
+        "object_type": "sales_invoice",
+        "where": [
+          {
+            "path": "$.state.status",
+            "op": "eq",
+            "value": "open"
+          }
+        ],
+        "rank": "=$.today - $.state.issue_date",
+        "columns": [
+          "number",
+          "buyer",
+          "issue_date",
+          "gross",
+          "open"
+        ],
+        "limit": 50
       }
     }
   ],

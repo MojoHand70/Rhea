@@ -237,6 +237,8 @@ func (s *Server) handleView(w http.ResponseWriter, r *http.Request) {
 		s.serveMatching(ctx, w, vd)
 	case "narrative":
 		s.serveNarrative(ctx, w, vd)
+	case "queue":
+		s.serveQueue(ctx, w, vd)
 	default:
 		writeErr(w, 400, fmt.Errorf("notion %q not renderable", vd.Notion))
 	}

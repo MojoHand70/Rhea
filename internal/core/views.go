@@ -94,3 +94,20 @@ type NarrativeFact struct {
 // said, on which view, on what facts — the host's words as facts in the
 // log (never a templated welcome: the next words know the last).
 const EventHostSaid = "host.said"
+
+// QueueSpec: spec of a `queue` notion (DIRECTION 2026-10-10, "The host is a
+// concierge": what to do today). The objects of one type that match the
+// conditions — the open ones — ranked by a formula over each object's
+// state, highest first, with today in the payload ($.today) so "days
+// overdue" is a formula and not code; the columns to show; and, when asked,
+// the approvals waiting at the gate beside them. The verbs a person can
+// take on an item are not declared here: every active activity with an
+// input of the type is offered on every item, inline.
+type QueueSpec struct {
+	ObjectType string      `json:"object_type"`
+	Where      []Condition `json:"where,omitempty"` // over {"state": …}: $.state.status eq open
+	Rank       string      `json:"rank"`            // a formula: =$.today - $.state.due_date
+	Columns    []string    `json:"columns,omitempty"`
+	Limit      int         `json:"limit,omitempty"`
+	Approvals  bool        `json:"approvals,omitempty"`
+}

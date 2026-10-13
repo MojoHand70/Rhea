@@ -2533,3 +2533,37 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
 - **Verified** on the phrasing that slipped three times in the round: DONE, nine of
   nine answers right on the first draft, the matching bundle approved first time.
   The model's text is data; reading it well is the kernel's job, not the prompt's.
+
+## 2026-10-14 — the queue: what to do today, ranked by a formula on the thing itself
+
+- **The queue notion** (`core.QueueSpec{object_type, where, rank, columns, limit,
+  approvals}`, `shell/queue.go`): the concierge's second scenario (DIRECTION
+  2026-10-10) with nothing new in the language. What is open is a condition over the
+  object's state (`$.state.status eq open`); how urgent it is is a formula over the
+  object with today in the payload (`=$.today - $.state.due_date`: the formula
+  language's date arithmetic, so "days overdue" is arithmetic the kernel already has,
+  never code), highest first, ties in log order; what to show is a column list. Views
+  compute nothing into the log: a rank is read-side arithmetic over baked state, with
+  the same lookups and reads through links a rule's formula has.
+- **The verbs ride on the item.** The queue declares none: every item carries the
+  detail view's contextual verbs — every active activity with a ref input of the
+  item's type — as buttons that open the door prefilled with the item. One mechanism
+  for "the one or two verbs that resolve it, inline", wherever an object is shown.
+- **The approvals sit above the items** when the view asks (`approvals: true`): the
+  draft bundles waiting at the gate, each a link to the gate. The person's day begins
+  with what only they can do.
+- **An item the formula cannot rank is listed, not dropped**: a task with no due date
+  ranks last, with the formula's reason where its rank would be, and the queue stands.
+  The formula language has no null literal to guard with, and a queue that fails
+  because one item is incomplete would hide the other nineteen.
+- **The pack ships two** (pl v13): "Do zrobienia dziś" — open tasks ranked by days past
+  due, weighted ten a day, plus a premium for priority, with the approvals — and
+  "Należności do pilnowania" — open receivables ranked by days outstanding. The story
+  test finds the one open receivable in the second; `TestQueue` checks the ranking
+  (13, 4, −6 days), the paid one absent, the columns, the verbs that take an invoice
+  and none that do not, the approval waiting.
+- **Named, not done**: the hotspot rules in the pack (thresholds raising cases, which
+  then appear in this queue); a queue over several types at once (a day has invoices
+  and tasks in it — one view per type for now, the simplest option); the queue as a
+  scene in the personas' day.
+
