@@ -1855,8 +1855,11 @@ that declares it and the runner stamps every fact it appends, so the
 bank rule guards as the others do; the live measurement — both personas
 DONE in every run over the scripted interview and three paraphrases (8
 of 8 runs, 59 of 60 answers right on the first draft, the matching
-bundle right in every voice). Owed next: the three-run round over the
-voices, the one-sided time window when a customer asks.
+bundle right in every voice); the two debts — the standing test that the
+overruled rule never returns (a correction's reason on the record, shown
+to the author), and the FA(3) check against the published schema (one
+slot wrong, fixed). Owed next: the three-run round over the voices, the
+one-sided time window when a customer asks.
 
 ## Language decisions with a recorded destination
 

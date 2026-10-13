@@ -136,10 +136,24 @@ func faRateSlot(percent int) (string, bool) {
 	case 5:
 		return "3", true
 	case 0:
-		return "6", true
+		return "6_1", true // domestic 0%: FA(3) splits the zero rate (6_1 home, 6_2 WDT, 6_3 export)
 	}
 	return "", false
 }
+
+// totals is the net and, where the schema has one, the VAT of the one rate
+// slot an invoice uses.
+func totals(slot string, net, vat int64) []faAmount {
+	out := []faAmount{{XMLName: xml.Name{Local: "P_13_" + slot}, Value: core.FormatMoney(net)}}
+	if !zeroRateSlot(slot) {
+		out = append(out, faAmount{XMLName: xml.Name{Local: "P_14_" + slot}, Value: core.FormatMoney(vat)})
+	}
+	return out
+}
+
+// zeroRateSlot reports a slot that carries no VAT element: FA(3) has P_13_6_k
+// but no P_14_6_k, and P_13_7 (exempt) likewise.
+func zeroRateSlot(slot string) bool { return strings.HasPrefix(slot, "6") || slot == "7" }
 
 // nip strips the country prefix a persona's vat_id carries: FA wants digits.
 func nip(vatID string) string { return strings.TrimPrefix(vatID, "PL") }
@@ -250,11 +264,8 @@ func (g *gen) faInvoices(events []Event) []Document {
 				Adres: faAddress{KodKraju: g.p.Company.Country, AdresL1: g.p.Company.Name}},
 			Fa: faBody{
 				KodWaluty: "PLN", P1: date, P2: number, WZ: wz,
-				Totals: []faAmount{
-					{XMLName: xml.Name{Local: "P_13_" + slot}, Value: core.FormatMoney(net)},
-					{XMLName: xml.Name{Local: "P_14_" + slot}, Value: core.FormatMoney(vat)},
-				},
-				P15: core.FormatMoney(net + vat), RodzajFaktury: "VAT", FaWiersz: lines,
+				Totals: totals(slot, net, vat),
+				P15:    core.FormatMoney(net + vat), RodzajFaktury: "VAT", FaWiersz: lines,
 				Platnosc: faPayment{
 					Termin:   faTerm{Termin: issued.AddDate(0, 0, g.p.Volume.PaymentDays).Format("2006-01-02")},
 					Rachunek: faAccount{NrRB: iban(sup)},

@@ -53,8 +53,58 @@ func DraftAsk(ctx context.Context, st *store.Store, k *network.Knowledge, intent
 	if err != nil {
 		return agent.Ask{}, err
 	}
+	corrections, err := Corrections(ctx, st, rules)
+	if err != nil {
+		return agent.Ask{}, err
+	}
 	return agent.Ask{Intent: intent, Sample: sample, Types: types, Hint: hint,
-		Rules: rules, Reference: reference, Residue: residue, Priors: priors(k, sample, residue)}, nil
+		Rules: rules, Reference: reference, Residue: residue, Priors: priors(k, sample, residue),
+		Corrections: corrections}, nil
+}
+
+// Corrections lists, for every active rule, the readings its owner replaced:
+// each approved version that a later approval superseded, with the later
+// approval's reason — read from the rule.approved events, the record of
+// every activation. The author never proposes an overruled reading again.
+func Corrections(ctx context.Context, st *store.Store, active []core.Rule) ([]agent.Correction, error) {
+	raws, err := st.EventsByKind(ctx, core.KindRaw)
+	if err != nil {
+		return nil, err
+	}
+	type approval struct {
+		version int
+		by      string
+		reason  string
+	}
+	approvals := map[string][]approval{}
+	for _, ev := range raws {
+		if ev.Type != "rule.approved" {
+			continue
+		}
+		var p struct {
+			RuleID  string `json:"rule_id"`
+			Version int    `json:"approved_version"`
+			By      string `json:"approved_by"`
+			Reason  string `json:"reason"`
+		}
+		if json.Unmarshal(ev.Payload, &p) != nil || p.RuleID == "" {
+			continue
+		}
+		approvals[p.RuleID] = append(approvals[p.RuleID], approval{p.Version, p.By, p.Reason})
+	}
+	var out []agent.Correction
+	for _, r := range active {
+		as := approvals[r.ID]
+		for i := 0; i+1 < len(as); i++ {
+			old, err := st.GetRuleVersion(ctx, r.ID, as[i].version)
+			if err != nil {
+				continue
+			}
+			out = append(out, agent.Correction{RuleID: r.ID, Version: as[i].version, Description: old.Description,
+				ReplacedBy: as[i+1].version, By: as[i+1].by, Reason: as[i+1].reason})
+		}
+	}
+	return out, nil
 }
 
 // priors turns what the network learned into the agent's evidence: answers

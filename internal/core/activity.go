@@ -563,6 +563,9 @@ func BuiltinActivities() []Activity {
 					{Name: "rule_id", Type: "string", Required: true}, // a definition ref; FieldDef refs point at ObjectTypes (recorded contortion, exit at ref-to-definition)
 					{Name: "approved_by", Type: "string", Required: true},
 					{Name: "occurred_at", Type: "date", Required: true},
+					// Why this version replaces the reading before it — the
+					// correction's reason, on the record (the host remembers).
+					{Name: "reason", Type: "string"},
 				},
 				Emits: "rule.approved",
 				Who:   []string{"human"},

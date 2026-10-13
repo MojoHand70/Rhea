@@ -54,6 +54,20 @@ type Ask struct {
 	// refused, oldest first: a redraft answers the latest refusal instead of
 	// starting over.
 	Rejections []Rejection
+	// Corrections are readings the owner replaced: an earlier version of an
+	// active rule, superseded by the next with a reason. The author sees
+	// them so an overruled reading never returns (the host remembers).
+	Corrections []Correction
+}
+
+// Correction is one superseded reading of a rule and why it was replaced.
+type Correction struct {
+	RuleID      string `json:"rule_id"`
+	Version     int    `json:"version"`     // the reading that was replaced
+	Description string `json:"description"` // what it said
+	ReplacedBy  int    `json:"replaced_by"` // the version that replaced it
+	By          string `json:"by"`
+	Reason      string `json:"reason,omitempty"`
 }
 
 // Prior is one learned answer: Count of Of installations answer Question
@@ -399,6 +413,16 @@ func userMessage(ask Ask) string {
 	for _, r := range ask.Rules {
 		match, _ := json.Marshal(r.Spec.Match)
 		fmt.Fprintf(&sb, "- %s p%d %s: %s\n", r.ID, r.Priority, match, r.Description)
+	}
+	if len(ask.Corrections) > 0 {
+		sb.WriteString("\nReadings the owner corrected before - superseded, never to be proposed again:\n")
+		for _, c := range ask.Corrections {
+			fmt.Fprintf(&sb, "- %s v%d (%q) was replaced by v%d by %s", c.RuleID, c.Version, c.Description, c.ReplacedBy, c.By)
+			if c.Reason != "" {
+				fmt.Fprintf(&sb, ": %s", c.Reason)
+			}
+			sb.WriteString("\n")
+		}
 	}
 	sb.WriteString("\nExisting master data (samples, per type):\n")
 	if len(ask.Reference) == 0 {

@@ -171,8 +171,10 @@ type fa struct {
 		Net3      string   `xml:"P_13_3"`
 		Net4      string   `xml:"P_13_4"`
 		Net5      string   `xml:"P_13_5"`
-		Net6      string   `xml:"P_13_6"`
-		Net7      string   `xml:"P_13_7"`
+		Net6Home  string   `xml:"P_13_6_1"` // 0%: domestic
+		Net6EU    string   `xml:"P_13_6_2"` // 0%: intra-EU supply
+		Net6Exp   string   `xml:"P_13_6_3"` // 0%: export
+		Net7      string   `xml:"P_13_7"`   // exempt
 		VAT1      string   `xml:"P_14_1"`
 		VAT2      string   `xml:"P_14_2"`
 		VAT3      string   `xml:"P_14_3"`
@@ -249,7 +251,7 @@ func ParseFA(b []byte) (Invoice, error) {
 	}
 	slots := []struct{ net, vat, code string }{
 		{f.Body.Net1, f.Body.VAT1, "23"}, {f.Body.Net2, f.Body.VAT2, "8"}, {f.Body.Net3, f.Body.VAT3, "5"},
-		{f.Body.Net4, f.Body.VAT4, "0"}, {f.Body.Net5, f.Body.VAT5, "0"}, {f.Body.Net6, "", "0"}, {f.Body.Net7, "", "zw"},
+		{f.Body.Net4, f.Body.VAT4, "0"}, {f.Body.Net5, f.Body.VAT5, "0"}, {f.Body.Net6Home, "", "0"}, {f.Body.Net6EU, "", "0"}, {f.Body.Net6Exp, "", "0"}, {f.Body.Net7, "", "zw"},
 	}
 	used := 0
 	for _, s := range slots {

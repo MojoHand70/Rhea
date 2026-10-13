@@ -2359,3 +2359,32 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   the digit of "at most 4" because the model spells small numbers out, which keeps the
   fact. `Preserved` now accepts a number word for a digit up to twelve, and still
   reports a number that is gone.
+
+## 2026-10-13 — two debts: the overruled rule never returns; the FA(3) check
+
+- **The standing test** (`TestOverruledRuleNeverReturns`, DIRECTION "The host
+  remembers"): a reading approved, then replaced by another with a reason. Acting: the
+  old reading explained what arrived in its time and never fires again, the new one
+  explains what came after, replay reproduces both as they happened. Drafting: the
+  author's ask names the new version as the active rule and shows the old one only as
+  a correction — version, what it said, who replaced it, why — and the prompt says in
+  so many words that corrected readings are never proposed again. What this needed:
+  `approve_rule` takes an optional `reason` (the correction's, on the record in the
+  `rule.approved` event; the shell's approve endpoint passes it), and the ask gains
+  `Corrections`, read from the approval events of every active rule. Speaking (the
+  briefing) and learning (the network's supersession) wait for their slices, as the
+  note said.
+- **The FA(3) check, against the schema the CRD publishes** (`crd.gov.pl/wzor/2025/06/
+  25/13775/schemat.xsd`, the Ministry's brochure): the namespace, `kodSystemowy "FA
+  (3)"`, `wersjaSchemy "1-0E"`, `WariantFormularza 3`, `RodzajFaktury VAT`, the
+  parties' `DaneIdentyfikacyjne` and `Adres`, the line fields `P_7`, `P_8A`, `P_8B`,
+  `P_9A`, `P_11`, `P_12`, `Fa/WZ`, `Platnosc/TerminPlatnosci/Termin` and
+  `Platnosc/RachunekBankowy/NrRB` are as the sim writes and the reader reads. The rate
+  slots: `P_13_1/P_14_1` the standard rate (23 or 22%), `_2` the first reduced (8 or
+  7%), `_3` the second (5%) — right. **One error**: FA(3) has no `P_13_6`; a zero-rated
+  sale goes in `P_13_6_1` (domestic), `P_13_6_2` (intra-EU supply) or `P_13_6_3`
+  (export), and none of them has a VAT element. The sim wrote `P_13_6` and a `P_14_6`;
+  the reader read `P_13_6` and nothing else. Fixed on both sides: the sim writes
+  `P_13_6_1` with no VAT element for 0%, the reader takes all three zero slots as 0%
+  and `P_13_7` as exempt. Neither persona uses a zero rate, so the bench never saw it
+  — the schema did.

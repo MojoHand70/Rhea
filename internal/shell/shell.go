@@ -608,13 +608,14 @@ func (s *Server) handleDraft(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleApprove(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		ApprovedBy string `json:"approved_by"`
+		Reason     string `json:"reason"` // why this version replaces the reading before it
 	}
 	json.NewDecoder(r.Body).Decode(&req)
 	if req.ApprovedBy == "" {
 		req.ApprovedBy = "human"
 	}
-	rule, booked, procErrs, err := s.Exec.ApproveRule(r.Context(), r.PathValue("id"),
-		req.ApprovedBy, time.Now().Format("2006-01-02"))
+	rule, booked, procErrs, err := s.Exec.ApproveRuleWithReason(r.Context(), r.PathValue("id"),
+		req.ApprovedBy, time.Now().Format("2006-01-02"), req.Reason)
 	if err != nil {
 		writeErr(w, 400, err)
 		return

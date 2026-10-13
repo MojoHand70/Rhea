@@ -216,6 +216,16 @@ func TestParseFA(t *testing.T) {
 	if _, err := adapter.ParseFA([]byte(`<Faktura><Fa><P_2>X</P_2></Fa></Faktura>`)); err == nil {
 		t.Fatal("an empty invoice parsed")
 	}
+	// A zero-rated sale sits in P_13_6_1 (FA(3) splits the zero rate three
+	// ways: domestic, intra-EU, export) and has no VAT element at all.
+	zero := `<Faktura xmlns="http://crd.gov.pl/wzor/2025/06/25/13775/"><Podmiot1><DaneIdentyfikacyjne><NIP>5260301234</NIP><Nazwa>A</Nazwa></DaneIdentyfikacyjne></Podmiot1>` +
+		`<Podmiot2><DaneIdentyfikacyjne><NIP>5272001122</NIP><Nazwa>B</Nazwa></DaneIdentyfikacyjne></Podmiot2>` +
+		`<Fa><KodWaluty>PLN</KodWaluty><P_1>2026-09-02</P_1><P_2>FS 0/2026</P_2><P_13_6_1>100.00</P_13_6_1><P_15>100.00</P_15>` +
+		`<FaWiersz><NrWierszaFa>1</NrWierszaFa><P_7>x</P_7><P_8B>1</P_8B><P_9A>100.00</P_9A><P_11>100.00</P_11><P_12>0</P_12></FaWiersz></Fa></Faktura>`
+	inv, err := adapter.ParseFA([]byte(zero))
+	if err != nil || inv.RateCode != "0" || inv.Net != 10000 || inv.VAT != 0 || inv.Gross != 10000 {
+		t.Fatalf("zero-rated FA(3): %+v %v", inv, err)
+	}
 }
 
 func jsonUnmarshal(b []byte, v any) error { return json.Unmarshal(b, v) }

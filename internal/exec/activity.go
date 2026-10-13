@@ -235,6 +235,7 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 		var p struct {
 			RuleID     string `json:"rule_id"`
 			ApprovedBy string `json:"approved_by"`
+			Reason     string `json:"reason"`
 		}
 		if err := json.Unmarshal(ev.Payload, &p); err != nil {
 			return nil, err
@@ -249,9 +250,11 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 		if err := x.refuseMember(ctx, core.Member{Kind: core.KindRule, Name: r.ID, Version: r.Version}); err != nil {
 			return nil, err
 		}
-		approval, _ := json.Marshal(map[string]any{
-			"rule_id": r.ID, "approved_version": r.Version + 1, "approved_by": p.ApprovedBy,
-		})
+		record := map[string]any{"rule_id": r.ID, "approved_version": r.Version + 1, "approved_by": p.ApprovedBy}
+		if p.Reason != "" {
+			record["reason"] = p.Reason // the correction's reason: why this reading replaces the last
+		}
+		approval, _ := json.Marshal(record)
 		ev.Payload = approval
 		ev.DedupKey = fmt.Sprintf("approve/%s/%d", r.ID, r.Version+1)
 		return func(tx store.Querier) error {
@@ -628,9 +631,19 @@ func (x *Executor) refuseMember(ctx context.Context, m core.Member) error {
 // re-evaluation are worklist conditions, not approval failures — they come
 // back as data, separate from the hard error.
 func (x *Executor) ApproveRule(ctx context.Context, ruleID, approvedBy, businessDate string) (core.Rule, int, []error, error) {
-	t, err := x.TriggerActivity(ctx, "approve_rule", map[string]any{
-		"rule_id": ruleID, "approved_by": approvedBy, "occurred_at": businessDate,
-	}, approvedBy, "")
+	return x.ApproveRuleWithReason(ctx, ruleID, approvedBy, businessDate, "")
+}
+
+// ApproveRuleWithReason approves with the correction's reason on the record:
+// why this version replaces the reading before it. The author's ask shows
+// the superseded reading with that reason, so the overruled rule never
+// returns (DIRECTION, "The host remembers").
+func (x *Executor) ApproveRuleWithReason(ctx context.Context, ruleID, approvedBy, businessDate, reason string) (core.Rule, int, []error, error) {
+	inputs := map[string]any{"rule_id": ruleID, "approved_by": approvedBy, "occurred_at": businessDate}
+	if reason != "" {
+		inputs["reason"] = reason
+	}
+	t, err := x.TriggerActivity(ctx, "approve_rule", inputs, approvedBy, "")
 	if err != nil {
 		return core.Rule{}, 0, nil, err
 	}
