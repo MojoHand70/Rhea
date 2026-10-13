@@ -2388,3 +2388,14 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   `P_13_6_1` with no VAT element for 0%, the reader takes all three zero slots as 0%
   and `P_13_7` as exempt. Neither persona uses a zero rate, so the bench never saw it
   — the schema did.
+
+## 2026-10-13 — the three-run round over the voices, Helios
+
+- `rhea eval -voices -runs 3 -months 1`: the scripted interview and three paraphrases,
+  three runs each — **DONE in every run, 12 of 12; first draft right on 71 of 72
+  questions, 1 re-asked and fixed.** The one re-ask was the master-data answer in one
+  run: the model wrote two company rules, one for a registration with an account and
+  one without, and the dry run refused them for materializing the same company —
+  the conflict guard doing its job, the re-ask fixing it. The matching bundle was right
+  on the first draft in all twelve runs. Nordwind's round follows.
+
