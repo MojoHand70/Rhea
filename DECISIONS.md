@@ -2448,3 +2448,29 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   have matched. The confidences it gave are not in the report yet — the next pass
   prints the readers and their confidences beside the residue. The worklist shows a
   proposal with its reason and one button.
+
+## 2026-10-13 — the company key: the partition key the store carries on every call
+
+- **The one scale item cheap now and expensive later** (DIRECTION 2026-10-08, scale
+  rule 1, security rule 2): the company is promoted from a payload field to a key the
+  store knows. `event.company` and `object.company` (indexed with the id and the type),
+  `core.Event.Company` and `core.Object.Company`. A door stamps the fact with the
+  caller's scope; everything derived from it — the chain's events, the objects, the
+  amendments, the matches — inherits it in `bookTx`; replay keeps it. Threaded as an
+  argument, not a global: the context every store call already carries holds the scope
+  (`store.WithCompany`, `store.CompanyOf`); the shell takes it from the request
+  (`X-Rhea-Company` or `?company=`), the CLI from `RHEA_COMPANY`. The key is a string by
+  convention the company's VAT id — it must exist before the company's first object does.
+- **A scoped read sees one company's facts alone; an unscoped read, the whole log.**
+  The reads of facts and objects — the worklist and the pending set, the events by
+  kind, the objects by type, the lookups rules resolve by, the counts, the whole cache
+  — filter by the scope when there is one, and behave exactly as before when there is
+  none. Nothing enforces a scope yet, as the note says: isolation and sharding ride on
+  this column later; the executor's own reads at fire time stay unscoped, which is the
+  cross-company read the note names (E4's intercompany cascade crosses through refs
+  there, by design) and the next partition question.
+- **`TestPartitionKey`**: two companies in one log, each fact stamped from its door and
+  inherited by its chain; each company's reads see its own notes, lookups and counts;
+  a fact no rule explains waits in its own company's worklist; replay keeps the key.
+  History from before the key, and facts appended without a scope, carry none and
+  show in every scoped read's complement — the whole-log read.

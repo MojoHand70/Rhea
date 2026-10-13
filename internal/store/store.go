@@ -160,13 +160,22 @@ func appendEvent(ctx context.Context, q Querier, ev core.Event, skipDuplicate bo
 	}
 	var id int64
 	sql := `
-		INSERT INTO event (kind, event_type, occurred_at, payload, cause_event_id, rule_id, rule_version, dedup_key, actor, activity_name, activity_version)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
+		INSERT INTO event (kind, event_type, occurred_at, payload, cause_event_id, rule_id, rule_version, dedup_key, actor, activity_name, activity_version, company)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`
 	if skipDuplicate {
 		sql += ` ON CONFLICT (dedup_key) DO NOTHING`
 	}
+	// The partition key: the event's own, or the scope the call carries.
+	company := ev.Company
+	if company == "" {
+		company = CompanyOf(ctx)
+	}
+	var companyKey *string
+	if company != "" {
+		companyKey = &company
+	}
 	err := q.QueryRow(ctx, sql+` RETURNING event_id`,
-		ev.Kind, ev.Type, ev.OccurredAt, ev.Payload, ev.CauseEventID, ruleID, ruleVersion, dedup, actor, actName, actVersion,
+		ev.Kind, ev.Type, ev.OccurredAt, ev.Payload, ev.CauseEventID, ruleID, ruleVersion, dedup, actor, actName, actVersion, companyKey,
 	).Scan(&id)
 	if skipDuplicate && errors.Is(err, pgx.ErrNoRows) {
 		return 0, ErrDuplicate
@@ -287,10 +296,14 @@ func scanEvents(rows pgx.Rows) ([]core.Event, error) {
 		var actor *string
 		var actName *string
 		var actVersion *int
+		var company *string
 		if err := rows.Scan(&ev.ID, &ev.Kind, &ev.Type, &ev.OccurredAt, &ev.RecordedAt,
 			&ev.Payload, &ev.CauseEventID, &ruleID, &ruleVersion, &dedup, &actor,
-			&actName, &actVersion); err != nil {
+			&actName, &actVersion, &company); err != nil {
 			return nil, err
+		}
+		if company != nil {
+			ev.Company = *company
 		}
 		if ruleID != nil {
 			ev.RuleID, ev.RuleVersion = *ruleID, *ruleVersion
@@ -313,11 +326,12 @@ func scanEvents(rows pgx.Rows) ([]core.Event, error) {
 }
 
 const eventCols = `event_id, kind, event_type, to_char(occurred_at,'YYYY-MM-DD'), recorded_at,
-	payload, cause_event_id, rule_id, rule_version, dedup_key, actor, activity_name, activity_version`
+	payload, cause_event_id, rule_id, rule_version, dedup_key, actor, activity_name, activity_version,
+       company`
 
 func (s *Store) EventsByKind(ctx context.Context, kind string) ([]core.Event, error) {
 	rows, err := s.Pool.Query(ctx,
-		`SELECT `+eventCols+` FROM event WHERE kind = $1 ORDER BY event_id`, kind)
+		`SELECT `+eventCols+` FROM event WHERE kind = $1 AND ($2 = '' OR company = $2) ORDER BY event_id`, kind, CompanyOf(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -379,7 +393,7 @@ func (s *Store) GetEvent(ctx context.Context, id int64) (core.Event, error) {
 
 // UnmatchedRawEvents is the worklist: raw events no rule has acted on yet.
 func (s *Store) UnmatchedRawEvents(ctx context.Context) ([]core.Event, error) {
-	rows, err := s.Pool.Query(ctx, unmatchedSQL)
+	rows, err := s.Pool.Query(ctx, unmatchedSQL, CompanyOf(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -390,7 +404,7 @@ func (s *Store) UnmatchedRawEvents(ctx context.Context) ([]core.Event, error) {
 // time events included — the worklist is the human view of the same
 // question minus the uneventful days.
 func (s *Store) PendingEvents(ctx context.Context) ([]core.Event, error) {
-	rows, err := s.Pool.Query(ctx, pendingSQL)
+	rows, err := s.Pool.Query(ctx, pendingSQL, CompanyOf(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -749,10 +763,14 @@ func InsertObject(ctx context.Context, q Querier, o core.Object) error {
 	if err != nil {
 		return err
 	}
+	var company *string
+	if o.Company != "" {
+		company = &o.Company
+	}
 	_, err = q.Exec(ctx, `
-		INSERT INTO object (object_id, object_type, type_version, state, source_event_id, rule_id, rule_version)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		o.ID, o.Type, o.TypeVersion, state, o.SourceEventID, o.RuleID, o.RuleVersion)
+		INSERT INTO object (object_id, object_type, type_version, state, source_event_id, rule_id, rule_version, company)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+		o.ID, o.Type, o.TypeVersion, state, o.SourceEventID, o.RuleID, o.RuleVersion, company)
 	return err
 }
 
@@ -786,9 +804,13 @@ func scanObjects(rows pgx.Rows) ([]core.Object, error) {
 	for rows.Next() {
 		var o core.Object
 		var state []byte
+		var company *string
 		if err := rows.Scan(&o.ID, &o.Type, &o.TypeVersion, &state,
-			&o.SourceEventID, &o.RuleID, &o.RuleVersion); err != nil {
+			&o.SourceEventID, &o.RuleID, &o.RuleVersion, &company); err != nil {
 			return nil, err
+		}
+		if company != nil {
+			o.Company = *company
 		}
 		if err := json.Unmarshal(state, &o.State); err != nil {
 			return nil, err
@@ -798,11 +820,34 @@ func scanObjects(rows pgx.Rows) ([]core.Object, error) {
 	return out, rows.Err()
 }
 
-const objectCols = `object_id, object_type, type_version, state, source_event_id, rule_id, rule_version`
+const objectCols = `object_id, object_type, type_version, state, source_event_id, rule_id, rule_version, company`
+
+// The partition key as the caller's scope (DIRECTION 2026-10-08, scale rule
+// 1 and security rule 2): every store call already carries a context, and
+// the context carries the company whose facts the caller is in. An append
+// stamps it on the event when the event names none; a read of objects or
+// facts sees that company's alone when a scope is set, everything when it is
+// not — the latter is today's whole-log behavior, and the enforcement that
+// will key on the same column stays out, as the note says.
+type companyKey struct{}
+
+// WithCompany scopes a context to one company's facts.
+func WithCompany(ctx context.Context, company string) context.Context {
+	if company == "" {
+		return ctx
+	}
+	return context.WithValue(ctx, companyKey{}, company)
+}
+
+// CompanyOf is the scope a context carries; empty means the whole log.
+func CompanyOf(ctx context.Context) string {
+	c, _ := ctx.Value(companyKey{}).(string)
+	return c
+}
 
 func (s *Store) ObjectsByType(ctx context.Context, typ string) ([]core.Object, error) {
 	rows, err := s.Pool.Query(ctx,
-		`SELECT `+objectCols+` FROM object WHERE object_type = $1 ORDER BY source_event_id, object_id`, typ)
+		`SELECT `+objectCols+` FROM object WHERE object_type = $1 AND ($2 = '' OR company = $2) ORDER BY source_event_id, object_id`, typ, CompanyOf(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -814,7 +859,7 @@ func (s *Store) ObjectsByType(ctx context.Context, typ string) ([]core.Object, e
 // and counting must not mean loading every object.
 func (s *Store) CountObjectsByType(ctx context.Context) (map[string]int, error) {
 	rows, err := s.Pool.Query(ctx,
-		`SELECT object_type, COUNT(*) FROM object GROUP BY object_type`)
+		`SELECT object_type, COUNT(*) FROM object WHERE ($1 = '' OR company = $1) GROUP BY object_type`, CompanyOf(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -832,7 +877,7 @@ func (s *Store) CountObjectsByType(ctx context.Context) (map[string]int, error) 
 }
 
 func (s *Store) AllObjects(ctx context.Context) ([]core.Object, error) {
-	rows, err := s.Pool.Query(ctx, `SELECT `+objectCols+` FROM object ORDER BY object_id`)
+	rows, err := s.Pool.Query(ctx, `SELECT `+objectCols+` FROM object WHERE ($1 = '' OR company = $1) ORDER BY object_id`, CompanyOf(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -844,8 +889,8 @@ func (s *Store) AllObjects(ctx context.Context) ([]core.Object, error) {
 // match; the period lock asks only whether any exist.
 func (s *Store) FindObjectIDsByField(ctx context.Context, typ, field, value string) ([]string, error) {
 	rows, err := s.Pool.Query(ctx,
-		`SELECT object_id FROM object WHERE object_type = $1 AND state->>$2 = $3 ORDER BY source_event_id, object_id`,
-		typ, field, value)
+		`SELECT object_id FROM object WHERE object_type = $1 AND state->>$2 = $3 AND ($4 = '' OR company = $4) ORDER BY source_event_id, object_id`,
+		typ, field, value, CompanyOf(ctx))
 	if err != nil {
 		return nil, err
 	}

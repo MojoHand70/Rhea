@@ -496,6 +496,7 @@ func (x *Executor) bookTx(ctx context.Context, tx store.Querier, root core.Event
 				RuleID:       n.rule.ID,
 				RuleVersion:  n.rule.Version,
 				Actor:        "kernel",
+				Company:      root.Company,
 			})
 			if err != nil {
 				return err
@@ -517,6 +518,7 @@ func (x *Executor) bookTx(ctx context.Context, tx store.Querier, root core.Event
 				RuleID:       n.rule.ID,
 				RuleVersion:  n.rule.Version,
 				Actor:        "kernel",
+				Company:      root.Company,
 			})
 			if err != nil {
 				return err
@@ -540,6 +542,7 @@ func (x *Executor) bookTx(ctx context.Context, tx store.Querier, root core.Event
 			RuleID:       n.rule.ID,
 			RuleVersion:  n.rule.Version,
 			Actor:        "kernel", // rule provenance explains the rest
+			Company:      root.Company, // and the partition key
 		})
 		if err != nil {
 			return err
@@ -548,6 +551,7 @@ func (x *Executor) bookTx(ctx context.Context, tx store.Querier, root core.Event
 		if err := store.InsertObject(ctx, tx, core.Object{
 			ID: n.mat.ObjectID, Type: n.mat.ObjectType, TypeVersion: n.mat.TypeVersion,
 			State: n.mat.State, SourceEventID: cause, RuleID: n.rule.ID, RuleVersion: n.rule.Version,
+			Company: root.Company,
 		}); err != nil {
 			return err
 		}
@@ -931,7 +935,7 @@ func (x *Executor) Replay(ctx context.Context) ([]core.Object, error) {
 			o := core.Object{
 				ID: mat.ObjectID, Type: mat.ObjectType, TypeVersion: mat.TypeVersion,
 				State: mat.State, SourceEventID: *ev.CauseEventID,
-				RuleID: ev.RuleID, RuleVersion: ev.RuleVersion,
+				RuleID: ev.RuleID, RuleVersion: ev.RuleVersion, Company: ev.Company,
 			}
 			if err := store.InsertObject(ctx, tx, o); err != nil {
 				return nil, err

@@ -2,9 +2,11 @@
 -- them as cause. The human view; the executor's set is pending.sql.
 SELECT event_id, kind, event_type, to_char(occurred_at,'YYYY-MM-DD'), recorded_at,
        payload, cause_event_id, rule_id, rule_version, dedup_key, actor,
-       activity_name, activity_version
+       activity_name, activity_version, company
 FROM event e
 WHERE e.kind = 'raw'
+  -- the caller's scope: one company's facts, or the whole log when unscoped
+  AND ($1 = '' OR e.company = $1)
   -- the rule.*, activity.*, bundle.* and backfill.* namespaces are system verbs (approvals, draft
   -- requests), not business events waiting for explanation
   AND e.event_type NOT LIKE 'rule.%'

@@ -33,6 +33,14 @@ type Event struct {
 	// doors existed.
 	ActivityName    string `json:"activity_name,omitempty"`
 	ActivityVersion int    `json:"activity_version,omitempty"`
+	// Company is the partition key (DIRECTION 2026-10-08, "Scale and
+	// security are welded": the one item cheap now and expensive later):
+	// the company whose fact this is, carried on every event and inherited
+	// by everything derived from it. The store carries it on every call as
+	// the caller's scope; isolation and sharding ride on it later, enforced
+	// by nothing yet. Empty on history from before the key, and on facts
+	// appended without a scope.
+	Company string `json:"company,omitempty"`
 }
 
 const (
@@ -219,6 +227,9 @@ type Object struct {
 	SourceEventID int64          `json:"source_event_id"`
 	RuleID        string         `json:"rule_id"`
 	RuleVersion   int            `json:"rule_version"`
+	// Company is the partition key, inherited from the event that
+	// materialized the object.
+	Company string `json:"company,omitempty"`
 }
 
 // Rule is the unit of system behavior. Versioned and append-only: any change,

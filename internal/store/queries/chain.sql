@@ -3,7 +3,7 @@
 -- this to know what already fired where; it is the provenance walk inverted.
 SELECT event_id, kind, event_type, to_char(occurred_at,'YYYY-MM-DD'), recorded_at,
        payload, cause_event_id, rule_id, rule_version, dedup_key, actor,
-       activity_name, activity_version
+       activity_name, activity_version, company
 FROM event
 WHERE event_id IN (
     WITH RECURSIVE chain AS (

@@ -185,6 +185,7 @@ func (x *Executor) TriggerActivity(ctx context.Context, name string, inputs map[
 		Kind: core.KindRaw, Type: built.Type, OccurredAt: built.OccurredAt,
 		Payload: built.Payload, DedupKey: dedupKey, Actor: actor,
 		ActivityName: act.Name, ActivityVersion: act.Version,
+		Company: store.CompanyOf(ctx), // the caller's scope: the fact's company
 	}
 	var out Triggered
 	apply, err := x.prepareReaction(ctx, &ev, &out)

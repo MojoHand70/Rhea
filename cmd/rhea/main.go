@@ -65,7 +65,9 @@ func main() {
 	if len(os.Args) < 2 {
 		log.Fatal("usage: rhea init|load|submit|intake|pass|serve|replay|channels|ksef|clock")
 	}
-	ctx := context.Background()
+	// The caller's scope: the company whose facts this run is in
+	// (DIRECTION 2026-10-08, the partition key); empty means the whole log.
+	ctx := store.WithCompany(context.Background(), os.Getenv("RHEA_COMPANY"))
 	s, err := store.Open(ctx, store.DSN())
 	if err != nil {
 		log.Fatal(err)

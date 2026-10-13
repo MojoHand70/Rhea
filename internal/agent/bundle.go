@@ -45,14 +45,16 @@ object and nothing else - no prose, no markdown fences.
 
 The JSON shape:
 {
-  "bundle_id": "kebab-case-slug naming the answer",       <- ALWAYS first, never omitted
-  "description": "one or two sentences: what this bundle makes the system do",  <- ALWAYS second
+  "bundle_id": "kebab-case-slug naming the answer",
+  "description": "one or two sentences: what this bundle makes the system do",
   "object_types": [ ... new types only, see OBJECT TYPES ... ],
   "rules": [ ... one or more rules, each shaped as below ... ],
   "view_defs": [ ... optional, see VIEWS ... ],
   "activities": [ ... optional, see ACTIVITIES ... ],
   "warrant": { ... required, see WARRANT ... }
 }
+The first two keys are "bundle_id" and "description", on every bundle, however long the
+answer: a bundle without them is refused before anything in it is read.
 
 A rule:
 ` + ruleShape + ruleGrammar + `
@@ -146,7 +148,9 @@ func (a *Agent) DraftBundle(ctx context.Context, ask Ask) (BundleDraft, error) {
 		return b, ErrAlreadyAnswered
 	}
 	if err := b.Validate(ask.Types); err != nil {
-		return b, fmt.Errorf("bundle failed validation: %w", err) // refused, with the evidence
+		// Refused, with the evidence: what the gate objected to, and how the
+		// answer began — a bundle without its envelope shows its shape here.
+		return b, fmt.Errorf("bundle failed validation: %w — the answer began: %.240s", err, extractJSON(raw))
 	}
 	return b, nil
 }

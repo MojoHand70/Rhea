@@ -49,7 +49,28 @@ func (s *Server) knowledge(ctx context.Context) *network.Knowledge {
 	return &k
 }
 
+// scopedHandler takes the caller's company from the request — the
+// X-Rhea-Company header, or ?company= — and puts it on the context every
+// store call carries (DIRECTION 2026-10-08, the partition key). No scope
+// means the whole log, today's behavior; enforcement rides on this later.
+func scopedHandler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		company := r.Header.Get("X-Rhea-Company")
+		if company == "" {
+			company = r.URL.Query().Get("company")
+		}
+		if company != "" {
+			r = r.WithContext(store.WithCompany(r.Context(), company))
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func (s *Server) Handler() http.Handler {
+	return scopedHandler(s.mux())
+}
+
+func (s *Server) mux() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/nav", s.handleNav)
 	mux.HandleFunc("GET /api/views/{id}", s.handleView)

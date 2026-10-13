@@ -25,6 +25,13 @@ CREATE TABLE IF NOT EXISTS event (
     CHECK (kind = 'raw' OR (cause_event_id IS NOT NULL AND rule_id IS NOT NULL))
 );
 
+-- The partition key (DIRECTION 2026-10-08, scale rule 1): the company whose
+-- fact an event is, inherited by everything derived from it. Carried on every
+-- call as the caller's scope; isolation and sharding ride on it later.
+-- NULL: history from before the key, or a fact appended without a scope.
+ALTER TABLE event ADD COLUMN IF NOT EXISTS company TEXT;
+CREATE INDEX IF NOT EXISTS event_company ON event (company, event_id);
+
 -- Idempotent migrations for databases created before these columns.
 ALTER TABLE event ADD COLUMN IF NOT EXISTS actor TEXT;
 ALTER TABLE event ADD COLUMN IF NOT EXISTS activity_name TEXT;
@@ -145,6 +152,8 @@ CREATE TABLE IF NOT EXISTS object (
     rule_version    INT NOT NULL,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+ALTER TABLE object ADD COLUMN IF NOT EXISTS company TEXT;
+CREATE INDEX IF NOT EXISTS object_company ON object (company, object_type);
 
 -- Invariant 1: the system of record is append-only. UPDATE/DELETE on the
 -- versioned tables fails loudly, in the database, no matter who connects.

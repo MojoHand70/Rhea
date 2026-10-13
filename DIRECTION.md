@@ -1873,6 +1873,13 @@ reading their text layer. The channel map's row 2 (email) is real; row 2
 (paper and photo) is the same reader over a scan without a text layer —
 the model alone — when a customer brings one.
 
+**The company key shipped 2026-10-13** (DECISIONS, "the company key"): the
+partition key on every event and object, stamped from the caller's scope
+at the door, inherited down every chain, kept by replay; the scope on the
+context every store call carries, from the shell's request or the CLI's
+environment; scoped reads see one company, unscoped reads the log;
+enforcement still out, as the note says.
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
