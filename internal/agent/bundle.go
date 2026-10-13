@@ -142,7 +142,7 @@ func (a *Agent) DraftBundle(ctx context.Context, ask Ask) (BundleDraft, error) {
 	}
 	var b BundleDraft
 	if err := json.Unmarshal([]byte(extractJSON(raw)), &b); err != nil {
-		return BundleDraft{}, fmt.Errorf("model returned unparseable JSON: %w", err)
+		return BundleDraft{}, fmt.Errorf("model returned unparseable JSON: %w — around: %s", err, around(extractJSON(raw), err))
 	}
 	if b.Description != "" && len(b.ObjectTypes)+len(b.Rules)+len(b.ViewDefs)+len(b.Activities) == 0 {
 		return b, ErrAlreadyAnswered
@@ -304,4 +304,24 @@ func (b BundleDraft) Summary() string {
 		}
 	}
 	return strings.Join(parts, ", ")
+}
+
+// around shows the text where a JSON syntax error sits — the evidence a
+// refusal keeps, so an author's habit can be named rather than guessed.
+func around(text string, err error) string {
+	var syn *json.SyntaxError
+	if !errors.As(err, &syn) {
+		if len(text) > 160 {
+			return text[:160] + "…"
+		}
+		return text
+	}
+	from, to := int(syn.Offset)-120, int(syn.Offset)+60
+	if from < 0 {
+		from = 0
+	}
+	if to > len(text) {
+		to = len(text)
+	}
+	return "…" + text[from:to] + "…"
 }
