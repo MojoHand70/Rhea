@@ -278,6 +278,9 @@ func Run(ctx context.Context, st *store.Store, a *agent.Agent, model string, c C
 			}
 		}
 	}
+	// The model-read channels read with this run's agent — the recorded
+	// agent reads nothing, so the text layer is read instead.
+	adapter.ModelReader = a.Read
 	n, err := Intake(ctx, st, x, c, dir, "eval:intake", nil)
 	if err != nil {
 		return rep, err

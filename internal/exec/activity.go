@@ -567,6 +567,69 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 			return x.bookTx(ctx, tx, root, nodes)
 		}, nil
 
+	case core.EventDocumentReadingConfirmed:
+		// A person is a reader too (DIRECTION 2026-10-10): confirming a
+		// doubtful reading makes the proposed event the person's own —
+		// the typed event, with the person as actor, caused by the
+		// proposal (which thereby leaves the worklist), and the document
+		// read. Nothing of the model's doubt is lost: the proposal stays.
+		var p struct {
+			Proposal int64 `json:"proposal"`
+		}
+		if err := json.Unmarshal(ev.Payload, &p); err != nil {
+			return nil, err
+		}
+		prop, err := x.Store.GetEvent(ctx, p.Proposal)
+		if err != nil {
+			return nil, fmt.Errorf("no event #%d to confirm", p.Proposal)
+		}
+		if prop.Type != "document.reading_proposed" {
+			return nil, fmt.Errorf("event #%d is a %s, not a proposed reading", p.Proposal, prop.Type)
+		}
+		var proposed struct {
+			Document  string          `json:"document"`
+			Channel   string          `json:"channel"`
+			EventType string          `json:"event_type"`
+			Payload   json.RawMessage `json:"payload"`
+		}
+		if err := json.Unmarshal(prop.Payload, &proposed); err != nil {
+			return nil, err
+		}
+		if proposed.EventType == "" || len(proposed.Payload) == 0 {
+			return nil, fmt.Errorf("event #%d proposes nothing to confirm", p.Proposal)
+		}
+		raws, err := x.Store.EventsByKind(ctx, core.KindRaw)
+		if err != nil {
+			return nil, err
+		}
+		for _, r := range raws {
+			if r.CauseEventID != nil && *r.CauseEventID == p.Proposal {
+				return nil, fmt.Errorf("proposal #%d was already confirmed by event #%d", p.Proposal, r.ID)
+			}
+		}
+		var fact map[string]any
+		if err := json.Unmarshal(proposed.Payload, &fact); err != nil {
+			return nil, err
+		}
+		fact["reader"] = "person"
+		fact["confirmed_from"] = p.Proposal
+		payload, err := json.Marshal(fact)
+		if err != nil {
+			return nil, err
+		}
+		cause := p.Proposal
+		ev.Type, ev.Payload, ev.CauseEventID = proposed.EventType, payload, &cause
+		ev.OccurredAt = prop.OccurredAt
+		ev.DedupKey = fmt.Sprintf("confirm_reading/%d", p.Proposal)
+		read, _ := json.Marshal(map[string]any{"document": proposed.Document, "channel": "confirm_reading", "event_type": proposed.EventType})
+		readEvent := core.Event{Kind: core.KindRaw, Type: "document.read", OccurredAt: prop.OccurredAt, Payload: read,
+			DedupKey: fmt.Sprintf("confirm_reading/read/%d", p.Proposal), Actor: ev.Actor, CauseEventID: &cause,
+			ActivityName: ev.ActivityName, ActivityVersion: ev.ActivityVersion}
+		return func(tx store.Querier) error {
+			_, err := store.AppendEvent(ctx, tx, readEvent)
+			return err
+		}, nil
+
 	case "bundle.rejected":
 		var p struct {
 			BundleID   string `json:"bundle_id"`

@@ -2408,3 +2408,38 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   caught: a long answer sometimes loses the bundle's envelope — the next prompt fix,
   measured before it is kept.
 
+
+## 2026-10-13 — the scanned invoice: the first model-read channel, behind the gate
+
+- **The channel** (`packs/pl/pdf-invoice.json`, adapter `pdf_invoice`, intake brief step
+  6): a supplier's invoice as a PDF — the German supplier after KSeF, the real reason a
+  Polish company still receives PDFs. The reader asks the model for the invoice's fields
+  and how sure it is (`agent.Read`: the PDF's bytes as a document block beside the
+  instruction; the answer is data), validates the answer against the event's shape and
+  the invoice's own arithmetic (net plus VAT is the gross, or `document.unreadable`),
+  and applies the channel's confidence policy, which the runner hands the reader from
+  its declaration (`Bound`): at or above the threshold the reading is
+  `purchase.invoice.received`, the same shape as the KSeF reader's, naming its reader
+  and confidence and file; below it a `document.reading_proposed` waits in the
+  worklist, with the proposed event, the confidence and the reason. Without a model
+  the reader reads the text layer and says so (reader `text-layer`, confidence 1.00):
+  the bench runs the channel without a model call. The channel says its market; the
+  pack's threshold is 0.90, a default with its warrant, any company's to change.
+- **A person is a reader too.** `confirm_reading` is a builtin door: confirming a
+  proposal makes the appended event the proposed typed event itself — the person as
+  its actor, the proposal as its cause (so it leaves the worklist), the document read
+  — and the proposal stays in the log as what the model thought. Confirmed twice is
+  refused. A wrong booked reading is corrected by amendment, as the brief says; a
+  wrong proposal is left unconfirmed and the fact submitted through the open door —
+  a "correct and confirm" door is named, not built.
+- **The simulator emits the PDFs**: one page of labelled lines in the supplier's words
+  (a German layout), written by a PDF writer of our own — uncompressed, one Type1 font,
+  a correct cross-reference table — so a person, a text extractor and the model read
+  the same thing; each names the fact it carries. `rhea sim`, `-documents-in` and the
+  eval feed the sources in the order `ksef`, `pdf`, `bank`: invoices before the lines
+  that pay them. Nordwind's German supplier now arrives as PDF; Helios has no foreign
+  supplier. Both personas stay DONE with the PDFs in (`TestPersonaReferenceIsDone…`).
+- **The agent's PDF reading is the model's, the runs above the bench's.** The live
+  measurement with the model reading Nordwind's PDFs is the next run; the bench reads
+  the text layer, which is exact by construction. The worklist shows a proposal with
+  its reason and one button.

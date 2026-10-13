@@ -156,6 +156,11 @@ func Run(ctx context.Context, s *store.Store, x *exec.Executor, a Adapter) (Resu
 		return Result{}, err
 	}
 	res := Result{Channel: ch.Name, Version: ch.Version}
+	// A reader that wants its channel's policy (a confidence threshold)
+	// gets the declaration before it reads.
+	if b, ok := a.(interface{ Bound(core.Activity) }); ok {
+		b.Bound(ch)
+	}
 	events, passErr := a.Pass(ctx, s)
 	res.PassErr = passErr
 	for _, ev := range events {

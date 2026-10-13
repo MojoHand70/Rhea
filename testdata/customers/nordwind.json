@@ -16,7 +16,8 @@
   "packs": [
     "../../packs/common/documents.json",
     "../../packs/pl/ksef-inbound.json",
-    "../../packs/pl/bank-mt940.json"
+    "../../packs/pl/bank-mt940.json",
+    "../../packs/pl/pdf-invoice.json"
   ],
   "seed": 7,
   "from": "2026-01",

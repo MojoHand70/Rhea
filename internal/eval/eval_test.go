@@ -117,7 +117,7 @@ func TestPersonaReferenceIsDoneWithDocuments(t *testing.T) {
 				t.Fatal(err)
 			}
 			p.Months = 2
-			c, facts, err := sim.CompileDocuments(p, nil, 0, []string{"ksef", "bank"})
+			c, facts, err := sim.CompileDocuments(p, nil, 0, []string{"ksef", "pdf", "bank"})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -125,8 +125,8 @@ func TestPersonaReferenceIsDoneWithDocuments(t *testing.T) {
 			for _, d := range facts.Documents {
 				covered += len(d.Events)
 			}
-			if len(c.Files) == 0 || len(c.Readers) != 2 || c.Readers[0] != "ksef_inbound" || c.Readers[1] != "bank_mt940" ||
-				len(c.Packs) != 3 || c.Expect["received_document"] != len(c.Files) || len(c.Events)+covered != len(facts.Events) {
+			if len(c.Files) == 0 || len(c.Readers) != 3 || c.Readers[0] != "ksef_inbound" || c.Readers[1] != "pdf_invoice" || c.Readers[2] != "bank_mt940" ||
+				len(c.Packs) != 4 || c.Expect["received_document"] != len(c.Files) || len(c.Events)+covered != len(facts.Events) {
 				t.Fatalf("corpus: %d files, readers %v, packs %v, events %d + %d of %d", len(c.Files), c.Readers, c.Packs, len(c.Events), covered, len(facts.Events))
 			}
 			paidPurchases := false

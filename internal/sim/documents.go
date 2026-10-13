@@ -182,12 +182,132 @@ func iban(p Party) string {
 }
 
 // documents turns the sorted events into files: one FA per purchase invoice
-// from a Polish supplier, one MT940 per month.
+// from a Polish supplier, one PDF per purchase invoice from a foreign one,
+// one MT940 per month.
 func (g *gen) documents(events []Event) []Document {
 	var out []Document
 	out = append(out, g.faInvoices(events)...)
+	out = append(out, g.pdfInvoices(events)...)
 	out = append(out, g.statements(events)...)
 	return out
+}
+
+// pdfInvoices: a foreign supplier is not in KSeF, so its invoice arrives as
+// a PDF (DIRECTION 2026-10-10, the channel map: email, read by the model
+// with a confidence). The file is a one-page text invoice in the supplier's
+// words — a German layout for a German supplier — with a text layer, so a
+// parser can read it too. Each document names the event it carries.
+func (g *gen) pdfInvoices(events []Event) []Document {
+	parties := map[string]Party{}
+	for _, s := range g.p.Suppliers {
+		parties[s.VATID] = s
+	}
+	items := map[string]Item{}
+	for _, it := range g.p.Items {
+		items[it.SKU] = it
+	}
+	var out []Document
+	for i, ev := range events {
+		if ev.EventType != "purchase.invoice.received" {
+			continue
+		}
+		supplierNIP, _ := ev.Payload["supplier_nip"].(string)
+		if strings.HasPrefix(supplierNIP, "PL") {
+			continue // a Polish supplier's invoice is a KSeF document
+		}
+		sup := parties[supplierNIP]
+		number, _ := ev.Payload["number"].(string)
+		date, _ := ev.Payload["invoice_date"].(string)
+		netStr, _ := ev.Payload["net"].(string)
+		vatStr, _ := ev.Payload["vat"].(string)
+		grossStr, _ := ev.Payload["gross"].(string)
+		currency, _ := ev.Payload["currency"].(string)
+		rateCode, _ := ev.Payload["vat_rate"].(string)
+		percent := 0
+		for _, r := range g.p.VATRates {
+			if r.Code == rateCode {
+				percent = r.Percent
+			}
+		}
+		issued, _ := time.Parse("2006-01-02", date)
+		lines := []string{
+			"RECHNUNG",
+			"Rechnungsnummer: " + number,
+			"Rechnungsdatum: " + date,
+			"Verkaeufer: " + sup.Name,
+			"USt-IdNr.: " + sup.VATID,
+			"Kaeufer: " + g.p.Company.Name,
+			"Kaeufer NIP: " + g.p.Company.VATID,
+		}
+		if doc, ok := ev.Payload["for_document"].(string); ok && doc != "" {
+			lines = append(lines, "Lieferschein: "+doc)
+		}
+		lines = append(lines,
+			fmt.Sprintf("Nettobetrag: %s %s", netStr, currency),
+			fmt.Sprintf("MwSt. %d%%: %s %s", percent, vatStr, currency),
+			fmt.Sprintf("Bruttobetrag: %s %s", grossStr, currency),
+			"Zahlungsziel: "+ymd(issued.AddDate(0, 0, g.p.Volume.PaymentDays)),
+			"IBAN: "+iban(sup),
+		)
+		out = append(out, Document{
+			Path:      filepath.Join(date[:7], "pdf", strings.ReplaceAll(number, "/", "-")+".pdf"),
+			MediaType: "application/pdf", Source: "pdf", Date: date,
+			Bytes: WritePDF(lines), Events: []int{i},
+		})
+	}
+	return out
+}
+
+// WritePDF writes one page of text lines as a PDF with a text layer — no
+// compression, one Type1 font, a correct cross-reference table — so a
+// person, a text extractor and the model all read the same thing.
+func WritePDF(lines []string) []byte {
+	var content bytes.Buffer
+	content.WriteString("BT\n/F1 11 Tf\n14 TL\n50 790 Td\n")
+	for _, l := range lines {
+		fmt.Fprintf(&content, "(%s) Tj T*\n", pdfEscape(l))
+	}
+	content.WriteString("ET\n")
+	objects := []string{
+		"<< /Type /Catalog /Pages 2 0 R >>",
+		"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
+		fmt.Sprintf("<< /Length %d >>\nstream\n%sendstream", content.Len(), content.String()),
+		"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+	}
+	var out bytes.Buffer
+	out.WriteString("%PDF-1.4\n")
+	offsets := make([]int, len(objects)+1)
+	for i, o := range objects {
+		offsets[i+1] = out.Len()
+		fmt.Fprintf(&out, "%d 0 obj\n%s\nendobj\n", i+1, o)
+	}
+	xref := out.Len()
+	fmt.Fprintf(&out, "xref\n0 %d\n0000000000 65535 f \n", len(objects)+1)
+	for i := 1; i <= len(objects); i++ {
+		fmt.Fprintf(&out, "%010d 00000 n \n", offsets[i])
+	}
+	fmt.Fprintf(&out, "trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n", len(objects)+1, xref)
+	return out.Bytes()
+}
+
+// pdfEscape writes a string for a PDF literal: the three characters that
+// need escaping, and anything outside ASCII as a question mark — a text
+// layer is kept plain so every reader agrees on it.
+func pdfEscape(s string) string {
+	var sb strings.Builder
+	for _, r := range s {
+		switch {
+		case r == '\\' || r == '(' || r == ')':
+			sb.WriteByte('\\')
+			sb.WriteRune(r)
+		case r > 126 || r < 32:
+			sb.WriteByte('?')
+		default:
+			sb.WriteRune(r)
+		}
+	}
+	return sb.String()
 }
 
 func (g *gen) faInvoices(events []Event) []Document {

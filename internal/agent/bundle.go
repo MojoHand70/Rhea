@@ -45,8 +45,8 @@ object and nothing else - no prose, no markdown fences.
 
 The JSON shape:
 {
-  "bundle_id": "kebab-case-slug naming the answer",
-  "description": "one or two sentences: what this bundle makes the system do",
+  "bundle_id": "kebab-case-slug naming the answer",       <- ALWAYS first, never omitted
+  "description": "one or two sentences: what this bundle makes the system do",  <- ALWAYS second
   "object_types": [ ... new types only, see OBJECT TYPES ... ],
   "rules": [ ... one or more rules, each shaped as below ... ],
   "view_defs": [ ... optional, see VIEWS ... ],

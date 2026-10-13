@@ -180,7 +180,7 @@ func (c ChannelSpec) validate(a Activity) error {
 func ReservedEventType(t string) bool {
 	return t == EventObjectMaterialized || t == EventObjectAmended ||
 		t == EventObjectsMatched || t == EventObjectsUnmatched ||
-		strings.HasPrefix(t, "matching.") ||
+		strings.HasPrefix(t, "matching.") || strings.HasPrefix(t, "reading.") ||
 		strings.HasPrefix(t, "rule.") || strings.HasPrefix(t, "activity.") ||
 		strings.HasPrefix(t, "bundle.") || strings.HasPrefix(t, "backfill.")
 }
@@ -290,6 +290,11 @@ type FileInput struct {
 // MaxFileBytes caps one file through a door — the experiment's blob store is
 // a Postgres table, not an object store.
 const MaxFileBytes = 32 << 20
+
+// EventDocumentReadingConfirmed is what the confirm_reading door declares it
+// emits; the kernel's reaction makes the appended event the proposed typed
+// event itself, with the person as its author and the proposal as its cause.
+const EventDocumentReadingConfirmed = "reading.confirmed"
 
 // EventDocumentReceived is the fact that a file arrived: the first event of
 // every document that is not born as JSON. The store refuses one whose file
@@ -672,6 +677,18 @@ func BuiltinActivities() []Activity {
 					{Name: "occurred_at", Type: "date"},
 				},
 				Emits: EventMatchingUnpaired,
+				Who:   []string{"human"},
+			},
+		},
+		{
+			Name: "confirm_reading", Domain: "system",
+			Description: "Confirm a document reading the channel was not sure enough of: the proposed event is appended as the person's own reading, caused by the proposal, and the document is read. Recorded as the typed event itself, through this door.",
+			Spec: ActivitySpec{
+				Inputs: []FieldDef{
+					{Name: "proposal", Type: "int", Required: true}, // the document.reading_proposed event
+					{Name: "occurred_at", Type: "date"},
+				},
+				Emits: EventDocumentReadingConfirmed,
 				Who:   []string{"human"},
 			},
 		},

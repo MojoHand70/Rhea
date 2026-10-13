@@ -7,6 +7,7 @@ package agent
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -97,8 +98,11 @@ type Cluster struct {
 }
 
 // Agent drafts rules. Complete is the single LLM call, injectable for tests.
+// Read is the model reading a document — a PDF's bytes with an instruction
+// — for the model-read channels; nil when the agent cannot read files.
 type Agent struct {
 	Complete func(ctx context.Context, system, user string) (string, error)
+	Read     func(ctx context.Context, system string, pdf []byte, user string) (string, error)
 }
 
 func Model() string {
@@ -117,12 +121,12 @@ func New() *Agent {
 		opts = append(opts, option.WithHeader("anthropic-workspace-id", ws))
 	}
 	client := anthropic.NewClient(opts...)
-	return &Agent{Complete: func(ctx context.Context, system, user string) (string, error) {
+	ask := func(ctx context.Context, system string, blocks ...anthropic.ContentBlockParamUnion) (string, error) {
 		msg, err := client.Messages.New(ctx, anthropic.MessageNewParams{
 			Model:     anthropic.Model(Model()),
 			MaxTokens: 16000,
 			System:    []anthropic.TextBlockParam{{Text: system}},
-			Messages:  []anthropic.MessageParam{anthropic.NewUserMessage(anthropic.NewTextBlock(user))},
+			Messages:  []anthropic.MessageParam{anthropic.NewUserMessage(blocks...)},
 		})
 		if err != nil {
 			return "", err
@@ -132,7 +136,18 @@ func New() *Agent {
 			sb.WriteString(block.Text)
 		}
 		return sb.String(), nil
-	}}
+	}
+	return &Agent{
+		Complete: func(ctx context.Context, system, user string) (string, error) {
+			return ask(ctx, system, anthropic.NewTextBlock(user))
+		},
+		// The document goes to the model as it is — the bytes, base64 — with
+		// the instruction beside it; the model's text comes back as data.
+		Read: func(ctx context.Context, system string, pdf []byte, user string) (string, error) {
+			doc := anthropic.NewDocumentBlock(anthropic.Base64PDFSourceParam{Data: base64.StdEncoding.EncodeToString(pdf)})
+			return ask(ctx, system, doc, anthropic.NewTextBlock(user))
+		},
+	}
 }
 
 const systemPrompt = `You draft rules for Rhea, a rule-driven ERP kernel. Every fact in Rhea is an

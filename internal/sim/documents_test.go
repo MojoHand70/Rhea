@@ -74,7 +74,8 @@ func TestDocumentsCarryTheFacts(t *testing.T) {
 	}
 
 	covered := map[int]bool{}
-	ksef, bank := 0, 0
+	pdfCovered := map[int]bool{}
+	ksef, bank, pdf := 0, 0, 0
 	for _, d := range f.Documents {
 		for _, i := range d.Events {
 			covered[i] = true
@@ -162,6 +163,16 @@ func TestDocumentsCarryTheFacts(t *testing.T) {
 			if sum != fromEvents {
 				t.Fatalf("%s: lines sum to %d, events to %d", d.Path, sum, fromEvents)
 			}
+		case "pdf":
+			pdf++
+			if !bytes.HasPrefix(d.Bytes, []byte("%PDF")) || len(d.Events) != 1 {
+				t.Fatalf("%s: not one PDF invoice", d.Path)
+			}
+			ev := f.Events[d.Events[0]]
+			if !strings.Contains(string(d.Bytes), "Rechnungsnummer: "+ev.Payload["number"].(string)) {
+				t.Fatalf("%s does not name its invoice", d.Path)
+			}
+			pdfCovered[d.Events[0]] = true
 		default:
 			t.Fatalf("unknown source %q", d.Source)
 		}
@@ -170,7 +181,7 @@ func TestDocumentsCarryTheFacts(t *testing.T) {
 		t.Fatalf("%d statements for %d months", bank, p.Months)
 	}
 	// Every Polish supplier's invoice is a KSeF document; the German one is
-	// not — it arrives as a PDF, in phase 2.
+	// a PDF — the model-read channel's document, never a KSeF one.
 	polish, foreign := 0, 0
 	for i, ev := range f.Events {
 		if ev.EventType != "purchase.invoice.received" {
@@ -178,18 +189,18 @@ func TestDocumentsCarryTheFacts(t *testing.T) {
 		}
 		if strings.HasPrefix(ev.Payload["supplier_nip"].(string), "PL") {
 			polish++
-			if !covered[i] {
-				t.Fatalf("purchase invoice %v has no document", ev.Payload["number"])
+			if !covered[i] || pdfCovered[i] {
+				t.Fatalf("purchase invoice %v: KSeF document %v, PDF %v", ev.Payload["number"], covered[i], pdfCovered[i])
 			}
 		} else {
 			foreign++
-			if covered[i] {
-				t.Fatalf("foreign invoice %v got a KSeF document", ev.Payload["number"])
+			if !pdfCovered[i] {
+				t.Fatalf("foreign invoice %v has no PDF", ev.Payload["number"])
 			}
 		}
 	}
-	if ksef != polish || polish == 0 || foreign == 0 {
-		t.Fatalf("ksef documents %d, polish invoices %d, foreign %d", ksef, polish, foreign)
+	if ksef != polish || polish == 0 || foreign == 0 || pdf != foreign {
+		t.Fatalf("ksef documents %d, polish invoices %d, foreign %d, pdf documents %d", ksef, polish, foreign, pdf)
 	}
 	// Balances carry: the last closing is the opening plus every credit
 	// minus every debit.
@@ -251,5 +262,40 @@ func TestGeneratedDocumentThroughTheDoor(t *testing.T) {
 	objs, _ := s.ObjectsByType(ctx, "received_document")
 	if len(objs) != len(f.Documents) {
 		t.Fatalf("received %d, generated %d", len(objs), len(f.Documents))
+	}
+}
+
+// A foreign supplier's invoice is a PDF with a text layer: the file starts
+// like a PDF, names the invoice it carries, and the lines a reader needs are
+// in its text.
+func TestForeignInvoicesArePDFs(t *testing.T) {
+	p := load(t, "nordwind")
+	p.Months = 2
+	f, err := sim.Generate(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := 0
+	for _, d := range f.Documents {
+		if d.Source != "pdf" {
+			continue
+		}
+		n++
+		if !bytes.HasPrefix(d.Bytes, []byte("%PDF-1.4")) || d.MediaType != "application/pdf" || len(d.Events) != 1 {
+			t.Fatalf("%s: not a PDF document: %+v", d.Path, d)
+		}
+		fact := f.Events[d.Events[0]].Payload
+		text := string(d.Bytes)
+		for _, want := range []string{"Rechnungsnummer: " + fact["number"].(string), "Nettobetrag: " + fact["net"].(string), "Bruttobetrag: " + fact["gross"].(string), "USt-IdNr.: " + fact["supplier_nip"].(string)} {
+			if !strings.Contains(text, want) {
+				t.Fatalf("%s lacks %q", d.Path, want)
+			}
+		}
+	}
+	if n == 0 {
+		t.Fatal("no PDF for the German supplier")
+	}
+	if len(sim.WritePDF([]string{"a (b) c\\"})) == 0 || !bytes.Contains(sim.WritePDF([]string{"a (b)"}), []byte(`(a \(b\)) Tj`)) {
+		t.Fatal("the PDF writer escapes its strings")
 	}
 }

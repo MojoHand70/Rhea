@@ -1,0 +1,48 @@
+{
+  "pack": "pl-pdf-invoice",
+  "version": 1,
+  "description": "Kanał faktur PDF: faktura dostawcy spoza KSeF (zagraniczny dostawca) czytana z magazynu dokumentów przez model, z pewnością odczytu; odczyt pewny staje się zdarzeniem purchase.invoice.received, niepewny czeka na potwierdzenie osoby",
+  "requires": [
+    "received_document"
+  ],
+  "warrant": {
+    "basis": "practice",
+    "citations": [
+      "po wejściu KSeF faktury w PDF przychodzą od dostawców zagranicznych (i od wyłączonych z KSeF): e-mail jest dla nich kanałem",
+      "odczyt przez model jest interpretacją z autorem i pewnością; próg 0,90 to domyślne ustawienie pakietu — poniżej odczyt czeka na potwierdzenie osoby, która staje się jego autorem; błędny odczyt zaksięgowany koryguje się poprawką"
+    ],
+    "scope": "pl"
+  },
+  "activities": [
+    {
+      "name": "pdf_invoice",
+      "domain": "finance",
+      "description": "Odczyt faktur PDF z magazynu dokumentów: model czyta plik i odpowiada polami faktury oraz pewnością; odczyt pewny (co najmniej 0,90) staje się zdarzeniem purchase.invoice.received z nazwą czytnika i pewnością, niepewny — document.reading_proposed do skrzynki, do potwierdzenia przez osobę; plik, którego nie da się odczytać — document.unreadable",
+      "spec": {
+        "inputs": [],
+        "emits": "purchase.invoice.received",
+        "who": [
+          "adapter"
+        ],
+        "channel": {
+          "adapter": "pdf_invoice",
+          "code_version": 1,
+          "format": "PDF faktury dostawcy z magazynu dokumentów; model z pewnością odczytu (warstwa tekstowa bez modelu)",
+          "identity": "skrót pliku",
+          "confidence": {
+            "policy": "model",
+            "threshold": "0.90"
+          },
+          "events": [
+            "purchase.invoice.received",
+            "document.read",
+            "document.unreadable",
+            "document.reading_proposed"
+          ],
+          "volume": "documents",
+          "market": "pl"
+        }
+      }
+    }
+  ]
+}

@@ -456,10 +456,31 @@ function openWorklist() {
         ...payloadFiles(ev.payload),
         el("details", {}, el("summary", {}, "payload"),
           el("pre", {}, JSON.stringify(ev.payload, null, 2))),
-        draftForm(ev, d.object_types)));
+        ev.event_type === "document.reading_proposed" ? confirmReading(ev) : draftForm(ev, d.object_types)));
     }
     return out;
   });
+}
+
+/* A reading the channel was not sure of: the proposed fact, the reader's
+   confidence and the reason, and one button — confirming makes the person
+   its author, through the confirm_reading door. */
+function confirmReading(ev) {
+  const p = ev.payload || {};
+  const btn = el("button", { class: "primary", onclick: async () => {
+    btn.disabled = true;
+    try {
+      const res = await api(`/api/activities/confirm_reading/trigger`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inputs: { proposal: ev.event_id } }),
+      });
+      toast(`Confirmed as #${res.event_id}; booked ${res.booked}.` + (res.errors ? ` Worklist: ${res.errors}` : ""));
+      openWorklist();
+    } catch (e) { toast(e.message, true); btn.disabled = false; }
+  } }, "Confirm this reading");
+  return el("div", { class: "draft-form" },
+    el("p", { class: "hint" }, `${p.reason || "the reader was not sure"} — as read: ${JSON.stringify(p.payload || {})}`),
+    el("div", { class: "row" }, btn));
 }
 
 function draftForm(ev, objectTypes) {

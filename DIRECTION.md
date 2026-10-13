@@ -1860,9 +1860,18 @@ overruled rule never returns (a correction's reason on the record, shown
 to the author), and the FA(3) check against the published schema (one
 slot wrong, fixed); the three-run round over the voices — 24 of 24 runs
 DONE across both personas, 175 of 180 answers right on the first draft,
-every re-ask fixed, the matching bundle right every time it was drafted.
-Owed next: the bundle-envelope habit on long answers (a prompt fix,
-measured), the one-sided time window when a customer asks.
+every re-ask fixed, the matching bundle right every time it was drafted;
+the bundle-envelope habit told to the author. Owed next: the one-sided
+time window when a customer asks.
+
+**Documents in, step 6 shipped 2026-10-13** (see DECISIONS, "the scanned
+invoice"): the first model-read channel — a foreign supplier's PDF read by
+the model with a confidence, the channel's threshold deciding between the
+typed event and a proposal for a person, the person's confirmation a door
+that makes the reading theirs, the simulator writing the PDFs, the bench
+reading their text layer. The channel map's row 2 (email) is real; row 2
+(paper and photo) is the same reader over a scan without a text layer —
+the model alone — when a customer brings one.
 
 ## Language decisions with a recorded destination
 

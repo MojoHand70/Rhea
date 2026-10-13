@@ -911,7 +911,7 @@ func Compile(p Persona, voices *Voices, voice int) (eval.Corpus, Facts, error) {
 // Readers names the channel that reads each document source a persona can
 // emit. A source without a reader stays JSON through the open door —
 // exactly "what no channel reads yet".
-var Readers = map[string]string{"ksef": "ksef_inbound", "bank": "bank_mt940"}
+var Readers = map[string]string{"ksef": "ksef_inbound", "bank": "bank_mt940", "pdf": "pdf_invoice"}
 
 // CompileDocuments compiles with the documents of the named sources fed as
 // files instead of the facts they carry — documents in, state out
@@ -1019,9 +1019,9 @@ func Summary(p Persona, f Facts) string {
 		fmt.Fprintf(&sb, " %s %d", w, f.Ways[w])
 	}
 	sb.WriteByte('\n')
-	fmt.Fprintf(&sb, "documents: %d KSeF invoices, %d bank statements", docs["ksef"], docs["bank"])
+	fmt.Fprintf(&sb, "documents: %d KSeF invoices, %d PDF invoices from foreign suppliers, %d bank statements", docs["ksef"], docs["pdf"], docs["bank"])
 	if foreign > 0 {
-		fmt.Fprintf(&sb, "; %d purchase invoices from foreign suppliers arrive as PDF (phase 2)", foreign)
+		fmt.Fprintf(&sb, "; %d purchase invoices from foreign suppliers still arrive as JSON", foreign)
 	}
 	sb.WriteByte('\n')
 	types := make([]string, 0, len(f.Counts))

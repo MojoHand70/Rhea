@@ -241,6 +241,7 @@ func main() {
 		if !ok {
 			log.Fatalf("no reader named %q — rhea channels lists what this binary can read", os.Args[2])
 		}
+		wireModelReader()
 		run, err := adapter.Run(ctx, s, x, a)
 		if err != nil {
 			log.Fatal(err)
@@ -583,6 +584,7 @@ func main() {
 				log.Fatal(err)
 			}
 			fmt.Printf("played %d fact(s) and %d file(s) into this installation\n", played, len(c.Files))
+			wireModelReader()
 			for _, name := range readers {
 				a, _ := adapter.Lookup(name)
 				run, err := adapter.Run(ctx, s, x, a)
@@ -749,5 +751,13 @@ func docSources(documentsIn bool) []string {
 	if !documentsIn {
 		return nil
 	}
-	return []string{"ksef", "bank"}
+	return []string{"ksef", "pdf", "bank"} // invoices before the lines that pay them
+}
+
+// wireModelReader gives the model-read channels the model, when there is a
+// key for one; without it the readers read the text layer and say so.
+func wireModelReader() {
+	if os.Getenv("ANTHROPIC_API_KEY") != "" {
+		adapter.ModelReader = agent.New().Read
+	}
 }
