@@ -2503,3 +2503,33 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   formula) and the hotspot rules in the pack — the next two scenarios; the briefing as
   a scene in the personas' day (the eval asking the view and checking the host's
   numbers against the facts), with the live measurement of the host's words.
+
+## 2026-10-13 — the author's habit named: the grammar's schematics leak into the answer
+
+- **The envelope slip was never about the envelope.** The refusals in the round said
+  "bundle needs bundle_id and description" because the decoder had silently stopped
+  earlier; the verbose reruns, once a refusal kept the text around the fault, showed
+  the real habit: on the longest answer the model copies the grammar's *schematic*
+  notation — `"sides": {<side>: [{"object_id", ..., "allocated": {<measure>: amount},
+  "open_before": {...}}]}` — verbatim into its JSON, placeholders and all, and the
+  answer stops being JSON. My first fix, an arrow annotation beside the shape
+  ("<- ALWAYS first"), was copied the same way and made it worse. The rule for the
+  grammar, kept from now on: **every shape the author is shown is a concrete instance
+  that parses, never a schematic with angle brackets, ellipses or arrows**; prose says
+  what varies. The match event is now shown as the real payload of a payment
+  settling two invoices with two grosz written off. `rhea eval -v` keeps the text
+  around a syntax error in the refusal, so the next habit is read, not guessed.
+- **The decoder reads the answer the model meant.** Two more runs of the same voice
+  showed the rest of the habit: the model prefaces its bundle with prose carrying JSON
+  snippets (`{"strategy": "reference"}`, even a `{"rule_id": …, "description": …}`
+  example), and the decoder took the first balanced object — a snippet — so the gate
+  said "no envelope", or worse, read a snippet with a description as "already answered"
+  and approved nothing. The decoder now takes the largest object in the text that
+  looks like an answer (one carrying `bundle_id` or `rule_id`); failing that, the first
+  object that parses, so the gate names what is missing; and when the first object
+  fails to parse and nothing else looks like an answer, the text from that brace, so
+  the real syntax error is reported where it is — never "no envelope" for a bundle that
+  broke in the middle (`TestExtractJSONTakesTheAnswerNotTheSnippet`).
+- **Verified** on the phrasing that slipped three times in the round: DONE, nine of
+  nine answers right on the first draft, the matching bundle approved first time.
+  The model's text is data; reading it well is the kernel's job, not the prompt's.

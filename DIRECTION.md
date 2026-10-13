@@ -1861,8 +1861,11 @@ to the author), and the FA(3) check against the published schema (one
 slot wrong, fixed); the three-run round over the voices — 24 of 24 runs
 DONE across both personas, 175 of 180 answers right on the first draft,
 every re-ask fixed, the matching bundle right every time it was drafted;
-the bundle-envelope habit told to the author. Owed next: the one-sided
-time window when a customer asks.
+the "envelope" habit traced to its cause (schematics in the grammar
+copied into the answer; prose snippets taken for the answer) and fixed
+on both sides — concrete examples in the grammar, a decoder that reads
+the answer the model meant. Owed next: the one-sided time window when a
+customer asks.
 
 **Documents in, step 6 shipped 2026-10-13** (see DECISIONS, "the scanned
 invoice"): the first model-read channel — a foreign supplier's PDF read by

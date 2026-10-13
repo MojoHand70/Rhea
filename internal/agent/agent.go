@@ -319,14 +319,25 @@ date_side's date, allocations are written back in each item's own currency, and 
 move since the item's own date is a difference of kind "fx", direction "up" or "down", in the
 functional currency. Netting (kompensata) needs no clause: a structure whose trigger is our
 purchase invoice and whose other side is the same party's open sales invoices.
-The outcome is ONE event, "objects.matched": {"matching": <name>, "strategy", "step",
-"trigger": {"side", "object_id"}, "kinds": {<measure>: money|int|decimal},
-"sides": {<side>: [{"object_id", "object_type", "allocated": {<measure>: amount},
-"open_before": {...}, "open_after": {...}, "currency", "date", "reference"}]},
-"differences": [{"kind", "measure", "side", "amount", "direction": short|over, "currency",
-"account"}], "tried": [...]}; money amounts in it are minor units. It changes nothing by
-itself: ordinary rules in the SAME answer explain it, matching "objects.matched" with
-"where": [{"path": "$.matching", "op": "eq", "value": <name>}] -
+The outcome is ONE event of type "objects.matched". For the structure above, a payment
+settling two invoices with two grosz written off reads, for example:
+  {"matching": "incoming-payments", "strategy": "subset", "step": 3,
+   "trigger": {"side": "payment", "object_id": "bank_line-41"},
+   "kinds": {"money": "money"},
+   "sides": {"payment": [{"object_id": "bank_line-41", "object_type": "bank_line",
+                          "allocated": {"money": 29998}, "open_before": {"money": 29998},
+                          "open_after": {"money": 0}, "currency": "PLN", "date": "2026-09-14"}],
+             "invoice": [{"object_id": "sales_invoice-12", "object_type": "sales_invoice",
+                          "allocated": {"money": 10000}, "open_before": {"money": 10000},
+                          "open_after": {"money": 0}, "currency": "PLN", "reference": "FV/1"},
+                         {"object_id": "sales_invoice-13", "object_type": "sales_invoice",
+                          "allocated": {"money": 20000}, "open_before": {"money": 20000},
+                          "open_after": {"money": 0}, "currency": "PLN", "reference": "FV/2"}]},
+   "differences": [{"kind": "tolerance", "measure": "money", "side": "invoice", "amount": 2,
+                    "direction": "short", "currency": "PLN", "account": "755"}]}
+Money amounts in it are minor units. It changes nothing by itself: ordinary rules in the
+SAME answer explain it, matching "objects.matched" with
+"where": [{"path": "$.matching", "op": "eq", "value": "incoming-payments"}] -
   the open amounts move by an amendment over the items:
   {"amend": {"type": "sales_invoice", "each": "=$.sides.invoice[*]", "target": "=$.line.object_id",
     "set": {"open": "=$.line.open_after.money",
@@ -489,15 +500,49 @@ func userMessage(ask Ask) string {
 // it decodes the first complete JSON object in the text, ignoring prose or
 // code fences around it.
 func extractJSON(s string) string {
-	start := strings.IndexByte(s, '{')
-	if start < 0 {
+	// The answer is the object the model meant: the largest object in the
+	// text that looks like an answer (a model that prefaces its bundle with
+	// prose carrying a snippet — even one with a rule_id in it — still wrote
+	// the bundle as the biggest thing); failing that, the first object when
+	// it parses, so the gate says what is missing; and when the first object
+	// fails to parse and nothing else looks like an answer, the text from
+	// that first brace — so the caller reports the real syntax error where
+	// it is, never "no envelope" for a bundle that broke in the middle.
+	first := strings.IndexByte(s, '{')
+	if first < 0 {
 		return s
 	}
-	var v json.RawMessage
-	if err := json.NewDecoder(strings.NewReader(s[start:])).Decode(&v); err != nil {
-		return s[start:] // let the caller report the real parse error
+	looksLikeAnswer := func(v string) bool {
+		return strings.Contains(v, `"bundle_id"`) || strings.Contains(v, `"rule_id"`)
 	}
-	return string(v)
+	var firstObj string
+	firstOK := false
+	best := ""
+	for i := first; i < len(s); i++ {
+		if s[i] != '{' {
+			continue
+		}
+		var v json.RawMessage
+		dec := json.NewDecoder(strings.NewReader(s[i:]))
+		err := dec.Decode(&v)
+		if i == first && err == nil {
+			firstObj, firstOK = string(v), true
+		}
+		if err != nil {
+			continue
+		}
+		if looksLikeAnswer(string(v)) && len(v) > len(best) {
+			best = string(v)
+		}
+		i += int(dec.InputOffset()) - 1
+	}
+	switch {
+	case best != "":
+		return best // the largest object that looks like an answer: the bundle, never a snippet of one
+	case firstOK:
+		return firstObj // a lone object that is no answer: the gate says what is missing
+	}
+	return s[first:] // the first object does not parse: the real error, with its place
 }
 
 // NarrateSystem is what the host is told before it speaks (DIRECTION
