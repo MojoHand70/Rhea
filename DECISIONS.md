@@ -2346,6 +2346,15 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   first time, with the structure's keys, the fan-out amendments and the guarded
   difference rule all composed correctly. The twelve-run round over the voices is the
   measurement proper; the voices are being regenerated for the changed answers.
+- **The round over the voices, Helios** (`rhea eval -voices -months 1`, the scripted
+  interview and three paraphrases, one run each): DONE in every run, 4 of 4; first
+  draft right on 24 of 24 questions, none re-asked — the matching bundle drafted
+  correctly in every voice, the policy composed from the owner's words each time.
+  **Nordwind**: DONE in every run, 4 of 4; first draft right on 35 of 36, one answer
+  re-asked once (the model returned a bundle without its id and description — a slip
+  of form, refused by the gate and fixed on the re-ask), the matching bundle right in
+  every voice. One run per voice this time; the three-run round over the voices, the
+  measurement the growth plan counts by, is the next one.
 - **The paraphrase check learned that "four" is "4"**: three retries in a row dropped
   the digit of "at most 4" because the model spells small numbers out, which keeps the
   fact. `Preserved` now accepts a number word for a digit up to twelve, and still

@@ -1852,9 +1852,11 @@ invoice through it; unpairing as a correcting event — a reversal the same
 rules explain, open amounts restored, differences flipped, never a
 deletion; the market stamp — a channel declares the market of the pack
 that declares it and the runner stamps every fact it appends, so the
-bank rule guards as the others do. Owed next: the live run with the
-model drafting the matching bundle from the paraphrased answers (with
-the twelve-run round), the one-sided time window when a customer asks.
+bank rule guards as the others do; the live measurement — both personas
+DONE in every run over the scripted interview and three paraphrases (8
+of 8 runs, 59 of 60 answers right on the first draft, the matching
+bundle right in every voice). Owed next: the three-run round over the
+voices, the one-sided time window when a customer asks.
 
 ## Language decisions with a recorded destination
 
