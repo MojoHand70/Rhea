@@ -519,6 +519,12 @@ func attempts(tried []match.Attempt) []core.MatchAttempt {
 func itemOf(side core.MatchingSide, id string, state map[string]any, kinds map[string]string, seq int) (match.Item, error) {
 	it := match.Item{ID: id, Open: map[string]*big.Rat{}, Seq: seq}
 	for m, field := range side.Open {
+		if state[field] == nil {
+			// An object born under an older version of its type, or by a
+			// rule that fills no open amount, has nothing open: never a
+			// candidate, never an error.
+			continue
+		}
 		v, err := amountOf(state[field], kinds[m])
 		if err != nil {
 			return it, fmt.Errorf("field %s: %w", field, err)

@@ -1,7 +1,7 @@
 {
   "pack": "pl",
-  "version": 10,
-  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane",
+  "version": 11,
+  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami",
   "requires": [
     "company",
     "account",
@@ -121,16 +121,11 @@
     },
     {
       "name": "bank_operation",
-      "version": 1,
+      "version": 2,
       "domain": "finance",
       "is_document": false,
       "label_field": "title",
       "fields": [
-        {
-          "name": "account",
-          "type": "ref<bank_account>",
-          "required": true
-        },
         {
           "name": "date",
           "type": "date",
@@ -147,16 +142,38 @@
           "required": true
         },
         {
+          "name": "direction",
+          "type": "enum",
+          "values": [
+            "credit",
+            "debit"
+          ],
+          "required": true
+        },
+        {
           "name": "title",
-          "type": "string"
+          "type": "string",
+          "required": false
         },
         {
           "name": "counterparty",
-          "type": "string"
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "counterparty_account",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "account",
+          "type": "string",
+          "required": false
         },
         {
           "name": "contractor",
-          "type": "ref<contractor>"
+          "type": "ref<contractor>",
+          "required": false
         },
         {
           "name": "kind",
@@ -166,7 +183,13 @@
             "card",
             "fee",
             "other"
-          ]
+          ],
+          "required": false
+        },
+        {
+          "name": "open",
+          "type": "money",
+          "required": true
         },
         {
           "name": "settlement_status",
@@ -175,8 +198,22 @@
             "unsettled",
             "settled",
             "private"
+          ],
+          "required": true
+        }
+      ],
+      "lifecycle": {
+        "field": "settlement_status",
+        "transitions": {
+          "unsettled": [
+            "unsettled",
+            "settled",
+            "private"
           ]
         }
+      },
+      "amendable": [
+        "open"
       ]
     },
     {
@@ -690,6 +727,277 @@
           "type": "money"
         }
       ]
+    },
+    {
+      "name": "company",
+      "version": 2,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "name",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "kind",
+          "type": "enum",
+          "values": [
+            "customer",
+            "supplier",
+            "self"
+          ],
+          "required": true
+        },
+        {
+          "name": "vat_id",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "country",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "iban",
+          "type": "string",
+          "required": false
+        }
+      ],
+      "amendable": [
+        "iban"
+      ]
+    },
+    {
+      "name": "sales_invoice",
+      "version": 4,
+      "domain": "finance",
+      "is_document": true,
+      "label_field": "number",
+      "fields": [
+        {
+          "name": "number",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "issue_date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "seller",
+          "type": "ref<company>",
+          "required": true
+        },
+        {
+          "name": "buyer",
+          "type": "ref<company>",
+          "required": true
+        },
+        {
+          "name": "net",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "vat",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "gross",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "vat_rate",
+          "type": "ref<vat_rate>",
+          "required": true
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "intragroup",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "seller_nip",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "buyer_nip",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "open",
+          "type": "money",
+          "required": false
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "values": [
+            "open",
+            "paid"
+          ],
+          "required": false
+        }
+      ],
+      "lifecycle": {
+        "field": "status",
+        "transitions": {
+          "open": [
+            "open",
+            "paid"
+          ]
+        }
+      },
+      "amendable": [
+        "open"
+      ]
+    },
+    {
+      "name": "purchase_invoice",
+      "version": 2,
+      "domain": "finance",
+      "is_document": true,
+      "label_field": "number",
+      "fields": [
+        {
+          "name": "number",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "invoice_date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "supplier",
+          "type": "ref<company>",
+          "required": true
+        },
+        {
+          "name": "owner",
+          "type": "ref<company>",
+          "required": true
+        },
+        {
+          "name": "mirror_of",
+          "type": "ref<sales_invoice>",
+          "required": false
+        },
+        {
+          "name": "net",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "vat",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "gross",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "vat_rate",
+          "type": "ref<vat_rate>",
+          "required": false
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "open",
+          "type": "money",
+          "required": false
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "values": [
+            "open",
+            "paid"
+          ],
+          "required": false
+        }
+      ],
+      "lifecycle": {
+        "field": "status",
+        "transitions": {
+          "open": [
+            "open",
+            "paid"
+          ]
+        }
+      },
+      "amendable": [
+        "open"
+      ]
+    },
+    {
+      "name": "matching_difference",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "fields": [
+        {
+          "name": "matching",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "kind",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "direction",
+          "type": "enum",
+          "values": [
+            "short",
+            "over",
+            "up",
+            "down"
+          ],
+          "required": true
+        },
+        {
+          "name": "account",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        }
+      ]
     }
   ],
   "view_defs": [
@@ -895,6 +1203,28 @@
           }
         ]
       }
+    },
+    {
+      "view_id": "wplaty-do-rozliczenia",
+      "version": 1,
+      "notion": "matching",
+      "title": "Wpłaty do rozliczenia",
+      "domain": "finance",
+      "function": "rozrachunki",
+      "spec": {
+        "rule": "pl-match-incoming"
+      }
+    },
+    {
+      "view_id": "wyplaty-do-rozliczenia",
+      "version": 1,
+      "notion": "matching",
+      "title": "Wypłaty do rozliczenia",
+      "domain": "finance",
+      "function": "rozrachunki",
+      "spec": {
+        "rule": "pl-match-outgoing"
+      }
     }
   ],
   "rules": [
@@ -958,7 +1288,7 @@
       "rule_id": "pl-book-sales-invoice",
       "priority": 100,
       "effective_from": "2026-01-01",
-      "description": "Wystawiona faktura sprzedaży staje się dokumentem sales_invoice",
+      "description": "Wystawiona faktura sprzedaży staje się dokumentem sales_invoice; kwota otwarta zaczyna się od brutto, status od open",
       "spec": {
         "match": {
           "event_type": "sales.invoice.issued",
@@ -985,7 +1315,9 @@
               "seller": "=ref(company, vat_id, $.seller_nip)",
               "intragroup": "=$.intragroup",
               "seller_nip": "=$.seller_nip",
-              "buyer_nip": "=$.buyer_nip"
+              "buyer_nip": "=$.buyer_nip",
+              "open": "=$.gross",
+              "status": "open"
             }
           }
         }
@@ -1061,7 +1393,7 @@
       "rule_id": "pl-book-purchase-invoice",
       "priority": 100,
       "effective_from": "2026-01-01",
-      "description": "Faktura zakupu z KSeF staje się dokumentem purchase_invoice: dostawca i nabywca po NIP, kwoty takie, jak podaje dokument",
+      "description": "Faktura zakupu z KSeF staje się dokumentem purchase_invoice: dostawca i nabywca po NIP, kwoty takie, jak podaje dokument; kwota otwarta zaczyna się od brutto, status od open",
       "spec": {
         "match": {
           "event_type": "purchase.invoice.received",
@@ -1085,7 +1417,9 @@
               "vat": "=$.vat",
               "gross": "=$.gross",
               "vat_rate": "=ref(vat_rate, code, $.vat_rate)",
-              "currency": "=$.currency"
+              "currency": "=$.currency",
+              "open": "=$.gross",
+              "status": "open"
             }
           }
         }
@@ -1131,6 +1465,586 @@
               "rounding": "half_up",
               "rounding_account": "756"
             }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-company-account",
+      "priority": 20,
+      "effective_from": "2026-01-01",
+      "description": "Kontrahent zarejestrowany z numerem rachunku dostaje go jako IBAN — klucz, po którym wyciąg wskazuje płatnika",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "company"
+            },
+            {
+              "path": "$.root.iban",
+              "op": "exists"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "company",
+            "target": "=$.object_id",
+            "set": {
+              "iban": "=$.root.iban"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-supplier-account",
+      "priority": 110,
+      "effective_from": "2026-01-01",
+      "description": "Rachunek dostawcy z faktury zakupu (KSeF) uzupełnia IBAN kontrahenta",
+      "spec": {
+        "match": {
+          "event_type": "purchase.invoice.received",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            },
+            {
+              "path": "$.supplier_account",
+              "op": "exists"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "company",
+            "target": "=ref(company, vat_id, $.supplier_nip)",
+            "set": {
+              "iban": "=$.supplier_account"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-bank-operation",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Pozycja wyciągu bankowego staje się operacją bankową, otwartą na swoją kwotę",
+      "spec": {
+        "match": {
+          "event_type": "bank.statement.line"
+        },
+        "effect": {
+          "object": {
+            "type": "bank_operation",
+            "fields": {
+              "date": "=$.date",
+              "amount": "=$.amount",
+              "currency": "=$.currency",
+              "direction": "=$.direction",
+              "title": "=$.reference",
+              "counterparty": "=$.counterparty",
+              "counterparty_account": "=$.counterparty_account",
+              "account": "=$.account",
+              "kind": "transfer",
+              "open": "=$.amount",
+              "settlement_status": "unsettled"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-post-incoming-payment",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Wpływ na rachunek księguje się: Wn 130 / Ma 201",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "bank_operation"
+            },
+            {
+              "path": "$.state.direction",
+              "op": "eq",
+              "value": "credit"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "=$.state.currency",
+            "lines": [
+              {
+                "account": "130",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "201",
+                "credit": "=$.state.amount"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-post-outgoing-payment",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Wypływ z rachunku księguje się: Wn 202 / Ma 130",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "bank_operation"
+            },
+            {
+              "path": "$.state.direction",
+              "op": "eq",
+              "value": "debit"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "=$.state.currency",
+            "lines": [
+              {
+                "account": "202",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "130",
+                "credit": "=$.state.amount"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-match-incoming",
+      "priority": 300,
+      "effective_from": "2026-01-01",
+      "description": "Wpłata rozlicza się z otwartymi fakturami sprzedaży płatnika (po IBAN): po numerze w tytule; po numerze do 2 gr różnicy na 756; po kwocie; kilka faktur (do 4); nazwana faktura częściowo; najstarsze w kolejności",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "bank_operation"
+            },
+            {
+              "path": "$.state.direction",
+              "op": "eq",
+              "value": "credit"
+            }
+          ]
+        },
+        "effect": {
+          "matching": {
+            "name": "pl-incoming-payments",
+            "trigger": "payment",
+            "sides": [
+              {
+                "name": "payment",
+                "type": "bank_operation",
+                "open": {
+                  "money": "open"
+                },
+                "currency": "currency",
+                "date": "date",
+                "reference": "title"
+              },
+              {
+                "name": "invoice",
+                "type": "sales_invoice",
+                "items": "=objects(sales_invoice, buyer, ref(company, iban, $.state.counterparty_account))",
+                "open": {
+                  "money": "open"
+                },
+                "currency": "currency",
+                "date": "issue_date",
+                "reference": "number"
+              }
+            ],
+            "policy": [
+              {
+                "strategy": "reference"
+              },
+              {
+                "strategy": "reference",
+                "tolerance": {
+                  "money": "0.02"
+                },
+                "difference_account": "756"
+              },
+              {
+                "strategy": "exact"
+              },
+              {
+                "strategy": "subset",
+                "max_items": 4
+              },
+              {
+                "strategy": "reference",
+                "partial": true
+              },
+              {
+                "strategy": "oldest_first"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-match-outgoing",
+      "priority": 300,
+      "effective_from": "2026-01-01",
+      "description": "Wypłata rozlicza się z otwartymi fakturami zakupu odbiorcy przelewu (po IBAN): po numerze; po kwocie; kilka faktur; nazwana częściowo; najstarsze",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "bank_operation"
+            },
+            {
+              "path": "$.state.direction",
+              "op": "eq",
+              "value": "debit"
+            }
+          ]
+        },
+        "effect": {
+          "matching": {
+            "name": "pl-outgoing-payments",
+            "trigger": "payment",
+            "sides": [
+              {
+                "name": "payment",
+                "type": "bank_operation",
+                "open": {
+                  "money": "open"
+                },
+                "currency": "currency",
+                "date": "date",
+                "reference": "title"
+              },
+              {
+                "name": "invoice",
+                "type": "purchase_invoice",
+                "items": "=objects(purchase_invoice, supplier, ref(company, iban, $.state.counterparty_account))",
+                "open": {
+                  "money": "open"
+                },
+                "currency": "currency",
+                "date": "invoice_date",
+                "reference": "number"
+              }
+            ],
+            "policy": [
+              {
+                "strategy": "reference"
+              },
+              {
+                "strategy": "exact"
+              },
+              {
+                "strategy": "subset",
+                "max_items": 4
+              },
+              {
+                "strategy": "reference",
+                "partial": true
+              },
+              {
+                "strategy": "oldest_first"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-settle-sales-invoice",
+      "priority": 310,
+      "effective_from": "2026-01-01",
+      "description": "Rozliczenie przesuwa kwotę otwartą sales_invoice o przydzieloną kwotę; paid, gdy nic nie zostaje otwarte",
+      "spec": {
+        "match": {
+          "event_type": "objects.matched",
+          "where": [
+            {
+              "path": "$.matching",
+              "op": "eq",
+              "value": "pl-incoming-payments"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "sales_invoice",
+            "each": "=$.sides.invoice[*]",
+            "target": "=$.line.object_id",
+            "set": {
+              "open": "=$.line.open_after.money",
+              "status": "=if($.line.open_after.money = 0, \"paid\", \"open\")"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-settle-purchase-invoice",
+      "priority": 310,
+      "effective_from": "2026-01-01",
+      "description": "Rozliczenie przesuwa kwotę otwartą purchase_invoice o przydzieloną kwotę; paid, gdy nic nie zostaje otwarte",
+      "spec": {
+        "match": {
+          "event_type": "objects.matched",
+          "where": [
+            {
+              "path": "$.matching",
+              "op": "eq",
+              "value": "pl-outgoing-payments"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "purchase_invoice",
+            "each": "=$.sides.invoice[*]",
+            "target": "=$.line.object_id",
+            "set": {
+              "open": "=$.line.open_after.money",
+              "status": "=if($.line.open_after.money = 0, \"paid\", \"open\")"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-settle-incoming-operation",
+      "priority": 310,
+      "effective_from": "2026-01-01",
+      "description": "Rozliczenie przesuwa kwotę otwartą bank_operation o przydzieloną kwotę; settled, gdy nic nie zostaje otwarte",
+      "spec": {
+        "match": {
+          "event_type": "objects.matched",
+          "where": [
+            {
+              "path": "$.matching",
+              "op": "eq",
+              "value": "pl-incoming-payments"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "bank_operation",
+            "each": "=$.sides.payment[*]",
+            "target": "=$.line.object_id",
+            "set": {
+              "open": "=$.line.open_after.money",
+              "settlement_status": "=if($.line.open_after.money = 0, \"settled\", \"unsettled\")"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-settle-outgoing-operation",
+      "priority": 310,
+      "effective_from": "2026-01-01",
+      "description": "Rozliczenie przesuwa kwotę otwartą bank_operation o przydzieloną kwotę; settled, gdy nic nie zostaje otwarte",
+      "spec": {
+        "match": {
+          "event_type": "objects.matched",
+          "where": [
+            {
+              "path": "$.matching",
+              "op": "eq",
+              "value": "pl-outgoing-payments"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "bank_operation",
+            "each": "=$.sides.payment[*]",
+            "target": "=$.line.object_id",
+            "set": {
+              "open": "=$.line.open_after.money",
+              "settlement_status": "=if($.line.open_after.money = 0, \"settled\", \"unsettled\")"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-record-incoming-settlement",
+      "priority": 320,
+      "effective_from": "2026-01-01",
+      "description": "Każda przydzielona faktura dostaje zapis rozliczenia: operacja, dokument, kwota, data",
+      "spec": {
+        "match": {
+          "event_type": "objects.matched",
+          "where": [
+            {
+              "path": "$.matching",
+              "op": "eq",
+              "value": "pl-incoming-payments"
+            },
+            {
+              "path": "$.sides.invoice[0]",
+              "op": "exists"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "settlement",
+            "each": "=$.sides.invoice[*]",
+            "fields": {
+              "operation": "=$.doc.trigger.object_id",
+              "document_type": "=$.line.object_type",
+              "document_id": "=$.line.object_id",
+              "amount": "=$.line.allocated.money",
+              "date": "=$.root.date"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-record-outgoing-settlement",
+      "priority": 320,
+      "effective_from": "2026-01-01",
+      "description": "Każda przydzielona faktura dostaje zapis rozliczenia: operacja, dokument, kwota, data",
+      "spec": {
+        "match": {
+          "event_type": "objects.matched",
+          "where": [
+            {
+              "path": "$.matching",
+              "op": "eq",
+              "value": "pl-outgoing-payments"
+            },
+            {
+              "path": "$.sides.invoice[0]",
+              "op": "exists"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "settlement",
+            "each": "=$.sides.invoice[*]",
+            "fields": {
+              "operation": "=$.doc.trigger.object_id",
+              "document_type": "=$.line.object_type",
+              "document_id": "=$.line.object_id",
+              "amount": "=$.line.allocated.money",
+              "date": "=$.root.date"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-record-difference",
+      "priority": 320,
+      "effective_from": "2026-01-01",
+      "description": "Tolerowana różnica staje się zapisem różnicy rozliczenia",
+      "spec": {
+        "match": {
+          "event_type": "objects.matched",
+          "where": [
+            {
+              "path": "$.matching",
+              "op": "eq",
+              "value": "pl-incoming-payments"
+            },
+            {
+              "path": "$.differences[0]",
+              "op": "exists"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "matching_difference",
+            "each": "=$.differences[*]",
+            "fields": {
+              "matching": "=$.doc.matching",
+              "kind": "=$.line.kind",
+              "amount": "=$.line.amount",
+              "currency": "=$.line.currency",
+              "direction": "=$.line.direction",
+              "account": "=$.line.account",
+              "date": "=$.root.date"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-post-short-difference",
+      "priority": 330,
+      "effective_from": "2026-01-01",
+      "description": "Niedopłata w granicach tolerancji księguje się: Wn 756 / Ma 201",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "matching_difference"
+            },
+            {
+              "path": "$.state.direction",
+              "op": "eq",
+              "value": "short"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "=$.state.currency",
+            "lines": [
+              {
+                "account": "=$.state.account",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "201",
+                "credit": "=$.state.amount"
+              }
+            ]
           }
         }
       }
@@ -1505,5 +2419,16 @@
         "market": "pl"
       }
     }
-  ]
+  ],
+  "warrant": {
+    "basis": "practice",
+    "citations": [
+      "wzorcowy plan kont dla małych i średnich przedsiębiorstw; ewidencja sprzedaży Wn 201 / Ma 70x, Ma 222; zakupu Wn 300, Wn 221 / Ma 202",
+      "ustawa o VAT art. 106e: kwoty podatku zaokrągla się do pełnych groszy",
+      "rozliczanie wpłat z wyciągu bankowego: po numerze faktury w tytule, potem po kwocie, kilka faktur jedną wpłatą, wpłata częściowa rozlicza najstarsze należności; kontrahent po numerze rachunku (z faktury lub z rejestracji)",
+      "różnice groszowe odpisuje się w ramach uproszczeń dopuszczonych polityką rachunkowości (ustawa o rachunkowości art. 4 ust. 4) — tu na 756",
+      "wpływ na rachunek: Wn 130 / Ma 201; wypływ: Wn 202 / Ma 130"
+    ],
+    "scope": "pl"
+  }
 }

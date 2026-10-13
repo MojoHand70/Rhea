@@ -1843,11 +1843,15 @@ pairing verb running the same engine on a person's selection into the
 same event; the host proposing a strategy — every pairing by hand says
 which named standards would have found it, and the second pairing the
 same way drafts the rule's next version with that step, warranted by the
-two pairings, behind the gate. The order of work is walked. Owed next:
-the Poland pack's default policy as drafts with warrants (the pack's
-invoice types gain the open amount first), unpairing as a correcting
-event, the live run with the model drafting the matching bundle from the
-paraphrased answers (with the twelve-run round), and the one-sided time
+two pairings, behind the gate. The order of work is walked. 2026-10-13:
+the Poland pack's default policy shipped as drafts with a practice
+warrant (pack pl v11: open amounts on the invoices, the bank operation
+with its cash postings, the account as an enrichment, the two matching
+rules, their consequences, the two grids) — the story test pays an
+invoice through it. Owed next: unpairing as a correcting event, the live
+run with the model drafting the matching bundle from the paraphrased
+answers (with the twelve-run round), the market stamp on a channel's
+events (so the bank rule can guard as the others do), the one-sided time
 window when a customer asks.
 
 ## Language decisions with a recorded destination

@@ -90,15 +90,17 @@ func TestM3PolandPack(t *testing.T) {
 	}
 	post("/api/bundles/pack-common-people-v1/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 
-	// Load the pack: 14 types, 6 views, 7 draft rules, one channel (the KSeF
-	// adapter's door, a draft like any verb), 31 master-data events.
+	// Load the pack: 18 types (the invoices with their open amounts, the
+	// bank operation, the matching difference, the company's account), 8
+	// views (the two grids among them), 22 draft rules, one channel (the
+	// KSeF adapter's door, a draft like any verb), 31 master-data events.
 	packPath := filepath.Join("..", "..", "packs", "pl", "pack.json")
 	sum, err := pack.Load(ctx, s, packPath, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 14 || sum.Views != 6 || sum.Rules != 7 || sum.Activities != 1 || sum.Events != 31 || sum.Skipped != 0 ||
-		sum.Bundle != "pack-pl-v10" {
+	if sum.Types != 18 || sum.Views != 8 || sum.Rules != 22 || sum.Activities != 1 || sum.Events != 31 || sum.Skipped != 0 ||
+		sum.Bundle != "pack-pl-v11" {
 		t.Fatalf("first load: %+v", sum)
 	}
 	// Idempotent: a reload changes nothing.
@@ -106,7 +108,7 @@ func TestM3PolandPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Skipped != 59 || sum.Bundle != "" {
+	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Skipped != 80 || sum.Bundle != "" {
 		t.Fatalf("reload: %+v", sum)
 	}
 
@@ -126,7 +128,7 @@ func TestM3PolandPack(t *testing.T) {
 	// Approving the pack's bundle IS the installation: its types, views and
 	// rules activate together, and the chart of accounts and the VAT rates
 	// materialize from the waiting events.
-	post("/api/bundles/pack-pl-v10/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-pl-v11/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {
 		t.Fatalf("worklist not cleared after approvals: %d", len(wl))
 	}
@@ -155,7 +157,7 @@ func TestM3PolandPack(t *testing.T) {
 	post("/api/events", map[string]any{
 		"event_type": "company.registered", "occurred_at": "2026-09-01", "dedup_key": "buyer",
 		"payload": map[string]any{"name": "Nabywca S.A.", "kind": "customer",
-			"vat_id": "5260001246", "country": "PL"},
+			"vat_id": "5260001246", "country": "PL", "iban": "PL60102010260000042270201111"},
 	}, nil)
 	post("/api/events", map[string]any{
 		"event_type": "company.registered", "occurred_at": "2026-09-01", "dedup_key": "seller",
@@ -249,6 +251,80 @@ func TestM3PolandPack(t *testing.T) {
 	}
 	if r := cellVals(purchases.Rows)[0]; r[0] != "2026-09" || r[1] != "23" || r[2] != "500.00" || r[3] != "115.00" || r[4] != "615.00" {
 		t.Fatalf("purchase register row = %v", r)
+	}
+
+	// The bank story, the pack's default policy (DIRECTION 2026-10-11, the
+	// matching brief): the buyer's account came with its registration (the
+	// pack's enrichment copies it); a statement line naming the invoice
+	// becomes a bank operation, posts Wn 130 / Ma 201, and is matched by
+	// reference — the invoice paid, the operation settled, a settlement
+	// recorded. The same party, paid as a supplier, settles the purchase.
+	post("/api/events", map[string]any{
+		"event_type": "bank.statement.line", "occurred_at": "2026-09-25", "dedup_key": "wb-1",
+		"payload": map[string]any{"date": "2026-09-25", "amount": "1230.00", "currency": "PLN", "direction": "credit",
+			"reference": "zapłata FV 1/09/2026", "counterparty": "Nabywca S.A.",
+			"counterparty_account": "PL60102010260000042270201111", "account": "PL83101010230000261395100000"},
+	}, &resp)
+	if resp["booked"].(float64) != 1 || resp["errors"] != nil {
+		t.Fatalf("incoming payment: %v", resp)
+	}
+	post("/api/events", map[string]any{
+		"event_type": "bank.statement.line", "occurred_at": "2026-09-26", "dedup_key": "wb-2",
+		"payload": map[string]any{"date": "2026-09-26", "amount": "615.00", "currency": "PLN", "direction": "debit",
+			"reference": "FAB/1/2026", "counterparty": "Nabywca S.A.",
+			"counterparty_account": "PL60102010260000042270201111", "account": "PL83101010230000261395100000"},
+	}, &resp)
+	if resp["booked"].(float64) != 1 || resp["errors"] != nil {
+		t.Fatalf("outgoing payment: %v", resp)
+	}
+	for _, typ := range []string{"sales_invoice", "purchase_invoice"} {
+		docs, _ := s.ObjectsByType(ctx, typ)
+		if len(docs) != 1 || docs[0].State["status"] != "paid" || docs[0].State["open"].(float64) != 0 {
+			t.Fatalf("%s after its payment: %v", typ, docs[0].State)
+		}
+	}
+	if ops, _ := s.ObjectsByType(ctx, "bank_operation"); len(ops) != 2 || ops[0].State["settlement_status"] != "settled" || ops[1].State["settlement_status"] != "settled" {
+		t.Fatalf("bank operations: %v", ops)
+	}
+	if stl, _ := s.ObjectsByType(ctx, "settlement"); len(stl) != 2 || stl[0].State["document_type"] != "sales_invoice" || stl[1].State["document_type"] != "purchase_invoice" {
+		t.Fatalf("settlements: %v", stl)
+	}
+	get("/api/views/trial-balance", &tb)
+	wantBank := map[string][2]string{"130": {"1230.00", "615.00"}, "201": {"1230.00", "1230.00"}, "202": {"615.00", "615.00"}}
+	seen = 0
+	for _, r := range cellVals(tb.Rows) {
+		if w, ok := wantBank[r[1]]; ok {
+			if r[0] != "pl-stat" || r[3] != w[0] || r[4] != w[1] {
+				t.Fatalf("account %s: book %s debit %s credit %s, want pl-stat %v", r[1], r[0], r[3], r[4], w)
+			}
+			seen++
+		}
+	}
+	if seen != 3 {
+		t.Fatalf("trial balance missing the bank entries: %+v", tb.Rows)
+	}
+	// A payment nothing fits stays for the person, on the grid, with why.
+	post("/api/events", map[string]any{
+		"event_type": "bank.statement.line", "occurred_at": "2026-09-27", "dedup_key": "wb-3",
+		"payload": map[string]any{"date": "2026-09-27", "amount": "100.00", "currency": "PLN", "direction": "credit",
+			"reference": "przelew", "counterparty": "Nabywca S.A.",
+			"counterparty_account": "PL60102010260000042270201111", "account": "PL83101010230000261395100000"},
+	}, &resp)
+	if resp["booked"].(float64) != 1 || resp["errors"] != nil {
+		t.Fatalf("unmatched payment: %v", resp)
+	}
+	var grid struct {
+		Sides []struct {
+			Name  string `json:"name"`
+			Items []struct {
+				Why []string `json:"why"`
+			} `json:"items"`
+		} `json:"sides"`
+	}
+	get("/api/views/wplaty-do-rozliczenia", &grid)
+	if len(grid.Sides) != 2 || grid.Sides[0].Name != "payment" || len(grid.Sides[0].Items) != 1 || len(grid.Sides[0].Items[0].Why) != 6 ||
+		!strings.Contains(grid.Sides[0].Items[0].Why[5], "oldest_first: nothing open on invoice") {
+		t.Fatalf("the grid: %+v", grid)
 	}
 
 	// The VAT register aggregates by month and rate.

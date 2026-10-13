@@ -2222,3 +2222,52 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   loop") — the host's proposal is deterministic kernel code over the engine's own
   standards; the model is not asked. When the host learns a *structure* (a new side, a
   new key) from what a person did, that is the interview's job and the agent's.
+
+## 2026-10-13 — the Poland pack's default matching policy: pack pl v11
+
+- **The pack proposes the standard; the owner overrides** (DIRECTION, "Rhea suggests
+  standards"; KK 2026-10-11: each company its own policy). Pack pl v11 ships, as drafts
+  in its one bundle with a practice warrant: the invoice types with an open amount and
+  a status (`sales_invoice` v4, `purchase_invoice` v2 — open starts at the gross, the
+  booking rules fill it), the bank operation as the channel delivers it
+  (`bank_operation` v2: direction, title, counterparty and its account, our account as
+  the statement names it, open, `settlement_status` unsettled → settled/private), a
+  `matching_difference`, the company's account (`company` v2, `iban` amendable), and
+  fifteen rules: the account as an enrichment — copied from the registration when it
+  carries one (a cascade on the company's materialization reading `$.root.iban`) and
+  from the supplier's KSeF invoice (`supplier_account`); the operation from the line,
+  posting Wn 130 / Ma 201 on money in and Wn 202 / Ma 130 on money out; two matching
+  rules — money in against the payer's open sales invoices with *reference; reference
+  ± 0.02 → 756; exact; subset ≤ 4; reference partial; oldest first*, money out against
+  the supplier's open purchase invoices without the tolerance, both keyed by the
+  counterparty's account; the settlements of invoices and operations, a `settlement`
+  per allocated document (the pack's own type, unchanged), the difference as an object
+  posting Wn 756 / Ma 201; and the two grids, "Wpłaty do rozliczenia" and "Wypłaty do
+  rozliczenia". The pack's chart keeps 756 ("różnice kursowe i zaokrąglenia") for the
+  tolerance, as it keeps it for convert's rounding.
+- **The story test** (`TestM3PolandPack`) plays it: the buyer registered with an
+  account, a payment naming the invoice posts to the bank and settles the invoice, the
+  same party paid as a supplier settles the purchase, the trial balance carries 130 and
+  the cleared 201 and 202, two settlements name their documents, and a payment nothing
+  fits waits on the grid with every step's reason.
+- **Two things the pack cannot say yet, named**: the bank-operation rule carries no
+  market guard — the bank line carries no market, and `where` sees only the payload
+  (the E2 lesson): the channel that appends a line should stamp the market of the pack
+  that declares it, in the registry; until then a second market's bank pack would
+  conflict on every line. And the customer's account is known only when the
+  registration or an invoice carries it — the loop that learns a payer's account from
+  the first payment matched by reference (the statement names the invoice; the invoice
+  names the buyer) wants a read through a link from the match event, which is untyped;
+  the white-list adapter (wykaz podatników VAT) is the statutory source when it comes.
+- **Evolution stays additive.** The first cut made `open` and `status` required on the
+  pack's new invoice versions, and the German pack's booking rule and the intercompany
+  mirror — other authors' rules on the same shared types — refused at once ("required
+  field open missing"). The fields are optional: the pack's own booking rules fill them,
+  an invoice born by another rule or under an older version simply has nothing open —
+  the engine reads a missing open amount as "nothing open", never a candidate, never an
+  error (a trigger without one is still malformed and refuses). SPEC §7's schema
+  evolution question answered the late-understanding way: a new version adds, it never
+  demands of the rules that came before it.
+- **Upgrading an installed pack** stays out of scope: the loader leaves known rule ids
+  alone, so v11's reshaped booking rules reach a fresh installation only. The
+  experiment reinstalls.
