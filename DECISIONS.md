@@ -2439,7 +2439,12 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   eval feed the sources in the order `ksef`, `pdf`, `bank`: invoices before the lines
   that pay them. Nordwind's German supplier now arrives as PDF; Helios has no foreign
   supplier. Both personas stay DONE with the PDFs in (`TestPersonaReferenceIsDone…`).
-- **The agent's PDF reading is the model's, the runs above the bench's.** The live
-  measurement with the model reading Nordwind's PDFs is the next run; the bench reads
-  the text layer, which is exact by construction. The worklist shows a proposal with
-  its reason and one button.
+- **Live, the model reading the PDFs** (`rhea eval -months 2 -v`, Nordwind, scripted
+  voice, claude-sonnet-4-6, documents in): the two months' German invoices entered as
+  PDFs and were read by the model (the eval hands the channel the run's agent), the
+  readings booked by the pack's and the persona's rules — 80 intake facts, residue 0,
+  state matches, DONE; one re-ask on the bank answer, the envelope slip, fixed. The
+  numbers the model read were the numbers the facts carry, or the state would not
+  have matched. The confidences it gave are not in the report yet — the next pass
+  prints the readers and their confidences beside the residue. The worklist shows a
+  proposal with its reason and one button.
