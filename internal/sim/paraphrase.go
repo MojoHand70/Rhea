@@ -121,7 +121,8 @@ func has(s string, forms []string) bool {
 }
 
 // present finds a fact in the paraphrase; a hyphenated token ("follow-up",
-// "pl-stat") may be written with its dash, a space, or joined.
+// "pl-stat") may be written with its dash, a space, or joined, and a small
+// number may be spelled as a word — "at most four" keeps "4".
 func present(lower, t string) bool {
 	if strings.Contains(lower, t) {
 		return true
@@ -129,7 +130,16 @@ func present(lower, t string) bool {
 	if strings.Contains(t, "-") {
 		return strings.Contains(lower, strings.ReplaceAll(t, "-", " ")) || strings.Contains(lower, strings.ReplaceAll(t, "-", ""))
 	}
+	if word, ok := numberWords[t]; ok {
+		return strings.Contains(lower, word)
+	}
 	return false
+}
+
+// numberWords are the digits a paraphrase may spell out.
+var numberWords = map[string]string{
+	"0": "zero", "1": "one", "2": "two", "3": "three", "4": "four", "5": "five", "6": "six",
+	"7": "seven", "8": "eight", "9": "nine", "10": "ten", "11": "eleven", "12": "twelve",
 }
 
 // factual: a token that carries a fact rather than wording — it has a

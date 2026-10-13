@@ -2327,3 +2327,26 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   the pack's bank-operation rule guards on it; the registry shows it. A line submitted
   through the open door says its market itself, as the invoices in the story test do.
 
+
+## 2026-10-13 — live: the model drafts the matching bundle from the interview
+
+- **Both personas DONE on one live run each**, scripted voice, claude-sonnet-4-6,
+  `rhea eval -months 1 -v` with the documents in: Helios six of six answers approved
+  on the first draft (31 intake facts, residue 0, state matches), Nordwind nine of nine
+  (52 facts, residue 0, state matches). The bank answer became one bundle of three
+  types, eleven rules and the grid: `bank_line` open on its amount, two matching rules
+  keyed by the payer's account — incoming with *reference; exact ± 0.02 → 755; exact;
+  subset ≤ 4; reference partial; oldest first*, outgoing without the tolerance — the
+  amendments over the match's items, the settlement per item, the difference and its
+  posting. The model put the tolerance on the exact step where the reference answer
+  puts it on the reference step; the generator's short payments name their invoice,
+  and exact-within-two-grosz found the same invoice, so the state agreed. Different
+  policy, same standard: the grammar's example shaped the draft, as it should.
+- **What this measures**: that the fourth effect is authorable from an owner's words,
+  first time, with the structure's keys, the fan-out amendments and the guarded
+  difference rule all composed correctly. The twelve-run round over the voices is the
+  measurement proper; the voices are being regenerated for the changed answers.
+- **The paraphrase check learned that "four" is "4"**: three retries in a row dropped
+  the digit of "at most 4" because the model spells small numbers out, which keeps the
+  fact. `Preserved` now accepts a number word for a digit up to twelve, and still
+  reports a number that is gone.

@@ -155,6 +155,13 @@ func TestPreserved(t *testing.T) {
 	if m := sim.Preserved("rounded half up to the grosz", "rounded to the grosz"); len(m) != 1 || m[0] != "half up" {
 		t.Fatalf("dropped rounding not reported: %v", m)
 	}
+	// a small number spelled as a word is the same fact
+	if m := sim.Preserved("the fewest invoices that add up to it, at most 4", "the fewest invoices adding up to it, at most four"); len(m) != 0 {
+		t.Fatalf("four is 4: %v", m)
+	}
+	if m := sim.Preserved("at most 4 invoices", "the fewest invoices"); len(m) != 1 || m[0] != "4" {
+		t.Fatalf("a dropped number is reported: %v", m)
+	}
 }
 
 // The bank story's identity, counted from the events a second way: money
