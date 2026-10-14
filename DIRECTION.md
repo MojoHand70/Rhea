@@ -1898,6 +1898,114 @@ items; an item the formula cannot rank listed last with the reason. The
 Poland pack's "Do zrobienia dziś" and "Należności do pilnowania". The
 hotspots follow: threshold rules raising cases that land in this queue.
 
+## Rhea as a public free service: the host is the product, the kernel is open (KK, 2026-10-14)
+
+KK's proposal, condensed: make Rhea a public service, free of charge,
+with very limited capability at first — "like all AI services started" —
+and a small but real wow: *yes, it's different*. The first version must
+carry what the law requires, KSeF and JPK. Then grow in small chunks,
+often; earn recognition; add the advanced capability; offer "easy
+migrate"; consider Patronite or crowdfunding; cement security; then
+monetise — enterprise, services, associated accountants, a marketplace,
+ads. A free tier cannot run on paid Anthropic tokens, so a cheaper model
+(Qwen, or Bielik for Polish) on Polish hardware. And the experience must
+be stunning and different: *intent-oriented*, the concierge of the host
+note, built apart from the kernel. Adopted 2026-10-14 with the
+amendments below.
+
+**Why free fits Rhea and not its competitors.** Every competitor pays
+per user: a licence, a support seat, model tokens per conversation.
+Rhea's expensive act is writing a rule, and a rule is written once per
+situation, not once per company. The thousandth sole trader whose
+purchase invoice arrives through KSeF costs almost nothing, because the
+matching rule already exists in the network. The kernel itself costs a
+Postgres row per fact. The business case for free is the network's
+economics, and it cannot be copied without rebuilding the kernel.
+
+**The timing.** KSeF has been mandatory for all but the smallest firms
+since 1 April 2026; the smallest join on 1 January 2027, and penalties
+start the same day. The switch moment is ten weeks from this note.
+
+**Amendments to KK's order.**
+
+- **Security moves to the top, not after recognition.** A tax tool holds
+  KSeF credentials and bank statements. Before the first stranger signs
+  up: sign-in, strict company separation (the company key exists;
+  sign-in does not), encrypted credentials, backups that restore, a
+  data-processing agreement, an incident plan.
+- **Ads are struck.** A tax tool with ads loses the trust that is its
+  only asset, and the money is tiny.
+- **Accountants are the channel, not a later option.** Most Polish
+  micro-firms keep a biuro rachunkowe. Free for the entrepreneur, a paid
+  seat for the accountant who oversees twenty of them. This is the
+  Junior Accountant → CFO path with a buyer attached, and the first
+  revenue.
+- **Open source replaces Patronite.** Patronite funds people, not
+  infrastructure. Open-sourcing the kernel and the packs answers "free,
+  and you hold my tax data?" with "you can run it yourself"; the hosted
+  network stays the service. GitHub Sponsors fits better than Patronite.
+  The licence decision is early, because it shapes the repo.
+- **The wow is defined before it is built.** KSeF and JPK are the ticket
+  to the room, not the wow; the government's free app already issues
+  invoices.
+
+**The wow: three moments nobody can fake cheaply.**
+
+1. *Zero data entry at the start.* Give KSeF access and a bank file; a
+   minute later the host says: 47 invoices in three months, 12
+   customers, two unpaid, VAT so far 3,214 zł. Nobody typed anything.
+2. *"Why?" on any number.* Tap the VAT amount and see the invoices and
+   the rule that produced it. No Polish tool does this.
+3. *Say it once, never again.* Correct the host once and the correction
+   holds ("The host remembers").
+
+**The statutory floor.** "KSeF plus JPK" is not the full legal minimum
+for a sole trader — records, ZUS and PIT advances are also required. The
+narrow first user is a VAT-registered sole trader who keeps an
+accountant. Rhea issues invoices to KSeF, reads purchase invoices and
+the bank, matches, keeps the VAT register, and hands a ready JPK_V7 to
+the accountant, who files it; the accountant is the safety net while
+penalties are new. Of that list only inbound KSeF exists today. Missing:
+KSeF outbound (issuing), the VAT register as a view, JPK_V7 as a file
+produced from it.
+
+**Two model jobs, two costs.** Writing rules is rare, hard, and
+structured; speaking to the owner is daily, easy, and Polish. Rule
+writing is shared across companies, so it can stay on Anthropic at
+first. The host's words and the morning briefing go to a local model.
+Bielik's current family is 3.0 at 1.5B and 4.5B, plus 2.5 at 11B — too
+small to write rules in the grammar, plausible for the host's words.
+Qwen 27B wrote the easy corpus 9/9 but slowly. Measure, don't guess: the
+eval harness and the base-URL switch exist; one afternoon answers it.
+Free hardware is not the plan: no free programme found (Cyfronet says it
+serves startups; worth one email). One rented GPU server in a Polish
+data centre, two to four thousand złoty a month, should carry the first
+thousand daily users on the shape above — an estimate to measure, not a
+fact.
+
+**The face: intent-oriented means the host shows, the owner decides.**
+Built apart from the kernel, against the JSON API, in its own repo.
+Three rules. A chat box is not stunning in 2026; the home screen is a
+short list of decisions, one tap each, no forms, chat only as the escape
+hatch. The face stays generic: it renders notions (queue, briefing,
+document, case, grid), the Poland pack supplies the words, and a screen
+that knows what an invoice is does not get built. The plain shell stays
+alive as the developer's truth, so the beautiful face can never show
+what the kernel did not say.
+
+**The order, against the growth plan.** Phases 1–3 are unchanged; the
+demo of April 2027 stays the date. Added: the three wow moments become
+scenes of the demo story; KSeF outbound and JPK_V7 join Phase 2 as the
+statutory floor; the security floor is the entry condition of Phase 3's
+private beta — ten to twenty sole traders from KK's network, free, by
+invitation; the public free tier opens in Phase 4 only when real people
+finish the way the simulated ones do; the accountant seat is the first
+revenue; "easy migrate", the marketplace and enterprise wait behind it.
+
+One line: *free is the network's economics, open source is the trust
+answer, the accountant is the buyer, and the wow is zero data entry,
+"why?" on every number, and a host that never asks twice.*
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
@@ -1989,3 +2097,11 @@ hotspots follow: threshold rules raising cases that land in this queue.
   the store carries on every call — isolation and sharding ride on it
   later, enforced by nothing yet. Alongside: snapshot-plus-tail replay,
   a hash-chained log, and the network test that no fact ever leaves.
+- **Free is the network's economics; open source is the trust answer**
+  (KK, 2026-10-14, "Rhea as a public free service" above). A rule is
+  written once per situation, not once per company, so a free tier costs
+  the network almost nothing per user; the kernel and packs go open
+  source, the hosted network stays the service; security and the
+  statutory floor (KSeF outbound, JPK_V7) precede the first stranger;
+  accountants are the channel; ads are struck; the face is built apart,
+  generic, with the plain shell as the developer's truth.
