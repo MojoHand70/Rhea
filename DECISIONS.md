@@ -2567,3 +2567,24 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   and tasks in it — one view per type for now, the simplest option); the queue as a
   scene in the personas' day.
 
+
+## 2026-10-14 — the live check of the host's words: one recorded morning, a gated test
+
+- **The check is a measurement, not an assertion.** `TestHostWordsLive` in
+  `internal/shell` runs only with `RHEA_LIVE_HOST=1` (`RHEA_LIVE_HOST_RUNS`, default 5):
+  it hands the model named by `RHEA_MODEL` one recorded morning and asks it to speak
+  several times in a row, each time told what it said before, and prints every answer
+  with the kernel's verdict — refused for a number the facts do not carry (the same
+  `foreignNumbers` the shell applies), refused for repeating itself, accepted otherwise.
+  The simplest option: no company is stood up, no event is logged, and the model switch
+  is the one the eval already uses (`ANTHROPIC_BASE_URL`, `RHEA_MODEL`).
+- **The morning is recorded, not invented.** `testdata/eval/briefing.json` is the
+  Poland story's briefing step verbatim — the four facts the kernel handed the host
+  (both VAT registers, both payment grids) with the pack's Polish voice and a date in
+  the story's month. It was captured from the running story test once and committed as
+  data; a richer morning (a persona's) can join it later as a second entry.
+- **Why now:** the public-service note (DIRECTION 2026-10-14) splits the model's work
+  into two jobs, writing rules and speaking to the owner, and KK asked for the
+  measurement before KSeF outbound. The rule corpora already had `rhea eval`; the
+  host's words had no bench. Local candidates measured through Ollama's Anthropic
+  endpoint: qwen3.6:27b, Bielik 11B v3.0 and Bielik 4.5B v3.0 (Q8_0).

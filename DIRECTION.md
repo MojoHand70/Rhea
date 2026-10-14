@@ -2002,6 +2002,18 @@ invitation; the public free tier opens in Phase 4 only when real people
 finish the way the simulated ones do; the accountant seat is the first
 revenue; "easy migrate", the marketplace and enterprise wait behind it.
 
+**Decided the same day (KK, 2026-10-14).** (a) Open source it is, and
+the code must meet a standard that is not laughed at: before the repo
+opens, a quality floor — formatted, vetted and linted clean, a README
+that explains the three-part split, a licence, and no secret anywhere
+in the history (checked 2026-10-14: `.env` was never tracked and no key
+is in the log). (b) Security first, in the sense of *defensible*:
+sooner or later someone asks, possibly an auditor, and every answer
+must already be on paper — what data is held, who can reach it, the
+threat model, the log as evidence. (c) April 2027 is the *latest*, not
+the date. Sequence from here: the model measurement first, then KSeF
+outbound.
+
 One line: *free is the network's economics, open source is the trust
 answer, the accountant is the buyer, and the wow is zero data entry,
 "why?" on every number, and a host that never asks twice.*
@@ -2104,4 +2116,7 @@ answer, the accountant is the buyer, and the wow is zero data entry,
   source, the hosted network stays the service; security and the
   statutory floor (KSeF outbound, JPK_V7) precede the first stranger;
   accountants are the channel; ads are struck; the face is built apart,
-  generic, with the plain shell as the developer's truth.
+  generic, with the plain shell as the developer's truth. Decided the
+  same day: open source with a quality floor, security as defensibility
+  before an audit, April 2027 the latest; measurement first, then KSeF
+  outbound.

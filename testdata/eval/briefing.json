@@ -1,0 +1,326 @@
+{
+ "name": "briefing",
+ "about": "One morning of the Poland story (internal/shell/poland_test.go, the briefing step): the facts the kernel handed the host, recorded so the host's words can be measured without a company.",
+ "today": "2026-09-22",
+ "voice": "Po polsku, krótko, jak najlepszy concierge: co jest zaksięgowane, co czeka na decyzję właściciela. Bez powitań z szablonu.",
+ "facts": [
+  {
+   "as": "sprzedaż tego miesiąca (rejestr VAT)",
+   "view": "rejestr-vat-sprzedazy",
+   "title": "Rejestr VAT sprzedaży",
+   "kind": "analysis",
+   "data": {
+    "columns": [
+     {
+      "field": "month",
+      "label": "Miesiąc",
+      "type": "string"
+     },
+     {
+      "field": "rate",
+      "label": "Stawka",
+      "type": "string"
+     },
+     {
+      "field": "net",
+      "label": "Netto",
+      "type": "money"
+     },
+     {
+      "field": "vat",
+      "label": "VAT",
+      "type": "money"
+     },
+     {
+      "field": "gross",
+      "label": "Brutto",
+      "type": "money"
+     }
+    ],
+    "rows": [
+     [
+      {
+       "v": "2026-09"
+      },
+      {
+       "v": "23"
+      },
+      {
+       "v": "1000.00"
+      },
+      {
+       "v": "230.00"
+      },
+      {
+       "v": "1230.00"
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "as": "zakupy tego miesiąca (rejestr VAT)",
+   "view": "rejestr-vat-zakupu",
+   "title": "Rejestr VAT zakupu",
+   "kind": "analysis",
+   "data": {
+    "columns": [
+     {
+      "field": "month",
+      "label": "Miesiąc",
+      "type": "string"
+     },
+     {
+      "field": "rate",
+      "label": "Stawka",
+      "type": "string"
+     },
+     {
+      "field": "net",
+      "label": "Netto",
+      "type": "money"
+     },
+     {
+      "field": "vat",
+      "label": "VAT",
+      "type": "money"
+     },
+     {
+      "field": "gross",
+      "label": "Brutto",
+      "type": "money"
+     }
+    ],
+    "rows": [
+     [
+      {
+       "v": "2026-09"
+      },
+      {
+       "v": "23"
+      },
+      {
+       "v": "500.00"
+      },
+      {
+       "v": "115.00"
+      },
+      {
+       "v": "615.00"
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "as": "wpłaty bez rozliczenia",
+   "view": "wplaty-do-rozliczenia",
+   "title": "Wpłaty do rozliczenia",
+   "kind": "matching",
+   "data": {
+    "matching": "pl-incoming-payments",
+    "rule": "pl-match-incoming",
+    "sides": [
+     {
+      "name": "payment",
+      "type": "bank_operation",
+      "trigger": true,
+      "columns": [
+       {
+        "field": "title",
+        "label": "Title",
+        "type": "string"
+       },
+       {
+        "field": "date",
+        "label": "Date",
+        "type": "date"
+       },
+       {
+        "field": "open",
+        "label": "Open",
+        "type": "money"
+       },
+       {
+        "field": "currency",
+        "label": "Currency",
+        "type": "string"
+       }
+      ],
+      "items": [
+       {
+        "object_id": "bank_operation-142",
+        "label": "przelew",
+        "detail": "derived:detail:bank_operation",
+        "cells": {
+         "currency": {
+          "v": "PLN"
+         },
+         "date": {
+          "v": "2026-09-27"
+         },
+         "open": {
+          "v": "100.00"
+         },
+         "title": {
+          "v": "przelew"
+         }
+        },
+        "why": [
+         "step 1 reference: \"przelew\" names nothing open on invoice",
+         "step 2 reference: \"przelew\" names nothing open on invoice",
+         "step 3 exact: no single item on invoice opens at 100.00 (0 candidates, 1 left out: sales_invoice-116: nothing open)",
+         "step 4 subset: no subset of up to 4 items on invoice opens at 100.00 (0 candidates, 1 left out: sales_invoice-116: nothing open)",
+         "step 5 reference: \"przelew\" names nothing open on invoice",
+         "step 6 oldest_first: nothing open on invoice (0 candidates, 1 left out: sales_invoice-116: nothing open)"
+        ]
+       }
+      ]
+     },
+     {
+      "name": "invoice",
+      "type": "sales_invoice",
+      "trigger": false,
+      "columns": [
+       {
+        "field": "number",
+        "label": "Number",
+        "type": "string"
+       },
+       {
+        "field": "issue_date",
+        "label": "Issue date",
+        "type": "date"
+       },
+       {
+        "field": "open",
+        "label": "Open",
+        "type": "money"
+       },
+       {
+        "field": "currency",
+        "label": "Currency",
+        "type": "string"
+       }
+      ],
+      "items": []
+     }
+    ],
+    "trigger": "payment",
+    "verb": "pair_items",
+    "view": {
+     "view_id": "wplaty-do-rozliczenia",
+     "version": 1,
+     "notion": "matching",
+     "title": "Wpłaty do rozliczenia",
+     "domain": "finance",
+     "function": "rozrachunki",
+     "spec": {
+      "rule": "pl-match-incoming"
+     }
+    }
+   }
+  },
+  {
+   "as": "wypłaty bez rozliczenia",
+   "view": "wyplaty-do-rozliczenia",
+   "title": "Wypłaty do rozliczenia",
+   "kind": "matching",
+   "data": {
+    "matching": "pl-outgoing-payments",
+    "rule": "pl-match-outgoing",
+    "sides": [
+     {
+      "name": "payment",
+      "type": "bank_operation",
+      "trigger": true,
+      "columns": [
+       {
+        "field": "title",
+        "label": "Title",
+        "type": "string"
+       },
+       {
+        "field": "date",
+        "label": "Date",
+        "type": "date"
+       },
+       {
+        "field": "open",
+        "label": "Open",
+        "type": "money"
+       },
+       {
+        "field": "currency",
+        "label": "Currency",
+        "type": "string"
+       }
+      ],
+      "items": [
+       {
+        "object_id": "bank_operation-142",
+        "label": "przelew",
+        "detail": "derived:detail:bank_operation",
+        "cells": {
+         "currency": {
+          "v": "PLN"
+         },
+         "date": {
+          "v": "2026-09-27"
+         },
+         "open": {
+          "v": "100.00"
+         },
+         "title": {
+          "v": "przelew"
+         }
+        }
+       }
+      ]
+     },
+     {
+      "name": "invoice",
+      "type": "purchase_invoice",
+      "trigger": false,
+      "columns": [
+       {
+        "field": "number",
+        "label": "Number",
+        "type": "string"
+       },
+       {
+        "field": "invoice_date",
+        "label": "Invoice date",
+        "type": "date"
+       },
+       {
+        "field": "open",
+        "label": "Open",
+        "type": "money"
+       },
+       {
+        "field": "currency",
+        "label": "Currency",
+        "type": "string"
+       }
+      ],
+      "items": []
+     }
+    ],
+    "trigger": "payment",
+    "verb": "pair_items",
+    "view": {
+     "view_id": "wyplaty-do-rozliczenia",
+     "version": 1,
+     "notion": "matching",
+     "title": "Wypłaty do rozliczenia",
+     "domain": "finance",
+     "function": "rozrachunki",
+     "spec": {
+      "rule": "pl-match-outgoing"
+     }
+    }
+   }
+  }
+ ]
+}
