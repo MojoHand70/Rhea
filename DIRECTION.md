@@ -2014,6 +2014,30 @@ threat model, the log as evidence. (c) April 2027 is the *latest*, not
 the date. Sequence from here: the model measurement first, then KSeF
 outbound.
 
+**Measured the same day (2026-10-14, laptop RTX 5090 24 GB, Ollama,
+one run each).** Writing rules: qwen3.6:27b easy corpus NOT DONE (all
+nine approved, residue zero, but the invoice state 0 of 5 — 9/9 on
+2026-10-10, so one run is not a verdict) and operations DONE in 474 s
+with one re-ask; Bielik 11B v3.0 (Q8_0) 0/9 and 0/6, eight drafts
+refused for writing the effect as a string; Bielik 4.5B v3.0 (Q8_0) 0/9
+and 0/6, refused at the gate. The host's words, five mornings each
+through the live check: qwen3.6:27b 5/5 accepted and truthful — both
+waiting payments named, every number exact, each morning phrased anew —
+at 40–78 s thinking, and 5/5 at 3–10 s with thinking switched off (a
+request parameter the agent does not send yet); Bielik 11B 0/5 — fluent
+Polish in 3–8 s, but the decimals dropped from every amount, the same
+text five times, and "no outgoing payments waiting" when one was;
+Bielik 4.5B 3/5 by the checks, yet every answer denied both waiting
+payments and opened with a template date. Two conclusions and a gap.
+Rule writing stays on Anthropic; no local candidate writes the grammar,
+and Bielik is out for both jobs at its current sizes. The host's words
+can run locally on a Qwen-class 27B with thinking off, at a few seconds
+a briefing on a laptop, which settles the free tier's cost shape. The
+gap is the law's: the kernel refuses a number the facts do not carry
+but not a fact the words deny — a non-empty fact must be spoken, or the
+words are refused; that check is the next small step, before KSeF
+outbound.
+
 One line: *free is the network's economics, open source is the trust
 answer, the accountant is the buyer, and the wow is zero data entry,
 "why?" on every number, and a host that never asks twice.*
