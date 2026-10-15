@@ -90,7 +90,7 @@ func TestM3PolandPack(t *testing.T) {
 	if _, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", "common", "people.json"), "test"); err != nil {
 		t.Fatal(err)
 	}
-	post("/api/bundles/pack-common-people-v1/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-common-people-v2/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	// Periods: the close_period door and the lock rule are common verbs.
 	if _, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", "common", "periods.json"), "test"); err != nil {
 		t.Fatal(err)
@@ -111,8 +111,8 @@ func TestM3PolandPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 19 || sum.Views != 12 || sum.Rules != 27 || sum.Activities != 1 || sum.Events != 31 || sum.Skipped != 0 ||
-		sum.Bundle != "pack-pl-v17" {
+	if sum.Types != 19 || sum.Views != 12 || sum.Rules != 29 || sum.Activities != 2 || sum.Events != 31 || sum.Skipped != 0 ||
+		sum.Bundle != "pack-pl-v18" {
 		t.Fatalf("first load: %+v", sum)
 	}
 	// Idempotent: a reload changes nothing.
@@ -120,7 +120,7 @@ func TestM3PolandPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Skipped != 90 || sum.Bundle != "" {
+	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Skipped != 93 || sum.Bundle != "" {
 		t.Fatalf("reload: %+v", sum)
 	}
 
@@ -140,7 +140,7 @@ func TestM3PolandPack(t *testing.T) {
 	// Approving the pack's bundle IS the installation: its types, views and
 	// rules activate together, and the chart of accounts and the VAT rates
 	// materialize from the waiting events.
-	post("/api/bundles/pack-pl-v17/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-pl-v18/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {
 		t.Fatalf("worklist not cleared after approvals: %d", len(wl))
 	}

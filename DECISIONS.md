@@ -2921,3 +2921,33 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   behind: a pack-upgrade mechanism is due before the private beta, since the loader
   leaves known ids alone by design); the natural person's door; the accountant's
   hand-over as a person (the issued document names no recipient yet).
+
+
+## 2026-10-15 — the two gaps closed: pack upgrades behind the gate, the natural person's door
+
+- **A pack upgrades its own definitions.** The loader kept a known rule id or activity
+  name untouched by design ("its versions are not a pack's to touch"), which protected
+  a company's local evolution and also froze every installation at the pack version it
+  was born with — the two live shells were four versions behind. The distinction the
+  loader lacked was authorship, and the store already had it: every version the pack
+  drafted carries `created_by: pack:<name>`, and approval's active row keeps it. Now a
+  known definition whose latest version is the pack's own and whose content differs is
+  drafted as the next version into the upgrade bundle (`pack-<name>-v<k>`, "Upgrade to
+  …"), behind the same gate as an install; an unchanged one is already present; one a
+  person or the agent evolved since is reported as a conflict and left alone, for a
+  person to resolve by hand (`Summary.Upgraded`, `Summary.Conflicts`; `rhea pack`
+  prints both). Object types and views were always keyed by version and upgraded by
+  the install path. Approving the bundle supersedes the old versions as any rule
+  approval does. `TestPackUpgrade`: install, upgrade two of three, the shipped version
+  runs until approval, reload is a no-op, a local evolution blocks the pack's change
+  with its name on the conflict.
+- **The natural person's door.** People pack v2: `person` v2 gains given name, family
+  name and birth date (amendable) and the door `identify_person` with its rule. Poland
+  pack v18: the door `identify_company` — e-mail, tax office code, legal form, and for
+  a natural person the owner as a person — with two rules split on `$.owner` present
+  or `absent`. The JPK writer renders the natural person's block from them; the test
+  walks both doors and reads the block back. The interview will fill these the way it
+  fills the rest.
+- **The live shells.** Both databases load the four current packs through the upgrade
+  path (people v2, periods v1, documents v3, Poland v18); the bundles wait at the gate
+  and are approved from the CLI as the person who runs them.

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -411,14 +410,4 @@ func nipOf(c map[string]any, fallback any) string {
 func text(v any) string {
 	s, _ := v.(string)
 	return s
-}
-
-// sortedKeys is for deterministic output where a map is walked.
-func sortedKeys(m map[string]string) []string {
-	out := make([]string, 0, len(m))
-	for k := range m {
-		out = append(out, k)
-	}
-	sort.Strings(out)
-	return out
 }

@@ -104,8 +104,11 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("pack %s: %d types, %d views, %d rules, %d activities drafted, %d events loaded; %d already present\n",
-			sum.Pack, sum.Types, sum.Views, sum.Rules, sum.Activities, sum.Events, sum.Skipped)
+		fmt.Printf("pack %s: %d types, %d views, %d rules, %d activities drafted, %d upgraded, %d events loaded; %d already present\n",
+			sum.Pack, sum.Types, sum.Views, sum.Rules, sum.Activities, sum.Upgraded, sum.Events, sum.Skipped)
+		for _, c := range sum.Conflicts {
+			fmt.Printf("conflict: %s evolved locally since the pack's version — the pack's change was not drafted; resolve by hand\n", c)
+		}
 		if sum.Bundle != "" {
 			fmt.Printf("bundle %s waits for approval — approving it installs the pack (rhea approve %s)\n", sum.Bundle, sum.Bundle)
 		}

@@ -1,7 +1,7 @@
 {
   "pack": "pl",
-  "version": 17,
-  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami; poranek: gospodarz mówi, co zaksięgowano i co czeka, z faktów, które policzyło jądro; dziś: otwarte zadania i należności w kolejności pilności, z zatwierdzeniami, które czekają; KSeF na zewnątrz: faktury sprzedaży idą do KSeF jako FA(3) jedną sesją interaktywną, dowód (numer KSeF, UPO) i odmowa (kod, słowa Ministerstwa) są zdarzeniami, odmowa staje się zadaniem na dziś; koniec miesiąca: faktury niosą okres VAT, zamknięcie miesiąca (period.closed) daje rozliczenie VAT jako obiekt policzony regułą — każda liczba deklaracji ma pochodzenie; plik JPK_V7M z rozliczenia i faktur miesiąca (writer rynku), firma zna swój urząd skarbowy, e-mail i formę prawną, faktura zakupu z KSeF niesie numer KSeF",
+  "version": 18,
+  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami; poranek: gospodarz mówi, co zaksięgowano i co czeka, z faktów, które policzyło jądro; dziś: otwarte zadania i należności w kolejności pilności, z zatwierdzeniami, które czekają; KSeF na zewnątrz: faktury sprzedaży idą do KSeF jako FA(3) jedną sesją interaktywną, dowód (numer KSeF, UPO) i odmowa (kod, słowa Ministerstwa) są zdarzeniami, odmowa staje się zadaniem na dziś; koniec miesiąca: faktury niosą okres VAT, zamknięcie miesiąca (period.closed) daje rozliczenie VAT jako obiekt policzony regułą — każda liczba deklaracji ma pochodzenie; plik JPK_V7M z rozliczenia i faktur miesiąca (writer rynku), firma zna swój urząd skarbowy, e-mail i formę prawną, faktura zakupu z KSeF niesie numer KSeF; firma mówi, kim jest dla urzędu (identify_company): e-mail, urząd skarbowy, forma prawna, właściciel",
   "requires": [
     "company",
     "account",
@@ -2573,6 +2573,65 @@
           }
         }
       }
+    },
+    {
+      "rule_id": "pl-identify-company",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Firma bez wskazanego właściciela: e-mail, urząd skarbowy i forma prawna, jak je podała",
+      "spec": {
+        "match": {
+          "event_type": "company.identified",
+          "where": [
+            {
+              "path": "$.owner",
+              "op": "absent"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "company",
+            "target": "=$.company",
+            "set": {
+              "email": "=$.email",
+              "tax_office": "=$.tax_office",
+              "legal_form": "=$.legal_form"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-identify-company-owner",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Firma ze wskazanym właścicielem (osoba fizyczna): e-mail, urząd skarbowy, forma prawna i właściciel, jak je podała",
+      "spec": {
+        "match": {
+          "event_type": "company.identified",
+          "where": [
+            {
+              "path": "$.owner",
+              "op": "exists"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "company",
+            "target": "=$.company",
+            "set": {
+              "email": "=$.email",
+              "tax_office": "=$.tax_office",
+              "legal_form": "=$.legal_form",
+              "owner": "=$.owner"
+            }
+          }
+        }
+      }
     }
   ],
   "activities": [
@@ -2603,6 +2662,52 @@
         }
       },
       "version": 2
+    },
+    {
+      "name": "identify_company",
+      "domain": "finance",
+      "description": "Firma mówi, kim jest dla urzędu skarbowego: e-mail, kod urzędu (np. 1471), forma prawna (osoba fizyczna albo osoba prawna) i — dla osoby fizycznej — właściciel jako osoba",
+      "spec": {
+        "inputs": [
+          {
+            "name": "company",
+            "type": "ref<company>",
+            "required": true
+          },
+          {
+            "name": "email",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "tax_office",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "legal_form",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "natural_person",
+              "legal_entity"
+            ]
+          },
+          {
+            "name": "owner",
+            "type": "ref<person>",
+            "required": false
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "company.identified",
+        "who": [
+          "human"
+        ]
+      }
     }
   ],
   "events": [

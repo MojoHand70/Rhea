@@ -5,8 +5,11 @@
 // approval gate as everything else (KK, 2026-10-08: everything drafts), and
 // its events wait in the worklist until the bundle is approved — approving
 // the pack's bundle IS the installation. Loading is idempotent: definitions
-// and events already present are skipped, and a rule id or activity name the
-// system already knows is left alone.
+// and events already present are skipped. A newer pack upgrades its own
+// definitions — a changed rule or activity whose latest version is the
+// pack's becomes the next draft version in the upgrade bundle — and leaves
+// alone what a person or the agent evolved locally since, reporting it as a
+// conflict (DECISIONS 2026-10-15).
 package pack
 
 import (
@@ -68,17 +71,45 @@ type Event struct {
 }
 
 // Summary says what a load did; Skipped counts everything already present.
+// Upgraded counts the pack's own definitions it drafted a new version of
+// (a pack upgrade, 2026-10-15); Conflicts names the ones it left alone
+// because a person or the agent evolved them locally since.
 type Summary struct {
-	Pack       string `json:"pack"`
-	Types      int    `json:"types"`
-	Views      int    `json:"views"`
-	Rules      int    `json:"rules"`
-	Activities int    `json:"activities"`
-	Events     int    `json:"events"`
-	Skipped    int    `json:"skipped"`
+	Pack       string   `json:"pack"`
+	Types      int      `json:"types"`
+	Views      int      `json:"views"`
+	Rules      int      `json:"rules"`
+	Activities int      `json:"activities"`
+	Events     int      `json:"events"`
+	Skipped    int      `json:"skipped"`
+	Upgraded   int      `json:"upgraded"`
+	Conflicts  []string `json:"conflicts,omitempty"`
 	// Bundle is the approval scope holding every draft this load added;
 	// empty when the load added none (a reload).
 	Bundle string `json:"bundle,omitempty"`
+}
+
+// A pack upgrade (DECISIONS 2026-10-15): a known rule or activity is the
+// pack's to move forward when its latest version is the pack's own — then
+// a changed definition is drafted as the next version, into the upgrade
+// bundle behind the gate like everything else. A definition a person or
+// the agent evolved since is not the pack's to touch: it is reported as a
+// conflict and left alone, for a person to resolve. An unchanged one is
+// already present. Object types and views were always keyed by version,
+// so their new versions upgrade by the same path they install.
+func packOwns(createdBy, pack string) bool { return createdBy == "pack:"+pack }
+
+func sameRule(have core.Rule, want Rule) bool {
+	a, _ := json.Marshal(have.Spec)
+	b, _ := json.Marshal(want.Spec)
+	return have.Priority == want.Priority && have.EffectiveFrom == want.EffectiveFrom &&
+		have.Description == want.Description && string(a) == string(b)
+}
+
+func sameActivity(have core.Activity, want Activity) bool {
+	a, _ := json.Marshal(have.Spec)
+	b, _ := json.Marshal(want.Spec)
+	return have.Domain == want.Domain && have.Description == want.Description && string(a) == string(b)
 }
 
 // BundleID names a pack version's bundle.
@@ -135,9 +166,18 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 	}
 
 	for _, r := range m.Rules {
-		if _, err := s.GetRule(ctx, r.RuleID); err == nil {
-			sum.Skipped++ // the id is known; its versions are not a pack's to touch
-			continue
+		upgrade := false
+		if have, err := s.GetRule(ctx, r.RuleID); err == nil {
+			switch {
+			case sameRule(have, r):
+				sum.Skipped++ // already present, this version or an earlier one with the same content
+				continue
+			case !packOwns(have.CreatedBy, m.Pack):
+				// evolved locally since: not the pack's to touch
+				sum.Conflicts = append(sum.Conflicts, fmt.Sprintf("rule %s v%d (by %s)", have.ID, have.Version, have.CreatedBy))
+				continue
+			}
+			upgrade = true
 		}
 		var target *core.ObjectType
 		if name := r.Spec.Effect.Object.Type; name != "" {
@@ -174,13 +214,25 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 			return sum, fmt.Errorf("rule %s: %w", r.RuleID, err)
 		}
 		members = append(members, core.Member{Kind: core.KindRule, Name: rule.ID, Version: rule.Version})
-		sum.Rules++
+		if upgrade {
+			sum.Upgraded++
+		} else {
+			sum.Rules++
+		}
 	}
 
 	for _, a := range m.Activities {
-		if _, err := s.GetActivity(ctx, a.Name); err == nil {
-			sum.Skipped++ // the name is known; its versions are not a pack's to touch
-			continue
+		upgrade := false
+		if have, err := s.GetActivity(ctx, a.Name); err == nil {
+			switch {
+			case sameActivity(have, a):
+				sum.Skipped++
+				continue
+			case !packOwns(have.CreatedBy, m.Pack):
+				sum.Conflicts = append(sum.Conflicts, fmt.Sprintf("activity %s v%d (by %s)", have.Name, have.Version, have.CreatedBy))
+				continue
+			}
+			upgrade = true
 		}
 		act, err := s.InsertActivityVersion(ctx, core.Activity{
 			Name: a.Name, Status: core.StatusDraft, Domain: a.Domain,
@@ -190,7 +242,11 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 			return sum, fmt.Errorf("activity %s: %w", a.Name, err)
 		}
 		members = append(members, core.Member{Kind: core.KindActivity, Name: act.Name, Version: act.Version})
-		sum.Activities++
+		if upgrade {
+			sum.Upgraded++
+		} else {
+			sum.Activities++
+		}
 	}
 
 	if len(members) > 0 {
@@ -205,7 +261,7 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 		}
 		b, err := s.InsertBundle(ctx, core.Bundle{
 			ID: BundleID(m.Pack, m.Version), CreatedBy: "pack:" + m.Pack, Members: members,
-			Description: fmt.Sprintf("Install pack %s v%d: %s", m.Pack, m.Version, m.Description),
+			Description: fmt.Sprintf("%s pack %s v%d: %s", map[bool]string{false: "Install", true: "Upgrade to"}[sum.Upgraded > 0], m.Pack, m.Version, m.Description),
 			Warrant:     warrant,
 		})
 		if err != nil {

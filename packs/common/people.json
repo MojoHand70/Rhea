@@ -1,7 +1,7 @@
 {
   "pack": "common-people",
-  "version": 1,
-  "description": "People: the person as master data — who acts, who is assigned, who stands in. Market-neutral; every pack that assigns work builds on it",
+  "version": 2,
+  "description": "People: the person as master data — who acts, who is assigned, who stands in. Market-neutral; every pack that assigns work builds on it v2: a person can say their given name, family name and birth date (identify_person) — what a natural person's tax return needs.",
   "warrant": {
     "basis": "practice",
     "citations": [
@@ -13,25 +13,76 @@
   "object_types": [
     {
       "name": "person",
-      "version": 1,
+      "version": 2,
       "domain": "people",
       "is_document": false,
       "label_field": "name",
       "fields": [
-        { "name": "name", "type": "string", "required": true },
-        { "name": "handle", "type": "string", "required": true },
-        { "name": "role", "type": "string", "required": true },
-        { "name": "status", "type": "enum", "required": true, "values": ["active", "away", "left"] },
-        { "name": "deputy", "type": "ref<person>" }
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "handle",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "role",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "active",
+            "away",
+            "left"
+          ]
+        },
+        {
+          "name": "deputy",
+          "type": "ref<person>"
+        },
+        {
+          "name": "given_name",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "family_name",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "birth_date",
+          "type": "date",
+          "required": false
+        }
       ],
       "lifecycle": {
         "field": "status",
         "transitions": {
-          "active": ["away", "left"],
-          "away": ["active", "left"]
+          "active": [
+            "away",
+            "left"
+          ],
+          "away": [
+            "active",
+            "left"
+          ]
         }
       },
-      "amendable": ["role", "deputy"]
+      "amendable": [
+        "birth_date",
+        "deputy",
+        "family_name",
+        "given_name",
+        "role"
+      ]
     }
   ],
   "rules": [
@@ -41,7 +92,9 @@
       "effective_from": "2026-01-01",
       "description": "A registered person becomes a person object, active from the day of registration",
       "spec": {
-        "match": { "event_type": "person.registered" },
+        "match": {
+          "event_type": "person.registered"
+        },
         "effect": {
           "object": {
             "type": "person",
@@ -61,12 +114,16 @@
       "effective_from": "2026-01-01",
       "description": "Appointing a deputy amends the person: work addressed to them can be routed to the deputy while they are away",
       "spec": {
-        "match": { "event_type": "person.deputy_appointed" },
+        "match": {
+          "event_type": "person.deputy_appointed"
+        },
         "effect": {
           "amend": {
             "type": "person",
             "target": "=$.person",
-            "set": { "deputy": "=$.deputy" }
+            "set": {
+              "deputy": "=$.deputy"
+            }
           }
         }
       }
@@ -77,12 +134,39 @@
       "effective_from": "2026-01-01",
       "description": "A person's status moves along the declared lifecycle: active ⇄ away, either → left; the kernel refuses any other move",
       "spec": {
-        "match": { "event_type": "person.status_changed" },
+        "match": {
+          "event_type": "person.status_changed"
+        },
         "effect": {
           "amend": {
             "type": "person",
             "target": "=$.person",
-            "set": { "status": "=$.status" }
+            "set": {
+              "status": "=$.status"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "identify-person",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "A person's names and birth date, as they said them",
+      "spec": {
+        "match": {
+          "event_type": "person.identified"
+        },
+        "effect": {
+          "amend": {
+            "type": "person",
+            "target": "=$.person",
+            "set": {
+              "given_name": "=$.given_name",
+              "family_name": "=$.family_name",
+              "birth_date": "=$.birth_date"
+            }
           }
         }
       }
@@ -95,13 +179,30 @@
       "description": "Register a person: name, the handle their actions are signed with, and their role",
       "spec": {
         "inputs": [
-          { "name": "name", "type": "string", "required": true },
-          { "name": "handle", "type": "string", "required": true },
-          { "name": "role", "type": "string", "required": true },
-          { "name": "occurred_at", "type": "date" }
+          {
+            "name": "name",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "handle",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "role",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
         ],
         "emits": "person.registered",
-        "who": ["human"]
+        "who": [
+          "human"
+        ]
       }
     },
     {
@@ -110,12 +211,25 @@
       "description": "Appoint who stands in for a person",
       "spec": {
         "inputs": [
-          { "name": "person", "type": "ref<person>", "required": true },
-          { "name": "deputy", "type": "ref<person>", "required": true },
-          { "name": "occurred_at", "type": "date" }
+          {
+            "name": "person",
+            "type": "ref<person>",
+            "required": true
+          },
+          {
+            "name": "deputy",
+            "type": "ref<person>",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
         ],
         "emits": "person.deputy_appointed",
-        "who": ["human"]
+        "who": [
+          "human"
+        ]
       }
     },
     {
@@ -124,12 +238,67 @@
       "description": "Mark a person away, back, or gone",
       "spec": {
         "inputs": [
-          { "name": "person", "type": "ref<person>", "required": true },
-          { "name": "status", "type": "enum", "required": true, "values": ["active", "away", "left"] },
-          { "name": "occurred_at", "type": "date" }
+          {
+            "name": "person",
+            "type": "ref<person>",
+            "required": true
+          },
+          {
+            "name": "status",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "active",
+              "away",
+              "left"
+            ]
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
         ],
         "emits": "person.status_changed",
-        "who": ["human"]
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "identify_person",
+      "domain": "people",
+      "description": "A person says who they are to an office: given name, family name, birth date — what a natural person's tax return carries",
+      "spec": {
+        "inputs": [
+          {
+            "name": "person",
+            "type": "ref<person>",
+            "required": true
+          },
+          {
+            "name": "given_name",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "family_name",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "birth_date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "person.identified",
+        "who": [
+          "human"
+        ]
       }
     }
   ]
