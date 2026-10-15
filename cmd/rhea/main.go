@@ -64,7 +64,7 @@ import (
 func main() {
 	log.SetFlags(0)
 	if len(os.Args) < 2 {
-		log.Fatal("usage: rhea init|load|submit|intake|pass|file|issue|serve|replay|channels|clock")
+		log.Fatal("usage: rhea init|load|submit|intake|pass|file|issue|backup|restore|serve|replay|channels|clock")
 	}
 	// The caller's scope: the company whose facts this run is in
 	// (DIRECTION 2026-10-08, the partition key); empty means the whole log.
@@ -221,6 +221,51 @@ func main() {
 			log.Fatal(err)
 		}
 		fmt.Printf("bundle %s rejected; its drafts stay on the record, a redraft is a new bundle\n", b.ID)
+
+	case "backup":
+		// The system of record as JSON lines: definitions, bundles, files,
+		// the event log — to FILE, or to stdout. Objects are not in it; a
+		// restore replays them.
+		out := os.Stdout
+		if len(os.Args) >= 3 {
+			f, err := os.Create(os.Args[2])
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer f.Close()
+			out = f
+		}
+		counts, err := s.Backup(ctx, out)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Fprintf(os.Stderr, "backup: %v\n", counts)
+
+	case "restore":
+		// Into an empty database: the schema, every row with its id and
+		// time, the sequence moved past the last event, then the replay that
+		// rebuilds the objects — the proof that the log and the definitions
+		// are the whole system.
+		if len(os.Args) < 3 {
+			log.Fatal("usage: rhea restore FILE   (into an empty database)")
+		}
+		f, err := os.Open(os.Args[2])
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer f.Close()
+		if err := s.InitSchema(ctx); err != nil {
+			log.Fatal(err)
+		}
+		counts, err := s.Restore(ctx, f)
+		if err != nil {
+			log.Fatal(err)
+		}
+		objects, err := x.Replay(ctx)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("restored %v; replay rebuilt %d objects\n", counts, len(objects))
 
 	case "file", "issue":
 		// Render a provided writer's file (rhea file WRITER k=v…: to stdout,

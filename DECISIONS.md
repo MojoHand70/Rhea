@@ -2951,3 +2951,34 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
 - **The live shells.** Both databases load the four current packs through the upgrade
   path (people v2, periods v1, documents v3, Poland v18); the bundles wait at the gate
   and are approved from the CLI as the person who runs them.
+
+
+## 2026-10-15 — backup and restore: the log and the definitions are the whole system
+
+- **What a backup is.** The append-only tables, every row: object types and views in
+  every version with their statuses, rules and activities likewise, bundles with their
+  warrants and questions, files under their hashes, and the event log with its ids,
+  causes, rule and door provenance, actors, companies and times. Not the object table:
+  it is the projection replay rebuilds (invariants 4 and 7), so a restore ends with a
+  replay. `Store.Backup` writes JSON lines — a header, then one line per row as
+  Postgres itself spells the row (`row_to_json`) — so a backup reads without Rhea.
+- **What a restore is.** Into an empty system of record (the schema in place, no event
+  and no definition — `InitSchema`, the schema without the seeded verbs, since the
+  verbs arrive with the backup): one transaction, every row inserted with its id and
+  time (`json_populate_record`, `OVERRIDING SYSTEM VALUE` on the event identity), the
+  event sequence moved past the last id so the log continues, then the replay. A
+  restore refuses a log that is not empty and a line naming a table it does not take.
+  `rhea backup [FILE]`, `rhea restore FILE`.
+- **The test** (`TestBackupRestore`) builds a world — two type versions, an active rule
+  and a draft at the gate in a bundle with a question, three events fired, a file
+  through the door — backs it up, restores it into a bare throwaway database, replays,
+  and finds: identical objects with identical provenance, every row of every table the
+  same byte for byte (a backup of the restore equals the backup, header aside), the
+  file under its hash, the doors present, the draft still waiting, the log continuing
+  at the next id and the restored world still booking. `TestRestoreLiveBackup`
+  (gated by `RHEA_LIVE_BACKUP`) restores a real backup; the Poland demo database was
+  backed up and restored into a throwaway the same night.
+- **Open-core, decided with KK the same night** (DIRECTION, the plan note): the kernel
+  and the base Poland pack with its statutory channels open on the day the street
+  opens; the face, the industry packs and the hosted network stay proprietary; the
+  boundary is the JSON API, so the kernel's licence never reaches the face.

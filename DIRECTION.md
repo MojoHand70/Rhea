@@ -2282,6 +2282,78 @@ month is a closed month".
 One line: *the settlement is a rule with provenance, the close is a door,
 the file is a market's writer rendered by a kernel that never names it.*
 
+## The plan after the statutory floor: test hard, then the face (KK, 2026-10-15)
+
+KK, the night the floor closed: defer the open-source floor; do
+backup-restore now. Then go through the whole Poland pack again and
+verify the rules are complete. Then a testing phase, not skimped — two
+more weeks and the tokens it takes: a *business generator* that makes
+test companies and document traffic and moves them over several months
+and through year-end. In parallel the first-class, intent-based modern
+UI, mobile first — "if we want Rhea to be different, mobile will be the
+#1 interface", no shortcut. KK looks for the infrastructure platform for
+live deployment. And security. The demo rehearsal with Novi's account
+waits for the face: without a UI there is nothing to rehearse but the
+login, and the login's only question (does Novi's KSeF authorization
+work on the demo environment) can be answered in five minutes whenever
+the time comes.
+
+**The order, replacing the one in the public-service note for the
+coming weeks.**
+
+1. **Backup and restore** — the claim the kernel makes is that the
+   event log plus the definitions rebuild everything; a test restores
+   from that alone into an empty database and replay reproduces identical
+   state. Done the same night (DECISIONS).
+2. **The Poland pack, read whole.** Every rule, type, view, door and
+   channel re-read against the story a sole trader lives through in a
+   year: what is missing, what is wrong, what the corpus never asked.
+   The output is a list with a verdict per item and the pack version
+   that closes it.
+3. **The business generator.** The simulator grows from two personas
+   with one scene each into a generator of companies: a shape (trade,
+   size, customers, suppliers, banks, currencies), a calendar (months,
+   quarter ends, the year end with its closings and filings), and
+   traffic (invoices in and out, payments, statements, corrections,
+   late arrivals, duplicates, the odd mistake). Every company runs
+   through the whole floor — KSeF out and in, matching, the month end,
+   JPK, the year end — and the verdict is the one the personas already
+   have: DONE or not, per run, per voice, with every number explained.
+   The generator is also the demo's content.
+4. **The face, mobile first.** Built apart, against the JSON API, in its
+   own repository, intent-based: the home screen is the decisions of the
+   day, one tap each; the briefing; "why?" on every number; the doors as
+   forms the pack declares; chat only as the escape hatch. The plain
+   shell stays the developer's truth. The mobile screen is the primary
+   one, not an adaptation.
+5. **Security**, with the platform KK finds: sign-in, strict company
+   separation on the company key, encrypted secrets (the KSeF token
+   first), backups that restore (item 1), the data-processing agreement
+   and the incident plan on paper before the first stranger.
+
+The open-source floor (licence, README, formatting) comes after these.
+KK, the same night: the kernel stays open source in the strategy, and it
+opens the same day the first version opens to the street — the floor is
+done before that day, not before the testing phase. The shape KK
+proposes: open the kernel and the base Poland pack; keep the face and
+perhaps some specialised packs proprietary. Agreed, with three lines
+drawn. The open part must be enough to run alone — the kernel, the plain
+shell as its working face, the common packs, and the base Poland pack
+*with* its statutory channels (KSeF in and out, JPK), because "you can
+run it yourself" is the trust answer and a sole trader who runs it needs
+exactly those. The pack format and the loader stay open so anyone can
+write a pack; what stays proprietary is the face, the industry packs
+(warehouse, intercompany, trade-specific rules) and the hosted network
+of learned rule shapes — the network is the moat, not the packs. The
+boundary with the proprietary face is the JSON API, in another process
+and another repository, so a copyleft licence on the kernel (AGPL) never
+reaches it; kernel code is never linked into the face.
+
+One line: *restore first, then read the pack whole, then generate
+businesses and test for two weeks without skimping, while the mobile
+face is built apart and the platform is found; security before the first
+stranger, and the kernel opens the day the street does.*
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,

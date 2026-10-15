@@ -29,6 +29,26 @@ func Throwaway(ctx context.Context, prefix string) (*Store, func(), error) {
 	return s, func() { s.Close(); drop() }, nil
 }
 
+// ThrowawayBare is Throwaway without the seed: the schema in place, no verb
+// and no event — the empty system of record a restore lands in.
+func ThrowawayBare(ctx context.Context, prefix string) (*Store, func(), error) {
+	dsn, drop, err := ThrowawayDSN(ctx, prefix)
+	if err != nil {
+		return nil, nil, err
+	}
+	s, err := Open(ctx, dsn)
+	if err != nil {
+		drop()
+		return nil, nil, fmt.Errorf("open %s: %w", dsn, err)
+	}
+	if err := s.InitSchema(ctx); err != nil {
+		s.Close()
+		drop()
+		return nil, nil, fmt.Errorf("init %s: %w", dsn, err)
+	}
+	return s, func() { s.Close(); drop() }, nil
+}
+
 // ThrowawayDSN creates an empty database on the rhea Postgres and returns its
 // connection string and the cleanup that drops it — for stores other than
 // the kernel's (the network's).
