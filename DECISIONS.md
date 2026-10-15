@@ -2767,3 +2767,18 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   invoice shown outside KSeF. The migration of the live shells to v14. A pass that dies
   between sending and status would re-send next time and meet a 440 duplicate carrying
   the original number — the rejection then tells the person; rare, noted.
+- **LIVE, 2026-10-15 evening: the first invoice Rhea issued to KSeF.** KK took the portal
+  walk on the test taxpayer app (test authentication, the random NIP 8058083055,
+  "Tokeny" → "Generuj token" with issuing and reading) and pasted the token into `.env`.
+  The token's own shape is three pipe-separated parts (a reference, `nip-<NIP>`, a
+  64-hex secret), so the value must be quoted in `.env` — a shell reads the pipes as
+  pipes; the whole string is the token the API wants. First live send: authenticated,
+  session open, invoice sent, **rejected 450** with the Ministry's exact words — the
+  buyer block (`Podmiot2`) was incomplete: FA(3) requires `JST` and `GV` (local
+  government unit, VAT group; "2" for no) after the address, which the sim's writer
+  never had and no local validator could tell us. Added; second live send: **accepted
+  200**, KSeF number `8058083055-20261015-84B870400000-11` (CRC-8 valid), the UPO XML
+  naming the session, the token reference, the invoice number and the acceptance time.
+  Twelve seconds end to end for one invoice, most of it the Ministry's processing. The
+  test environment is the validator of record, as the brief said: it found in one
+  round what a schema read by eye missed.

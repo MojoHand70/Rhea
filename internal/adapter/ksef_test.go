@@ -179,7 +179,7 @@ func TestWriteFA3(t *testing.T) {
 	for _, want := range []string{
 		`<?xml version="1.0" encoding="UTF-8"?>`, `<Faktura xmlns="` + adapter.FA3Namespace + `">`,
 		`<KodFormularza kodSystemowy="FA (3)" wersjaSchemy="1-0E">FA</KodFormularza>`, `<WariantFormularza>3</WariantFormularza>`,
-		`<NIP>8058083055</NIP>`, `<AdresL1>ul. Testowa 1</AdresL1>`, `<AdresL1>Nabywca S.A.</AdresL1>`, `<KodKraju>PL</KodKraju>`,
+		`<NIP>8058083055</NIP>`, `<AdresL1>ul. Testowa 1</AdresL1>`, `<AdresL1>Nabywca S.A.</AdresL1>`, `<KodKraju>PL</KodKraju>`, `<JST>2</JST>`, `<GV>2</GV>`,
 		`<P_13_1>1000.00</P_13_1>`, `<P_14_1>230.00</P_14_1>`, `<P_15>1230.00</P_15>`,
 		`<Adnotacje>`, `<P_16>2</P_16>`, `<P_19N>1</P_19N>`, `<P_22N>1</P_22N>`, `<P_PMarzyN>1</P_PMarzyN>`, `<RodzajFaktury>VAT</RodzajFaktury>`,
 		`<P_7>Sprzedaż wg faktury FV/1/2026</P_7>`, `<P_12>23</P_12>`, `<NrRB>PL83101010230000261395100000</NrRB>`,
@@ -189,7 +189,7 @@ func TestWriteFA3(t *testing.T) {
 		}
 	}
 	// Order: the schema's.
-	order := []string{"<Naglowek>", "<Podmiot1>", "<Podmiot2>", "<Fa>", "<KodWaluty>", "<P_1>", "<P_2>", "<P_13_1>", "<P_15>", "<Adnotacje>", "<RodzajFaktury>", "<FaWiersz>", "<Platnosc>"}
+	order := []string{"<Naglowek>", "<Podmiot1>", "<Podmiot2>", "<JST>", "<GV>", "<Fa>", "<KodWaluty>", "<P_1>", "<P_2>", "<P_13_1>", "<P_15>", "<Adnotacje>", "<RodzajFaktury>", "<FaWiersz>", "<Platnosc>"}
 	last := -1
 	for _, tag := range order {
 		i := strings.Index(text, tag)

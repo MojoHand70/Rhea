@@ -54,7 +54,7 @@ type faInvoice struct {
 	XMLNS    string   `xml:"xmlns,attr"`
 	Naglowek faHeader `xml:"Naglowek"`
 	Podmiot1 faParty  `xml:"Podmiot1"`
-	Podmiot2 faParty  `xml:"Podmiot2"`
+	Podmiot2 faBuyer  `xml:"Podmiot2"`
 	Fa       faBody   `xml:"Fa"`
 }
 
@@ -74,6 +74,16 @@ type faCode struct {
 type faParty struct {
 	Dane  faIdent   `xml:"DaneIdentyfikacyjne"`
 	Adres faAddress `xml:"Adres"`
+}
+
+// faBuyer is Podmiot2: the schema also asks, after the address, whether the
+// buyer is a local-government unit (JST) and a VAT group (GV) — "2" for no;
+// the Ministry's test environment refused the document without them.
+type faBuyer struct {
+	Dane  faIdent   `xml:"DaneIdentyfikacyjne"`
+	Adres faAddress `xml:"Adres"`
+	JST   string    `xml:"JST"`
+	GV    string    `xml:"GV"`
 }
 
 type faIdent struct {
@@ -251,7 +261,7 @@ func WriteFA3(inv FA3Invoice) ([]byte, error) {
 			SystemInfo:        inv.SystemInfo,
 		},
 		Podmiot1: party(inv.Seller),
-		Podmiot2: party(inv.Buyer),
+		Podmiot2: faBuyer{Dane: party(inv.Buyer).Dane, Adres: party(inv.Buyer).Adres, JST: "2", GV: "2"},
 		Fa: faBody{
 			KodWaluty: inv.Currency, P1: inv.IssueDate, P2: inv.Number, WZ: inv.WZ,
 			Totals: totals, P15: core.FormatMoney(inv.Gross), Adnotacje: annotations,
