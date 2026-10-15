@@ -37,6 +37,7 @@ import (
 //
 // Functions: round(x, places, method) with method ∈ half_up half_even down up;
 // if(c, a, b); abs(x); min(a, b); max(a, b); end_of_month(d); add_months(d, n);
+// month(d) — the period a date falls in, "YYYY-MM", the key periods share;
 // ref(T, field, v) — the id of the single T whose field equals v;
 // objects(T, field, v) — the T objects whose field equals v, as a list.
 // Division is admitted only under a round(): where precision can be lost,
@@ -905,6 +906,18 @@ func (e *checkEnv) checkCall(n *node, rounded bool) (ty, error) {
 			return anyT, fmt.Errorf("at %d: end_of_month wants a date, got %s", n.pos, d.kind)
 		}
 		return ty{kind: KDate}, nil
+	case "month":
+		if err := argc(1); err != nil {
+			return anyT, err
+		}
+		d, err := e.check(n.args[0], rounded)
+		if err != nil {
+			return anyT, err
+		}
+		if d.kind != KDate && d.kind != KString && d.kind != KAny {
+			return anyT, fmt.Errorf("at %d: month wants a date, got %s", n.pos, d.kind)
+		}
+		return ty{kind: KString}, nil
 	case "add_months":
 		if err := argc(2); err != nil {
 			return anyT, err

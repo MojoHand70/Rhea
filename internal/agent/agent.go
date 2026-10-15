@@ -218,7 +218,7 @@ TEMPLATES - every field value in an effect is a template string:
     value is text, never a link: "$.vat_rate.percent" fails - resolve first,
     "ref(vat_rate, code, $.vat_rate).percent".
   * dates: "=$.state.registered_on + 14" (days), date - date (days),
-    end_of_month(d), add_months(d, n)
+    end_of_month(d), add_months(d, n), month(d) — "YYYY-MM", the key a period is named by
   * folds over the event's own lines: "=sum(l in $.lines: l.qty * l.price)",
     count(l in $.lines where l.qty > 0), min/max/any/all(l in $.lines: ...),
     "=sum($.lines[*].amount)" sums a fanned-out path

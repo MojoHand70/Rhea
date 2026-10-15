@@ -39,10 +39,10 @@ func TestCohabitation(t *testing.T) {
 	seedFromFile(t, s, "finance_v2.json")
 	seedFromFile(t, s, "finance_v3.json")
 	seedFromFile(t, s, "finance_v4.json")
-	seedFromFile(t, s, "finance_v5.json") // books: posting v2, per-book trial balance
-	seedFromFile(t, s, "finance_v6.json") // sales_invoice v2: the seller is a ref
-	seedFromFile(t, s, "finance_v7.json") // posting v3 (tx trace), fx_rate
-	seedFromFile(t, s, "finance_v8.json") // sales_invoice v3 (intragroup + nip echoes), purchase_invoice
+	seedFromFile(t, s, "finance_v5.json")  // books: posting v2, per-book trial balance
+	seedFromFile(t, s, "finance_v6.json")  // sales_invoice v2: the seller is a ref
+	seedFromFile(t, s, "finance_v7.json")  // posting v3 (tx trace), fx_rate
+	seedFromFile(t, s, "finance_v8.json")  // sales_invoice v3 (intragroup + nip echoes), purchase_invoice
 
 	x := &exec.Executor{Store: s}
 	srv := &shell.Server{
@@ -125,7 +125,7 @@ func TestCohabitation(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	for _, id := range []string{"pack-pl-v15", "pack-de-v3"} {
+	for _, id := range []string{"pack-pl-v16", "pack-de-v3"} {
 		post("/api/bundles/"+id+"/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	}
 	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {

@@ -835,6 +835,14 @@ func call(name string, args []Value) (Value, error) {
 		}
 		first := time.Date(d.Year(), d.Month(), 1, 0, 0, 0, 0, time.UTC)
 		return Value{Kind: KDate, Str: first.AddDate(0, 1, -1).Format("2006-01-02")}, nil
+	case "month":
+		// the period a date falls in, as the key periods are named by:
+		// "2026-09" — what period_lock, the registers and a settlement share
+		d, err := toDate(args[0])
+		if err != nil {
+			return Value{}, err
+		}
+		return Value{Kind: KString, Str: d.Format("2006-01")}, nil
 	case "add_months":
 		d, err := toDate(args[0])
 		if err != nil {

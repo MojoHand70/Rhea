@@ -315,3 +315,26 @@ func (lyingKSeF) Submit(ctx context.Context, invoices []pl.Outbound) ([]pl.Submi
 	}
 	return subs, err
 }
+
+// TestDumpFA3 writes the writer's sample document to RHEA_FA3_DUMP, for a
+// schema validator outside the test suite (none is installed here; the
+// scratch validator uses lxml against the Ministry's XSD).
+func TestDumpFA3(t *testing.T) {
+	path := os.Getenv("RHEA_FA3_DUMP")
+	if path == "" {
+		t.Skip("set RHEA_FA3_DUMP=<file> to write the sample FA(3)")
+	}
+	body, err := pl.WriteFA3(pl.FA3Invoice{
+		Seller:   pl.FA3Party{NIP: "8058083055", Name: "Rhea Test sp. z o.o.", Address: "ul. Testowa 1, 00-001 Warszawa"},
+		Buyer:    pl.FA3Party{NIP: "5265877635", Name: "Nabywca S.A.", Address: "ul. Próbna 2, 00-002 Warszawa"},
+		Currency: "PLN", IssueDate: "2026-09-21", Number: "FV/1/2026", RateCode: "23",
+		Net: 100000, VAT: 23000, Gross: 123000, Account: "PL83101010230000261395100000",
+		Created: "2026-09-21T08:00:00Z", SystemInfo: "Rhea",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, body, 0o644); err != nil {
+		t.Fatal(err)
+	}
+}

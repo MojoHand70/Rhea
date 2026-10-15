@@ -2819,3 +2819,42 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   append-only log is the evidence store and an adapter returns events only; a few
   kilobytes per invoice is the right price for one rule. Live shells still run v13;
   the migration to v15 is owed before the next demo.
+
+
+## 2026-10-15 — month end, part one: the settlement is a rule, the close is a door
+
+- **`month(d)` joins the formula language**: the period a date falls in, "YYYY-MM" — the
+  key `period_lock`, the registers (DuckDB `substr`) and a settlement share. One
+  function, typed to return a string, documented in the grammar the agent is told.
+  The simplest option over a substring function: a period is a thing the language
+  names, not a slice of text.
+- **The close is a common door** (`packs/common/periods.json`, pack `common-periods`):
+  `close_period` takes any day of the month and the book; `period.closed` is the fact;
+  the common rule `lock-period` makes the `period_lock` (month, book) that postings
+  already refuse into. Market-neutral by construction — every VAT regime closes months —
+  so no market declares its own.
+- **The settlement is the Poland pack's rule** (v16): invoices carry `vat_period` from
+  booking (`=month($.issue_date)` on sales, `=month($.invoice_date)` on purchases — the
+  deduction month is the invoice month until a person amends it); on `period.closed`
+  for book `pl-stat`, `pl-settle-vat` materializes one `vat_settlement` whose every
+  field is a fold over the month's invoices — bases and VAT by rate through the link to
+  the rate's code, output VAT, purchase VAT, the excess carried in from the previous
+  month's settlement (`objects(vat_settlement, period, month(add_months($.period,
+  -1)))`, empty for the first month), VAT due or the excess forward. The declaration's
+  positions are thus kernel facts with provenance: the walk shows the rule, the event
+  and the inputs each fold read, and replay reproduces them (the story's determinism
+  check covers the settlement). The list view "Rozliczenie VAT" shows the month.
+- **The VAT period lives on the pack's invoice versions** (sales_invoice v5,
+  purchase_invoice v3), not on a base seed: the pack already owns the later versions
+  of both types (open amounts, status), and a competing base version of the same
+  number collided — the loader validates a rule against the type it knows. Noted for
+  the base's market-neutral read when Germany lands: `vat_period` is neutral, the pack
+  is merely where the type's current version happens to be.
+- **The worklist is re-read when the world changes, and the lock applies to what was
+  late**: closing September re-tried the unbalanced September invoice still waiting,
+  which is now refused by the lock and says so. The story asserts it, and that a late
+  posting after the close is refused per event naming the lock.
+- **Next:** the file — the writer seam, `markets/pl` rendering JPK_V7M(3) from the
+  settlement and the invoices, the common documents pack's `issue_document` door and
+  `issued_document` type, validated against the Ministry's XSD with the scratch
+  validator (lxml; this morning's FA(3) validates against the schema offline too).

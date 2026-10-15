@@ -1,7 +1,7 @@
 {
   "pack": "pl",
-  "version": 15,
-  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami; poranek: gospodarz mówi, co zaksięgowano i co czeka, z faktów, które policzyło jądro; dziś: otwarte zadania i należności w kolejności pilności, z zatwierdzeniami, które czekają; KSeF na zewnątrz: faktury sprzedaży idą do KSeF jako FA(3) jedną sesją interaktywną, dowód (numer KSeF, UPO) i odmowa (kod, słowa Ministerstwa) są zdarzeniami, odmowa staje się zadaniem na dziś",
+  "version": 16,
+  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami; poranek: gospodarz mówi, co zaksięgowano i co czeka, z faktów, które policzyło jądro; dziś: otwarte zadania i należności w kolejności pilności, z zatwierdzeniami, które czekają; KSeF na zewnątrz: faktury sprzedaży idą do KSeF jako FA(3) jedną sesją interaktywną, dowód (numer KSeF, UPO) i odmowa (kod, słowa Ministerstwa) są zdarzeniami, odmowa staje się zadaniem na dziś; koniec miesiąca: faktury niosą okres VAT, zamknięcie miesiąca (period.closed) daje rozliczenie VAT jako obiekt policzony regułą — każda liczba deklaracji ma pochodzenie",
   "requires": [
     "company",
     "account",
@@ -809,7 +809,7 @@
     },
     {
       "name": "sales_invoice",
-      "version": 4,
+      "version": 5,
       "domain": "finance",
       "is_document": true,
       "label_field": "number",
@@ -887,6 +887,11 @@
             "paid"
           ],
           "required": false
+        },
+        {
+          "name": "vat_period",
+          "type": "string",
+          "required": false
         }
       ],
       "lifecycle": {
@@ -907,7 +912,7 @@
     },
     {
       "name": "purchase_invoice",
-      "version": 2,
+      "version": 3,
       "domain": "finance",
       "is_document": true,
       "label_field": "number",
@@ -975,6 +980,11 @@
             "paid"
           ],
           "required": false
+        },
+        {
+          "name": "vat_period",
+          "type": "string",
+          "required": false
         }
       ],
       "lifecycle": {
@@ -1037,6 +1047,105 @@
         },
         {
           "name": "date",
+          "type": "date",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "vat_settlement",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "period",
+      "fields": [
+        {
+          "name": "period",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "sales_net_23",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "sales_vat_23",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "sales_net_8",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "sales_vat_8",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "sales_net_5",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "sales_vat_5",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "sales_net_0",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "sales_net_exempt",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "output_vat",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "purchase_net",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "purchase_vat",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "carried_in",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "input_vat",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "vat_due",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "vat_carry",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "closed_on",
           "type": "date",
           "required": true
         }
@@ -1359,6 +1468,47 @@
         ],
         "limit": 50
       }
+    },
+    {
+      "view_id": "rozliczenie-vat",
+      "version": 1,
+      "notion": "list",
+      "title": "Rozliczenie VAT",
+      "domain": "finance",
+      "function": "vat",
+      "spec": {
+        "object_type": "vat_settlement",
+        "columns": [
+          {
+            "field": "period",
+            "label": "Okres"
+          },
+          {
+            "field": "sales_net_23",
+            "label": "Sprzedaż 23% netto"
+          },
+          {
+            "field": "output_vat",
+            "label": "VAT należny"
+          },
+          {
+            "field": "purchase_vat",
+            "label": "VAT naliczony"
+          },
+          {
+            "field": "carried_in",
+            "label": "Z poprzedniego"
+          },
+          {
+            "field": "vat_due",
+            "label": "Do zapłaty"
+          },
+          {
+            "field": "vat_carry",
+            "label": "Do przeniesienia"
+          }
+        ]
+      }
     }
   ],
   "rules": [
@@ -1422,7 +1572,7 @@
       "rule_id": "pl-book-sales-invoice",
       "priority": 100,
       "effective_from": "2026-01-01",
-      "description": "Wystawiona faktura sprzedaży staje się dokumentem sales_invoice; kwota otwarta zaczyna się od brutto, status od open",
+      "description": "Wystawiona faktura sprzedaży staje się dokumentem sales_invoice; kwota otwarta zaczyna się od brutto, status od open; okres VAT = miesiąc wystawienia",
       "spec": {
         "match": {
           "event_type": "sales.invoice.issued",
@@ -1451,11 +1601,13 @@
               "seller_nip": "=$.seller_nip",
               "buyer_nip": "=$.buyer_nip",
               "open": "=$.gross",
-              "status": "open"
+              "status": "open",
+              "vat_period": "=month($.issue_date)"
             }
           }
         }
-      }
+      },
+      "version": 2
     },
     {
       "rule_id": "pl-post-sales-invoice",
@@ -1593,7 +1745,7 @@
       "rule_id": "pl-book-purchase-invoice",
       "priority": 100,
       "effective_from": "2026-01-01",
-      "description": "Faktura zakupu z KSeF staje się dokumentem purchase_invoice: dostawca i nabywca po NIP, kwoty takie, jak podaje dokument; kwota otwarta zaczyna się od brutto, status od open",
+      "description": "Faktura zakupu z KSeF staje się dokumentem purchase_invoice: dostawca i nabywca po NIP, kwoty takie, jak podaje dokument; kwota otwarta zaczyna się od brutto, status od open; okres VAT = miesiąc faktury (odliczenie w miesiącu otrzymania; zmiana przez poprawkę)",
       "spec": {
         "match": {
           "event_type": "purchase.invoice.received",
@@ -1619,11 +1771,13 @@
               "vat_rate": "=ref(vat_rate, code, $.vat_rate)",
               "currency": "=$.currency",
               "open": "=$.gross",
-              "status": "open"
+              "status": "open",
+              "vat_period": "=month($.invoice_date)"
             }
           }
         }
-      }
+      },
+      "version": 2
     },
     {
       "rule_id": "pl-post-purchase-invoice",
@@ -2291,6 +2445,50 @@
                 "credit": "=$.state.amount"
               }
             ]
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-settle-vat",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Zamknięcie miesiąca w księdze pl-stat rozlicza VAT: podstawy i podatek należny po stawkach z faktur sprzedaży tego okresu, podatek naliczony z faktur zakupu, nadwyżka z poprzedniego miesiąca; do zapłaty, gdy należny przewyższa naliczony, inaczej nadwyżka do przeniesienia (ustawa o VAT art. 86, 87, 99; pozycje JPK_V7M P_10–P_62); do zapłaty i do przeniesienia w pełnych złotych (Ordynacja podatkowa art. 63 §1: należny i naliczony zaokrąglone, potem różnica)",
+      "spec": {
+        "match": {
+          "event_type": "period.closed",
+          "where": [
+            {
+              "path": "$.book",
+              "op": "eq",
+              "value": "pl-stat"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "vat_settlement",
+            "fields": {
+              "period": "=month($.period)",
+              "book": "=$.book",
+              "sales_net_23": "=sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"23\": i.net)",
+              "sales_vat_23": "=sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"23\": i.vat)",
+              "sales_net_8": "=sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"8\": i.net)",
+              "sales_vat_8": "=sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"8\": i.vat)",
+              "sales_net_5": "=sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"5\": i.net)",
+              "sales_vat_5": "=sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"5\": i.vat)",
+              "sales_net_0": "=sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"0\": i.net)",
+              "sales_net_exempt": "=sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"zw\": i.net)",
+              "output_vat": "=sum(i in objects(sales_invoice, vat_period, month($.period)): i.vat)",
+              "purchase_net": "=sum(i in objects(purchase_invoice, vat_period, month($.period)): i.net)",
+              "purchase_vat": "=sum(i in objects(purchase_invoice, vat_period, month($.period)): i.vat)",
+              "carried_in": "=sum(s in objects(vat_settlement, period, month(add_months($.period, -1))): s.vat_carry)",
+              "input_vat": "=(sum(i in objects(purchase_invoice, vat_period, month($.period)): i.vat) + sum(s in objects(vat_settlement, period, month(add_months($.period, -1))): s.vat_carry))",
+              "vat_due": "=if(round(sum(i in objects(sales_invoice, vat_period, month($.period)): i.vat), 0, half_up) - round((sum(i in objects(purchase_invoice, vat_period, month($.period)): i.vat) + sum(s in objects(vat_settlement, period, month(add_months($.period, -1))): s.vat_carry)), 0, half_up) > 0, round(sum(i in objects(sales_invoice, vat_period, month($.period)): i.vat), 0, half_up) - round((sum(i in objects(purchase_invoice, vat_period, month($.period)): i.vat) + sum(s in objects(vat_settlement, period, month(add_months($.period, -1))): s.vat_carry)), 0, half_up), sum(i in objects(sales_invoice, vat_period, month($.period)): i.vat) - sum(i in objects(sales_invoice, vat_period, month($.period)): i.vat))",
+              "vat_carry": "=if(round((sum(i in objects(purchase_invoice, vat_period, month($.period)): i.vat) + sum(s in objects(vat_settlement, period, month(add_months($.period, -1))): s.vat_carry)), 0, half_up) - round(sum(i in objects(sales_invoice, vat_period, month($.period)): i.vat), 0, half_up) > 0, round((sum(i in objects(purchase_invoice, vat_period, month($.period)): i.vat) + sum(s in objects(vat_settlement, period, month(add_months($.period, -1))): s.vat_carry)), 0, half_up) - round(sum(i in objects(sales_invoice, vat_period, month($.period)): i.vat), 0, half_up), sum(i in objects(sales_invoice, vat_period, month($.period)): i.vat) - sum(i in objects(sales_invoice, vat_period, month($.period)): i.vat))",
+              "closed_on": "=$.period"
+            }
           }
         }
       }

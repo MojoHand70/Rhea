@@ -115,6 +115,12 @@ func TestFormulaDatesConditionsStrings(t *testing.T) {
 	if v, _ := evalFormula(t, "=add_months($.jan, 1)", p, "date", nil); v != "2026-02-28" {
 		t.Fatalf("add_months clamps: %v", v)
 	}
+	if v, _ := evalFormula(t, "=month($.d)", p, "string", nil); v != "2026-10" {
+		t.Fatalf("month = %v", v)
+	}
+	if v, _ := evalFormula(t, "=month(add_months($.d, -1))", p, "string", nil); v != "2026-09" {
+		t.Fatalf("month of the previous period = %v", v)
+	}
 	if v, _ := evalFormula(t, "=end_of_month($.d) + 30", p, "date", nil); v != "2026-11-30" {
 		t.Fatalf("end of month + 30 = %v", v)
 	}

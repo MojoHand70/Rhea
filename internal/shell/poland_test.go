@@ -90,6 +90,11 @@ func TestM3PolandPack(t *testing.T) {
 		t.Fatal(err)
 	}
 	post("/api/bundles/pack-common-people-v1/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	// Periods: the close_period door and the lock rule are common verbs.
+	if _, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", "common", "periods.json"), "test"); err != nil {
+		t.Fatal(err)
+	}
+	post("/api/bundles/pack-common-periods-v1/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 
 	// Load the pack: 18 types (the invoices with their open amounts, the
 	// bank operation, the matching difference, the company's account), 8
@@ -100,8 +105,8 @@ func TestM3PolandPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 18 || sum.Views != 11 || sum.Rules != 25 || sum.Activities != 1 || sum.Events != 31 || sum.Skipped != 0 ||
-		sum.Bundle != "pack-pl-v15" {
+	if sum.Types != 19 || sum.Views != 12 || sum.Rules != 26 || sum.Activities != 1 || sum.Events != 31 || sum.Skipped != 0 ||
+		sum.Bundle != "pack-pl-v16" {
 		t.Fatalf("first load: %+v", sum)
 	}
 	// Idempotent: a reload changes nothing.
@@ -109,7 +114,7 @@ func TestM3PolandPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Skipped != 86 || sum.Bundle != "" {
+	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Skipped != 89 || sum.Bundle != "" {
 		t.Fatalf("reload: %+v", sum)
 	}
 
@@ -129,7 +134,7 @@ func TestM3PolandPack(t *testing.T) {
 	// Approving the pack's bundle IS the installation: its types, views and
 	// rules activate together, and the chart of accounts and the VAT rates
 	// materialize from the waiting events.
-	post("/api/bundles/pack-pl-v15/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-pl-v16/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {
 		t.Fatalf("worklist not cleared after approvals: %d", len(wl))
 	}
@@ -447,6 +452,79 @@ func TestM3PolandPack(t *testing.T) {
 	}
 	if docs, _ := s.ObjectsByType(ctx, "sales_invoice"); len(docs) != 1 {
 		t.Fatalf("unbalanced invoice half-booked: %d docs", len(docs))
+	}
+
+	// Month end (DIRECTION 2026-10-15, "Month end"): a person closes
+	// September for the statutory book through the common door; the common
+	// rule locks the period, the pack's rule settles VAT — every position a
+	// fold over the month's invoices, with provenance — and the list view
+	// shows it. A posting into the closed month is refused per event.
+	closed, err := srv.Exec.TriggerActivity(ctx, "close_period", map[string]any{"period": "2026-09-30", "book": "pl-stat", "occurred_at": "2026-10-05"}, "krzysztof", "")
+	if err != nil || closed.Booked != 1 {
+		t.Fatalf("close_period: %+v %v", closed, err)
+	}
+	// The worklist is re-read when the world changes: the unbalanced
+	// September invoice still waiting there is now refused by the lock, and
+	// says so — a closed month is a closed month, even for what was late.
+	if len(closed.Errors) != 1 || !strings.Contains(closed.Errors[0].Error(), "2026-09 is locked for book pl-stat") {
+		t.Fatalf("the late invoice meets the lock: %v", closed.Errors)
+	}
+	settlements, _ := s.ObjectsByType(ctx, "vat_settlement")
+	if len(settlements) != 1 {
+		t.Fatalf("settlements: %+v", settlements)
+	}
+	st := settlements[0].State
+	expect := map[string]float64{"sales_net_23": 100000, "sales_vat_23": 23000, "sales_net_8": 0, "sales_net_exempt": 0, "output_vat": 23000,
+		"purchase_net": 50000, "purchase_vat": 11500, "carried_in": 0, "input_vat": 11500, "vat_due": 11500, "vat_carry": 0}
+	for k, v := range expect {
+		if got, _ := st[k].(float64); got != v {
+			t.Fatalf("settlement %s = %v, want %v (state %v)", k, st[k], v, st)
+		}
+	}
+	if st["period"] != "2026-09" || st["book"] != "pl-stat" || st["closed_on"] != "2026-09-30" {
+		t.Fatalf("settlement keys: %v", st)
+	}
+	if locks, _ := s.ObjectsByType(ctx, "period_lock"); len(locks) != 1 || locks[0].State["month"] != "2026-09" || locks[0].State["book"] != "pl-stat" {
+		t.Fatalf("period lock: %+v", locks)
+	}
+	var vatView struct {
+		Rows [][]cell `json:"rows"`
+	}
+	get("/api/views/rozliczenie-vat", &vatView)
+	if len(vatView.Rows) != 1 || cellVals(vatView.Rows)[0][0] != "2026-09" || cellVals(vatView.Rows)[0][5] != "115.00" {
+		t.Fatalf("rozliczenie VAT view: %+v", vatView.Rows)
+	}
+	// Every number on the settlement is explained: the rule, the event, the
+	// invoices it folded over.
+	var walk walkOut
+	get("/api/explain?object="+settlements[0].ID, &walk)
+	// One fact, two derivations: the lock (the common rule) and the
+	// settlement (the pack's); the settlement's arithmetic is baked with
+	// the inputs it read, so the walk never recomputes.
+	var settled *walkNode
+	for i := range walk.Tree.Children {
+		if walk.Tree.Children[i].RuleID == "pl-settle-vat" {
+			settled = &walk.Tree.Children[i]
+		}
+	}
+	if len(walk.Tree.Children) != 2 || settled == nil || settled.Object == nil {
+		t.Fatalf("the settlement's provenance: %+v", walk.Tree)
+	}
+	if calc := settled.Object.Calc["vat_due"]; !strings.Contains(calc.Formula, "objects(sales_invoice, vat_period, month($.period))") || len(calc.Inputs) == 0 {
+		t.Fatalf("the settlement's arithmetic is baked with its inputs: %+v", calc)
+	}
+	// September is closed: a late September posting is refused into the
+	// worklist, naming the lock; October still books.
+	post("/api/events", map[string]any{
+		"event_type": "sales.invoice.issued", "occurred_at": "2026-09-25", "dedup_key": "fv-late",
+		"payload": map[string]any{
+			"number": "FV 3/09/2026", "issue_date": "2026-09-25", "market": "pl", "intragroup": "no",
+			"seller_nip": "5250001111", "buyer_nip": "5260001246",
+			"net": "100.00", "vat": "23.00", "gross": "123.00", "vat_rate": "23", "currency": "PLN",
+		},
+	}, &resp)
+	if resp["booked"].(float64) != 0 || resp["errors"] == nil || !strings.Contains(fmt.Sprint(resp["errors"]), "2026-09 is locked") {
+		t.Fatalf("a posting into the closed month: %v", resp)
 	}
 
 	// Determinism holds for a whole market loaded at runtime.

@@ -2203,6 +2203,85 @@ One line: *a market is data plus its own code behind one contract; the
 kernel imports no market, and a test says so; the invoice's meaning is
 the kernel's, its syntax and transport are the market's.*
 
+## Month end: the VAT settlement, the JPK_V7M file, the close (2026-10-15)
+
+The second half of the statutory floor (the public-service note): Rhea
+keeps the VAT register, settles the month, and hands the accountant a
+ready JPK_V7M, who files it. KSeF outbound closed the first half this
+morning. This note is the brief; it answers the growth plan's two welding
+questions and keeps invariant 8 — the settlement is a rule, the file is a
+market's writer, and nothing of either is kernel code.
+
+**What exists.** Both VAT registers as analysis views (DuckDB, by month and
+rate); postings refused into a locked (book, month) by `period_lock`
+objects; `end_of_month` and `add_months` in the formula language, folds
+over keyed, capped collections with `where` and reads through links; the
+KSeF number and the UPO on every issued sales invoice since this morning.
+What is missing: the settlement as a kernel fact, a door that closes a
+month, the file.
+
+**The law, in one paragraph.** JPK_V7M(3) is in force for periods from
+February 2026 (published 19 December 2025 in the national repository,
+schema `http://crd.gov.pl/wzor/2025/12/19/14090/`): one XML with a header
+(form, purpose, tax office, year, month), the taxpayer (a natural person
+with NIP, names and birth date, or a legal person with NIP and name, an
+e-mail), the declaration (positions P_10…P_69: bases and output VAT by
+rate — P_19/P_20 for 23%, P_17/P_18 for 8%, P_15/P_16 for 5%, P_13 for
+0%, P_10 for exempt — P_38 total output VAT, P_42/P_43 purchases and
+input VAT, P_39 the excess carried in, P_48 total input VAT, P_51 VAT to
+pay, P_53 the excess, P_62 the excess carried forward), and the records
+(every sales invoice with the buyer, the number, the dates, its K_
+amounts by rate, and the KSeF number — or the mark BFK for an invoice
+issued outside KSeF, DI for a document that is not an invoice, OFF for
+the offline mode; every purchase invoice likewise with K_42/K_43; control
+sums). The KSeF number in the records is required from 1 August 2026.
+The brochure of February 2026 is the field-by-field spec.
+
+**The settlement is a rule, not code.** Every invoice gets a `vat_period`
+at booking — the month it settles in, `month(date)`, a market-neutral
+field on the base types (a purchase invoice's deduction month is a
+choice the owner may amend later; the default is the invoice month). A
+door, `close_period`, is a common verb (packs/common/periods): a person
+names the month and the books, and `period.closed` is the fact. The
+Poland pack reacts with rules: `period_lock` for the statutory book, and
+`vat_settlement` — one object per month whose fields are folds over the
+invoices of that month by rate (`sum(i in objects(sales_invoice,
+vat_period, $.period) where i.vat_rate.code = "23": i.vat)`), the excess
+carried in from the previous month's settlement, VAT to pay or the
+excess forward. Every number on the declaration is then a kernel fact
+with provenance, explained by the rule the owner approved, reproduced by
+replay — invariant 5 applied to the tax return. A declaration never
+contains a number the log cannot derive.
+
+**The file is a writer.** A market writer is the second seam beside the
+adapter: `adapter.ProvideWriter(name, fn)` where fn reads objects and
+returns a named file. `markets/pl` provides `jpk_v7m`: the settlement for
+the positions, the invoices for the records, the company and its owner
+for the taxpayer block, the KSeF submissions for the numbers. The kernel
+renders any provided writer generically — `rhea file <writer>
+key=value…` and `GET /api/files/<writer>?…` — and never names one. A
+file handed to the accountant is a fact: the common documents pack gains
+the door `issue_document` (writer, parameters) and the type
+`issued_document` (name, hash, size, writer, parameters), the bytes kept
+in the blob store under their hash, the event the evidence. The file is
+rendered from the objects at that moment and sealed by its hash; a later
+correction is a new file, a new fact.
+
+**Validation.** The Ministry's XSD validates the file; there is no test
+environment for JPK. A local validator (lxml against the national
+schemas, in a scratch environment) checked this morning's FA(3) and will
+check the first JPK; the story test keeps a golden file. The accountant's
+own tool is the validator of record until the signed-upload API is worth
+the certificate.
+
+**Welding.** Partition: a settlement is a company's (the company key
+stamps it); containment: the close is a door with a gate behind it like
+every verb, and a closed month refuses postings per event — "a closed
+month is a closed month".
+
+One line: *the settlement is a rule with provenance, the close is a door,
+the file is a market's writer rendered by a kernel that never names it.*
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
