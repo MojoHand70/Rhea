@@ -2647,10 +2647,13 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   waiting". The law let it through because the story's one bank operation sits open on
   *both* payment grids, so the 100 it named for the incoming side also covered the
   outgoing one: when two facts share every amount, numbers cannot tell a denial of one
-  from a mention of the other. The remedy is in the pack, not the law — a bank
-  operation carries a direction, and then never appears on both grids; a law that
-  attributes an amount to a fact would need to read sentences, which the kernel does
-  not do.
+  from a mention of the other. The remedy is in the grid, not the law — corrected the
+  same day: the pack's two rules already match on the operation's direction (credit
+  in, debit out), but the grid view lists every open object of the side's type and
+  ignores the trigger rule's where, so one credit shows on both grids; the grid
+  should apply the trigger's where to its trigger side (a small fix, owed). A law
+  that attributes an amount to a fact would need to read sentences, which the kernel
+  does not do.
 - **Live databases keep the door's old text.** Builtin activities are seeded once and
   left alone; the law lives in the shell's check, not in the door's description, so
   nothing needs migrating.
