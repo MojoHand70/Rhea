@@ -49,6 +49,8 @@ CREATE TABLE IF NOT EXISTS rule (
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (rule_id, version)
 );
+-- A rule's own warrant: the source its reading rests on (core.Warrant).
+ALTER TABLE rule ADD COLUMN IF NOT EXISTS warrant JSONB;
 
 CREATE TABLE IF NOT EXISTS object_type (
     name       TEXT NOT NULL,

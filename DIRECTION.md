@@ -2354,6 +2354,80 @@ businesses and test for two weeks without skimping, while the mobile
 face is built apart and the platform is found; security before the first
 stranger, and the kernel opens the day the street does.*
 
+## Reading the Poland pack: the law's open questions, two kinds of company (KK, 2026-10-16)
+
+KK, on item 2: much of the Polish law the pack implements is ambiguous,
+and the hope is that Rhea helps create more accounting standards in
+Poland. And the first deployment phase will have sole traders as users,
+so the pack must support them — as a variant of the Poland pack, not a
+separate pack.
+
+**How the pack is read.** Not rule by rule but question by question:
+walk the year of two companies — a sole trader (KPiR or ryczałt) and a
+small sp. z o.o. on full books — and list every point where the books
+must decide something. Each point gets a grade: *1 plain* (the text
+decides; cite the article), *2 settled* (the text is unclear but the
+Ministry's explanations, a general interpretation, an NSA resolution,
+the TSUE or a KSR settled it; cite that), *3 open* (practice splits;
+Rhea ships a reading, names the alternatives and who holds them, and
+the client chooses). The sources, strongest first: the consolidated
+statute (ISAP, ELI) and the VAT Directive with the TSUE behind it; the
+Ministry's own reading (objaśnienia podatkowe, general interpretations,
+the KSeF and JPK manuals, the XSDs — the schema often settles what the
+statute leaves open); individual interpretations (Eureka — binding only
+on the asker, but the best map of where taxpayers were unsure); the
+courts (CBOSA); the KSR and the Committee's positions; practice
+(commentaries, SKwP, KIDP, one practising accountant). Every claim is
+quoted from a source, never recalled. The register lives in
+`packs/pl/REVIEW.md` with a verdict per point (right, wrong, missing,
+later) and the pack version that closes it; the grade-3 list goes to a
+practising accountant as business questions, not as rules.
+
+**Every rule carries its own warrant** (shipped 2026-10-16): the pack
+had one warrant for 29 rules, written when it booked only the bank. Now
+a rule names its source and the reading it chose, the warrant travels
+with every version, and "why?" on any number ends at the article.
+
+**Sole traders are a variant of the Poland pack.** Most of the pack is
+the same for both: invoices, VAT, KSeF, JPK_V7, bank matching,
+contractors. What differs is how revenue and cost are recorded (KPiR
+columns, the ryczałt record, or accounts), the income tax (PIT advances
+on the scale, linear or ryczałt; CIT), the owner's ZUS, and the year
+end. The form of books and of income tax is a dated fact about the
+company, said through a door the way its legal form is: a sole trader
+who crosses the threshold moves to full books on 1 January by one more
+event, and replay shows which form held when. The one kernel step it
+needs is already on the destiny list: a rule's match conditions reading
+through a link to the company record (today they see only the event —
+the reason `market` is stamped onto every payload). Sole traders are
+the case that earns it.
+
+**How Rhea helps make standards.** Two legal doors exist. The
+accounting act (art. 10 ust. 3) lets a company apply the national
+standards and positions of the Accounting Standards Committee where the
+act is silent, and IFRS only where no KSR exists — the act expects its
+gaps to be filled by standards, and someone has to propose them. The
+Tax Ordinance (art. 14a § 2) lets anyone but a public body ask the
+Minister for a general interpretation, and the request must show the
+law applied inconsistently in decisions, judgments or interpretations
+on the same facts. Rhea brings what a standard-setter lacks: the
+register of open questions with the competing readings and their
+sources (the evidence § 2 asks for); later, real counts of how
+companies actually decided (counted approved rules, never estimates);
+and readings that run — replay a company's year under reading A and
+reading B and show the difference in the tax due, before anyone adopts
+either. A company's approved rules with their warrants are also its
+written accounting policy (art. 10 ust. 1), which Rhea can print. And
+when the base Poland pack opens, its readings become public commentary
+practitioners can contest and cite. Rhea's readings are always proposals
+with their sources, never the law; the client's approval stays.
+
+One line: *read the pack as the year's questions, graded by how settled
+the law is; every rule names its source; the sole trader is a dated fact
+about the company, not a second pack; and the open questions, written
+down with their readings and run on real books, are what Rhea brings to
+the people who write Polish standards.*
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,

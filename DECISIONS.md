@@ -2982,3 +2982,27 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   and the base Poland pack with its statutory channels open on the day the street
   opens; the face, the industry packs and the hosted network stay proprietary; the
   boundary is the JSON API, so the kernel's licence never reaches the face.
+
+## 2026-10-16 — a rule's own warrant
+
+- **What.** `core.Rule` carries an optional `Warrant` — the same type a bundle carries
+  (basis, citations, scope; support counted, never proposed). A bundle's warrant speaks
+  for the whole proposal; a rule's speaks for itself and travels with every version,
+  because approval and the pairing verb append versions by copying the rule. Stored in
+  a new `rule.warrant` JSONB column (additive `ALTER TABLE … ADD COLUMN IF NOT EXISTS`;
+  `rhea init` applies it — both live databases migrated the same day). Backup and
+  restore carry it with no change: they spell rows as Postgres does.
+- **Why on the rule, not by splitting the pack into bundles.** The pack had one warrant
+  for 29 rules; the review of the Poland pack (DIRECTION, 2026-10-16) needs a source per
+  reading, and "why?" on a number walks fact → rule, so the rule is where the law must
+  be found. Splitting the pack into a bundle per decision would have meant an approval
+  per decision for one install.
+- **The pack format.** A pack rule may name `warrant`; the loader validates it as
+  proposed (a statute or standard needs its citation, no support figures) and a changed
+  warrant is a changed rule — the upgrade drafts it behind the gate like any change.
+- **Where it shows.** The provenance walk names the explaining rule's source under the
+  rule (`rule_warrant`, `Store.RuleNotes` replacing `RuleDescriptions`); the rules list
+  shows it under the description; the bundle card uses the same one-line rendering.
+- **The test** (`TestRuleWarrant`): a toy pack's rule cites an article; the approved
+  version keeps it; a fact it explains walks to it; a corrected citation is drafted as
+  the upgrade; a statute without an article and a pack claiming support never land.

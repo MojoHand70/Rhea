@@ -200,6 +200,13 @@ function explainLink(q, text) {
   } }, text);
 }
 
+// A warrant as one line: its basis, citations and scope — a bundle's for the
+// proposal, a rule's for itself.
+function warrantText(w) {
+  return w.basis + (w.citations && w.citations.length ? " — " + w.citations.join("; ") : "") +
+    (w.scope ? ` (${w.scope})` : "");
+}
+
 function dataTable(columns, rows, onRowClick) {
   // Alignment is type-driven; for undeclared columns, fall back to sniffing —
   // a renderer heuristic, which is the one place heuristics belong.
@@ -380,6 +387,8 @@ function openExplain(q) {
         head.append(el("div", { class: "explain-line" },
           `via rule ${n.rule_id} v${n.rule_version}`,
           n.rule_description ? el("span", { class: "hint" }, ` — ${n.rule_description}`) : ""));
+        if (n.rule_warrant) head.append(el("div", { class: "explain-line hint" },
+          "Source: " + warrantText(n.rule_warrant)));
       }
       if (n.object) {
         const o = n.object;
@@ -621,7 +630,8 @@ function openRules() {
         el("tr", {},
           el("td", {}, r.rule_id), el("td", { class: "num" }, String(r.version)),
           el("td", {}, el("span", { class: "status " + r.status }, r.status)),
-          el("td", {}, r.created_by), el("td", {}, r.description), actions),
+          el("td", {}, r.created_by), el("td", {}, r.description,
+            r.warrant ? el("div", { class: "hint" }, "Source: " + warrantText(r.warrant)) : ""), actions),
         el("tr", {}, el("td", { colspan: "6" },
           el("details", {}, el("summary", {}, "spec"),
             el("pre", {}, JSON.stringify(r.spec, null, 2))),
@@ -717,9 +727,7 @@ function openBundles() {
       // how many explanations across the network agree. Never invented.
       if (b.warrant) {
         const w = b.warrant;
-        const why = el("p", { class: "hint" }, "Why: " + w.basis +
-          (w.citations && w.citations.length ? " — " + w.citations.join("; ") : "") +
-          (w.scope ? ` (${w.scope})` : ""));
+        const why = el("p", { class: "hint" }, "Why: " + warrantText(w));
         if (w.support) why.append(` · ${w.support.count} of ${w.support.of} ${w.support.population} explain it this way`);
         card.append(why);
       }

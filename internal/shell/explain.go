@@ -43,6 +43,8 @@ type explainNode struct {
 	RuleID          string `json:"rule_id,omitempty"`
 	RuleVersion     int    `json:"rule_version,omitempty"`
 	RuleDesc        string `json:"rule_description,omitempty"`
+	// RuleWarrant is the rule's source — the walk ends at the law.
+	RuleWarrant *core.Warrant `json:"rule_warrant,omitempty"`
 	// Object is what this event materialized, when it did.
 	Object *explainObject `json:"object,omitempty"`
 	// Amend is what this event moved, when it is an amendment: the object
@@ -165,7 +167,7 @@ func (s *Server) handleExplain(w http.ResponseWriter, r *http.Request) {
 // buildExplainTree renders the root's whole consequence tree, each node
 // annotated with its rule version and materialized object.
 func (s *Server) buildExplainTree(ctx context.Context, ix *chainIndex, root core.Event) (*explainNode, error) {
-	descs, err := s.Store.RuleDescriptions(ctx)
+	notes, err := s.Store.RuleNotes(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -185,11 +187,12 @@ func (s *Server) buildExplainTree(ctx context.Context, ix *chainIndex, root core
 
 	var build func(ev core.Event) *explainNode
 	build = func(ev core.Event) *explainNode {
+		note := notes[store.RuleKey{ID: ev.RuleID, Version: ev.RuleVersion}]
 		n := &explainNode{EventID: ev.ID, Kind: ev.Kind, EventType: ev.Type,
 			OccurredAt: ev.OccurredAt, Actor: ev.Actor,
 			Activity: ev.ActivityName, ActivityVersion: ev.ActivityVersion,
 			RuleID: ev.RuleID, RuleVersion: ev.RuleVersion,
-			RuleDesc: descs[store.RuleKey{ID: ev.RuleID, Version: ev.RuleVersion}],
+			RuleDesc: note.Description, RuleWarrant: note.Warrant,
 			Children: []*explainNode{}}
 		if ev.Kind == core.KindRaw {
 			n.Payload = ev.Payload

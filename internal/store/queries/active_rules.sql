@@ -4,7 +4,7 @@
 -- latest version is superseded is retired.
 SELECT a.rule_id, a.version, a.status, a.priority,
        to_char(a.effective_from,'YYYY-MM-DD'),
-       a.created_by, a.description, a.spec, a.created_at
+       a.created_by, a.description, a.spec, a.warrant, a.created_at
 FROM (
     SELECT DISTINCT ON (rule_id) rule_id, status AS latest_status
     FROM rule

@@ -509,12 +509,21 @@ func InsertRuleVersion(ctx context.Context, q Querier, r core.Rule) (core.Rule, 
 	if err != nil {
 		return r, err
 	}
+	var warrant []byte
+	if r.Warrant != nil {
+		if err := r.Warrant.ValidateStored(); err != nil {
+			return r, fmt.Errorf("rule %s warrant: %w", r.ID, err)
+		}
+		if warrant, err = json.Marshal(r.Warrant); err != nil {
+			return r, err
+		}
+	}
 	err = q.QueryRow(ctx, `
-		INSERT INTO rule (rule_id, version, status, priority, effective_from, created_by, description, spec)
+		INSERT INTO rule (rule_id, version, status, priority, effective_from, created_by, description, spec, warrant)
 		VALUES ($1, COALESCE((SELECT MAX(version) FROM rule WHERE rule_id = $1), 0) + 1,
-		        $2, $3, $4, $5, $6, $7)
+		        $2, $3, $4, $5, $6, $7, $8)
 		RETURNING version, created_at`,
-		r.ID, r.Status, r.Priority, r.EffectiveFrom, r.CreatedBy, r.Description, spec,
+		r.ID, r.Status, r.Priority, r.EffectiveFrom, r.CreatedBy, r.Description, spec, warrant,
 	).Scan(&r.Version, &r.CreatedAt)
 	return r, err
 }
@@ -528,13 +537,19 @@ func scanRules(rows pgx.Rows) ([]core.Rule, error) {
 	var out []core.Rule
 	for rows.Next() {
 		var r core.Rule
-		var spec []byte
+		var spec, warrant []byte
 		if err := rows.Scan(&r.ID, &r.Version, &r.Status, &r.Priority, &r.EffectiveFrom,
-			&r.CreatedBy, &r.Description, &spec, &r.CreatedAt); err != nil {
+			&r.CreatedBy, &r.Description, &spec, &warrant, &r.CreatedAt); err != nil {
 			return nil, err
 		}
 		if err := json.Unmarshal(spec, &r.Spec); err != nil {
 			return nil, fmt.Errorf("rule %s v%d spec: %w", r.ID, r.Version, err)
+		}
+		if len(warrant) > 0 {
+			r.Warrant = &core.Warrant{}
+			if err := json.Unmarshal(warrant, r.Warrant); err != nil {
+				return nil, fmt.Errorf("rule %s v%d warrant: %w", r.ID, r.Version, err)
+			}
 		}
 		out = append(out, r)
 	}
@@ -580,7 +595,7 @@ func (s *Store) GetRule(ctx context.Context, id string) (core.Rule, error) {
 func (s *Store) GetRuleVersion(ctx context.Context, id string, version int) (core.Rule, error) {
 	rows, err := s.Pool.Query(ctx, `
 		SELECT rule_id, version, status, priority, to_char(effective_from,'YYYY-MM-DD'),
-		       created_by, description, spec, created_at
+		       created_by, description, spec, warrant, created_at
 		FROM rule WHERE rule_id = $1 AND version = $2`, id, version)
 	if err != nil {
 		return core.Rule{}, err
@@ -601,23 +616,37 @@ type RuleKey struct {
 	Version int
 }
 
-// RuleDescriptions returns the description of every rule version ever stored,
-// superseded ones included: the provenance walk explains history, and history
-// names exact versions.
-func (s *Store) RuleDescriptions(ctx context.Context) (map[RuleKey]string, error) {
-	rows, err := s.Pool.Query(ctx, `SELECT rule_id, version, description FROM rule`)
+// RuleNote is what the provenance walk says about one rule version: what
+// it does and, when it has one, the source it rests on.
+type RuleNote struct {
+	Description string
+	Warrant     *core.Warrant
+}
+
+// RuleNotes returns the note of every rule version ever stored, superseded
+// ones included: the provenance walk explains history, and history names
+// exact versions.
+func (s *Store) RuleNotes(ctx context.Context) (map[RuleKey]RuleNote, error) {
+	rows, err := s.Pool.Query(ctx, `SELECT rule_id, version, description, warrant FROM rule`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	out := map[RuleKey]string{}
+	out := map[RuleKey]RuleNote{}
 	for rows.Next() {
 		var k RuleKey
-		var desc string
-		if err := rows.Scan(&k.ID, &k.Version, &desc); err != nil {
+		var n RuleNote
+		var warrant []byte
+		if err := rows.Scan(&k.ID, &k.Version, &n.Description, &warrant); err != nil {
 			return nil, err
 		}
-		out[k] = desc
+		if len(warrant) > 0 {
+			n.Warrant = &core.Warrant{}
+			if err := json.Unmarshal(warrant, n.Warrant); err != nil {
+				return nil, fmt.Errorf("rule %s v%d warrant: %w", k.ID, k.Version, err)
+			}
+		}
+		out[k] = n
 	}
 	return out, rows.Err()
 }

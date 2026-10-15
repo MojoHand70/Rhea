@@ -49,6 +49,9 @@ type Rule struct {
 	EffectiveFrom string        `json:"effective_from"`
 	Description   string        `json:"description"`
 	Spec          core.RuleSpec `json:"spec"`
+	// Warrant: the rule's own source, beside the pack's. Travels with the
+	// rule's versions; a changed citation is a changed rule.
+	Warrant *core.Warrant `json:"warrant,omitempty"`
 }
 
 // Activity is a pack-shipped verb. Like a rule it always lands as a draft:
@@ -102,8 +105,10 @@ func packOwns(createdBy, pack string) bool { return createdBy == "pack:"+pack }
 func sameRule(have core.Rule, want Rule) bool {
 	a, _ := json.Marshal(have.Spec)
 	b, _ := json.Marshal(want.Spec)
+	wa, _ := json.Marshal(have.Warrant)
+	wb, _ := json.Marshal(want.Warrant)
 	return have.Priority == want.Priority && have.EffectiveFrom == want.EffectiveFrom &&
-		have.Description == want.Description && string(a) == string(b)
+		have.Description == want.Description && string(a) == string(b) && string(wa) == string(wb)
 }
 
 func sameActivity(have core.Activity, want Activity) bool {
@@ -205,10 +210,15 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 		}); err != nil {
 			return sum, fmt.Errorf("rule %s: %w", r.RuleID, err)
 		}
+		if r.Warrant != nil {
+			if err := r.Warrant.ValidateProposed(); err != nil {
+				return sum, fmt.Errorf("rule %s warrant: %w", r.RuleID, err)
+			}
+		}
 		rule, err := s.InsertRuleVersion(ctx, core.Rule{
 			ID: r.RuleID, Status: core.StatusDraft, Priority: r.Priority,
 			EffectiveFrom: r.EffectiveFrom, CreatedBy: "pack:" + m.Pack,
-			Description: r.Description, Spec: r.Spec,
+			Description: r.Description, Spec: r.Spec, Warrant: r.Warrant,
 		})
 		if err != nil {
 			return sum, fmt.Errorf("rule %s: %w", r.RuleID, err)

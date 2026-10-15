@@ -235,15 +235,21 @@ type Object struct {
 // Rule is the unit of system behavior. Versioned and append-only: any change,
 // including a status transition, is a new version row.
 type Rule struct {
-	ID            string    `json:"rule_id"`
-	Version       int       `json:"version"`
-	Status        string    `json:"status"` // draft | approved | active | superseded
-	Priority      int       `json:"priority"`
-	EffectiveFrom string    `json:"effective_from"` // YYYY-MM-DD
-	CreatedBy     string    `json:"created_by"`     // "agent" | "human"
-	Description   string    `json:"description"`
-	Spec          RuleSpec  `json:"spec"`
-	CreatedAt     time.Time `json:"created_at"`
+	ID            string   `json:"rule_id"`
+	Version       int      `json:"version"`
+	Status        string   `json:"status"` // draft | approved | active | superseded
+	Priority      int      `json:"priority"`
+	EffectiveFrom string   `json:"effective_from"` // YYYY-MM-DD
+	CreatedBy     string   `json:"created_by"`     // "agent" | "human"
+	Description   string   `json:"description"`
+	Spec          RuleSpec `json:"spec"`
+	// Warrant is the rule's own source: the article, standard or practice
+	// its reading of the world rests on, and the reading it chose where the
+	// law is unclear. A bundle's warrant speaks for the whole proposal; a
+	// rule's travels with every version and answers "why?" on every fact
+	// the rule explains. Optional.
+	Warrant   *Warrant  `json:"warrant,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 const (
