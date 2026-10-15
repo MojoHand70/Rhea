@@ -302,6 +302,9 @@ const EventDocumentReadingConfirmed = "reading.confirmed"
 // without the document.
 const EventDocumentReceived = "document.received"
 
+// EventDocumentIssued: a file Rhea rendered was handed over (issue_document).
+const EventDocumentIssued = "document.issued"
+
 // HashBytes is the content address every file is kept and named by.
 func HashBytes(b []byte) string {
 	sum := sha256.Sum256(b)
@@ -557,6 +560,20 @@ func BuiltinActivities() []Activity {
 					{Name: "occurred_at", Type: "date"},
 				},
 				Emits: EventDocumentReceived,
+				Who:   []string{"human", "agent"},
+			},
+		},
+		{
+			Name: "issue_document", Domain: "system",
+			Description: "The door for documents going out: a file Rhea rendered from its objects — a filing, a statement — handed to a person or an office. The writer and its parameters say what was rendered, the bytes are kept under their hash, and the event is the evidence of what was handed over, sealed by the hash. A correction is a new file, a new fact.",
+			Spec: ActivitySpec{
+				Inputs: []FieldDef{
+					{Name: "writer", Type: "string", Required: true},
+					{Name: "params", Type: "string", Required: true},
+					{Name: "file", Type: "file", Required: true},
+					{Name: "occurred_at", Type: "date"},
+				},
+				Emits: EventDocumentIssued,
 				Who:   []string{"human", "agent"},
 			},
 		},

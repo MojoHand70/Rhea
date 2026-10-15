@@ -1,7 +1,7 @@
 {
   "pack": "common-documents",
-  "version": 2,
-  "description": "Documents as received: the file is the fact, and this object is its place in state until a reader explains it",
+  "version": 3,
+  "description": "Documents as received: the file is the fact, and this object is its place in state until a reader explains it Documents out (DIRECTION 2026-10-15, \"Month end\"): a file Rhea rendered and handed over is an issued_document — the writer, its parameters, the hash that seals it.",
   "warrant": {
     "basis": "practice",
     "citations": [
@@ -66,6 +66,53 @@
           ]
         }
       }
+    },
+    {
+      "name": "issued_document",
+      "version": 1,
+      "domain": "system",
+      "is_document": true,
+      "label_field": "name",
+      "fields": [
+        {
+          "name": "hash",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "media_type",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "size",
+          "type": "int",
+          "required": true
+        },
+        {
+          "name": "writer",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "params",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "issued"
+          ]
+        }
+      ]
     }
   ],
   "rules": [
@@ -111,6 +158,67 @@
             }
           }
         }
+      }
+    },
+    {
+      "rule_id": "register-issued-document",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "A file handed over through issue_document is an issued_document: what was rendered (the writer and its parameters) and the hash that seals it",
+      "spec": {
+        "match": {
+          "event_type": "document.issued"
+        },
+        "effect": {
+          "object": {
+            "type": "issued_document",
+            "fields": {
+              "hash": "=$.file.hash",
+              "name": "=$.file.name",
+              "media_type": "=$.file.media_type",
+              "size": "=$.file.size",
+              "writer": "=$.writer",
+              "params": "=$.params",
+              "status": "issued"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "view_defs": [
+    {
+      "view_id": "issued-documents",
+      "version": 1,
+      "notion": "list",
+      "title": "Issued documents",
+      "domain": "system",
+      "function": "documents",
+      "spec": {
+        "object_type": "issued_document",
+        "columns": [
+          {
+            "field": "name",
+            "label": "File"
+          },
+          {
+            "field": "writer",
+            "label": "Writer"
+          },
+          {
+            "field": "params",
+            "label": "Parameters"
+          },
+          {
+            "field": "size",
+            "label": "Size"
+          },
+          {
+            "field": "hash",
+            "label": "Hash"
+          }
+        ]
       }
     }
   ]

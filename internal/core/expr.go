@@ -249,6 +249,11 @@ func EvalCondition(payload any, c Condition) (bool, error) {
 	if c.Op == "exists" {
 		return err == nil, nil
 	}
+	if c.Op == "absent" {
+		// the mirror of exists: a rule may state that a field is not there
+		// (an invoice without a KSeF number is booked by another rule)
+		return err != nil, nil
+	}
 	if err != nil {
 		return false, nil // missing value matches nothing (except exists)
 	}

@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<JPK xmlns="http://crd.gov.pl/wzor/2025/12/19/14090/">
+  <Naglowek>
+    <KodFormularza kodSystemowy="JPK_V7M (3)" wersjaSchemy="1-0E">JPK_VAT</KodFormularza>
+    <WariantFormularza>3</WariantFormularza>
+    <DataWytworzeniaJPK>2026-10-05T10:00:00Z</DataWytworzeniaJPK>
+    <NazwaSystemu>Rhea</NazwaSystemu>
+    <CelZlozenia poz="P_7">1</CelZlozenia>
+    <KodUrzedu>1471</KodUrzedu>
+    <Rok>2026</Rok>
+    <Miesiac>9</Miesiac>
+  </Naglowek>
+  <Podmiot1 rola="Podatnik">
+    <OsobaNiefizyczna>
+      <NIP>8058083055</NIP>
+      <PelnaNazwa>Rhea Test sp. z o.o.</PelnaNazwa>
+      <Email>biuro@rhea-test.pl</Email>
+    </OsobaNiefizyczna>
+  </Podmiot1>
+  <Deklaracja>
+    <Naglowek>
+      <KodFormularzaDekl kodSystemowy="VAT-7 (23)" kodPodatku="VAT" rodzajZobowiazania="Z" wersjaSchemy="1-0E">VAT-7</KodFormularzaDekl>
+      <WariantFormularzaDekl>23</WariantFormularzaDekl>
+    </Naglowek>
+    <PozycjeSzczegolowe>
+      <P_17>200</P_17>
+      <P_18>16</P_18>
+      <P_19>1000</P_19>
+      <P_20>230</P_20>
+      <P_37>1200</P_37>
+      <P_38>246</P_38>
+      <P_42>400</P_42>
+      <P_43>92</P_43>
+      <P_48>92</P_48>
+      <P_51>154</P_51>
+    </PozycjeSzczegolowe>
+    <Pouczenia>1</Pouczenia>
+  </Deklaracja>
+  <Ewidencja>
+    <SprzedazWiersz>
+      <LpSprzedazy>1</LpSprzedazy>
+      <NrKontrahenta>5265877635</NrKontrahenta>
+      <NazwaKontrahenta>Nabywca S.A.</NazwaKontrahenta>
+      <DowodSprzedazy>FV/1/2026</DowodSprzedazy>
+      <DataWystawienia>2026-09-21</DataWystawienia>
+      <NrKSeF>8058083055-20260921-1E03BFFA6B22-F7</NrKSeF>
+      <K_19>1000.00</K_19>
+      <K_20>230.00</K_20>
+    </SprzedazWiersz>
+    <SprzedazWiersz>
+      <LpSprzedazy>2</LpSprzedazy>
+      <NrKontrahenta>5265877635</NrKontrahenta>
+      <NazwaKontrahenta>Nabywca S.A.</NazwaKontrahenta>
+      <DowodSprzedazy>FV/2/2026</DowodSprzedazy>
+      <DataWystawienia>2026-09-22</DataWystawienia>
+      <BFK>1</BFK>
+      <K_17>200.00</K_17>
+      <K_18>16.00</K_18>
+    </SprzedazWiersz>
+    <SprzedazCtrl>
+      <LiczbaWierszySprzedazy>2</LiczbaWierszySprzedazy>
+      <PodatekNalezny>246.00</PodatekNalezny>
+    </SprzedazCtrl>
+    <ZakupWiersz>
+      <LpZakupu>1</LpZakupu>
+      <NrDostawcy>5265877635</NrDostawcy>
+      <NazwaDostawcy>Nabywca S.A.</NazwaDostawcy>
+      <DowodZakupu>Z/77/2026</DowodZakupu>
+      <DataZakupu>2026-09-10</DataZakupu>
+      <NrKSeF>5265877635-20260910-0100001AF629-AF</NrKSeF>
+      <K_42>300.00</K_42>
+      <K_43>69.00</K_43>
+    </ZakupWiersz>
+    <ZakupWiersz>
+      <LpZakupu>2</LpZakupu>
+      <NrDostawcy>5265877635</NrDostawcy>
+      <NazwaDostawcy>Nabywca S.A.</NazwaDostawcy>
+      <DowodZakupu>P/12</DowodZakupu>
+      <DataZakupu>2026-09-12</DataZakupu>
+      <BFK>1</BFK>
+      <K_42>100.00</K_42>
+      <K_43>23.00</K_43>
+    </ZakupWiersz>
+    <ZakupCtrl>
+      <LiczbaWierszyZakupow>2</LiczbaWierszyZakupow>
+      <PodatekNaliczony>92.00</PodatekNaliczony>
+    </ZakupCtrl>
+  </Ewidencja>
+</JPK>

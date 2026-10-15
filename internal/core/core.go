@@ -370,7 +370,7 @@ func (s RuleSpec) Validate(target *ObjectType) error {
 	}
 	for _, c := range s.Match.Where {
 		switch c.Op {
-		case "eq", "ne", "exists", "gt", "lt":
+		case "eq", "ne", "exists", "absent", "gt", "lt":
 		default:
 			return fmt.Errorf("unknown condition op %q", c.Op)
 		}

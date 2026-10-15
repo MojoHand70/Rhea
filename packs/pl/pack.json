@@ -1,7 +1,7 @@
 {
   "pack": "pl",
-  "version": 16,
-  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami; poranek: gospodarz mówi, co zaksięgowano i co czeka, z faktów, które policzyło jądro; dziś: otwarte zadania i należności w kolejności pilności, z zatwierdzeniami, które czekają; KSeF na zewnątrz: faktury sprzedaży idą do KSeF jako FA(3) jedną sesją interaktywną, dowód (numer KSeF, UPO) i odmowa (kod, słowa Ministerstwa) są zdarzeniami, odmowa staje się zadaniem na dziś; koniec miesiąca: faktury niosą okres VAT, zamknięcie miesiąca (period.closed) daje rozliczenie VAT jako obiekt policzony regułą — każda liczba deklaracji ma pochodzenie",
+  "version": 17,
+  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami; poranek: gospodarz mówi, co zaksięgowano i co czeka, z faktów, które policzyło jądro; dziś: otwarte zadania i należności w kolejności pilności, z zatwierdzeniami, które czekają; KSeF na zewnątrz: faktury sprzedaży idą do KSeF jako FA(3) jedną sesją interaktywną, dowód (numer KSeF, UPO) i odmowa (kod, słowa Ministerstwa) są zdarzeniami, odmowa staje się zadaniem na dziś; koniec miesiąca: faktury niosą okres VAT, zamknięcie miesiąca (period.closed) daje rozliczenie VAT jako obiekt policzony regułą — każda liczba deklaracji ma pochodzenie; plik JPK_V7M z rozliczenia i faktur miesiąca (writer rynku), firma zna swój urząd skarbowy, e-mail i formę prawną, faktura zakupu z KSeF niesie numer KSeF",
   "requires": [
     "company",
     "account",
@@ -762,7 +762,7 @@
     },
     {
       "name": "company",
-      "version": 3,
+      "version": 4,
       "domain": "finance",
       "is_document": false,
       "label_field": "name",
@@ -801,10 +801,39 @@
           "name": "address",
           "type": "string",
           "required": false
+        },
+        {
+          "name": "email",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "tax_office",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "legal_form",
+          "type": "enum",
+          "required": false,
+          "values": [
+            "natural_person",
+            "legal_entity"
+          ]
+        },
+        {
+          "name": "owner",
+          "type": "ref<person>",
+          "required": false
         }
       ],
       "amendable": [
-        "iban"
+        "iban",
+        "address",
+        "email",
+        "tax_office",
+        "legal_form",
+        "owner"
       ]
     },
     {
@@ -912,7 +941,7 @@
     },
     {
       "name": "purchase_invoice",
-      "version": 3,
+      "version": 4,
       "domain": "finance",
       "is_document": true,
       "label_field": "number",
@@ -983,6 +1012,11 @@
         },
         {
           "name": "vat_period",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "ksef_ref",
           "type": "string",
           "required": false
         }
@@ -1745,7 +1779,7 @@
       "rule_id": "pl-book-purchase-invoice",
       "priority": 100,
       "effective_from": "2026-01-01",
-      "description": "Faktura zakupu z KSeF staje się dokumentem purchase_invoice: dostawca i nabywca po NIP, kwoty takie, jak podaje dokument; kwota otwarta zaczyna się od brutto, status od open; okres VAT = miesiąc faktury (odliczenie w miesiącu otrzymania; zmiana przez poprawkę)",
+      "description": "Faktura zakupu z KSeF staje się dokumentem purchase_invoice: dostawca i nabywca po NIP, kwoty takie, jak podaje dokument; kwota otwarta zaczyna się od brutto, status od open; okres VAT = miesiąc faktury (odliczenie w miesiącu otrzymania; zmiana przez poprawkę); faktura spoza KSeF (bez numeru KSeF)",
       "spec": {
         "match": {
           "event_type": "purchase.invoice.received",
@@ -1754,6 +1788,10 @@
               "path": "$.market",
               "op": "eq",
               "value": "pl"
+            },
+            {
+              "path": "$.ksef_ref",
+              "op": "absent"
             }
           ]
         },
@@ -1777,7 +1815,50 @@
           }
         }
       },
-      "version": 2
+      "version": 3
+    },
+    {
+      "rule_id": "pl-book-purchase-invoice-ksef",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Faktura zakupu z KSeF staje się dokumentem purchase_invoice z numerem KSeF (do ewidencji JPK): dostawca i nabywca po NIP, kwoty takie, jak podaje dokument; kwota otwarta zaczyna się od brutto, status od open; okres VAT = miesiąc faktury",
+      "spec": {
+        "match": {
+          "event_type": "purchase.invoice.received",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            },
+            {
+              "path": "$.ksef_ref",
+              "op": "exists"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "purchase_invoice",
+            "fields": {
+              "number": "=$.number",
+              "invoice_date": "=$.invoice_date",
+              "supplier": "=ref(company, vat_id, $.supplier_nip)",
+              "owner": "=ref(company, vat_id, $.buyer_nip)",
+              "net": "=$.net",
+              "vat": "=$.vat",
+              "gross": "=$.gross",
+              "vat_rate": "=ref(vat_rate, code, $.vat_rate)",
+              "currency": "=$.currency",
+              "open": "=$.gross",
+              "status": "open",
+              "vat_period": "=month($.invoice_date)",
+              "ksef_ref": "=$.ksef_ref"
+            }
+          }
+        }
+      },
+      "version": 1
     },
     {
       "rule_id": "pl-post-purchase-invoice",

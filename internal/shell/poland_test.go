@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http/httptest"
 	"path/filepath"
 	"reflect"
@@ -95,6 +96,11 @@ func TestM3PolandPack(t *testing.T) {
 		t.Fatal(err)
 	}
 	post("/api/bundles/pack-common-periods-v1/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	// Documents: the issued_document the JPK file becomes.
+	if _, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", "common", "documents.json"), "test"); err != nil {
+		t.Fatal(err)
+	}
+	post("/api/bundles/pack-common-documents-v3/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 
 	// Load the pack: 18 types (the invoices with their open amounts, the
 	// bank operation, the matching difference, the company's account), 8
@@ -105,8 +111,8 @@ func TestM3PolandPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 19 || sum.Views != 12 || sum.Rules != 26 || sum.Activities != 1 || sum.Events != 31 || sum.Skipped != 0 ||
-		sum.Bundle != "pack-pl-v16" {
+	if sum.Types != 19 || sum.Views != 12 || sum.Rules != 27 || sum.Activities != 1 || sum.Events != 31 || sum.Skipped != 0 ||
+		sum.Bundle != "pack-pl-v17" {
 		t.Fatalf("first load: %+v", sum)
 	}
 	// Idempotent: a reload changes nothing.
@@ -114,7 +120,7 @@ func TestM3PolandPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Skipped != 89 || sum.Bundle != "" {
+	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Skipped != 90 || sum.Bundle != "" {
 		t.Fatalf("reload: %+v", sum)
 	}
 
@@ -134,7 +140,7 @@ func TestM3PolandPack(t *testing.T) {
 	// Approving the pack's bundle IS the installation: its types, views and
 	// rules activate together, and the chart of accounts and the VAT rates
 	// materialize from the waiting events.
-	post("/api/bundles/pack-pl-v16/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-pl-v17/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {
 		t.Fatalf("worklist not cleared after approvals: %d", len(wl))
 	}
@@ -150,7 +156,7 @@ func TestM3PolandPack(t *testing.T) {
 		Match: core.Match{EventType: "company.registered"},
 		Effect: core.Effect{Object: core.ObjectTemplate{Type: "company",
 			Fields: map[string]string{"name": "=$.name", "kind": "=$.kind",
-				"vat_id": "=$.vat_id", "country": "=$.country"}}},
+				"vat_id": "=$.vat_id", "country": "=$.country", "email": "=$.email", "tax_office": "=$.tax_office", "legal_form": "=$.legal_form"}}},
 	}
 	if _, err := s.InsertRuleVersion(ctx, core.Rule{
 		ID: "register-company", Status: core.StatusDraft, Priority: 10,
@@ -162,12 +168,12 @@ func TestM3PolandPack(t *testing.T) {
 	post("/api/rules/register-company/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	post("/api/events", map[string]any{
 		"event_type": "company.registered", "occurred_at": "2026-09-01", "dedup_key": "buyer",
-		"payload": map[string]any{"name": "Nabywca S.A.", "kind": "customer",
+		"payload": map[string]any{"name": "Nabywca S.A.", "kind": "customer", "email": "biuro@nabywca.pl", "tax_office": "1472", "legal_form": "legal_entity",
 			"vat_id": "5260001246", "country": "PL", "iban": "PL60102010260000042270201111"},
 	}, nil)
 	post("/api/events", map[string]any{
 		"event_type": "company.registered", "occurred_at": "2026-09-01", "dedup_key": "seller",
-		"payload": map[string]any{"name": "Sprzedawca Sp. z o.o.", "kind": "self",
+		"payload": map[string]any{"name": "Sprzedawca Sp. z o.o.", "kind": "self", "email": "ksiegowosc@sprzedawca.pl", "tax_office": "1471", "legal_form": "legal_entity",
 			"vat_id": "5250001111", "country": "PL"},
 	}, nil)
 
@@ -525,6 +531,55 @@ func TestM3PolandPack(t *testing.T) {
 	}, &resp)
 	if resp["booked"].(float64) != 0 || resp["errors"] == nil || !strings.Contains(fmt.Sprint(resp["errors"]), "2026-09 is locked") {
 		t.Fatalf("a posting into the closed month: %v", resp)
+	}
+
+	// The file: the market's writer renders JPK_V7M(3) from the settlement
+	// and the month's invoices; the kernel renders it by name and hands it
+	// over through the issue_document door — the bytes under their hash, the
+	// event the evidence, an issued_document on the list.
+	var jpk struct {
+		Writers []string `json:"writers"`
+	}
+	get("/api/files", &jpk)
+	if len(jpk.Writers) == 0 || jpk.Writers[0] != "jpk_v7m" {
+		t.Fatalf("writers: %v", jpk.Writers)
+	}
+	res, err := ts.Client().Get(ts.URL + "/api/files/jpk_v7m?period=2026-09&created=2026-10-05T10:00:00Z")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fileBytes, _ := io.ReadAll(res.Body)
+	res.Body.Close()
+	file := string(fileBytes)
+	if res.StatusCode != 200 || res.Header.Get("Content-Type") != "application/xml" || !strings.Contains(res.Header.Get("Content-Disposition"), "JPK_V7M_5250001111_202609.xml") {
+		t.Fatalf("GET the file: %d %v %s", res.StatusCode, res.Header, file[:200])
+	}
+	for _, want := range []string{
+		`<KodFormularza kodSystemowy="JPK_V7M (3)" wersjaSchemy="1-0E">JPK_VAT</KodFormularza>`, `<KodUrzedu>1471</KodUrzedu>`, `<Rok>2026</Rok>`, `<Miesiac>9</Miesiac>`,
+		`<NIP>5250001111</NIP>`, `<PelnaNazwa>Sprzedawca Sp. z o.o.</PelnaNazwa>`,
+		`<P_19>1000</P_19>`, `<P_20>230</P_20>`, `<P_37>1000</P_37>`, `<P_38>230</P_38>`, `<P_42>500</P_42>`, `<P_43>115</P_43>`, `<P_48>115</P_48>`, `<P_51>115</P_51>`,
+		`<DowodSprzedazy>FV 1/09/2026</DowodSprzedazy>`, `<NrKSeF>`, `<K_19>1000.00</K_19>`, `<K_20>230.00</K_20>`, `<PodatekNalezny>230.00</PodatekNalezny>`,
+		`<BFK>1</BFK>`, `<K_42>500.00</K_42>`, `<K_43>115.00</K_43>`, `<PodatekNaliczony>115.00</PodatekNaliczony>`,
+	} {
+		if !strings.Contains(file, want) {
+			t.Fatalf("the JPK lacks %s:\n%s", want, file)
+		}
+	}
+	if strings.Contains(file, "<P_53>") || strings.Contains(file, "<P_62>") || strings.Contains(file, "<P_39>") || strings.Contains(file, "<P_10>") {
+		t.Fatalf("empty positions are left out:\n%s", file)
+	}
+	var issued map[string]any
+	post("/api/files/jpk_v7m/issue", map[string]any{"params": map[string]string{"period": "2026-09", "created": "2026-10-05T10:00:00Z"}, "actor": "krzysztof", "occurred_at": "2026-10-05"}, &issued)
+	if issued["booked"].(float64) != 1 || issued["name"] != "JPK_V7M_5250001111_202609.xml" {
+		t.Fatalf("issue: %v", issued)
+	}
+	docs, _ := s.ObjectsByType(ctx, "issued_document")
+	if len(docs) != 1 || docs[0].State["writer"] != "jpk_v7m" || docs[0].State["params"] != "created=2026-10-05T10:00:00Z,period=2026-09" || docs[0].State["status"] != "issued" {
+		t.Fatalf("issued document: %+v", docs)
+	}
+	blob, err := s.GetBlob(ctx, docs[0].State["hash"].(string))
+	if err != nil || string(blob.Bytes) != file {
+		t.Fatalf("the bytes under the hash are the file rendered: %v", err)
 	}
 
 	// Determinism holds for a whole market loaded at runtime.

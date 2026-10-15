@@ -51,7 +51,7 @@ func installPoland(t *testing.T, s *store.Store, x *exec.Executor) {
 			}
 		}
 	}
-	for _, p := range []string{filepath.Join("..", "..", "packs", "common", "people.json"), filepath.Join("..", "..", "packs", "pl", "pack.json")} {
+	for _, p := range []string{filepath.Join("..", "..", "packs", "common", "people.json"), filepath.Join("..", "..", "packs", "common", "periods.json"), filepath.Join("..", "..", "packs", "pl", "pack.json")} {
 		sum, err := pack.Load(ctx, s, p, "test")
 		if err != nil {
 			t.Fatal(err)
@@ -336,5 +336,28 @@ func TestDumpFA3(t *testing.T) {
 	}
 	if err := os.WriteFile(path, body, 0o644); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// The FA(3) golden file validated against the Ministry's schema on
+// 2026-10-15 (lxml, the national XSDs) and was accepted by the test
+// environment the same day; the writer must keep producing it.
+func TestFA3Golden(t *testing.T) {
+	body, err := pl.WriteFA3(pl.FA3Invoice{
+		Seller:   pl.FA3Party{NIP: "8058083055", Name: "Rhea Test sp. z o.o.", Address: "ul. Testowa 1, 00-001 Warszawa"},
+		Buyer:    pl.FA3Party{NIP: "5265877635", Name: "Nabywca S.A.", Address: "ul. Próbna 2, 00-002 Warszawa"},
+		Currency: "PLN", IssueDate: "2026-09-21", Number: "FV/1/2026", RateCode: "23",
+		Net: 100000, VAT: 23000, Gross: 123000, Account: "PL83101010230000261395100000",
+		Created: "2026-09-21T08:00:00Z", SystemInfo: "Rhea",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	golden, err := os.ReadFile("testdata/fa3_sample.xml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(golden) != string(body) {
+		t.Fatalf("the FA(3) differs from the schema-validated golden file:\n%s", body)
 	}
 }

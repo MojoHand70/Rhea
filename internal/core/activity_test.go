@@ -180,9 +180,10 @@ func TestDeclaredActivitiesKeepOutOfKernelNamespaces(t *testing.T) {
 		if a.Spec.Channel != nil {
 			continue
 		}
-		// The two open doors — facts as JSON, facts as files — speak the
-		// business namespace by design; the kernel's verbs stay in theirs.
-		if a.Name == "submit_event" || a.Name == "receive_document" {
+		// The three open doors — facts as JSON, facts as files in, files
+		// out — speak the business namespace by design; the kernel's verbs
+		// stay in theirs.
+		if a.Name == "submit_event" || a.Name == "receive_document" || a.Name == "issue_document" {
 			continue
 		}
 		if !strings.HasPrefix(a.Spec.Emits, "=") && !core.ReservedEventType(a.Spec.Emits) {

@@ -64,7 +64,7 @@ import (
 func main() {
 	log.SetFlags(0)
 	if len(os.Args) < 2 {
-		log.Fatal("usage: rhea init|load|submit|intake|pass|serve|replay|channels|clock")
+		log.Fatal("usage: rhea init|load|submit|intake|pass|file|issue|serve|replay|channels|clock")
 	}
 	// The caller's scope: the company whose facts this run is in
 	// (DIRECTION 2026-10-08, the partition key); empty means the whole log.
@@ -218,6 +218,35 @@ func main() {
 			log.Fatal(err)
 		}
 		fmt.Printf("bundle %s rejected; its drafts stay on the record, a redraft is a new bundle\n", b.ID)
+
+	case "file", "issue":
+		// Render a provided writer's file (rhea file WRITER k=v…: to stdout,
+		// nothing recorded) or hand it over (rhea issue WRITER k=v…: through
+		// the issue_document door, the bytes kept under their hash, the event
+		// the evidence). The kernel never names a writer; a market provides it.
+		if len(os.Args) < 3 {
+			log.Fatalf("usage: rhea %s WRITER key=value…   (writers: %v)", os.Args[1], adapter.WriterNames())
+		}
+		params, err := adapter.ParseParams(os.Args[3:])
+		if err != nil {
+			log.Fatal(err)
+		}
+		if os.Args[1] == "file" {
+			f, err := adapter.Render(ctx, s, os.Args[2], params)
+			if err != nil {
+				log.Fatal(err)
+			}
+			os.Stdout.Write(f.Bytes)
+			break
+		}
+		f, t, err := adapter.Issue(ctx, s, x, os.Args[2], params, actor(), today())
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("issued %s (%d bytes) through issue_document: event %d, %d booked\n", f.Name, len(f.Bytes), t.EventID, t.Booked)
+		for _, e := range t.Errors {
+			fmt.Println("worklist:", e)
+		}
 
 	case "pass":
 		// One pass of a reader of the document store, through its channel.

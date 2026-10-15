@@ -2858,3 +2858,66 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   settlement and the invoices, the common documents pack's `issue_document` door and
   `issued_document` type, validated against the Ministry's XSD with the scratch
   validator (lxml; this morning's FA(3) validates against the schema offline too).
+
+
+## 2026-10-15 — month end, part two: the file is a market's writer, handing it over is a door
+
+- **The writer seam** (`internal/adapter/writers.go`): beside the adapter (talks to an
+  outside system, returns events) stands the writer — reads objects and parameters,
+  returns a named file — `adapter.ProvideWriter`, `LookupWriter`, `WriterNames`,
+  `Render`. The kernel renders any writer by name and knows none: `rhea file WRITER
+  k=v…` (to stdout), `GET /api/files` (what the binary renders), `GET
+  /api/files/{writer}?k=v` (the file). Deterministic in the objects: the same state
+  and parameters give the same bytes (`created` is a parameter so a test can pin it).
+- **Handing a file over is the kernel's third open door.** `issue_document` (builtin,
+  beside `submit_event` and `receive_document`): the writer, its parameters (spelled
+  one way, sorted `k=v` pairs), the file; the bytes kept under their hash in the same
+  transaction, `document.issued` the evidence. The documents pack v3 makes it an
+  `issued_document` (name, hash, media type, size, writer, parameters) with its list
+  view. `adapter.Issue` renders and hands over in one step: `rhea issue WRITER k=v…`,
+  `POST /api/files/{writer}/issue`. A later correction is a new file, a new fact; the
+  recorded writer and parameters let anyone render again and compare.
+- **JPK_V7M(3) in `markets/pl`** (`jpk.go`, provided as `jpk_v7m`): the header (form
+  code and schema version fixed by the XSD, purpose 1, the tax office, year, month),
+  the taxpayer (a legal person: NIP, full name, e-mail; a natural person: NIP, given
+  and family name, birth date, e-mail — read from the company of kind self and its
+  owner person), the declaration from the month's `vat_settlement` in whole złoty
+  (P_10 exempt, P_13 zero, P_15/16 5%, P_17/18 8%, P_19/20 23%, P_37 bases, P_38
+  output VAT, P_39 carried in, P_42/43 purchases, P_48 input VAT, P_51 to pay, P_53
+  and P_62 the excess forward; empty optional positions left out, as the brochure
+  says), the records from the month's invoices with their grosze (each sales invoice
+  with the buyer, the number, the issue date, its KSeF number from the accepted
+  submission or the mark BFK when it was issued outside KSeF, the K_ amounts in the
+  rate's column; each purchase with the supplier, the number, the date, its KSeF
+  number when the KSeF reader carried one or BFK, K_42/K_43), and the control sums.
+  Without a settlement for the month the file has records only — it says what the
+  log can derive. The writer refuses a company that has not said its tax office and
+  e-mail, and a rate without a column. The one arithmetic it does is the form's own:
+  whole złoty by the tax ordinance's rounding (art. 63 §1).
+- **The company says who it is** (pack v17): `company` gains `email`, `tax_office`,
+  `legal_form` (natural_person | legal_entity) and `owner` (a person), all amendable
+  with `address` and `iban`; the interview fills them, a correction amends them. A
+  natural person's names and birth date wait for their door on the people pack —
+  fields nobody can fill are not shipped.
+- **A purchase invoice from KSeF keeps its number** (pack v17): `purchase_invoice`
+  gains `ksef_ref`; the KSeF reader already carried the reference in its event, and
+  the booking rule splits in two — `pl-book-purchase-invoice-ksef` where `$.ksef_ref`
+  exists, `pl-book-purchase-invoice` where it is `absent`. **`absent` joins the
+  condition ops** (the mirror of `exists`): a rule may state that a field is not
+  there; without it two rules could not divide one event type by the presence of a
+  field, and a mapped path that is missing fails the rule.
+- **Validated against the Ministry's schema, kept as golden files.** The scratch
+  validator (lxml, the national XSDs resolved locally) says VALID for the JPK the
+  story renders and for the FA(3) sample; both are committed under
+  `markets/pl/testdata` and the tests fail on any byte of drift — a change is a
+  change to re-validate. The validator itself stays outside the suite (no libxml in
+  the build); when a Go validator is worth its weight it joins. The validator found
+  what reading the schema by eye missed: the taxpayer's NIP and name are in the JPK
+  namespace, not the shared types' — the same lesson as the buyer block this morning.
+- **The story** closes September, renders the file by name, checks the positions
+  (P_51 = 115, the records with the KSeF number and the BFK mark), hands it over,
+  finds the issued_document with the writer and the parameters, and reads the bytes
+  back under their hash. **Owed:** the live shells on v13 (now four pack versions
+  behind: a pack-upgrade mechanism is due before the private beta, since the loader
+  leaves known ids alone by design); the natural person's door; the accountant's
+  hand-over as a person (the issued document names no recipient yet).
