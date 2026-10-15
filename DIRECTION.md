@@ -2036,7 +2036,8 @@ a briefing on a laptop, which settles the free tier's cost shape. The
 gap is the law's: the kernel refuses a number the facts do not carry
 but not a fact the words deny — a non-empty fact must be spoken, or the
 words are refused; that check is the next small step, before KSeF
-outbound.
+outbound. (Shipped 2026-10-15, DECISIONS: the second law — a fact with
+an amount in it must be spoken — and thinking off for the words.)
 
 One line: *free is the network's economics, open source is the trust
 answer, the accountant is the buyer, and the wow is zero data entry,

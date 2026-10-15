@@ -694,7 +694,7 @@ func BuiltinActivities() []Activity {
 		},
 		{
 			Name: "host_said", Domain: "system",
-			Description: "What the host said: the words it phrased for a narrative view, logged as a fact so it never repeats itself and so what was said can be read back. The agent speaks through this door; the words it says never carry a number the facts did not.",
+			Description: "What the host said: the words it phrased for a narrative view, logged as a fact so it never repeats itself and so what was said can be read back. The agent speaks through this door; the words it says never carry a number the facts did not, and never pass over a fact that has an amount in it.",
 			Spec: ActivitySpec{
 				Inputs: []FieldDef{
 					{Name: "view", Type: "string", Required: true},

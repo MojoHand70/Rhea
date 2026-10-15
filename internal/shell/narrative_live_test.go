@@ -19,7 +19,8 @@ import (
 // morning — the facts the kernel computed in the Poland story — and asked
 // to speak, several times in a row, each time told what it said before.
 // The kernel's own law is applied to every answer: a number the facts do
-// not carry refuses the words, and so does repeating itself. The verdict
+// not carry refuses the words, so does a fact passed over, and so does
+// repeating itself. The verdict
 // is printed, not asserted: this is a measurement, run by hand with
 // RHEA_LIVE_HOST=1 (RHEA_LIVE_HOST_RUNS picks how many times, default 5).
 func TestHostWordsLive(t *testing.T) {
@@ -58,6 +59,8 @@ func TestHostWordsLive(t *testing.T) {
 		verdict := "accepted"
 		if foreign := foreignNumbers(words, morning.Facts); len(foreign) > 0 {
 			verdict = "refused: numbers the facts do not carry (" + strings.Join(foreign, ", ") + ")"
+		} else if unspoken := unspokenFacts(words, morning.Facts); len(unspoken) > 0 {
+			verdict = "refused: passes over " + strings.Join(unspoken, "; ")
 		} else if slices.Contains(before, words) {
 			verdict = "refused: repeated itself"
 		} else {

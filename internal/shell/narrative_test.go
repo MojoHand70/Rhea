@@ -123,7 +123,7 @@ func TestBriefing(t *testing.T) {
 
 	fresh := func() { d.Said, d.SaidEvent, d.Silent, d.Facts = "", 0, "", nil }
 	// 2. The next time, the host is told what it said, so it does not repeat itself.
-	words = "Nothing new since the two notes."
+	words = "Nothing new: the 2 notes still stand at 1234.56 PLN."
 	fresh()
 	get("/api/views/briefing", &d)
 	if !strings.Contains(heard, "What you said before") || !strings.Contains(heard, "worth 1234.56 PLN together") || d.Said != words {
@@ -139,6 +139,26 @@ func TestBriefing(t *testing.T) {
 	}
 	if said, _ := srvSaid(ctx, s); said != 2 {
 		t.Fatalf("refused words are not logged: %d said", said)
+	}
+
+	// 3b. A fact passed over is refused too: the host never denies what the
+	// facts carry. Words without a number clear the first check and fail
+	// the second, and the refusal names the fact and its amounts.
+	words = "A quiet day: nothing was taken and nothing waits."
+	fresh()
+	get("/api/views/briefing", &d)
+	if d.Said != "" || !strings.Contains(d.Silent, "pass over") || !strings.Contains(d.Silent, "the notes (2, 1234.56)") {
+		t.Fatalf("a denied fact is refused: %+v", d)
+	}
+	if said, _ := srvSaid(ctx, s); said != 2 {
+		t.Fatalf("refused words are not logged: %d said", said)
+	}
+	// One amount spoken is enough: the count alone names the fact.
+	words = "2 notes today, both booked."
+	fresh()
+	get("/api/views/briefing", &d)
+	if d.Said != words || d.Silent != "" {
+		t.Fatalf("one amount of the fact, spoken, is the fact spoken: %+v", d)
 	}
 
 	// 4. Without a host, the facts speak for themselves.

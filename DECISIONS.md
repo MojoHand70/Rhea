@@ -2588,3 +2588,69 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   measurement before KSeF outbound. The rule corpora already had `rhea eval`; the
   host's words had no bench. Local candidates measured through Ollama's Anthropic
   endpoint: qwen3.6:27b, Bielik 11B v3.0 and Bielik 4.5B v3.0 (Q8_0).
+
+
+## 2026-10-15 — the host never denies a fact: a second law, and thinking off for the words
+
+- **The gap the small models exposed, closed.** The host's words had one law — a number
+  the facts do not carry refuses the words — and the measurement of 2026-10-14 found
+  its blind side: Bielik said "no outgoing payments waiting" over a grid with a
+  100.00 payment on it, and the kernel let it through, because a denial carries no
+  number. The second law: *a fact with an amount in it must be spoken, or the words
+  are refused.* `unspokenFacts` in `internal/shell` mirrors `foreignNumbers`: a fact is
+  spoken when at least one of its amounts appears in the words digit for digit; a
+  fact's amounts are the non-zero cells of its typed money and count columns (an
+  analysis view's declared columns, a matching grid's open amounts), or every number
+  its cells carry when no column is typed. The refusal names the fact and its
+  amounts: "they pass over wypłaty bez rozliczenia (100.00)".
+- **An empty fact asks nothing.** No rows, no open items, only zeros: "nothing waits"
+  is then the truth, not a denial. The simplest option; the alternative — the host
+  must mention every fact, empty ones included — would make a quiet month a list of
+  absences.
+- **One amount is enough.** A register with three rate rows is spoken when one of its
+  amounts is; a count ("2 notes") names a fact as well as a total does. The floor is
+  deliberately low — the law is against denial, not for completeness — and it can be
+  raised without touching the shape.
+- **The host is told the law** in `NarrateSystem`: never deny or pass over a fact, speak
+  at least one amount of every fact that has one, call only an empty fact empty. The
+  door's description says the same. The live check (`TestHostWordsLive`) applies the
+  new verdict between the foreign-number check and the repetition check.
+- **Thinking off for the words.** `Agent.Speak` is the same call as `Complete` with
+  `thinking: {type: disabled}` sent explicitly; `Narrate` speaks through it (falling
+  back to `Complete` when a test injects only that). Drafting and reading keep the
+  model's default. Measured on the local endpoint before wiring: qwen3.6:27b warm
+  answers a one-line question in 0.9 s with the parameter and 3.6 s with a thinking
+  block without it; Ollama 0.40 honours the parameter on its Anthropic endpoint, and
+  Anthropic's own API accepts "disabled" as the default it already is.
+- **Tests:** `TestHostLaw` runs the recorded morning (`testdata/eval/briefing.json`)
+  through both laws with the shapes the measurement produced — the denial refused by
+  name, the truthful morning accepted, dropped decimals still foreign, a register
+  passed over named with its amounts, an emptied grid callable empty, zeros asking
+  nothing, an untyped table counting every number. `TestBriefing` gains the step: a
+  quiet day over two notes is refused, "2 notes" alone is accepted.
+- **Numbers are compared as values, not digits.** The first law read "1000 zł" as a
+  number the facts (1000.00) do not carry and refused it; nothing was rounded, so that
+  refusal was false. `canonicalNumber` now drops the zeros after the decimal point:
+  "100", "100,00" and "100.00" are one value, "1234" is still not "1234.56" (a decimal
+  that was there and is gone is a rounding). Both laws share the comparison. The
+  2026-10-14 measurement's "decimals dropped from every amount" against Bielik 11B was
+  this false refusal; its other two findings (the same text five times, the denied
+  payment) stand.
+- **Measured with the laws as they now stand** (2026-10-15, same laptop, Ollama 0.40,
+  five mornings each, thinking off through `Speak`): qwen3.6:27b 4/5 accepted at 4–5 s
+  a morning, against 40–78 s yesterday with thinking on — the one refusal was "nothing
+  has changed since the last report", which passed over all four facts, the second law
+  doing its work; Bielik 11B 1/5 at 3–8 s — told the law, it now names the waiting
+  payment, the first morning is accepted, and the four after it are the same text word
+  for word, refused for repeating itself.
+- **A limit, named.** Bielik's accepted morning still said "no outgoing payments
+  waiting". The law let it through because the story's one bank operation sits open on
+  *both* payment grids, so the 100 it named for the incoming side also covered the
+  outgoing one: when two facts share every amount, numbers cannot tell a denial of one
+  from a mention of the other. The remedy is in the pack, not the law — a bank
+  operation carries a direction, and then never appears on both grids; a law that
+  attributes an amount to a fact would need to read sentences, which the kernel does
+  not do.
+- **Live databases keep the door's old text.** Builtin activities are seeded once and
+  left alone; the law lives in the shell's check, not in the door's description, so
+  nothing needs migrating.

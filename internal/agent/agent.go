@@ -100,9 +100,14 @@ type Cluster struct {
 // Agent drafts rules. Complete is the single LLM call, injectable for tests.
 // Read is the model reading a document — a PDF's bytes with an instruction
 // — for the model-read channels; nil when the agent cannot read files.
+// Speak is the host speaking — the same call with the model's thinking
+// switched off: the words are daily and easy, and a local model then answers
+// in seconds instead of a minute (DECISIONS 2026-10-15). Nil falls back to
+// Complete, so a test's injected Complete hears the host too.
 type Agent struct {
 	Complete func(ctx context.Context, system, user string) (string, error)
 	Read     func(ctx context.Context, system string, pdf []byte, user string) (string, error)
+	Speak    func(ctx context.Context, system, user string) (string, error)
 }
 
 func Model() string {
@@ -121,13 +126,20 @@ func New() *Agent {
 		opts = append(opts, option.WithHeader("anthropic-workspace-id", ws))
 	}
 	client := anthropic.NewClient(opts...)
-	ask := func(ctx context.Context, system string, blocks ...anthropic.ContentBlockParamUnion) (string, error) {
-		msg, err := client.Messages.New(ctx, anthropic.MessageNewParams{
+	ask := func(ctx context.Context, think bool, system string, blocks ...anthropic.ContentBlockParamUnion) (string, error) {
+		params := anthropic.MessageNewParams{
 			Model:     anthropic.Model(Model()),
 			MaxTokens: 16000,
 			System:    []anthropic.TextBlockParam{{Text: system}},
 			Messages:  []anthropic.MessageParam{anthropic.NewUserMessage(blocks...)},
-		})
+		}
+		if !think {
+			// The model's default stands when thinking is wanted; switched
+			// off explicitly, a local model skips its reasoning pass (Ollama
+			// honours the same parameter on its Anthropic endpoint).
+			params.Thinking = anthropic.ThinkingConfigParamUnion{OfDisabled: &anthropic.ThinkingConfigDisabledParam{}}
+		}
+		msg, err := client.Messages.New(ctx, params)
 		if err != nil {
 			return "", err
 		}
@@ -139,13 +151,16 @@ func New() *Agent {
 	}
 	return &Agent{
 		Complete: func(ctx context.Context, system, user string) (string, error) {
-			return ask(ctx, system, anthropic.NewTextBlock(user))
+			return ask(ctx, true, system, anthropic.NewTextBlock(user))
 		},
 		// The document goes to the model as it is — the bytes, base64 — with
 		// the instruction beside it; the model's text comes back as data.
 		Read: func(ctx context.Context, system string, pdf []byte, user string) (string, error) {
 			doc := anthropic.NewDocumentBlock(anthropic.Base64PDFSourceParam{Data: base64.StdEncoding.EncodeToString(pdf)})
-			return ask(ctx, system, doc, anthropic.NewTextBlock(user))
+			return ask(ctx, true, system, doc, anthropic.NewTextBlock(user))
+		},
+		Speak: func(ctx context.Context, system, user string) (string, error) {
+			return ask(ctx, false, system, anthropic.NewTextBlock(user))
 		},
 	}
 }
@@ -553,7 +568,9 @@ like the best concierge. You are handed facts the system computed — tables wit
 columns and rows — and you phrase them for the owner in a few sentences: what was done,
 what waits for a decision, what stands out. Rules: every number you say must appear in
 the facts exactly as given (same digits, same decimals) — you never compute, round, add
-up or estimate; you never invent a fact; you do not repeat what you said before; you
+up or estimate; you never invent a fact; you never deny or pass over one — every fact
+with an amount in it is spoken, with at least one of its amounts exactly as given, and
+only an empty fact may be called empty; you do not repeat what you said before; you
 do not greet with a template. Speak in the voice the owner asked for. Answer with the
 words only - no JSON, no markdown, no headings.`
 
@@ -573,5 +590,9 @@ func (a *Agent) Narrate(ctx context.Context, today, voice string, facts json.Raw
 		}
 	}
 	fmt.Fprintf(&sb, "\nThe facts:\n%s\n\nSpeak.", facts)
-	return a.Complete(ctx, NarrateSystem, sb.String())
+	speak := a.Speak
+	if speak == nil {
+		speak = a.Complete
+	}
+	return speak(ctx, NarrateSystem, sb.String())
 }

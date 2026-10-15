@@ -19,8 +19,11 @@ import (
 // sentences in the owner's voice, fresh each time, logged through the
 // host_said door so the next words know the last. The host never computes
 // a number: every number in its words must be one the facts carry, or the
-// words are refused and the facts are shown alone, with the reason. Without
-// an agent the host is silent and the facts speak for themselves.
+// words are refused and the facts are shown alone, with the reason. The
+// host never denies a fact either (DECISIONS 2026-10-15): a fact with an
+// amount in it must be spoken — one of its amounts, exactly — or the words
+// are refused the same way. Without an agent the host is silent and the
+// facts speak for themselves.
 
 type narrativeFact struct {
 	As    string      `json:"as"`
@@ -113,6 +116,13 @@ func (s *Server) serveNarrative(ctx context.Context, w http.ResponseWriter, vd *
 		writeJSON(w, 200, out)
 		return
 	}
+	if unspoken := unspokenFacts(words, factsJSON); len(unspoken) > 0 {
+		// The host never denies a fact: words that pass over a fact with an
+		// amount in it are refused, and the fact passed over is named.
+		out["silent"] = fmt.Sprintf("the host's words were refused: they pass over %s", strings.Join(unspoken, "; "))
+		writeJSON(w, 200, out)
+		return
+	}
 	// The words are a fact: logged through the door, by the agent.
 	t, err := s.Exec.TriggerActivity(ctx, "host_said", map[string]any{"view": vd.ID, "text": words}, "agent:"+s.model(), "")
 	if err != nil {
@@ -146,8 +156,9 @@ func (s *Server) saidBefore(ctx context.Context, viewID string, n int) ([]string
 }
 
 // foreignNumbers lists the numbers in the words that the facts do not
-// carry — compared digit for digit, separators dropped, so "1 234,56" and
-// "1234.56" are one number and "1234" is not "1234.56".
+// carry — compared as values, separators dropped, so "1 234,56" and
+// "1234.56" are one number, "100 zł" is "100.00" (nothing was rounded),
+// and "1234" is not "1234.56" (something was).
 func foreignNumbers(words string, facts []byte) []string {
 	have := map[string]bool{}
 	for _, m := range numberRe.FindAllString(string(facts), -1) {
@@ -171,10 +182,124 @@ func foreignNumbers(words string, facts []byte) []string {
 	return out
 }
 
+// unspokenFacts lists the facts the words pass over: a fact with an amount
+// in it is spoken when at least one of its amounts appears in the words,
+// digit for digit. A fact's amounts are the non-zero cells of its money and
+// count columns — an analysis view's typed columns, a matching grid's open
+// amounts — or, when no column is typed, every number its cells carry. An
+// empty fact (no rows, no open items, only zeros) asks nothing of the host:
+// "nothing waits" is then the truth, not a denial. The check is the mirror
+// of foreignNumbers: that one refuses a number the facts do not carry, this
+// one refuses silence about a fact they do.
+func unspokenFacts(words string, facts []byte) []string {
+	said := map[string]bool{}
+	for _, m := range numberRe.FindAllString(words, -1) {
+		said[canonicalNumber(m)] = true
+	}
+	var shape []struct {
+		As   string `json:"as"`
+		Kind string `json:"kind"`
+		Data struct {
+			Columns []struct {
+				Type string `json:"type"`
+			} `json:"columns"`
+			Rows [][]struct {
+				V string `json:"v"`
+			} `json:"rows"`
+			Sides []struct {
+				Columns []struct {
+					Field string `json:"field"`
+					Type  string `json:"type"`
+				} `json:"columns"`
+				Items []struct {
+					Cells map[string]struct {
+						V string `json:"v"`
+					} `json:"cells"`
+				} `json:"items"`
+			} `json:"sides"`
+		} `json:"data"`
+	}
+	if json.Unmarshal(facts, &shape) != nil {
+		return nil
+	}
+	var out []string
+	for _, f := range shape {
+		var amounts []string
+		seen := map[string]bool{}
+		add := func(cell string) {
+			for _, m := range numberRe.FindAllString(cell, -1) {
+				c := canonicalNumber(m)
+				if c == "0" || seen[c] {
+					continue
+				}
+				seen[c] = true
+				amounts = append(amounts, c)
+			}
+		}
+		switch f.Kind {
+		case "analysis":
+			typed := false
+			for _, c := range f.Data.Columns {
+				if amountColumn(c.Type) {
+					typed = true
+				}
+			}
+			for _, row := range f.Data.Rows {
+				for j, cell := range row {
+					if !typed || (j < len(f.Data.Columns) && amountColumn(f.Data.Columns[j].Type)) {
+						add(cell.V)
+					}
+				}
+			}
+		case "matching":
+			for _, side := range f.Data.Sides {
+				for _, item := range side.Items {
+					for _, col := range side.Columns {
+						if amountColumn(col.Type) {
+							add(item.Cells[col.Field].V)
+						}
+					}
+				}
+			}
+		}
+		if len(amounts) == 0 {
+			continue
+		}
+		spoken := false
+		for _, a := range amounts {
+			if said[a] {
+				spoken = true
+				break
+			}
+		}
+		if spoken {
+			continue
+		}
+		shown := amounts
+		if len(shown) > 3 {
+			shown = append(append([]string{}, shown[:3]...), "…")
+		}
+		out = append(out, fmt.Sprintf("%s (%s)", f.As, strings.Join(shown, ", ")))
+	}
+	return out
+}
+
+// amountColumn: the column types whose cells are amounts the host must
+// carry — money and counts.
+func amountColumn(t string) bool { return t == "money" || t == "int" }
+
+// canonicalNumber is the value a written number stands for: thousand
+// spaces dropped, the decimal comma a dot, leading zeros gone, and zeros
+// after the decimal point gone too, so that "100", "100,00" and "100.00"
+// are one value and "1234" and "1234.56" are two.
 func canonicalNumber(m string) string {
 	m = strings.ReplaceAll(strings.TrimSpace(m), " ", "")
 	m = strings.ReplaceAll(m, ",", ".")
 	m = strings.TrimLeft(m, "0")
+	if strings.Contains(m, ".") {
+		m = strings.TrimRight(m, "0")
+		m = strings.TrimSuffix(m, ".")
+	}
 	if strings.HasPrefix(m, ".") {
 		m = "0" + m
 	}
