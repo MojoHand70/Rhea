@@ -1,7 +1,9 @@
-package adapter_test
+package pl_test
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
@@ -17,6 +19,7 @@ import (
 	"rhea/internal/pack"
 	"rhea/internal/store"
 	"rhea/internal/store/storetest"
+	"rhea/markets/pl"
 )
 
 // installPoland seeds the finance base the Poland pack layers on, installs
@@ -99,8 +102,8 @@ func TestKSeFOutbound(t *testing.T) {
 			"number": number, "issue_date": "2026-09-21", "seller_nip": "PL8058083055", "buyer_nip": "PL5265877635",
 			"net": "1000.00", "vat": "230.00", "gross": "1230.00", "vat_rate": "23", "currency": "PLN", "intragroup": "no", "market": "pl"})
 	}
-	fake := adapter.FakeKSeF{Reject: map[string]string{"FV/2/2026": "Błąd weryfikacji semantyki dokumentu faktury"}}
-	ksef := adapter.KSeF{Client: fake, Today: func() string { return "2026-09-22" }}
+	fake := pl.FakeKSeF{Reject: map[string]string{"FV/2/2026": "Błąd weryfikacji semantyki dokumentu faktury"}}
+	ksef := pl.KSeF{Client: fake, Today: func() string { return "2026-09-22" }}
 	run, err := adapter.Run(ctx, s, x, ksef)
 	if err != nil || run.PassErr != nil {
 		t.Fatalf("pass: %v / %v", err, run.PassErr)
@@ -109,15 +112,22 @@ func TestKSeFOutbound(t *testing.T) {
 		t.Fatalf("pass: %+v", run)
 	}
 	// The evidence: what was sent is in the event, hashed; the UPO is there.
-	ev, ok, err := s.LatestEventOfType(ctx, adapter.EventKSeFSubmitted)
+	ev, ok, err := s.LatestEventOfType(ctx, pl.EventKSeFSubmitted)
 	if err != nil || !ok {
 		t.Fatal(err, ok)
 	}
 	var sub map[string]any
 	json.Unmarshal(ev.Payload, &sub)
-	if sub["number"] != "FV/1/2026" || !adapter.KSeFNumberValid(sub["ksef_ref"].(string)) || sub["upo"] != "FAKE-SESSION" ||
-		!strings.Contains(sub["upo_xml"].(string), "<NumerFaktury>FV/1/2026</NumerFaktury>") || sub["invoice_hash"] == "" || sub["market"] != "pl" {
+	if sub["number"] != "FV/1/2026" || !pl.KSeFNumberValid(sub["ksef_ref"].(string)) || sub["upo"] != "FAKE-SESSION" ||
+		!strings.Contains(sub["upo_xml"].(string), "<NumerFaktury>FV/1/2026</NumerFaktury>") || sub["invoice_hash"] == "" || sub["market"] != "pl" ||
+		!strings.Contains(sub["invoice_xml"].(string), "<P_2>FV/1/2026</P_2>") || sub["sent_at"] != "2026-09-21T08:00:00+02:00" || sub["accepted_at"] != "2026-09-21T08:00:01+02:00" {
 		t.Fatalf("the acceptance: %v", sub)
+	}
+	// The document sent is kept whole, and its fingerprint is the one the
+	// receipt acknowledges.
+	sum := sha256.Sum256([]byte(sub["invoice_xml"].(string)))
+	if base64.StdEncoding.EncodeToString(sum[:]) != sub["invoice_hash"] {
+		t.Fatal("the kept document is not the fingerprinted one")
 	}
 	// The objects: one accepted, one rejected, and the rejection's task.
 	subs, _ := s.ObjectsByType(ctx, "ksef_submission")
@@ -129,7 +139,8 @@ func TestKSeFOutbound(t *testing.T) {
 		byStatus[o.State["status"].(string)] = o
 	}
 	acc, rej := byStatus["accepted"], byStatus["rejected"]
-	if acc.State["ksef_ref"] != sub["ksef_ref"] || acc.State["upo"] != "FAKE-SESSION" || acc.State["invoice_hash"] != sub["invoice_hash"] {
+	if acc.State["ksef_ref"] != sub["ksef_ref"] || acc.State["upo"] != "FAKE-SESSION" || acc.State["invoice_hash"] != sub["invoice_hash"] ||
+		acc.State["sent_at"] != "2026-09-21T08:00:00+02:00" || acc.State["accepted_at"] != "2026-09-21T08:00:01+02:00" {
 		t.Fatalf("accepted: %+v", acc.State)
 	}
 	if rej.State["reason"] != "KSeF 450: Błąd weryfikacji semantyki dokumentu faktury" || rej.State["ksef_ref"] != nil || rej.State["date"] != "2026-09-22" {
@@ -141,7 +152,7 @@ func TestKSeFOutbound(t *testing.T) {
 		t.Fatalf("the rejection's task: %+v", tasks)
 	}
 	// The second pass: nothing owed — not even to a Ministry that would now accept.
-	run, err = adapter.Run(ctx, s, x, adapter.KSeF{Client: adapter.FakeKSeF{}, Today: ksef.Today})
+	run, err = adapter.Run(ctx, s, x, pl.KSeF{Client: pl.FakeKSeF{}, Today: ksef.Today})
 	if err != nil || run.PassErr != nil || run.Submitted != 0 || run.Duplicates != 0 {
 		t.Fatalf("second pass: %+v %v", run, err)
 	}
@@ -152,12 +163,24 @@ func TestKSeFOutbound(t *testing.T) {
 	append1(t, s, x, "sales.invoice.issued", "2026-09-23", "inv-4", map[string]any{
 		"number": "FV/4/2026", "issue_date": "2026-09-23", "seller_nip": "PL8058083055", "buyer_nip": "PL5265877635",
 		"net": "200.00", "vat": "16.00", "gross": "216.00", "vat_rate": "8", "currency": "PLN", "intragroup": "no", "market": "pl"})
-	run, err = adapter.Run(ctx, s, x, adapter.KSeF{Client: adapter.FakeKSeF{}, Today: ksef.Today})
+	run, err = adapter.Run(ctx, s, x, pl.KSeF{Client: pl.FakeKSeF{}, Today: ksef.Today})
 	if err != nil || run.PassErr != nil || run.Submitted != 1 {
 		t.Fatalf("third pass: %+v %v %v", run, err, run.PassErr)
 	}
 	if subs, _ := s.ObjectsByType(ctx, "ksef_submission"); len(subs) != 3 {
 		t.Fatalf("submissions after the third pass: %d", len(subs))
+	}
+	// A receipt that acknowledges a different document is refused: nothing
+	// booked, the pass error names the invoice.
+	append1(t, s, x, "sales.invoice.issued", "2026-09-24", "inv-5", map[string]any{
+		"number": "FV/5/2026", "issue_date": "2026-09-24", "seller_nip": "PL8058083055", "buyer_nip": "PL5265877635",
+		"net": "10.00", "vat": "2.30", "gross": "12.30", "vat_rate": "23", "currency": "PLN", "intragroup": "no", "market": "pl"})
+	run, _ = adapter.Run(ctx, s, x, pl.KSeF{Client: lyingKSeF{}, Today: ksef.Today})
+	if run.Submitted != 0 || run.PassErr == nil || !strings.Contains(run.PassErr.Error(), "FV/5/2026: the UPO acknowledges a different document") {
+		t.Fatalf("a lying receipt: %+v %v", run, run.PassErr)
+	}
+	if subs, _ := s.ObjectsByType(ctx, "ksef_submission"); len(subs) != 3 {
+		t.Fatalf("a lying receipt booked something: %d", len(subs))
 	}
 }
 
@@ -165,9 +188,9 @@ func TestKSeFOutbound(t *testing.T) {
 // in the schema's order, with the mandatory annotation block, the rate in
 // its slot, the exemption declared when the rate is zw.
 func TestWriteFA3(t *testing.T) {
-	body, err := adapter.WriteFA3(adapter.FA3Invoice{
-		Seller:   adapter.FA3Party{NIP: "8058083055", Name: "Rhea Test sp. z o.o.", Address: "ul. Testowa 1"},
-		Buyer:    adapter.FA3Party{NIP: "5265877635", Name: "Nabywca S.A."},
+	body, err := pl.WriteFA3(pl.FA3Invoice{
+		Seller:   pl.FA3Party{NIP: "8058083055", Name: "Rhea Test sp. z o.o.", Address: "ul. Testowa 1"},
+		Buyer:    pl.FA3Party{NIP: "5265877635", Name: "Nabywca S.A."},
 		Currency: "PLN", IssueDate: "2026-09-21", Number: "FV/1/2026", RateCode: "23",
 		Net: 100000, VAT: 23000, Gross: 123000, Account: "PL83101010230000261395100000",
 		Created: "2026-09-21T08:00:00Z", SystemInfo: "Rhea",
@@ -177,7 +200,7 @@ func TestWriteFA3(t *testing.T) {
 	}
 	text := string(body)
 	for _, want := range []string{
-		`<?xml version="1.0" encoding="UTF-8"?>`, `<Faktura xmlns="` + adapter.FA3Namespace + `">`,
+		`<?xml version="1.0" encoding="UTF-8"?>`, `<Faktura xmlns="` + pl.FA3Namespace + `">`,
 		`<KodFormularza kodSystemowy="FA (3)" wersjaSchemy="1-0E">FA</KodFormularza>`, `<WariantFormularza>3</WariantFormularza>`,
 		`<NIP>8058083055</NIP>`, `<AdresL1>ul. Testowa 1</AdresL1>`, `<AdresL1>Nabywca S.A.</AdresL1>`, `<KodKraju>PL</KodKraju>`, `<JST>2</JST>`, `<GV>2</GV>`,
 		`<P_13_1>1000.00</P_13_1>`, `<P_14_1>230.00</P_14_1>`, `<P_15>1230.00</P_15>`,
@@ -204,27 +227,27 @@ func TestWriteFA3(t *testing.T) {
 	var doc struct {
 		XMLName xml.Name
 	}
-	if err := xml.Unmarshal(body, &doc); err != nil || doc.XMLName.Space != adapter.FA3Namespace {
+	if err := xml.Unmarshal(body, &doc); err != nil || doc.XMLName.Space != pl.FA3Namespace {
 		t.Fatalf("well-formed in the namespace: %v %v", err, doc.XMLName)
 	}
 	// Exempt: the slot without VAT, P_12 zw, the exemption declared.
-	body, err = adapter.WriteFA3(adapter.FA3Invoice{Seller: adapter.FA3Party{NIP: "8058083055", Name: "X"}, Buyer: adapter.FA3Party{NIP: "5265877635"},
+	body, err = pl.WriteFA3(pl.FA3Invoice{Seller: pl.FA3Party{NIP: "8058083055", Name: "X"}, Buyer: pl.FA3Party{NIP: "5265877635"},
 		Currency: "PLN", IssueDate: "2026-09-21", Number: "FV/5/2026", RateCode: "zw", Net: 5000, Gross: 5000, Created: "2026-09-21T08:00:00Z"})
 	if err != nil || !strings.Contains(string(body), "<P_13_7>50.00</P_13_7>") || strings.Contains(string(body), "P_14_7") ||
 		!strings.Contains(string(body), "<P_12>zw</P_12>") || !strings.Contains(string(body), "<P_19>1</P_19>") || strings.Contains(string(body), "P_19N") {
 		t.Fatalf("exempt: %v\n%s", err, body)
 	}
 	// Zero rate: 0 KR in the line, the 6_1 slot, no VAT element.
-	body, _ = adapter.WriteFA3(adapter.FA3Invoice{Seller: adapter.FA3Party{NIP: "8058083055", Name: "X"}, Buyer: adapter.FA3Party{NIP: "5265877635"},
+	body, _ = pl.WriteFA3(pl.FA3Invoice{Seller: pl.FA3Party{NIP: "8058083055", Name: "X"}, Buyer: pl.FA3Party{NIP: "5265877635"},
 		Currency: "PLN", IssueDate: "2026-09-21", Number: "FV/6/2026", RateCode: "0", Net: 5000, Gross: 5000, Created: "2026-09-21T08:00:00Z"})
 	if !strings.Contains(string(body), "<P_13_6_1>50.00</P_13_6_1>") || !strings.Contains(string(body), "<P_12>0 KR</P_12>") {
 		t.Fatalf("zero rate:\n%s", body)
 	}
 	// Refusals: an unknown rate, a seller without a name.
-	if _, err := adapter.WriteFA3(adapter.FA3Invoice{Seller: adapter.FA3Party{NIP: "1", Name: "X"}, Buyer: adapter.FA3Party{NIP: "2"}, Number: "n", RateCode: "np"}); err == nil || !strings.Contains(err.Error(), "no FA(3) slot") {
+	if _, err := pl.WriteFA3(pl.FA3Invoice{Seller: pl.FA3Party{NIP: "1", Name: "X"}, Buyer: pl.FA3Party{NIP: "2"}, Number: "n", RateCode: "np"}); err == nil || !strings.Contains(err.Error(), "no FA(3) slot") {
 		t.Fatalf("unknown rate: %v", err)
 	}
-	if _, err := adapter.WriteFA3(adapter.FA3Invoice{Seller: adapter.FA3Party{NIP: "1"}, Buyer: adapter.FA3Party{NIP: "2"}, Number: "n", RateCode: "23"}); err == nil || !strings.Contains(err.Error(), "seller needs") {
+	if _, err := pl.WriteFA3(pl.FA3Invoice{Seller: pl.FA3Party{NIP: "1"}, Buyer: pl.FA3Party{NIP: "2"}, Number: "n", RateCode: "23"}); err == nil || !strings.Contains(err.Error(), "seller needs") {
 		t.Fatalf("nameless seller: %v", err)
 	}
 }
@@ -246,13 +269,13 @@ func TestKSeFLive(t *testing.T) {
 		t.Fatal("the live check never runs against production")
 	}
 	nip, token := os.Getenv("RHEA_KSEF_NIP"), os.Getenv("RHEA_KSEF_TOKEN")
-	client := &adapter.KSeF2{BaseURL: adapter.KSeFEnvironments[env], NIP: nip, Token: token,
+	client := &pl.KSeF2{BaseURL: pl.KSeFEnvironments[env], NIP: nip, Token: token,
 		Log: func(format string, args ...any) { t.Logf(format, args...) }}
 	number := "RHEA/TEST/" + time.Now().UTC().Format("20060102-150405")
 	today := time.Now().UTC().Format("2006-01-02")
-	body, err := adapter.WriteFA3(adapter.FA3Invoice{
-		Seller:   adapter.FA3Party{NIP: nip, Name: "Rhea Test sp. z o.o.", Address: "ul. Testowa 1, 00-001 Warszawa"},
-		Buyer:    adapter.FA3Party{NIP: "5265877635", Name: "Nabywca Testowy S.A.", Address: "ul. Próbna 2, 00-002 Warszawa"},
+	body, err := pl.WriteFA3(pl.FA3Invoice{
+		Seller:   pl.FA3Party{NIP: nip, Name: "Rhea Test sp. z o.o.", Address: "ul. Testowa 1, 00-001 Warszawa"},
+		Buyer:    pl.FA3Party{NIP: "5265877635", Name: "Nabywca Testowy S.A.", Address: "ul. Próbna 2, 00-002 Warszawa"},
 		Currency: "PLN", IssueDate: today, Number: number, RateCode: "23",
 		Net: 100000, VAT: 23000, Gross: 123000, Created: time.Now().UTC().Format(time.RFC3339), SystemInfo: "Rhea",
 	})
@@ -261,16 +284,34 @@ func TestKSeFLive(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
-	subs, err := client.Submit(ctx, []adapter.Outbound{{ID: "live", Number: number, XML: body}})
+	subs, err := client.Submit(ctx, []pl.Outbound{{ID: "live", Number: number, XML: body}})
 	if err != nil {
 		t.Fatalf("the Ministry's test environment: %v", err)
 	}
 	for _, sub := range subs {
 		t.Logf("invoice %s: accepted=%v code=%d %s details=%v ksef=%s session=%s", sub.Number, sub.Accepted, sub.Code, sub.Description, sub.Details, sub.KSeFNumber, sub.Session)
 		if sub.Accepted {
-			t.Logf("KSeF number valid: %v\nUPO:\n%s", adapter.KSeFNumberValid(sub.KSeFNumber), sub.UPO)
+			t.Logf("KSeF number valid: %v\nUPO:\n%s", pl.KSeFNumberValid(sub.KSeFNumber), sub.UPO)
+			upo, err := pl.ParseUPO(sub.UPO)
+			if err != nil || upo.DocumentHash != sub.InvoiceHash || upo.KSeFNumber != sub.KSeFNumber || upo.ReceivedAt == "" || upo.NumberedAt == "" {
+				t.Errorf("the receipt read back: %+v %v (our fingerprint %s)", upo, err, sub.InvoiceHash)
+			} else {
+				t.Logf("the receipt acknowledges our document: fingerprint %s, received %s, numbered %s", upo.DocumentHash, upo.ReceivedAt, upo.NumberedAt)
+			}
 		} else {
 			t.Errorf("rejected: %s", sub.Reason())
 		}
 	}
+}
+
+// lyingKSeF accepts everything with a receipt whose fingerprint is not of
+// the document sent.
+type lyingKSeF struct{}
+
+func (lyingKSeF) Submit(ctx context.Context, invoices []pl.Outbound) ([]pl.Submission, error) {
+	subs, err := pl.FakeKSeF{}.Submit(ctx, invoices)
+	for i := range subs {
+		subs[i].UPO = strings.Replace(subs[i].UPO, "<SkrotDokumentu>"+subs[i].InvoiceHash, "<SkrotDokumentu>AAAA", 1)
+	}
+	return subs, err
 }

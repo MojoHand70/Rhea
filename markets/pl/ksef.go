@@ -1,4 +1,4 @@
-package adapter
+package pl
 
 import (
 	"context"
@@ -8,9 +8,12 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"log"
+	"os"
 	"strings"
 	"time"
 
+	"rhea/internal/adapter"
 	"rhea/internal/core"
 )
 
@@ -42,8 +45,33 @@ type KSeF struct {
 const ksefCodeVersion = 2
 
 func init() {
-	Register(Implemented{Name: "ksef", CodeVersion: ksefCodeVersion, Format: "KSeF API 2.0: one interactive session per pass, FA(3), acceptance and rejection as evidence"})
+	adapter.Register(adapter.Implemented{Name: "ksef", CodeVersion: ksefCodeVersion, Format: "KSeF API 2.0: one interactive session per pass, FA(3), acceptance and rejection as evidence"})
+	adapter.Provide("ksef", func() adapter.Adapter { return KSeF{Client: ClientFromEnv()} })
 }
+
+// ClientFromEnv is the national API when the channel is configured —
+// RHEA_KSEF_ENV (test | demo | prod), RHEA_KSEF_NIP, RHEA_KSEF_TOKEN; the
+// secret stays outside the log — and the deterministic fake otherwise. A
+// misnamed environment is a client that refuses to send, not a guess.
+func ClientFromEnv() KSeFClient {
+	token := os.Getenv("RHEA_KSEF_TOKEN")
+	if token == "" {
+		return FakeKSeF{}
+	}
+	env := os.Getenv("RHEA_KSEF_ENV")
+	base, ok := KSeFEnvironments[env]
+	if !ok {
+		return refusingClient{fmt.Errorf("RHEA_KSEF_ENV must be test, demo or prod (got %q)", env)}
+	}
+	return &KSeF2{BaseURL: base, NIP: os.Getenv("RHEA_KSEF_NIP"), Token: token,
+		Log: func(format string, args ...any) {
+			log.Printf("ksef (%s, NIP %s): "+format, append([]any{env, os.Getenv("RHEA_KSEF_NIP")}, args...)...)
+		}}
+}
+
+type refusingClient struct{ err error }
+
+func (r refusingClient) Submit(context.Context, []Outbound) ([]Submission, error) { return nil, r.err }
 
 func (k KSeF) Name() string     { return "ksef" }
 func (k KSeF) CodeVersion() int { return ksefCodeVersion }
@@ -55,7 +83,7 @@ const (
 	EventKSeFRejected  = "ksef.invoice.rejected"
 )
 
-func (k KSeF) Pass(ctx context.Context, reads Reads) ([]core.Event, error) {
+func (k KSeF) Pass(ctx context.Context, reads adapter.Reads) ([]core.Event, error) {
 	invoices, err := reads.ObjectsByType(ctx, "sales_invoice")
 	if err != nil {
 		return nil, err
@@ -118,10 +146,15 @@ func (k KSeF) Pass(ctx context.Context, reads Reads) ([]core.Event, error) {
 			// Nothing of a failed session is evidence; the next pass retries.
 			return nil, fmt.Errorf("ksef: %w", err)
 		}
+		sent := map[string][]byte{}
+		for _, o := range pending {
+			sent[o.ID] = o.XML
+		}
 		for _, r := range results {
-			ev, err := k.evidence(r, today)
+			ev, err := k.evidence(r, sent[r.ID], today)
 			if err != nil {
-				return nil, err
+				problems = append(problems, err.Error())
+				continue
 			}
 			out = append(out, ev)
 		}
@@ -132,12 +165,29 @@ func (k KSeF) Pass(ctx context.Context, reads Reads) ([]core.Event, error) {
 	return out, nil
 }
 
-// evidence turns one submission into the event the log is owed.
-func (k KSeF) evidence(r Submission, today string) (core.Event, error) {
+// evidence turns one submission into the event the log is owed. An
+// acceptance carries the document sent, the KSeF number, the UPO and the
+// two times the Ministry stamped — received, and the number assigned; the
+// first is the day a structured invoice counts as issued (VAT act, art.
+// 106na). The UPO's own fingerprint of the document must be the fingerprint
+// of what was sent, or the evidence is refused as inconsistent: nothing is
+// booked, and the pass error names it for a person.
+func (k KSeF) evidence(r Submission, sent []byte, today string) (core.Event, error) {
 	if r.Accepted {
+		upo, err := ParseUPO(r.UPO)
+		if err != nil {
+			return core.Event{}, fmt.Errorf("invoice %s: the UPO cannot be read: %w", r.Number, err)
+		}
+		if upo.DocumentHash != r.InvoiceHash {
+			return core.Event{}, fmt.Errorf("invoice %s: the UPO acknowledges a different document (its fingerprint %s, ours %s) — evidence refused", r.Number, upo.DocumentHash, r.InvoiceHash)
+		}
+		if upo.KSeFNumber != "" && upo.KSeFNumber != r.KSeFNumber {
+			return core.Event{}, fmt.Errorf("invoice %s: the UPO names KSeF number %s, the session said %s — evidence refused", r.Number, upo.KSeFNumber, r.KSeFNumber)
+		}
 		payload, err := json.Marshal(map[string]any{
 			"number": r.Number, "ksef_ref": r.KSeFNumber, "upo": r.Session, "upo_xml": r.UPO,
-			"date": today, "invoice_hash": r.InvoiceHash,
+			"invoice_xml": string(sent), "invoice_hash": r.InvoiceHash,
+			"sent_at": upo.ReceivedAt, "accepted_at": upo.NumberedAt, "date": today,
 		})
 		if err != nil {
 			return core.Event{}, err
@@ -216,7 +266,7 @@ func sellerID(inv core.Object) string {
 }
 
 // byID indexes one type's objects' state by object id.
-func byID(ctx context.Context, reads Reads, typ string) (map[string]map[string]any, error) {
+func byID(ctx context.Context, reads adapter.Reads, typ string) (map[string]map[string]any, error) {
 	objs, err := reads.ObjectsByType(ctx, typ)
 	if err != nil {
 		return nil, err
@@ -240,6 +290,31 @@ func minorUnits(v any) (int64, bool) {
 		return int64(n), true
 	}
 	return 0, false
+}
+
+// UPO is what the official receipt says: the session, the KSeF number, the
+// invoice number, the document's fingerprint (base64 SHA-256, the same
+// encoding Rhea computes before sending), and the Ministry's two times.
+type UPO struct {
+	Session      string `xml:"NumerReferencyjnySesji"`
+	KSeFNumber   string `xml:"Dokument>NumerKSeFDokumentu"`
+	Number       string `xml:"Dokument>NumerFaktury"`
+	DocumentHash string `xml:"Dokument>SkrotDokumentu"`
+	ReceivedAt   string `xml:"Dokument>DataPrzeslaniaDokumentu"`
+	NumberedAt   string `xml:"Dokument>DataNadaniaNumeruKSeF"`
+}
+
+// ParseUPO reads the receipt XML as the Ministry returns it (namespace
+// http://upo.schematy.mf.gov.pl/KSeF/v4-3, root Potwierdzenie).
+func ParseUPO(text string) (UPO, error) {
+	var u UPO
+	if err := xml.Unmarshal([]byte(text), &u); err != nil {
+		return UPO{}, err
+	}
+	if u.DocumentHash == "" {
+		return UPO{}, errors.New("no document fingerprint in the UPO")
+	}
+	return u, nil
 }
 
 // FakeKSeF answers like the national system would, deterministically from
@@ -274,8 +349,8 @@ func (f FakeKSeF) Submit(_ context.Context, invoices []Outbound) ([]Submission, 
 			sub.Accepted = true
 			sub.Code, sub.Description = 200, "Sukces"
 			sub.KSeFNumber = KSeFReference(doc.Seller.NIP, doc.Fa.Date, doc.Fa.Number)
-			sub.UPO = fmt.Sprintf("<Potwierdzenie><NumerReferencyjnySesji>%s</NumerReferencyjnySesji><Dokument><NumerKSeFDokumentu>%s</NumerKSeFDokumentu><NumerFaktury>%s</NumerFaktury></Dokument></Potwierdzenie>",
-				sub.Session, sub.KSeFNumber, doc.Fa.Number)
+			sub.UPO = fmt.Sprintf(`<?xml version="1.0" encoding="utf-8"?><Potwierdzenie xmlns="http://upo.schematy.mf.gov.pl/KSeF/v4-3"><NazwaPodmiotuPrzyjmujacego>Rhea (fake KSeF)</NazwaPodmiotuPrzyjmujacego><NumerReferencyjnySesji>%s</NumerReferencyjnySesji><Dokument><NipSprzedawcy>%s</NipSprzedawcy><NumerKSeFDokumentu>%s</NumerKSeFDokumentu><NumerFaktury>%s</NumerFaktury><DataWystawieniaFaktury>%s</DataWystawieniaFaktury><DataPrzeslaniaDokumentu>%sT08:00:00+02:00</DataPrzeslaniaDokumentu><DataNadaniaNumeruKSeF>%sT08:00:01+02:00</DataNadaniaNumeruKSeF><SkrotDokumentu>%s</SkrotDokumentu><TrybWysylki>Online</TrybWysylki></Dokument></Potwierdzenie>`,
+				sub.Session, doc.Seller.NIP, sub.KSeFNumber, doc.Fa.Number, doc.Fa.Date, doc.Fa.Date, doc.Fa.Date, sub.InvoiceHash)
 		}
 		out = append(out, sub)
 	}

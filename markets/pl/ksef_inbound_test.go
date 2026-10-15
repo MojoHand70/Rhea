@@ -1,4 +1,4 @@
-package adapter_test
+package pl_test
 
 import (
 	"bytes"
@@ -15,6 +15,7 @@ import (
 	"rhea/internal/sim"
 	"rhea/internal/store"
 	"rhea/internal/store/storetest"
+	"rhea/markets/pl"
 )
 
 // installs the documents pack and the KSeF inbound channel, approved.
@@ -72,7 +73,7 @@ func TestKSeFInboundReadsTheStore(t *testing.T) {
 	}
 	receive(t, x, "notes.xml", "application/xml", "email", "2026-01-20", []byte(`<?xml version="1.0"?><Notes><Note>not an invoice</Note></Notes>`))
 
-	res, err := adapter.Run(ctx, s, x, adapter.KSeFInbound{})
+	res, err := adapter.Run(ctx, s, x, pl.KSeFInbound{})
 	if err != nil || res.PassErr != nil {
 		t.Fatalf("pass: %v %v", err, res.PassErr)
 	}
@@ -128,7 +129,7 @@ func TestKSeFInboundReadsTheStore(t *testing.T) {
 	}
 
 	// A second pass: every invoice is read, nothing is owed.
-	res, err = adapter.Run(ctx, s, x, adapter.KSeFInbound{})
+	res, err = adapter.Run(ctx, s, x, pl.KSeFInbound{})
 	if err != nil || res.Submitted != 0 || res.Duplicates != 0 {
 		t.Fatalf("second pass = %+v, %v", res, err)
 	}
@@ -137,7 +138,7 @@ func TestKSeFInboundReadsTheStore(t *testing.T) {
 	// stays received.
 	lying := bytes.Replace(ksef[0].Bytes, []byte("<P_15>"), []byte("<P_15>9"), 1)
 	receive(t, x, "lying.xml", "application/xml", "email", "2026-01-21", lying)
-	res, err = adapter.Run(ctx, s, x, adapter.KSeFInbound{Today: func() string { return "2026-01-22" }})
+	res, err = adapter.Run(ctx, s, x, pl.KSeFInbound{Today: func() string { return "2026-01-22" }})
 	if err != nil || res.Submitted != 1 {
 		t.Fatalf("lying pass = %+v, %v", res, err)
 	}
@@ -159,7 +160,7 @@ func TestKSeFInboundReadsTheStore(t *testing.T) {
 	noBuyer := inBuyer(ksef[0].Bytes, "<NIP>5260301234</NIP>", "")
 	receive(t, x, "de-buyer.xml", "application/xml", "ksef", "2026-01-23", deBuyer)
 	receive(t, x, "no-buyer.xml", "application/xml", "ksef", "2026-01-23", noBuyer)
-	if res, err := adapter.Run(ctx, s, x, adapter.KSeFInbound{}); err != nil || res.Submitted != 4 {
+	if res, err := adapter.Run(ctx, s, x, pl.KSeFInbound{}); err != nil || res.Submitted != 4 {
 		t.Fatalf("buyer pass = %+v, %v", res, err)
 	}
 	raws, _ = s.EventsByKind(ctx, core.KindRaw)
@@ -196,10 +197,10 @@ func TestParseFA(t *testing.T) {
 		if d.Source != "ksef" {
 			continue
 		}
-		if !adapter.IsFA(d.Bytes) {
+		if !pl.IsFA(d.Bytes) {
 			t.Fatalf("%s is not recognized", d.Path)
 		}
-		inv, err := adapter.ParseFA(d.Bytes)
+		inv, err := pl.ParseFA(d.Bytes)
 		if err != nil {
 			t.Fatalf("%s: %v", d.Path, err)
 		}
@@ -210,10 +211,10 @@ func TestParseFA(t *testing.T) {
 			t.Fatalf("%s: %+v vs %v", d.Path, inv, fact.Payload)
 		}
 	}
-	if adapter.IsFA([]byte(`<Other/>`)) || adapter.IsFA([]byte(`not xml`)) {
+	if pl.IsFA([]byte(`<Other/>`)) || pl.IsFA([]byte(`not xml`)) {
 		t.Fatal("IsFA sees invoices everywhere")
 	}
-	if _, err := adapter.ParseFA([]byte(`<Faktura><Fa><P_2>X</P_2></Fa></Faktura>`)); err == nil {
+	if _, err := pl.ParseFA([]byte(`<Faktura><Fa><P_2>X</P_2></Fa></Faktura>`)); err == nil {
 		t.Fatal("an empty invoice parsed")
 	}
 	// A zero-rated sale sits in P_13_6_1 (FA(3) splits the zero rate three
@@ -222,7 +223,7 @@ func TestParseFA(t *testing.T) {
 		`<Podmiot2><DaneIdentyfikacyjne><NIP>5272001122</NIP><Nazwa>B</Nazwa></DaneIdentyfikacyjne></Podmiot2>` +
 		`<Fa><KodWaluty>PLN</KodWaluty><P_1>2026-09-02</P_1><P_2>FS 0/2026</P_2><P_13_6_1>100.00</P_13_6_1><P_15>100.00</P_15>` +
 		`<FaWiersz><NrWierszaFa>1</NrWierszaFa><P_7>x</P_7><P_8B>1</P_8B><P_9A>100.00</P_9A><P_11>100.00</P_11><P_12>0</P_12></FaWiersz></Fa></Faktura>`
-	inv, err := adapter.ParseFA([]byte(zero))
+	inv, err := pl.ParseFA([]byte(zero))
 	if err != nil || inv.RateCode != "0" || inv.Net != 10000 || inv.VAT != 0 || inv.Gross != 10000 {
 		t.Fatalf("zero-rated FA(3): %+v %v", inv, err)
 	}

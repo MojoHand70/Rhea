@@ -2782,3 +2782,40 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   Twelve seconds end to end for one invoice, most of it the Ministry's processing. The
   test environment is the validator of record, as the brief said: it found in one
   round what a schema read by eye missed.
+
+
+## 2026-10-15 — local packs, clean kernel: the Polish code moves to markets/pl; the evidence keeps the document and the Ministry's times
+
+- **Invariant 8** (CLAUDE.md; DIRECTION "Local packs, clean kernel"): the kernel never
+  imports a market. KK: "I don't want to contaminate Rhea with local specific
+  solutions; if we fix the Polish pack, we fix the Polish pack, not Rhea's kernel."
+  `markets/pl` now holds KSeF in, KSeF out and the FA(3) writer; `internal/adapter`
+  keeps the contract, the runner, the registry, the clock and the EU-wide readers
+  (MT940, the model-read PDF) plus the three names every reader of the document store
+  shares (`ReceivedDocumentType`, `EventDocumentRead`, `EventDocumentUnreadable`).
+  `adapter.Provide(name, factory)` is the exported seam beside `Register`: a market
+  registers what the binary carries and what can be run by name; the CLI's Polish
+  verb is gone (`rhea pass ksef` is the generic form, the client built from the
+  environment by the market, a misnamed environment a client that refuses). The binary
+  links each market by one blank import. `markets/markets_test.go` lists every
+  package's imports and fails if a kernel package imports a market, or a market
+  another market. Two named exceptions outside the kernel: the binary's import line
+  and the simulator, which writes a Polish persona's documents through the Polish
+  writer — to move into the market when a second market's personas exist.
+- **The evidence is complete** (KK's question: how do we store the invoice, the date,
+  the proof). The acceptance event now carries the FA(3) document exactly as sent
+  (`invoice_xml`) beside the receipt, so "show me what you sent" is answerable from the
+  log; the Ministry's two times are lifted from the receipt into fields — `sent_at`
+  (DataPrzeslaniaDokumentu: the day a structured invoice counts as issued, VAT act
+  art. 106na) and `accepted_at` (DataNadaniaNumeruKSeF); and the receipt's own
+  fingerprint of the document (SkrotDokumentu, base64 SHA-256) must equal the
+  fingerprint of what was sent, and its KSeF number the session's — otherwise the
+  evidence is refused: nothing booked, the pass error names the invoice
+  (`TestKSeFOutbound`, the lying receipt). `ParseUPO` reads the receipt as the
+  Ministry returns it. Pack v15: `ksef_submission` v3 with `sent_at` and
+  `accepted_at`, the recording rule v3, the "Wysyłki KSeF" view v2 showing status and
+  the Ministry's time. The live check reads the real receipt back and verifies it.
+- **Not done, by choice:** the document is kept in the event, not the blob store — the
+  append-only log is the evidence store and an adapter returns events only; a few
+  kilobytes per invoice is the right price for one rule. Live shells still run v13;
+  the migration to v15 is owed before the next demo.

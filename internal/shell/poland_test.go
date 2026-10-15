@@ -18,6 +18,7 @@ import (
 	"rhea/internal/pack"
 	"rhea/internal/shell"
 	"rhea/internal/store/storetest"
+	"rhea/markets/pl"
 )
 
 // TestM3PolandPack is the market-pack milestone (SPEC M3): Poland arrives as
@@ -100,7 +101,7 @@ func TestM3PolandPack(t *testing.T) {
 		t.Fatal(err)
 	}
 	if sum.Types != 18 || sum.Views != 11 || sum.Rules != 25 || sum.Activities != 1 || sum.Events != 31 || sum.Skipped != 0 ||
-		sum.Bundle != "pack-pl-v14" {
+		sum.Bundle != "pack-pl-v15" {
 		t.Fatalf("first load: %+v", sum)
 	}
 	// Idempotent: a reload changes nothing.
@@ -114,7 +115,7 @@ func TestM3PolandPack(t *testing.T) {
 
 	// Before approval the KSeF channel is a draft: the adapter is implemented
 	// but not connected, and a pass is refused before it reads anything.
-	ksefDraft := adapter.KSeF{Client: adapter.FakeKSeF{}}
+	ksefDraft := pl.KSeF{Client: pl.FakeKSeF{}}
 	if _, err := adapter.Run(ctx, s, srv.Exec, ksefDraft); err == nil || !strings.Contains(err.Error(), "no active channel") {
 		t.Fatalf("a draft channel let the adapter through: %v", err)
 	}
@@ -128,7 +129,7 @@ func TestM3PolandPack(t *testing.T) {
 	// Approving the pack's bundle IS the installation: its types, views and
 	// rules activate together, and the chart of accounts and the VAT rates
 	// materialize from the waiting events.
-	post("/api/bundles/pack-pl-v14/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-pl-v15/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {
 		t.Fatalf("worklist not cleared after approvals: %d", len(wl))
 	}
@@ -380,7 +381,7 @@ func TestM3PolandPack(t *testing.T) {
 	// unsubmitted invoice, "submits" it through its (fake) client, and the
 	// evidence comes back as an ordinary raw event that a pack rule books
 	// into a ksef_submission object. A second pass finds nothing owed.
-	ksef := adapter.KSeF{Client: adapter.FakeKSeF{}, Today: func() string { return "2026-09-21" }}
+	ksef := pl.KSeF{Client: pl.FakeKSeF{}, Today: func() string { return "2026-09-21" }}
 	run, err := adapter.Run(ctx, s, srv.Exec, ksef)
 	if err != nil || run.PassErr != nil {
 		t.Fatalf("adapter run: %v / %v", err, run.PassErr)

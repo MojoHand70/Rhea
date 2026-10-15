@@ -11,6 +11,7 @@ import (
 	"rhea/internal/eval"
 	"rhea/internal/sim"
 	"rhea/internal/store/storetest"
+	_ "rhea/markets/pl"
 )
 
 // The corpus is solvable: its reference answers, played back as the agent

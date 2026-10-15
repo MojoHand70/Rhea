@@ -11,7 +11,6 @@
 //	rhea network             what Rhea has learned across installations
 //	rhea reject BUNDLE REASON
 //	                         reject a bundle; the reason stays on the record
-//	rhea ksef                run one pass of the KSeF statutory adapter (fake client)
 //	rhea clock [-catchup] [-through DATE]
 //	                         advance time: steady state opens one day by itself;
 //	                         a gap waits for -catchup (the burst gate)
@@ -58,12 +57,14 @@ import (
 	"rhea/internal/shell"
 	"rhea/internal/sim"
 	"rhea/internal/store"
+
+	_ "rhea/markets/pl" // the markets the binary carries: each registers its channels; the kernel never names one
 )
 
 func main() {
 	log.SetFlags(0)
 	if len(os.Args) < 2 {
-		log.Fatal("usage: rhea init|load|submit|intake|pass|serve|replay|channels|ksef|clock")
+		log.Fatal("usage: rhea init|load|submit|intake|pass|serve|replay|channels|clock")
 	}
 	// The caller's scope: the company whose facts this run is in
 	// (DIRECTION 2026-10-08, the partition key); empty means the whole log.
@@ -217,35 +218,6 @@ func main() {
 			log.Fatal(err)
 		}
 		fmt.Printf("bundle %s rejected; its drafts stay on the record, a redraft is a new bundle\n", b.ID)
-
-	case "ksef":
-		// One pass of the Poland pack's statutory adapter, documents out: the
-		// national API when the channel is configured (RHEA_KSEF_ENV,
-		// RHEA_KSEF_NIP, RHEA_KSEF_TOKEN — secrets stay out of the log), the
-		// deterministic fake otherwise.
-		var client adapter.KSeFClient = adapter.FakeKSeF{}
-		if token := os.Getenv("RHEA_KSEF_TOKEN"); token != "" {
-			env := os.Getenv("RHEA_KSEF_ENV")
-			base, ok := adapter.KSeFEnvironments[env]
-			if !ok {
-				log.Fatalf("RHEA_KSEF_ENV must be test, demo or prod (got %q)", env)
-			}
-			client = &adapter.KSeF2{BaseURL: base, NIP: os.Getenv("RHEA_KSEF_NIP"), Token: token,
-				Log: func(format string, args ...any) { fmt.Printf("ksef: "+format+"\n", args...) }}
-			fmt.Printf("ksef: the %s environment, NIP %s\n", env, os.Getenv("RHEA_KSEF_NIP"))
-		}
-		run, err := adapter.Run(ctx, s, x, adapter.KSeF{Client: client})
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Printf("ksef through channel %s v%d: %d submitted, %d retries already logged, %d booked\n",
-			run.Channel, run.Version, run.Submitted, run.Duplicates, run.Booked)
-		for _, e := range run.Errors {
-			fmt.Println("worklist:", e)
-		}
-		if run.PassErr != nil {
-			log.Fatal(run.PassErr)
-		}
 
 	case "pass":
 		// One pass of a reader of the document store, through its channel.

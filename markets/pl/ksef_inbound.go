@@ -1,4 +1,4 @@
-package adapter
+package pl
 
 import (
 	"bytes"
@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"rhea/internal/adapter"
 	"rhea/internal/core"
 )
 
@@ -27,33 +28,20 @@ type KSeFInbound struct {
 	Today func() string // the business date of a refusal; defaults to the wall clock
 }
 
-const (
-	ksefInboundCodeVersion = 1
-
-	// ReceivedDocumentType is the documents pack's conventional vocabulary
-	// (packs/common/documents.json) the readers scan — a type the pack
-	// ships, like task_schedule for the clock; the kernel does not know it.
-	ReceivedDocumentType = "received_document"
-
-	// EventDocumentRead says a channel turned a received document into
-	// typed events; the documents pack moves the document to "read" on it.
-	EventDocumentRead = "document.read"
-	// EventDocumentUnreadable says a channel could not: the reason is for a
-	// person, so the event waits in the worklist.
-	EventDocumentUnreadable = "document.unreadable"
-)
+// ksefInboundCodeVersion is what a channel declaration binds to.
+const ksefInboundCodeVersion = 1
 
 func init() {
-	Register(Implemented{Name: "ksef_inbound", CodeVersion: ksefInboundCodeVersion,
+	adapter.Register(adapter.Implemented{Name: "ksef_inbound", CodeVersion: ksefInboundCodeVersion,
 		Format: "FA(3) XML, the subset a purchase invoice needs, from the document store"})
-	readers["ksef_inbound"] = func() Adapter { return KSeFInbound{} }
+	adapter.Provide("ksef_inbound", func() adapter.Adapter { return KSeFInbound{} })
 }
 
 func (KSeFInbound) Name() string     { return "ksef_inbound" }
 func (KSeFInbound) CodeVersion() int { return ksefInboundCodeVersion }
 
-func (k KSeFInbound) Pass(ctx context.Context, reads Reads) ([]core.Event, error) {
-	docs, err := reads.ObjectsByType(ctx, ReceivedDocumentType)
+func (k KSeFInbound) Pass(ctx context.Context, reads adapter.Reads) ([]core.Event, error) {
+	docs, err := reads.ObjectsByType(ctx, adapter.ReceivedDocumentType)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +71,7 @@ func (k KSeFInbound) Pass(ctx context.Context, reads Reads) ([]core.Event, error
 			payload, _ := json.Marshal(map[string]any{
 				"document": hash, "name": name, "channel": k.Name(), "reason": err.Error(),
 			})
-			out = append(out, core.Event{Type: EventDocumentUnreadable, OccurredAt: k.today(),
+			out = append(out, core.Event{Type: adapter.EventDocumentUnreadable, OccurredAt: k.today(),
 				Payload: payload, DedupKey: "ksef_inbound/unreadable/" + hash})
 			continue
 		}
@@ -121,7 +109,7 @@ func (k KSeFInbound) Pass(ctx context.Context, reads Reads) ([]core.Event, error
 		out = append(out,
 			core.Event{Type: "purchase.invoice.received", OccurredAt: inv.IssueDate,
 				Payload: payload, DedupKey: "ksef_inbound/" + hash},
-			core.Event{Type: EventDocumentRead, OccurredAt: inv.IssueDate,
+			core.Event{Type: adapter.EventDocumentRead, OccurredAt: inv.IssueDate,
 				Payload: read, DedupKey: "ksef_inbound/read/" + hash})
 	}
 	return out, nil

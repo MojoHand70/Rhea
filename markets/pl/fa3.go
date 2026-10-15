@@ -1,4 +1,4 @@
-package adapter
+package pl
 
 import (
 	"crypto/sha256"

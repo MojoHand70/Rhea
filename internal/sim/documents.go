@@ -28,8 +28,8 @@ import (
 	"strings"
 	"time"
 
-	"rhea/internal/adapter"
 	"rhea/internal/core"
+	"rhea/markets/pl"
 )
 
 // Document is one generated file: a channel's delivery, with the facts it
@@ -46,16 +46,16 @@ type Document struct {
 // FA3Namespace and KSeFReference are the adapter's: the simulator writes
 // the same FA(3) shape Rhea sends (internal/adapter/fa3.go), so what a
 // persona receives and what Rhea issues are one document.
-const FA3Namespace = adapter.FA3Namespace
+const FA3Namespace = pl.FA3Namespace
 
 // KSeFReference is the number KSeF assigns on acceptance, derived from the
 // invoice so the same persona always yields the same reference.
 func KSeFReference(sellerNIP, issueDate, number string) string {
-	return adapter.KSeFReference(sellerNIP, issueDate, number)
+	return pl.KSeFReference(sellerNIP, issueDate, number)
 }
 
 // nip strips the country prefix a persona's vat_id carries: FA wants digits.
-func nip(vatID string) string { return adapter.NIPDigits(vatID) }
+func nip(vatID string) string { return pl.NIPDigits(vatID) }
 
 // iban is a party's account, or a deterministic stand-in when the persona
 // names none: "PL" and 26 digits drawn from the VAT id.
@@ -240,7 +240,7 @@ func (g *gen) faInvoices(events []Event) []Document {
 		vat := halfUp(net*int64(percent), 100)
 		issued, _ := time.Parse("2006-01-02", date)
 
-		var lines []adapter.FA3Line
+		var lines []pl.FA3Line
 		var wz []string
 		if doc, ok := ev.Payload["for_document"].(string); ok && doc != "" {
 			wz = append(wz, doc)
@@ -250,17 +250,17 @@ func (g *gen) faInvoices(events []Event) []Document {
 					qty := line["qty"].(int)
 					price, _ := core.ParseMoney(line["price"].(string))
 					it := items[line["item"].(string)]
-					lines = append(lines, adapter.FA3Line{Name: it.Name, Unit: it.Unit, Qty: fmt.Sprint(qty),
+					lines = append(lines, pl.FA3Line{Name: it.Name, Unit: it.Unit, Qty: fmt.Sprint(qty),
 						UnitPrice: price, Net: int64(qty) * price, RateCode: rateCode})
 				}
 			}
 		}
 		if len(lines) == 0 {
-			lines = append(lines, adapter.FA3Line{Name: "Usługa", Unit: "usł.", Qty: "1", UnitPrice: net, Net: net, RateCode: rateCode})
+			lines = append(lines, pl.FA3Line{Name: "Usługa", Unit: "usł.", Qty: "1", UnitPrice: net, Net: net, RateCode: rateCode})
 		}
-		body, err := adapter.WriteFA3(adapter.FA3Invoice{
-			Seller:   adapter.FA3Party{NIP: nip(sup.VATID), Name: sup.Name, Country: sup.Country},
-			Buyer:    adapter.FA3Party{NIP: nip(g.p.Company.VATID), Name: g.p.Company.Name, Country: g.p.Company.Country},
+		body, err := pl.WriteFA3(pl.FA3Invoice{
+			Seller:   pl.FA3Party{NIP: nip(sup.VATID), Name: sup.Name, Country: sup.Country},
+			Buyer:    pl.FA3Party{NIP: nip(g.p.Company.VATID), Name: g.p.Company.Name, Country: g.p.Company.Country},
 			Currency: "PLN", IssueDate: date, Number: number, WZ: wz, RateCode: rateCode,
 			Net: net, VAT: vat, Gross: net + vat, Lines: lines,
 			Term:    issued.AddDate(0, 0, g.p.Volume.PaymentDays).Format("2006-01-02"),

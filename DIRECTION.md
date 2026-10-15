@@ -2138,6 +2138,71 @@ with Novi, go to production only as Novi's real first month; one paste
 onboards, secrets stay out of the log, and the evidence — number, UPO,
 rejection — is an event.*
 
+## Local packs, clean kernel: market code is peripheral (KK, 2026-10-15)
+
+KK, after the first invoice reached KSeF: "I just don't want to
+contaminate Rhea with local specific solutions. Later, if we fix the
+Polish pack, we fix the Polish pack, not Rhea's kernel." All EU countries
+will need such local packs, Germany and France first. Adopted as an
+invariant (CLAUDE.md, 8), with the record and the plan below.
+
+**What the record already said.** On 2026-10-03, closing M3: an adapter
+is a user, not a kernel extension — it reads objects, talks to the
+outside world through its own client, returns events; the kernel never
+calls out and replay never re-runs it. Germany then proved a market can
+be pure data: Poland and Germany run on byte-for-byte the same kernel.
+By dependency the KSeF code was never in the kernel: the kernel packages
+do not import the adapter package, the Poland pack declares the channel
+as data, and the registry binds it to code by name and version.
+
+**What it lacked, in KK's sense.** The KSeF code was compiled into the
+one binary, in the shared adapter package beside the EU-wide readers; the
+CLI had a verb naming a Polish institution; and a "local pack" was data
+only, so the one piece of code a country brings had nowhere to live but
+the kernel's repository. Twenty-seven countries would make a binary full
+of every tax office in Europe.
+
+**Move one, done the same day.** `markets/pl` holds KSeF in, KSeF out and
+the FA(3) writer; `internal/adapter` keeps the contract, the runner, the
+registry, the clock and the readers that are EU-wide anyway (MT940, the
+model-read PDF). A market registers itself at init through
+`adapter.Register` (what the binary carries) and `adapter.Provide` (an
+adapter the CLI, the shell or a corpus may run by name, its client built
+from the environment); the CLI's Polish verb is gone — `rhea pass ksef`
+is the generic form. The binary links each market by one blank import,
+and nothing else in the kernel names one. `markets/markets_test.go`
+fails the build of any kernel package that imports a market. Two named
+exceptions, both outside the kernel: the binary's one import line, and
+the simulator, which writes a Polish persona's documents through the
+Polish writer — a bench tool's debt, to move into the market when a
+second market's personas exist.
+
+**Move two, when Germany lands: adapters out of process.** The registry
+already separates "implemented" from "connected"; the implemented side
+becomes adapter programs discovered at startup, speaking the contract
+over a local protocol (a pass asks for objects by type and files by
+hash, returns events). A country pack is then data plus its own program,
+versioned by the code version the channel declares, and an open-source
+contributor ships France without touching the kernel repository. That is
+the full meaning of "local pack"; the seam exists today, the protocol
+waits for its second customer.
+
+**Move three, the one thing that belongs in the kernel: the invoice's
+meaning.** Every EU mandate but Poland's is built on the same semantic
+invoice, EN 16931 — Germany's XRechnung and ZUGFeRD, France's Factur-X,
+the Peppol network, the EU-wide ViDA rules from 2030. Poland's FA(3) is
+its own schema. So the invoice's semantics belong in the kernel's
+language once, and a market supplies only its syntax (a writer) and its
+transport (a channel). Without that, every country pack reinvents the
+invoice. Germany receives e-invoices since 2025 and issues from 2027 for
+larger firms, 2028 for all; France receives from September 2026 and
+issues from 2026 or 2027 by company size, through certified platforms
+with reporting on top — dates to verify when each market starts.
+
+One line: *a market is data plus its own code behind one contract; the
+kernel imports no market, and a test says so; the invoice's meaning is
+the kernel's, its syntax and transport are the market's.*
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,

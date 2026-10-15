@@ -1,6 +1,6 @@
 {
   "pack": "pl",
-  "version": 14,
+  "version": 15,
   "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami; poranek: gospodarz mówi, co zaksięgowano i co czeka, z faktów, które policzyło jądro; dziś: otwarte zadania i należności w kolejności pilności, z zatwierdzeniami, które czekają; KSeF na zewnątrz: faktury sprzedaży idą do KSeF jako FA(3) jedną sesją interaktywną, dowód (numer KSeF, UPO) i odmowa (kod, słowa Ministerstwa) są zdarzeniami, odmowa staje się zadaniem na dziś",
   "requires": [
     "company",
@@ -14,7 +14,7 @@
   "object_types": [
     {
       "name": "ksef_submission",
-      "version": 2,
+      "version": 3,
       "domain": "finance",
       "is_document": false,
       "label_field": "ksef_ref",
@@ -50,6 +50,16 @@
         },
         {
           "name": "invoice_hash",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "sent_at",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "accepted_at",
           "type": "string",
           "required": false
         },
@@ -1172,7 +1182,7 @@
     },
     {
       "view_id": "ksef-submissions",
-      "version": 1,
+      "version": 2,
       "notion": "list",
       "title": "Wysyłki KSeF",
       "domain": "finance",
@@ -1185,12 +1195,20 @@
             "label": "Faktura"
           },
           {
+            "field": "status",
+            "label": "Status"
+          },
+          {
             "field": "ksef_ref",
             "label": "Numer KSeF"
           },
           {
+            "field": "sent_at",
+            "label": "Przyjęto w KSeF"
+          },
+          {
             "field": "upo",
-            "label": "UPO"
+            "label": "UPO (sesja)"
           },
           {
             "field": "date",
@@ -1487,7 +1505,7 @@
       "rule_id": "pl-record-ksef-submission",
       "priority": 100,
       "effective_from": "2026-01-01",
-      "description": "Potwierdzenie wysyłki do KSeF staje się obiektem ksef_submission ze statusem accepted (dowód: numer KSeF + UPO; skrót wysłanego XML)",
+      "description": "Potwierdzenie wysyłki do KSeF staje się obiektem ksef_submission ze statusem accepted: numer KSeF, UPO, skrót wysłanego XML, czas przyjęcia przez KSeF (dzień wystawienia faktury ustrukturyzowanej) i czas nadania numeru",
       "spec": {
         "match": {
           "event_type": "ksef.invoice.submitted"
@@ -1501,12 +1519,14 @@
               "ksef_ref": "=$.ksef_ref",
               "upo": "=$.upo",
               "invoice_hash": "=$.invoice_hash",
-              "date": "=$.date"
+              "date": "=$.date",
+              "sent_at": "=$.sent_at",
+              "accepted_at": "=$.accepted_at"
             }
           }
         }
       },
-      "version": 2
+      "version": 3
     },
     {
       "rule_id": "pl-record-ksef-rejection",

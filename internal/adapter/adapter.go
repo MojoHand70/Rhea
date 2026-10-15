@@ -44,7 +44,14 @@ type Reads interface {
 // document store — by name, so a corpus or a CLI verb can name one.
 var readers = map[string]func() Adapter{}
 
-// Lookup returns a reader by its adapter name.
+// Provide registers an adapter the binary can run by name — a reader of the
+// document store, or a channel out whose client is built from the
+// environment — so a corpus, the CLI or the shell can name it without
+// knowing the market it belongs to. Markets call it from their own package
+// at init (markets/<cc>); the kernel never names one.
+func Provide(name string, mk func() Adapter) { readers[name] = mk }
+
+// Lookup returns a provided adapter by its name.
 func Lookup(name string) (Adapter, bool) {
 	mk, ok := readers[name]
 	if !ok {

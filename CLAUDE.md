@@ -37,6 +37,10 @@ do not invent another one.
    boundary. No floats, ever.
 7. The `object` table is a rebuildable cache owned by the kernel's executor/replayer —
    the only non-append table, and nothing else may write it.
+8. The kernel never imports a market. A market's code (a statutory channel, a document
+   syntax) lives under `markets/<cc>/` behind the adapter contract and registers itself;
+   the kernel knows no market by name. A fix to the Polish pack is a fix to the Polish
+   pack, never to the kernel. `markets/markets_test.go` enforces the import direction.
 
 ## Layout
 ```
@@ -45,7 +49,8 @@ internal/core/     the language: Event, ObjectType, Object, Rule, ViewDef types 
 internal/store/    Postgres event log + versioned definition stores (.sql embedded)
 internal/exec/     deterministic executor: match → expand → emit derived events → project
 internal/agent/    Anthropic calls; drafts rule JSON; no side effects, no store access
-internal/adapter/  statutory adapters behind the declared contract (read objects, return events)
+internal/adapter/  the adapter contract, runner and registry; EU-wide readers (MT940, PDF)
+markets/<cc>/      a market's code behind the contract: pl = KSeF in/out, FA(3)
 internal/pack/     market-pack loader: definitions + draft rules + master-data events
 internal/project/  event log → DuckDB projections for analysis views
 internal/shell/    HTTP JSON API + embedded web shell
