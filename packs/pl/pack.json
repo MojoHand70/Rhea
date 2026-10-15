@@ -1,7 +1,7 @@
 {
   "pack": "pl",
-  "version": 13,
-  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami; poranek: gospodarz mówi, co zaksięgowano i co czeka, z faktów, które policzyło jądro; dziś: otwarte zadania i należności w kolejności pilności, z zatwierdzeniami, które czekają",
+  "version": 14,
+  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami; poranek: gospodarz mówi, co zaksięgowano i co czeka, z faktów, które policzyło jądro; dziś: otwarte zadania i należności w kolejności pilności, z zatwierdzeniami, które czekają; KSeF na zewnątrz: faktury sprzedaży idą do KSeF jako FA(3) jedną sesją interaktywną, dowód (numer KSeF, UPO) i odmowa (kod, słowa Ministerstwa) są zdarzeniami, odmowa staje się zadaniem na dziś",
   "requires": [
     "company",
     "account",
@@ -14,7 +14,7 @@
   "object_types": [
     {
       "name": "ksef_submission",
-      "version": 1,
+      "version": 2,
       "domain": "finance",
       "is_document": false,
       "label_field": "ksef_ref",
@@ -25,14 +25,33 @@
           "required": true
         },
         {
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "accepted",
+            "rejected"
+          ]
+        },
+        {
           "name": "ksef_ref",
           "type": "string",
-          "required": true
+          "required": false
         },
         {
           "name": "upo",
           "type": "string",
-          "required": true
+          "required": false
+        },
+        {
+          "name": "reason",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "invoice_hash",
+          "type": "string",
+          "required": false
         },
         {
           "name": "date",
@@ -733,7 +752,7 @@
     },
     {
       "name": "company",
-      "version": 2,
+      "version": 3,
       "domain": "finance",
       "is_document": false,
       "label_field": "name",
@@ -765,6 +784,11 @@
         },
         {
           "name": "iban",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "address",
           "type": "string",
           "required": false
         }
@@ -1463,7 +1487,7 @@
       "rule_id": "pl-record-ksef-submission",
       "priority": 100,
       "effective_from": "2026-01-01",
-      "description": "Potwierdzenie wysyłki do KSeF staje się obiektem ksef_submission (dowód: numer KSeF + UPO)",
+      "description": "Potwierdzenie wysyłki do KSeF staje się obiektem ksef_submission ze statusem accepted (dowód: numer KSeF + UPO; skrót wysłanego XML)",
       "spec": {
         "match": {
           "event_type": "ksef.invoice.submitted"
@@ -1473,9 +1497,73 @@
             "type": "ksef_submission",
             "fields": {
               "invoice": "=ref(sales_invoice, number, $.number)",
+              "status": "accepted",
               "ksef_ref": "=$.ksef_ref",
               "upo": "=$.upo",
+              "invoice_hash": "=$.invoice_hash",
               "date": "=$.date"
+            }
+          }
+        }
+      },
+      "version": 2
+    },
+    {
+      "rule_id": "pl-record-ksef-rejection",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Odmowa KSeF staje się obiektem ksef_submission ze statusem rejected (kod i słowa Ministerstwa, skrót odrzuconego XML) — ten sam XML nie idzie drugi raz",
+      "spec": {
+        "match": {
+          "event_type": "ksef.invoice.rejected"
+        },
+        "effect": {
+          "object": {
+            "type": "ksef_submission",
+            "fields": {
+              "invoice": "=ref(sales_invoice, number, $.number)",
+              "status": "rejected",
+              "reason": "=$.reason",
+              "invoice_hash": "=$.invoice_hash",
+              "date": "=$.date"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-ksef-rejection-task",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Odrzucona przez KSeF faktura staje się zadaniem na dziś (kategoria: faktury, priorytet wysoki) z powodem odmowy — decyduje człowiek",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "ksef_submission"
+            },
+            {
+              "path": "$.state.status",
+              "op": "eq",
+              "value": "rejected"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "task",
+            "fields": {
+              "title": "Faktura odrzucona przez KSeF",
+              "status": "open",
+              "due_date": "=$.state.date",
+              "priority": "high",
+              "category": "invoices",
+              "description": "=$.state.reason"
             }
           }
         }
@@ -2192,7 +2280,7 @@
     {
       "name": "ksef",
       "domain": "finance",
-      "description": "Kanał KSeF: wysyłka faktur sprzedaży do Krajowego Systemu e-Faktur; dowód (numer KSeF, UPO) wraca jako zdarzenie ksef.invoice.submitted i staje się obiektem ksef_submission",
+      "description": "Kanał KSeF: wysyłka faktur sprzedaży do Krajowego Systemu e-Faktur jedną sesją interaktywną (API 2.0, FA(3)); dowód (numer KSeF, UPO) wraca jako ksef.invoice.submitted, odmowa jako ksef.invoice.rejected — oba stają się obiektem ksef_submission",
       "spec": {
         "inputs": [],
         "emits": "ksef.invoice.submitted",
@@ -2201,18 +2289,21 @@
         ],
         "channel": {
           "adapter": "ksef",
-          "code_version": 1,
-          "format": "KSeF API, jedna faktura sprzedaży na wysyłkę",
-          "identity": "numer referencyjny KSeF jednej faktury; klucz ksef/submit/<id faktury>",
+          "code_version": 2,
+          "format": "KSeF API 2.0, sesja interaktywna, FA(3), jedna sesja na przebieg",
+          "identity": "klucz ksef/submit/<id faktury> dla przyjęcia; ksef/reject/<id faktury>/<skrót XML> dla odmowy",
           "confidence": {
             "policy": "exact"
           },
           "events": [
-            "ksef.invoice.submitted"
+            "ksef.invoice.submitted",
+            "ksef.invoice.rejected"
           ],
-          "volume": "documents"
+          "volume": "documents",
+          "market": "pl"
         }
-      }
+      },
+      "version": 2
     }
   ],
   "events": [

@@ -2043,6 +2043,101 @@ One line: *free is the network's economics, open source is the trust
 answer, the accountant is the buyer, and the wow is zero data entry,
 "why?" on every number, and a host that never asks twice.*
 
+## Documents out: KSeF outbound, the first statutory channel out (KK, 2026-10-15)
+
+KK: the KSeF phase touches integration, presentation, performance and
+onboarding; can Novi's company account be used; and — the point that
+shapes the product — an ordinary owner has to be walked by the hand
+through the Ministry's portal: "go there, click that". This note is the
+brief; it answers the growth plan's two welding questions and names the
+decisions the first step takes.
+
+**The three environments, and which key opens which.** The Ministry runs
+three separated KSeF 2.0 systems (official integrator docs,
+`srodowiska.md`). *Test* (`api-test.ksef.mf.gov.pl`) is public and
+fictitious: anyone authenticates as any company with a self-made
+certificate, the Ministry asks for random NIPs because the data is shared
+between integrators, nothing there has legal effect. *Demo*
+(`api-demo`) is configured like production, needs real credentials (a
+Trusted Profile or a qualified signature of the company's
+representative), and invoices there have no legal effect; real entity
+data and production invoices must not be sent. *Production* (`api`) is
+the real thing. So: integration and performance are built on test with
+a random NIP and no account; onboarding is rehearsed on demo with Novi's
+account, KK authenticating as Novi's representative; production is not a
+test but the decision to make Novi the first real company on Rhea, with
+Novi's accountant as the safety net — recommended as the private beta's
+first member, after demo. Keys and tokens from one environment do not
+work in another, which is the safety.
+
+**Onboarding is one paste, and the walk to it is data.** KSeF 2.0 keeps
+tokens (the Ministry reversed the planned deprecation; 1.0 tokens do not
+carry over). The owner logs into the Ministry's taxpayer app with their
+Trusted Profile, generates a token with the invoicing permissions
+(`InvoiceWrite`, `InvoiceRead`) and pastes it into Rhea once; Rhea
+authenticates with it (a challenge, the token encrypted with the
+Ministry's published key, a short-lived access token) every time it
+speaks. The walk — "go there, click that" — is a scenario in the Poland
+pack, the host narrating each step, not a page in code; the first draft
+of it is the walk KK takes on the test portal to produce the first test
+token, written down as it is taken. A token generated on the test portal
+behind "test authentication" needs no account at all.
+
+**Secrets never enter the log.** A channel declaration is data, versioned
+and approved, and every version of it is an event — so a token in a
+declaration would be a secret kept forever in an append-only log. The
+declaration names what the channel needs; the binding resolves it from
+outside the log: today the environment (`RHEA_KSEF_ENV`, `RHEA_KSEF_NIP`,
+`RHEA_KSEF_TOKEN`), later the encrypted secrets store that is the first
+item of the security floor. The adapter runs with the Ministry's fake
+stand-in when no token is configured, so every test and demo keeps
+running without one.
+
+**The flow, as the law of the channel.** One pass of the `ksef` adapter
+is one interactive session per company: authenticate, open a session
+declaring FA(3), encrypt each pending invoice with a fresh AES key
+wrapped with the Ministry's key, send, poll each invoice to its final
+status, fetch the UPO of each accepted one, close. The evidence is the
+event: `ksef.invoice.submitted` carries the KSeF number (35 characters,
+CRC-8 checked), the UPO's session reference and the UPO XML itself; the
+append-only log is the evidence store, as the adapter contract says. A
+rejection is evidence too: `ksef.invoice.rejected` carries the code and
+the Ministry's description and details (a duplicate is code 440 with the
+original KSeF number), and the pack turns it into a `ksef_submission`
+with status *rejected* and a task in "Do zrobienia dziś", so a person
+decides. An invoice is re-sent only when its XML changes (the event
+carries the invoice's hash); a transport or authentication failure fails
+the pass, and the next pass retries — retry is free by the contract.
+
+**Performance is the limits, not the speed.** Per integration the
+defaults are 120 session openings and 180 invoices an hour (June 2026
+annex), raised on application for demo and production, with batch mode
+recommended for volume. One session per pass per company keeps a sole
+trader far below them; a hosted service with a thousand companies will
+need the clocked pass to spread sessions and, above that, the batch
+session — the welding question of partition is answered by the company
+key (one session per company context), and containment by the channel
+(the limits are the channel's, declared as data when the time comes).
+
+**Presentation.** The KSeF number and the UPO become evidence on the
+invoice, shown generically by the document and list views (the pack's
+"Wysyłki KSeF" exists). An invoice shown outside KSeF needs the two
+mandated QR codes on its visualization — a rendering addition to the
+same view, after the floor.
+
+**Verification.** The Ministry's checks (`weryfikacja-faktury.md`): UTF-8
+without BOM, schema-valid against the declared FA(3), no processing
+instructions, the issue date not after acceptance, duplicates by seller
+NIP + invoice kind + number kept ten years, 1 MB per invoice, 10,000 per
+session. The test environment is the validator of record; the live check
+`TestKSeFLive` (gated by `RHEA_LIVE_KSEF=1`) sends one invoice there and
+prints what came back.
+
+One line: *build on test with a random NIP, rehearse onboarding on demo
+with Novi, go to production only as Novi's real first month; one paste
+onboards, secrets stay out of the log, and the evidence — number, UPO,
+rejection — is an event.*
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,

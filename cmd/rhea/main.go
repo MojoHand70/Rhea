@@ -219,9 +219,22 @@ func main() {
 		fmt.Printf("bundle %s rejected; its drafts stay on the record, a redraft is a new bundle\n", b.ID)
 
 	case "ksef":
-		// One pass of the Poland pack's statutory adapter, against the fake
-		// KSeF client (the real API stays outside the experiment).
-		run, err := adapter.Run(ctx, s, x, adapter.KSeF{Client: adapter.FakeKSeF{}})
+		// One pass of the Poland pack's statutory adapter, documents out: the
+		// national API when the channel is configured (RHEA_KSEF_ENV,
+		// RHEA_KSEF_NIP, RHEA_KSEF_TOKEN — secrets stay out of the log), the
+		// deterministic fake otherwise.
+		var client adapter.KSeFClient = adapter.FakeKSeF{}
+		if token := os.Getenv("RHEA_KSEF_TOKEN"); token != "" {
+			env := os.Getenv("RHEA_KSEF_ENV")
+			base, ok := adapter.KSeFEnvironments[env]
+			if !ok {
+				log.Fatalf("RHEA_KSEF_ENV must be test, demo or prod (got %q)", env)
+			}
+			client = &adapter.KSeF2{BaseURL: base, NIP: os.Getenv("RHEA_KSEF_NIP"), Token: token,
+				Log: func(format string, args ...any) { fmt.Printf("ksef: "+format+"\n", args...) }}
+			fmt.Printf("ksef: the %s environment, NIP %s\n", env, os.Getenv("RHEA_KSEF_NIP"))
+		}
+		run, err := adapter.Run(ctx, s, x, adapter.KSeF{Client: client})
 		if err != nil {
 			log.Fatal(err)
 		}

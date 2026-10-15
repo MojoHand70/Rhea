@@ -21,7 +21,6 @@ package sim
 import (
 	"bytes"
 	"crypto/sha256"
-	"encoding/xml"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -29,6 +28,7 @@ import (
 	"strings"
 	"time"
 
+	"rhea/internal/adapter"
 	"rhea/internal/core"
 )
 
@@ -43,128 +43,19 @@ type Document struct {
 	Events    []int  `json:"events"` // indexes into Facts.Events
 }
 
-// FA3Namespace is the schema namespace the files declare.
-const FA3Namespace = "http://crd.gov.pl/wzor/2025/06/25/13775/"
+// FA3Namespace and KSeFReference are the adapter's: the simulator writes
+// the same FA(3) shape Rhea sends (internal/adapter/fa3.go), so what a
+// persona receives and what Rhea issues are one document.
+const FA3Namespace = adapter.FA3Namespace
 
-// The FA subset, as encoding/xml sees it.
-type faInvoice struct {
-	XMLName  xml.Name `xml:"Faktura"`
-	XMLNS    string   `xml:"xmlns,attr"`
-	Naglowek faHeader `xml:"Naglowek"`
-	Podmiot1 faParty  `xml:"Podmiot1"`
-	Podmiot2 faParty  `xml:"Podmiot2"`
-	Fa       faBody   `xml:"Fa"`
+// KSeFReference is the number KSeF assigns on acceptance, derived from the
+// invoice so the same persona always yields the same reference.
+func KSeFReference(sellerNIP, issueDate, number string) string {
+	return adapter.KSeFReference(sellerNIP, issueDate, number)
 }
-
-type faHeader struct {
-	KodFormularza     faCode `xml:"KodFormularza"`
-	WariantFormularza int    `xml:"WariantFormularza"`
-	DataWytworzeniaFa string `xml:"DataWytworzeniaFa"`
-	SystemInfo        string `xml:"SystemInfo"`
-}
-
-type faCode struct {
-	KodSystemowy string `xml:"kodSystemowy,attr"`
-	WersjaSchemy string `xml:"wersjaSchemy,attr"`
-	Value        string `xml:",chardata"`
-}
-
-type faParty struct {
-	Dane  faIdent   `xml:"DaneIdentyfikacyjne"`
-	Adres faAddress `xml:"Adres"`
-}
-
-type faIdent struct {
-	NIP   string `xml:"NIP"`
-	Nazwa string `xml:"Nazwa"`
-}
-
-type faAddress struct {
-	KodKraju string `xml:"KodKraju"`
-	AdresL1  string `xml:"AdresL1"`
-}
-
-// faAmount is one P_13_k / P_14_k slot: net and VAT by rate, named at
-// generation so the one rate a persona uses lands in its slot.
-type faAmount struct {
-	XMLName xml.Name
-	Value   string `xml:",chardata"`
-}
-
-type faBody struct {
-	KodWaluty     string     `xml:"KodWaluty"`
-	P1            string     `xml:"P_1"` // issue date
-	P2            string     `xml:"P_2"` // number
-	WZ            []string   `xml:"WZ,omitempty"`
-	Totals        []faAmount // P_13_k, P_14_k
-	P15           string     `xml:"P_15"` // gross
-	RodzajFaktury string     `xml:"RodzajFaktury"`
-	FaWiersz      []faLine   `xml:"FaWiersz"`
-	Platnosc      faPayment  `xml:"Platnosc"`
-}
-
-type faLine struct {
-	NrWierszaFa int    `xml:"NrWierszaFa"`
-	P7          string `xml:"P_7"`  // name
-	P8A         string `xml:"P_8A"` // unit
-	P8B         string `xml:"P_8B"` // quantity
-	P9A         string `xml:"P_9A"` // unit price net
-	P11         string `xml:"P_11"` // line net
-	P12         string `xml:"P_12"` // rate
-}
-
-type faPayment struct {
-	Termin   faTerm    `xml:"TerminPlatnosci"`
-	Rachunek faAccount `xml:"RachunekBankowy"`
-}
-
-type faTerm struct {
-	Termin string `xml:"Termin"`
-}
-
-type faAccount struct {
-	NrRB string `xml:"NrRB"`
-}
-
-// faRateSlot maps a VAT percent to the FA slot its net and VAT go in.
-func faRateSlot(percent int) (string, bool) {
-	switch percent {
-	case 23, 22:
-		return "1", true
-	case 8, 7:
-		return "2", true
-	case 5:
-		return "3", true
-	case 0:
-		return "6_1", true // domestic 0%: FA(3) splits the zero rate (6_1 home, 6_2 WDT, 6_3 export)
-	}
-	return "", false
-}
-
-// totals is the net and, where the schema has one, the VAT of the one rate
-// slot an invoice uses.
-func totals(slot string, net, vat int64) []faAmount {
-	out := []faAmount{{XMLName: xml.Name{Local: "P_13_" + slot}, Value: core.FormatMoney(net)}}
-	if !zeroRateSlot(slot) {
-		out = append(out, faAmount{XMLName: xml.Name{Local: "P_14_" + slot}, Value: core.FormatMoney(vat)})
-	}
-	return out
-}
-
-// zeroRateSlot reports a slot that carries no VAT element: FA(3) has P_13_6_k
-// but no P_14_6_k, and P_13_7 (exempt) likewise.
-func zeroRateSlot(slot string) bool { return strings.HasPrefix(slot, "6") || slot == "7" }
 
 // nip strips the country prefix a persona's vat_id carries: FA wants digits.
-func nip(vatID string) string { return strings.TrimPrefix(vatID, "PL") }
-
-// KSeFReference is the number KSeF assigns on acceptance, derived here from
-// the invoice so the same persona always yields the same reference:
-// <NIP>-<YYYYMMDD>-<12 hex>-<2 hex>.
-func KSeFReference(sellerNIP, issueDate, number string) string {
-	h := sha256.Sum256([]byte(sellerNIP + "|" + issueDate + "|" + number))
-	return fmt.Sprintf("%s-%s-%012X-%02X", sellerNIP, strings.ReplaceAll(issueDate, "-", ""), h[:6], h[6])
-}
+func nip(vatID string) string { return adapter.NIPDigits(vatID) }
 
 // iban is a party's account, or a deterministic stand-in when the persona
 // names none: "PL" and 26 digits drawn from the VAT id.
@@ -347,60 +238,42 @@ func (g *gen) faInvoices(events []Event) []Document {
 			}
 		}
 		vat := halfUp(net*int64(percent), 100)
-		slot, _ := faRateSlot(percent)
 		issued, _ := time.Parse("2006-01-02", date)
 
-		var lines []faLine
+		var lines []adapter.FA3Line
 		var wz []string
 		if doc, ok := ev.Payload["for_document"].(string); ok && doc != "" {
 			wz = append(wz, doc)
 			if d, ok := deliveries[doc]; ok {
-				for n, l := range d.Payload["lines"].([]any) {
+				for _, l := range d.Payload["lines"].([]any) {
 					line := l.(map[string]any)
 					qty := line["qty"].(int)
 					price, _ := core.ParseMoney(line["price"].(string))
 					it := items[line["item"].(string)]
-					lines = append(lines, faLine{NrWierszaFa: n + 1, P7: it.Name, P8A: it.Unit,
-						P8B: fmt.Sprint(qty), P9A: core.FormatMoney(price),
-						P11: core.FormatMoney(int64(qty) * price), P12: fmt.Sprint(percent)})
+					lines = append(lines, adapter.FA3Line{Name: it.Name, Unit: it.Unit, Qty: fmt.Sprint(qty),
+						UnitPrice: price, Net: int64(qty) * price, RateCode: rateCode})
 				}
 			}
 		}
 		if len(lines) == 0 {
-			lines = append(lines, faLine{NrWierszaFa: 1, P7: "Usługa", P8A: "usł.", P8B: "1",
-				P9A: core.FormatMoney(net), P11: core.FormatMoney(net), P12: fmt.Sprint(percent)})
+			lines = append(lines, adapter.FA3Line{Name: "Usługa", Unit: "usł.", Qty: "1", UnitPrice: net, Net: net, RateCode: rateCode})
 		}
-		inv := faInvoice{
-			XMLNS: FA3Namespace,
-			Naglowek: faHeader{
-				KodFormularza:     faCode{KodSystemowy: "FA (3)", WersjaSchemy: "1-0E", Value: "FA"},
-				WariantFormularza: 3,
-				DataWytworzeniaFa: issued.Format("2006-01-02") + "T08:00:00Z",
-				SystemInfo:        "Rhea sim " + g.p.Name,
-			},
-			Podmiot1: faParty{Dane: faIdent{NIP: nip(sup.VATID), Nazwa: sup.Name},
-				Adres: faAddress{KodKraju: sup.Country, AdresL1: sup.Name}},
-			Podmiot2: faParty{Dane: faIdent{NIP: nip(g.p.Company.VATID), Nazwa: g.p.Company.Name},
-				Adres: faAddress{KodKraju: g.p.Company.Country, AdresL1: g.p.Company.Name}},
-			Fa: faBody{
-				KodWaluty: "PLN", P1: date, P2: number, WZ: wz,
-				Totals: totals(slot, net, vat),
-				P15:    core.FormatMoney(net + vat), RodzajFaktury: "VAT", FaWiersz: lines,
-				Platnosc: faPayment{
-					Termin:   faTerm{Termin: issued.AddDate(0, 0, g.p.Volume.PaymentDays).Format("2006-01-02")},
-					Rachunek: faAccount{NrRB: iban(sup)},
-				},
-			},
-		}
-		body, err := xml.MarshalIndent(inv, "", "  ")
+		body, err := adapter.WriteFA3(adapter.FA3Invoice{
+			Seller:   adapter.FA3Party{NIP: nip(sup.VATID), Name: sup.Name, Country: sup.Country},
+			Buyer:    adapter.FA3Party{NIP: nip(g.p.Company.VATID), Name: g.p.Company.Name, Country: g.p.Company.Country},
+			Currency: "PLN", IssueDate: date, Number: number, WZ: wz, RateCode: rateCode,
+			Net: net, VAT: vat, Gross: net + vat, Lines: lines,
+			Term:    issued.AddDate(0, 0, g.p.Volume.PaymentDays).Format("2006-01-02"),
+			Account: iban(sup), Created: issued.Format("2006-01-02") + "T08:00:00Z", SystemInfo: "Rhea sim " + g.p.Name,
+		})
 		if err != nil {
-			panic(err) // a struct of strings cannot fail to marshal
+			panic(err) // the persona's rates are the pack's; a slot always exists
 		}
 		ref := KSeFReference(nip(sup.VATID), date, number)
 		out = append(out, Document{
 			Path:      filepath.Join(date[:7], "ksef", ref+".xml"),
 			MediaType: "application/xml", Source: "ksef", Date: date,
-			Bytes:  append([]byte(xml.Header), append(body, '\n')...),
+			Bytes:  body,
 			Events: []int{i},
 		})
 	}

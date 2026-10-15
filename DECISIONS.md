@@ -2696,3 +2696,74 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   rate of the last business day before the tax point (VAT act art. 31a), JPK_V7 wants
   PLN — as a pack rule with its warrant plus an NBP rates channel; placed after the
   statutory floor and before the private beta.
+
+
+## 2026-10-15 — KSeF outbound: the national API 2.0 client, FA(3) written from objects, rejection as evidence
+
+- **The brief first** (DIRECTION, "Documents out"): test environment with a random NIP
+  and no account, demo with Novi's account for the onboarding rehearsal, production
+  only as Novi's real first month; onboarding is one pasted token and the walk to it is
+  pack data; secrets never enter the log; one interactive session per pass; the
+  evidence — number, UPO, rejection — is an event; performance is the limits.
+- **The client is the standard library.** `adapter.KSeF2` speaks KSeF API 2.0 as the
+  Ministry's docs lay it out: the published keys (`/security/public-key-certificates`,
+  by usage), a challenge, the token encrypted with its timestamp (RSA-OAEP SHA-256,
+  `token|timestampMs`), the authentication operation polled past "in progress", the
+  access token redeemed; a session declaring FA (3) 1-0E with a fresh AES-256 key and
+  IV wrapped with the Ministry's symmetric-key certificate; each invoice AES-CBC
+  PKCS#7, both hashes and sizes; each invoice polled to a final code; the UPO XML
+  fetched per accepted invoice; the session closed (a session that will not close
+  times out by itself). Error bodies are read in both of the API's shapes, so a
+  refusal carries the Ministry's own words. Three environments by short name
+  (`KSeFEnvironments`); keys of one never work in another.
+- **The FA(3) writer is shared.** `adapter.WriteFA3` renders a sales invoice in the
+  schema's order with the mandatory annotation block (cash method, self-invoicing,
+  reverse charge, split payment each "no"; exemption, new means of transport and
+  margin each "none", the exemption declared when the rate is `zw`), the rate in its
+  slot (23/22 → 1, 8/7 → 2, 5 → 3, 0 → 6_1 as "0 KR", zw → 7, no VAT element on the
+  zero slots), one line for the whole net when no lines are given, the payment block
+  only when a term or an account is known, the address falling back to the name
+  (`company` v3 gains an optional `address`). The simulator writes through the same
+  function, so what a persona receives and what Rhea sends are one document — the
+  simulator's own copy of the types is gone. The Ministry's verification doc is the
+  spec: UTF-8, no BOM, no processing instructions, the declared schema.
+- **The adapter, code version 2.** `KSeF.Pass` reads sales invoices, companies and VAT
+  rates, writes each unsent invoice, hashes it, sends all of them in one session, and
+  returns `ksef.invoice.submitted` (number, KSeF number, the UPO's session reference as
+  `upo`, the UPO XML as `upo_xml`, the date, the hash) or `ksef.invoice.rejected`
+  (number, code, the reason in one line, the details, the date, the hash). An invoice
+  with an accepted submission is done; one whose exact XML was rejected is not sent
+  again — a person changes something, the hash changes, it goes. A session that fails
+  in transport or authentication is a pass error with nothing appended; the next pass
+  retries, as the contract says. Dedup keys: `ksef/submit/<invoice id>`,
+  `ksef/reject/<invoice id>/<hash prefix>`. A KSeF number is CRC-8 checked
+  (`KSeFNumberValid`, polynomial 0x07) and the fake's references now carry a valid
+  checksum.
+- **The pack, v14.** `ksef_submission` v2: `status` (accepted | rejected), `ksef_ref`
+  and `upo` optional, `reason`, `invoice_hash`. Rules: `pl-record-ksef-submission` v2
+  (status accepted, hash), `pl-record-ksef-rejection` (status rejected, the reason),
+  `pl-ksef-rejection-task` (a cascade: a rejected submission is a task for its date,
+  priority high, category invoices, the reason as description — it lands in "Do
+  zrobienia dziś"). The `ksef` channel v2 declares code version 2, both events and
+  the market. Existing databases keep v13's rows (a pack load leaves known ids alone);
+  the two shells need a migration before the next live demo, as the queue did.
+- **The CLI.** `rhea ksef` uses the national API when `RHEA_KSEF_TOKEN` is set, with
+  `RHEA_KSEF_ENV` (test | demo | prod) and `RHEA_KSEF_NIP`, and the deterministic fake
+  otherwise; the fake takes a `Reject` map so a demo can show a refusal.
+- **Tests.** `TestKSeF2AgainstTheFakeMinistry`: an httptest server that implements the
+  endpoints to the letter, decrypts what the client sent with its own keys and checks
+  the hashes — the plain XML the Ministry would read is byte-for-byte what Rhea wrote;
+  polling past "in progress" twice; a duplicate (440) with the original number in the
+  details; a wrong token refused in the Ministry's words. `TestKSeFOutbound` runs the
+  adapter through the runner with the pack: two invoices, one accepted into a
+  submission with the number and UPO, one rejected into a submission and a task; the
+  second pass sends nothing; a later invoice goes alone. `TestWriteFA3`: the order,
+  the annotation block, the slots, zw and 0 KR, the refusals. `TestKSeFNumber`: the
+  documented example validates. `TestKSeFLive` (gated by `RHEA_LIVE_KSEF=1`) sends one
+  invoice to the test environment and prints what came back; never against prod.
+- **Owed.** The live run itself: it needs a test-environment token, which only a
+  one-time signed authentication can mint — KK takes the portal walk (the onboarding
+  rehearsal, written down as taken) and the token goes into `.env`. The QR codes on an
+  invoice shown outside KSeF. The migration of the live shells to v14. A pass that dies
+  between sending and status would re-send next time and meet a 440 duplicate carrying
+  the original number — the rejection then tells the person; rare, noted.
