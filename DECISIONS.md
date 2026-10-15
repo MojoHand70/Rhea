@@ -2657,3 +2657,42 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
 - **Live databases keep the door's old text.** Builtin activities are seeded once and
   left alone; the law lives in the shell's check, not in the door's description, so
   nothing needs migrating.
+
+
+## 2026-10-15 — numbers as people write them, one reader; the grid lists what its rule would fire on
+
+- **One prose reader of numbers, in core.** KK asked whether number cleaning, trimming
+  and comparing belong in the arithmetic engine. No: the engine computes on exact
+  values only, and reading a written number is a reader's job. Every channel already
+  reads its own fixed spelling into the strict boundary form (`ParseMoney`: a dot, two
+  decimals); what was missing was the reader for prose — the host's words today, a
+  mail or a chat line tomorrow — which lived in the shell as a regex.
+  `core.WrittenNumbers` / `core.ReadWrittenNumber` now hold it: spaces (plain,
+  non-breaking, narrow) group thousands; a dot or a comma is the decimal mark; both
+  kinds present, the last one is the decimal mark; one kind several times groups
+  thousands unless the last tail is not three digits; a lone mark is the decimal mark
+  (the continental reading: "1,234" is one and 234 thousandths — a thousands group is
+  written with a space or beside a decimal mark). The value is canonical (no grouping,
+  a dot, no leading zeros, no trailing zeros after the point), so comparison is value
+  equality. A sign is not read. The host's two laws use it; the channel readers keep
+  their strict forms, where a stray character should fail rather than be read.
+- **The grid's trigger side applies the rule's where.** The limit named this morning
+  was the grid's: it listed every open object of the trigger's type, so a credit sat on
+  the outgoing grid whose rule matches only debits. `matchingData` now evaluates the
+  trigger rule's where on the same payload shape the executor fires on
+  (`core.EvalCondition` over `{object_id, object_type, state}`) and lists only what the
+  rule would fire on. The Poland story asserts the outgoing grid is empty while the
+  open credit waits on the incoming one. The recorded morning
+  (`testdata/eval/briefing.json`) keeps its older shape — it is a fixture of the
+  shared-amount case, which the law test still exercises.
+- **Currencies (answered, not built).** Conversion exists where it belongs — postings'
+  `convert` and matching's `convert`, the rate a fact, the date and rounding declared,
+  the residue to a named account, a missing rate to the worklist. What the formula
+  language lacks is the *type*: money does not know its currency, so a rule could add
+  EUR to PLN unrefused. Planned, not now: money carries its currency; mixing is refused
+  at the gate; `convert` joins the formula vocabulary over the same rate facts; minor
+  units per currency as a data table when the first such currency appears. Due with
+  the first euro purchase invoice — the VAT register wants it in PLN at the NBP average
+  rate of the last business day before the tax point (VAT act art. 31a), JPK_V7 wants
+  PLN — as a pack rule with its warrant plus an NBP rates channel; placed after the
+  statutory floor and before the private beta.

@@ -124,6 +124,12 @@ func (s *Server) matchingData(ctx context.Context, vd *core.ViewDef) (map[string
 			if !open {
 				continue
 			}
+			if out.Trigger && !triggersRule(rule, o) {
+				// The trigger side lists what the rule would fire on: an open
+				// object the rule's where excludes (a credit on the outgoing
+				// grid) is another rule's to pair, not this grid's.
+				continue
+			}
 			item := matchingItem{ObjectID: o.ID, Label: o.ID, Detail: detailFor[side.Type], Cells: map[string]cellOut{}}
 			if ot.LabelField != "" {
 				if l, ok := o.State[ot.LabelField].(string); ok && l != "" {
@@ -145,6 +151,20 @@ func (s *Server) matchingData(ctx context.Context, vd *core.ViewDef) (map[string
 		"view": vd, "rule": rule.ID, "matching": tmpl.Name, "trigger": tmpl.Trigger,
 		"verb": "pair_items", "sides": sides,
 	}, nil
+}
+
+// triggersRule reports whether an object, materialized, would meet the
+// rule's where — the same conditions the executor applies to the
+// object.materialized event, evaluated on the same payload shape.
+func triggersRule(rule *core.Rule, o core.Object) bool {
+	payload := map[string]any{"object_id": o.ID, "object_type": o.Type, "state": o.State}
+	for _, c := range rule.Spec.Match.Where {
+		ok, err := core.EvalCondition(payload, c)
+		if err != nil || !ok {
+			return false
+		}
+	}
+	return true
 }
 
 // unmatchedReasons indexes the latest objects.unmatched of one structure by

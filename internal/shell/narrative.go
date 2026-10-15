@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"regexp"
 	"strings"
 
 	"rhea/internal/agent"
@@ -32,10 +31,6 @@ type narrativeFact struct {
 	Kind  string      `json:"kind"` // analysis | matching
 	Data  interface{} `json:"data"`
 }
-
-// numberRe finds the numbers in the host's words, with a dot or a comma
-// as the decimal separator and spaces as thousand separators dropped.
-var numberRe = regexp.MustCompile(`\d[\d ]*(?:[.,]\d+)?`)
 
 func (s *Server) serveNarrative(ctx context.Context, w http.ResponseWriter, vd *core.ViewDef) {
 	var spec core.NarrativeSpec
@@ -156,28 +151,27 @@ func (s *Server) saidBefore(ctx context.Context, viewID string, n int) ([]string
 }
 
 // foreignNumbers lists the numbers in the words that the facts do not
-// carry — compared as values, separators dropped, so "1 234,56" and
-// "1234.56" are one number, "100 zł" is "100.00" (nothing was rounded),
-// and "1234" is not "1234.56" (something was).
+// carry — read as people write them (core.WrittenNumbers) and compared as
+// values, so "1 234,56" and "1234.56" are one number, "100 zł" is "100.00"
+// (nothing was rounded), and "1234" is not "1234.56" (something was).
 func foreignNumbers(words string, facts []byte) []string {
 	have := map[string]bool{}
-	for _, m := range numberRe.FindAllString(string(facts), -1) {
-		have[canonicalNumber(m)] = true
+	for _, n := range core.WrittenNumbers(string(facts)) {
+		have[n.Value] = true
 	}
 	var out []string
 	seen := map[string]bool{}
-	for _, m := range numberRe.FindAllString(words, -1) {
-		c := canonicalNumber(m)
-		if c == "" || have[c] || seen[c] {
+	for _, n := range core.WrittenNumbers(words) {
+		if have[n.Value] || seen[n.Value] {
 			continue
 		}
 		// A date's parts and small counts the facts imply are not numbers the
 		// host computed; a number below 32 with no decimals passes.
-		if !strings.Contains(c, ".") && len(c) <= 2 {
+		if !strings.Contains(n.Value, ".") && len(n.Value) <= 2 {
 			continue
 		}
-		seen[c] = true
-		out = append(out, strings.TrimSpace(m))
+		seen[n.Value] = true
+		out = append(out, n.Text)
 	}
 	return out
 }
@@ -193,8 +187,8 @@ func foreignNumbers(words string, facts []byte) []string {
 // one refuses silence about a fact they do.
 func unspokenFacts(words string, facts []byte) []string {
 	said := map[string]bool{}
-	for _, m := range numberRe.FindAllString(words, -1) {
-		said[canonicalNumber(m)] = true
+	for _, n := range core.WrittenNumbers(words) {
+		said[n.Value] = true
 	}
 	var shape []struct {
 		As   string `json:"as"`
@@ -227,13 +221,12 @@ func unspokenFacts(words string, facts []byte) []string {
 		var amounts []string
 		seen := map[string]bool{}
 		add := func(cell string) {
-			for _, m := range numberRe.FindAllString(cell, -1) {
-				c := canonicalNumber(m)
-				if c == "0" || seen[c] {
+			for _, n := range core.WrittenNumbers(cell) {
+				if n.Value == "0" || seen[n.Value] {
 					continue
 				}
-				seen[c] = true
-				amounts = append(amounts, c)
+				seen[n.Value] = true
+				amounts = append(amounts, n.Value)
 			}
 		}
 		switch f.Kind {
@@ -287,27 +280,6 @@ func unspokenFacts(words string, facts []byte) []string {
 // amountColumn: the column types whose cells are amounts the host must
 // carry — money and counts.
 func amountColumn(t string) bool { return t == "money" || t == "int" }
-
-// canonicalNumber is the value a written number stands for: thousand
-// spaces dropped, the decimal comma a dot, leading zeros gone, and zeros
-// after the decimal point gone too, so that "100", "100,00" and "100.00"
-// are one value and "1234" and "1234.56" are two.
-func canonicalNumber(m string) string {
-	m = strings.ReplaceAll(strings.TrimSpace(m), " ", "")
-	m = strings.ReplaceAll(m, ",", ".")
-	m = strings.TrimLeft(m, "0")
-	if strings.Contains(m, ".") {
-		m = strings.TrimRight(m, "0")
-		m = strings.TrimSuffix(m, ".")
-	}
-	if strings.HasPrefix(m, ".") {
-		m = "0" + m
-	}
-	if m == "" {
-		return "0"
-	}
-	return m
-}
 
 // analysisData runs an analysis view's query on the read side, typed.
 func (s *Server) analysisData(ctx context.Context, spec core.AnalysisSpec) ([]columnOut, [][]cellOut, error) {

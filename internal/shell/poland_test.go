@@ -342,6 +342,13 @@ func TestM3PolandPack(t *testing.T) {
 		!strings.Contains(grid.Sides[0].Items[0].Why[5], "oldest_first: nothing open on invoice") {
 		t.Fatalf("the grid: %+v", grid)
 	}
+	// The outgoing grid lists what its rule would fire on — debits — so the
+	// open credit is not on it (DECISIONS 2026-10-15, the grid re-diagnosed).
+	grid.Sides = nil
+	get("/api/views/wyplaty-do-rozliczenia", &grid)
+	if len(grid.Sides) != 2 || grid.Sides[0].Name != "payment" || len(grid.Sides[0].Items) != 0 {
+		t.Fatalf("a credit on the outgoing grid: %+v", grid)
+	}
 
 	// The briefing: the pack's narrative view draws on the registers and the
 	// grids; with no host in this test the facts speak for themselves.
