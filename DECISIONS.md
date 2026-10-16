@@ -3006,3 +3006,36 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
 - **The test** (`TestRuleWarrant`): a toy pack's rule cites an article; the approved
   version keeps it; a fact it explains walks to it; a corrected citation is drafted as
   the upgrade; a statute without an article and a pack claiming support never land.
+
+## 2026-10-16 — a condition reads through a link
+
+- **What.** A match condition may be a formula: `{"formula": "=ref(company, vat_id,
+  $.seller_nip).books = \"kpir\""}` — any formula-language expression that yields true or
+  false, reading the payload and, through `ref()` and links, the objects the event
+  names. Path conditions are unchanged; a condition is one or the other. Earned by the
+  Poland pack review (DIRECTION, 2026-10-16): one pack serves a sole trader and a
+  company by what the company says it is, and a rule must ask the company record, not
+  the event. The exit the destiny list recorded for ref-reads in match conditions.
+- **Where it reads.** The executor evaluates conditions in the environment the rule's
+  effect gets (`x.env` over the chain-visible lookup and getter): the state at this
+  point in the log, so replay decides every condition the same way (invariant 4 — the
+  test replays and finds each sale in the same book). A field the record lacks
+  compares as null and the condition is false; a link that does not resolve is an
+  error and the event waits in the worklist — unroutable beats misrouted, as for
+  markets.
+- **The gate.** `Validate` admits a formula condition only if it parses and its
+  static result can be a truth value; `Check` re-runs it against the catalog, so a
+  read through a link must name a field the record declares. Contexts without state
+  (the queue filter, the matching grid's trigger preview) evaluate formula conditions
+  on the payload alone (`EvalCondition`); the executor uses `Condition.Holds`.
+- **Known limit.** A condition reads the record as it stands at its point in the log,
+  not as of the event's business date. A late document from before a change of the
+  company's form, processed after it, reads the new form. Rare (a year boundary and a
+  late document) and correctable by a person; the exit is an as-of read, if the
+  business generator shows it matters.
+- **The agent** knows the new condition from its grammar.
+- **The test** (`TestConditionReadsThroughALink`): one company switches from full books
+  to KPiR between two sales; each sale lands in its book by the rule the company's
+  record selects, a sale from an unregistered seller waits, replay reproduces it, and
+  the gate refuses a condition that is not true-or-false, one that is both formula and
+  path, one without its "=", and one reading a field the company does not declare.

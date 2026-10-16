@@ -239,8 +239,54 @@ func checked(v any, fd FieldDef) (any, error) {
 	return v, nil
 }
 
-// EvalCondition evaluates one match condition against a decoded payload.
+// conditionFormula parses a formula condition: "=" and an expression whose
+// static result can be a truth value.
+func conditionFormula(text string) (*Formula, error) {
+	if !strings.HasPrefix(text, "=") {
+		return nil, fmt.Errorf("condition %q: a formula condition starts with =", text)
+	}
+	f, err := ParseFormula(strings.TrimSpace(text[1:]))
+	if err != nil {
+		return nil, fmt.Errorf("condition %q: %w", text, err)
+	}
+	if k := f.prog.result.kind; k != KAny && k != KBool {
+		return nil, fmt.Errorf("condition %q: a condition must yield true or false, not a %s", text, k)
+	}
+	return f, nil
+}
+
+// Holds evaluates one match condition: a path condition against the payload
+// alone, a formula condition with the environment the rule's effect gets —
+// lookups and state reads at this point in the log. A formula reading a
+// field that is not there compares as null and does not hold; a link that
+// does not resolve is an error, and the event waits.
+func (c Condition) Holds(payload any, env *Env) (bool, error) {
+	if c.Formula == "" {
+		return EvalCondition(payload, c)
+	}
+	f, err := conditionFormula(c.Formula)
+	if err != nil {
+		return false, err
+	}
+	v, _, err := f.run(payload, env)
+	if err != nil {
+		return false, fmt.Errorf("condition %s: %w", c.Formula, err)
+	}
+	switch v.Kind {
+	case KBool:
+		return v.Bool, nil
+	case KNull:
+		return false, nil
+	}
+	return false, fmt.Errorf("condition %s yields a %s, not true or false", c.Formula, v.Kind)
+}
+
+// EvalCondition evaluates one match condition against a decoded payload. A
+// formula condition evaluates without state: it may read the payload only.
 func EvalCondition(payload any, c Condition) (bool, error) {
+	if c.Formula != "" {
+		return c.Holds(payload, &Env{})
+	}
 	p, err := parsePath(c.Path)
 	if err != nil {
 		return false, err

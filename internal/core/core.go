@@ -271,9 +271,16 @@ type Match struct {
 }
 
 type Condition struct {
-	Path  string `json:"path"` // e.g. $.customer, $.lines[*].amount
-	Op    string `json:"op"`   // eq | ne | exists | gt | lt
+	Path  string `json:"path,omitempty"` // e.g. $.customer, $.lines[*].amount
+	Op    string `json:"op,omitempty"`   // eq | ne | exists | absent | gt | lt
 	Value any    `json:"value,omitempty"`
+	// Formula is a condition the path ops cannot say: "=" and an expression
+	// that yields true or false, reading the event and, through links, the
+	// objects it names — "the seller keeps KPiR" is
+	// =ref(company, vat_id, $.seller_nip).books = "kpir". It reads the state
+	// the rule's effect reads, at the same point in the log, so replay
+	// decides it the same way. A condition is a formula or a path, not both.
+	Formula string `json:"formula,omitempty"`
 }
 
 // Effect is what a firing rule does: materialize one object, post one
@@ -375,6 +382,15 @@ func (s RuleSpec) Validate(target *ObjectType) error {
 		return fmt.Errorf("rules cannot match %s — amendments end chains", EventObjectAmended)
 	}
 	for _, c := range s.Match.Where {
+		if c.Formula != "" {
+			if c.Path != "" || c.Op != "" {
+				return fmt.Errorf("condition %q: a condition is a formula or a path, not both", c.Formula)
+			}
+			if _, err := conditionFormula(c.Formula); err != nil {
+				return err
+			}
+			continue
+		}
 		switch c.Op {
 		case "eq", "ne", "exists", "absent", "gt", "lt":
 		default:
@@ -648,6 +664,28 @@ type SchedulingSpec struct {
 // payload prefixes come from the match: a cascade on a materialized type T
 // reads T's state under $.state (and under $.doc.state inside each).
 func (s RuleSpec) Check(types Catalog) error {
+	// Conditions read the event payload: a cascade's $.state is typed
+	// whatever the effect's scope.
+	var condTyped map[string]string
+	if s.Match.EventType == EventObjectMaterialized {
+		for _, c := range s.Match.Where {
+			if t, ok := c.Value.(string); ok && c.Path == "$.object_type" && c.Op == "eq" {
+				condTyped = map[string]string{"$.state": t}
+			}
+		}
+	}
+	for _, c := range s.Match.Where {
+		if c.Formula == "" {
+			continue
+		}
+		f, err := conditionFormula(c.Formula)
+		if err != nil {
+			return err
+		}
+		if err := f.CheckBool(types, condTyped); err != nil {
+			return fmt.Errorf("condition %q: %w", c.Formula, err)
+		}
+	}
 	var target *ObjectType
 	name := s.Effect.Object.Type
 	if s.Effect.Amend != nil {

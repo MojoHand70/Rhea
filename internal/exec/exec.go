@@ -338,11 +338,14 @@ func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []cor
 				// amendments end their branch: nothing cascades from them
 			}
 		}
+		// Formula conditions read the world the effects read: the base world
+		// plus the chain so far.
+		matchEnv := x.env(ctx, evPayload, lookup, get)
 		for _, r := range rules {
 			if fired[r.ID] {
 				continue
 			}
-			ok, err := matchRule(r, ev, evPayload)
+			ok, err := matchRule(r, ev, evPayload, matchEnv)
 			if err != nil {
 				return err
 			}
@@ -425,9 +428,11 @@ func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []cor
 }
 
 // matchRule reports whether rule r fires on ev (payload already decoded):
-// event type, effective date, and every where condition. Shared between the
-// live executor and the simulator, so a dry run cannot drift from reality.
-func matchRule(r core.Rule, ev core.Event, payload any) (bool, error) {
+// event type, effective date, and every where condition — a formula
+// condition evaluated in env, the state the rule's effect would read. Shared
+// between the live executor and the simulator, so a dry run cannot drift
+// from reality.
+func matchRule(r core.Rule, ev core.Event, payload any, env *core.Env) (bool, error) {
 	if r.Spec.Match.EventType != ev.Type {
 		return false, nil
 	}
@@ -435,7 +440,7 @@ func matchRule(r core.Rule, ev core.Event, payload any) (bool, error) {
 		return false, nil
 	}
 	for _, c := range r.Spec.Match.Where {
-		ok, err := core.EvalCondition(payload, c)
+		ok, err := c.Holds(payload, env)
 		if err != nil {
 			return false, fmt.Errorf("rule %s v%d condition: %w", r.ID, r.Version, err)
 		}

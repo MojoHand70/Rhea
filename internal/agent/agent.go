@@ -181,7 +181,8 @@ const ruleShape = `{
   "spec": {
     "match": {
       "event_type": "<event type>",
-      "where": [ {"path": "$.field", "op": "eq|ne|exists|gt|lt", "value": ...} ]
+      "where": [ {"path": "$.field", "op": "eq|ne|exists|absent|gt|lt", "value": ...}
+                 or {"formula": "=<an expression that is true or false>"} ]
     },
     "effect": { exactly ONE of "object", "postings", "amend", "matching" - see below }
   }
@@ -191,6 +192,10 @@ const ruleShape = `{
 
 // ruleGrammar is the rule language: templates, the three effects, cascade.
 const ruleGrammar = `Use "where" conditions only for constraints the user's intent actually implies.
+A condition is a path test, or a formula when it must read through a link to a record the event
+names: {"formula": "=ref(company, vat_id, $.seller_nip).vat_status = \"active\""} holds when that
+company says so (a field the record lacks makes the formula false; a record that does not exist
+makes the event wait).
 Priority orders firing among rules matching the same event: lower fires first.
 Pick one not taken by the active rules listed in the request.
 

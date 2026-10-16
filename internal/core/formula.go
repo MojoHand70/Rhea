@@ -1354,6 +1354,20 @@ func (f *Formula) CheckList(types Catalog, typed map[string]string, objType stri
 	return nil
 }
 
+// CheckBool re-runs the static checker with the catalog and requires a
+// truth value — what a match condition must yield.
+func (f *Formula) CheckBool(types Catalog, typed map[string]string) error {
+	env := &checkEnv{types: types, typed: typed, vars: map[string]ty{}}
+	result, err := env.check(f.tree, false)
+	if err != nil {
+		return err
+	}
+	if result.kind != KAny && result.kind != KBool {
+		return fmt.Errorf("a condition must yield true or false, not a %s", result.kind)
+	}
+	return nil
+}
+
 // fitsField judges a static result against the field it feeds.
 func fitsField(r ty, fd FieldDef) error {
 	if r.kind == KAny || fd.Type == "" {
