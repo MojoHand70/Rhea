@@ -105,15 +105,16 @@ func TestM3PolandPack(t *testing.T) {
 	// Load the pack: 19 types (the invoices with their open amounts and
 	// dates, the bank operation, the matching difference, the company with
 	// its declared form), 12 views (the two grids, the briefing and the two
-	// queues among them), 33 draft rules, three doors (the KSeF channel,
-	// identify_company, declare_company_form), 31 master-data events.
+	// queues among them), 34 draft rules, four doors (the KSeF channel,
+	// identify_company, declare_company_form, set_cost_account), 34
+	// master-data events.
 	packPath := filepath.Join("..", "..", "packs", "pl", "pack.json")
 	sum, err := pack.Load(ctx, s, packPath, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 19 || sum.Views != 12 || sum.Rules != 33 || sum.Activities != 3 || sum.Events != 31 || sum.Skipped != 0 ||
-		sum.Bundle != "pack-pl-v19" {
+	if sum.Types != 19 || sum.Views != 12 || sum.Rules != 34 || sum.Activities != 4 || sum.Events != 34 || sum.Skipped != 0 ||
+		sum.Bundle != "pack-pl-v20" {
 		t.Fatalf("first load: %+v", sum)
 	}
 	// Idempotent: a reload changes nothing.
@@ -121,7 +122,7 @@ func TestM3PolandPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Skipped != 98 || sum.Bundle != "" {
+	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Skipped != 103 || sum.Bundle != "" {
 		t.Fatalf("reload: %+v", sum)
 	}
 
@@ -134,18 +135,18 @@ func TestM3PolandPack(t *testing.T) {
 
 	// Nothing is installed yet: the chart of accounts sits in the worklist,
 	// because the pack's rules are drafts behind the human gate.
-	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 31 {
-		t.Fatalf("worklist = %d, want 31 pack events waiting", len(wl))
+	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 34 {
+		t.Fatalf("worklist = %d, want 34 pack events waiting", len(wl))
 	}
 
 	// Approving the pack's bundle IS the installation: its types, views and
 	// rules activate together, and the chart of accounts and the VAT rates
 	// materialize from the waiting events.
-	post("/api/bundles/pack-pl-v19/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-pl-v20/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {
 		t.Fatalf("worklist not cleared after approvals: %d", len(wl))
 	}
-	if accs, _ := s.ObjectsByType(ctx, "account"); len(accs) != 26 {
+	if accs, _ := s.ObjectsByType(ctx, "account"); len(accs) != 29 {
 		t.Fatalf("accounts = %d, want the chart of accounts", len(accs))
 	}
 	if rates, _ := s.ObjectsByType(ctx, "vat_rate"); len(rates) != 5 {
@@ -244,8 +245,9 @@ func TestM3PolandPack(t *testing.T) {
 
 	// The purchase side (DIRECTION 2026-10-10, step 5): a supplier's invoice
 	// as the KSeF reader hands it — the document's own VAT and gross — is a
-	// purchase_invoice document and a three-line entry, Wn 300 / Wn 221 /
-	// Ma 202, and the purchase VAT register shows it.
+	// purchase_invoice document and a three-line entry, Wn 403 / Wn 221 /
+	// Ma 202 — a service with no delivery note is a cost, not a purchase
+	// waiting on 300 for goods — and the purchase VAT register shows it.
 	post("/api/events", map[string]any{
 		"event_type": "purchase.invoice.received", "occurred_at": "2026-09-22", "dedup_key": "fab-1",
 		"payload": map[string]any{
@@ -258,7 +260,7 @@ func TestM3PolandPack(t *testing.T) {
 		t.Fatalf("purchase invoice: %v", resp)
 	}
 	get("/api/views/trial-balance", &tb)
-	wantPurchase := map[string][2]string{"300": {"500.00", "0.00"}, "221": {"115.00", "0.00"}, "202": {"0.00", "615.00"}}
+	wantPurchase := map[string][2]string{"403": {"500.00", "0.00"}, "221": {"115.00", "0.00"}, "202": {"0.00", "615.00"}}
 	seen = 0
 	for _, r := range cellVals(tb.Rows) {
 		if w, ok := wantPurchase[r[1]]; ok {

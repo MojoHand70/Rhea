@@ -1,7 +1,7 @@
 {
   "pack": "pl",
-  "version": 19,
-  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami; poranek: gospodarz mówi, co zaksięgowano i co czeka, z faktów, które policzyło jądro; dziś: otwarte zadania i należności w kolejności pilności, z zatwierdzeniami, które czekają; KSeF na zewnątrz: faktury sprzedaży idą do KSeF jako FA(3) jedną sesją interaktywną, dowód (numer KSeF, UPO) i odmowa (kod, słowa Ministerstwa) są zdarzeniami, odmowa staje się zadaniem na dziś; koniec miesiąca: faktury niosą okres VAT, zamknięcie miesiąca (period.closed) daje rozliczenie VAT jako obiekt policzony regułą — każda liczba deklaracji ma pochodzenie; plik JPK_V7M z rozliczenia i faktur miesiąca (writer rynku), firma zna swój urząd skarbowy, e-mail i formę prawną, faktura zakupu z KSeF niesie numer KSeF; firma mówi, kim jest dla urzędu (identify_company): e-mail, urząd skarbowy, forma prawna, właściciel; v19 (przegląd pakietu, 2026-10-16): daty, które decydują o okresie VAT — faktura sprzedaży niesie datę sprzedaży (P_6, a gdy jej nie podano, datę wystawienia) i okres VAT według obowiązku podatkowego; faktura zakupu niesie datę sprzedaży u dostawcy i datę otrzymania (dla KSeF: dzień nadania numeru), a odliczenie przypada na późniejszy z tych miesięcy; firma mówi, czym jest (declare_company_form): status VAT (czynny albo zwolniony, z przepisem zwolnienia), forma ksiąg i forma opodatkowania od wskazanej daty; firma zwolniona nie rozlicza VAT i nie składa JPK_V7, a VAT od jej zakupów jest kosztem; faktury bez VAT (zw, 0%) księgują się bez linii VAT; każda zmieniona reguła nazywa swoje źródło",
+  "version": 20,
+  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami; poranek: gospodarz mówi, co zaksięgowano i co czeka, z faktów, które policzyło jądro; dziś: otwarte zadania i należności w kolejności pilności, z zatwierdzeniami, które czekają; KSeF na zewnątrz: faktury sprzedaży idą do KSeF jako FA(3) jedną sesją interaktywną, dowód (numer KSeF, UPO) i odmowa (kod, słowa Ministerstwa) są zdarzeniami, odmowa staje się zadaniem na dziś; koniec miesiąca: faktury niosą okres VAT, zamknięcie miesiąca (period.closed) daje rozliczenie VAT jako obiekt policzony regułą — każda liczba deklaracji ma pochodzenie; plik JPK_V7M z rozliczenia i faktur miesiąca (writer rynku), firma zna swój urząd skarbowy, e-mail i formę prawną, faktura zakupu z KSeF niesie numer KSeF; firma mówi, kim jest dla urzędu (identify_company): e-mail, urząd skarbowy, forma prawna, właściciel; v19 (przegląd pakietu, 2026-10-16): daty, które decydują o okresie VAT — faktura sprzedaży niesie datę sprzedaży (P_6, a gdy jej nie podano, datę wystawienia) i okres VAT według obowiązku podatkowego; faktura zakupu niesie datę sprzedaży u dostawcy i datę otrzymania (dla KSeF: dzień nadania numeru), a odliczenie przypada na późniejszy z tych miesięcy; firma mówi, czym jest (declare_company_form): status VAT (czynny albo zwolniony, z przepisem zwolnienia), forma ksiąg i forma opodatkowania od wskazanej daty; firma zwolniona nie rozlicza VAT i nie składa JPK_V7, a VAT od jej zakupów jest kosztem; faktury bez VAT (zw, 0%) księgują się bez linii VAT; każda zmieniona reguła nazywa swoje źródło; v20 (przegląd, 2026-10-16): zakup trafia w koszty — usługa albo wydatek bez dokumentu dostawy na konto kosztowe dostawcy (set_cost_account), a gdy go nie podano, na 403 usługi obce; zakup z dokumentem dostawy (WZ) czeka na 300 na rozliczenie z przyjęciem (PZ); różnice groszowe rozliczeń: niedopłata 761, nadpłata 760 (pozostałe operacyjne), cofnięcie wraca tym kontem, którym weszło; konta 750, 751, 761 w planie kont",
   "requires": [
     "company",
     "account",
@@ -762,7 +762,7 @@
     },
     {
       "name": "company",
-      "version": 5,
+      "version": 6,
       "domain": "finance",
       "is_document": false,
       "label_field": "name",
@@ -865,6 +865,11 @@
           "name": "form_from",
           "type": "date",
           "required": false
+        },
+        {
+          "name": "cost_account",
+          "type": "string",
+          "required": false
         }
       ],
       "amendable": [
@@ -878,7 +883,8 @@
         "vat_exemption_basis",
         "books",
         "income_tax",
-        "form_from"
+        "form_from",
+        "cost_account"
       ]
     },
     {
@@ -2022,7 +2028,7 @@
       "rule_id": "pl-post-purchase-invoice",
       "priority": 200,
       "effective_from": "2026-01-01",
-      "description": "Faktura zakupu z VAT do odliczenia (nabywca czynny podatnik VAT) księguje się: Wn 300 netto, Wn 221 VAT naliczony / Ma 202 brutto",
+      "description": "Faktura zakupu z VAT do odliczenia (nabywca czynny podatnik VAT) księguje się: Wn koszt netto (konto dostawcy, inaczej 403; zakup z dokumentem dostawy — 300 do rozliczenia z PZ), Wn 221 VAT naliczony / Ma 202 brutto",
       "spec": {
         "match": {
           "event_type": "purchase.invoice.received",
@@ -2042,7 +2048,7 @@
             "currency": "=$.currency",
             "lines": [
               {
-                "account": "300",
+                "account": "=if(coalesce($.for_document, \"\") <> \"\", \"300\", coalesce(ref(company, vat_id, $.supplier_nip).cost_account, \"403\"))",
                 "debit": "=$.net"
               },
               {
@@ -2068,7 +2074,9 @@
         "basis": "statute",
         "citations": [
           "ustawa o VAT art. 86 ust. 1: podatnikowi przysługuje prawo do obniżenia podatku należnego o podatek naliczony — w zakresie, w jakim zakupy służą czynnościom opodatkowanym",
-          "wzorcowy plan kont: Wn 300 rozliczenie zakupu, Wn 221 VAT naliczony / Ma 202 rozrachunki z dostawcami"
+          "ustawa o rachunkowości art. 3 ust. 1 pkt 31 i art. 6 ust. 1: koszty okresu ujmuje się w okresie, którego dotyczą — zakup usługi jest kosztem, nie rozliczeniem zakupu",
+          "wzorcowy plan kont: zespół 4 — koszty według rodzajów (402 zużycie materiałów i energii, 403 usługi obce, 409 pozostałe); konto 300 rozlicza zakup towarów i materiałów z ich przyjęciem (PZ) i wraca do zera",
+          "domyślne 403 dla zakupu bez dokumentu dostawy i bez konta dostawcy: najczęstszy koszt małej firmy; zysk się nie zmienia, gdy rodzaj kosztu okaże się inny — zmienia go set_cost_account"
         ],
         "scope": "pl"
       }
@@ -2077,7 +2085,7 @@
       "rule_id": "pl-post-purchase-invoice-gross",
       "priority": 200,
       "effective_from": "2026-01-01",
-      "description": "Faktura zakupu bez VAT do odliczenia — bez VAT (zw, 0%) albo kupiona przez firmę zwolnioną z VAT — księguje się brutto: Wn 300 brutto / Ma 202 brutto; VAT, którego nie wolno odliczyć, jest częścią kosztu",
+      "description": "Faktura zakupu bez VAT do odliczenia — bez VAT (zw, 0%) albo kupiona przez firmę zwolnioną z VAT — księguje się brutto: Wn koszt (konto dostawcy, inaczej 403; z dokumentem dostawy — 300) / Ma 202; VAT, którego nie wolno odliczyć, jest częścią kosztu",
       "spec": {
         "match": {
           "event_type": "purchase.invoice.received",
@@ -2097,7 +2105,7 @@
             "currency": "=$.currency",
             "lines": [
               {
-                "account": "300",
+                "account": "=if(coalesce($.for_document, \"\") <> \"\", \"300\", coalesce(ref(company, vat_id, $.supplier_nip).cost_account, \"403\"))",
                 "debit": "=$.gross"
               },
               {
@@ -2120,7 +2128,9 @@
         "citations": [
           "ustawa o PIT art. 23 ust. 1 pkt 43 lit. a: podatek naliczony jest kosztem, „jeżeli podatnik zwolniony jest od podatku od towarów i usług”",
           "rozporządzenie w sprawie KPiR § 2 pkt 2: cena zakupu pomniejszona tylko o podatek „podlegający odliczeniu zgodnie z odrębnymi przepisami”",
-          "ustawa o rachunkowości art. 28 ust. 2: cena nabycia obejmuje podatek, którego nie można odliczyć"
+          "ustawa o rachunkowości art. 28 ust. 2: cena nabycia obejmuje podatek, którego nie można odliczyć",
+          "ustawa o rachunkowości art. 3 ust. 1 pkt 31 i art. 6 ust. 1: koszty okresu ujmuje się w okresie, którego dotyczą — zakup usługi jest kosztem, nie rozliczeniem zakupu",
+          "wzorcowy plan kont: zespół 4 — koszty według rodzajów (402 zużycie materiałów i energii, 403 usługi obce, 409 pozostałe); konto 300 rozlicza zakup towarów i materiałów z ich przyjęciem (PZ) i wraca do zera"
         ],
         "scope": "pl"
       }
@@ -2305,7 +2315,7 @@
       "rule_id": "pl-match-incoming",
       "priority": 300,
       "effective_from": "2026-01-01",
-      "description": "Wpłata rozlicza się z otwartymi fakturami sprzedaży płatnika (po IBAN): po numerze w tytule; po numerze do 2 gr różnicy na 756; po kwocie; kilka faktur (do 4); nazwana faktura częściowo; najstarsze w kolejności",
+      "description": "Wpłata rozlicza się z otwartymi fakturami sprzedaży płatnika (po IBAN): po numerze w tytule; po numerze do 2 gr różnicy (niedopłata 761, nadpłata 760); po kwocie; kilka faktur (do 4); nazwana faktura częściowo; najstarsze w kolejności",
       "spec": {
         "match": {
           "event_type": "object.materialized",
@@ -2358,7 +2368,7 @@
                 "tolerance": {
                   "money": "0.02"
                 },
-                "difference_account": "756"
+                "difference_account": "761"
               },
               {
                 "strategy": "exact"
@@ -2640,7 +2650,7 @@
       "rule_id": "pl-record-difference",
       "priority": 320,
       "effective_from": "2026-01-01",
-      "description": "Tolerowana różnica staje się zapisem różnicy rozliczenia",
+      "description": "Tolerowana różnica staje się zapisem różnicy rozliczenia, z kontem: niedopłata — konto polityki (761 pozostałe koszty operacyjne), nadpłata — 760 pozostałe przychody operacyjne; cofnięcie rozliczenia wraca tym kontem, którym różnica weszła",
       "spec": {
         "match": {
           "event_type": "objects.matched",
@@ -2666,18 +2676,28 @@
               "amount": "=$.line.amount",
               "currency": "=$.line.currency",
               "direction": "=$.line.direction",
-              "account": "=$.line.account",
+              "account": "=if($.line.account = \"756\", \"756\", if(($.line.direction = \"short\") <> (coalesce($.doc.reversal_of, 0) > 0), $.line.account, \"760\"))",
               "date": "=$.root.date"
             }
           }
         }
+      },
+      "warrant": {
+        "basis": "standard",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 4 ust. 4: uproszczenia w polityce rachunkowości, „jeżeli nie wywiera to istotnie ujemnego wpływu” na obraz jednostki — tolerancja 2 gr jest takim uproszczeniem",
+          "ustawa o rachunkowości art. 3 ust. 1 pkt 32 lit. d: pozostałe koszty i przychody operacyjne obejmują odpisanie należności i zobowiązań; różnice kursowe należą do finansowych (art. 30 ust. 4) — stąd 760/761, nie 756",
+          "ustawa o rachunkowości art. 20 ust. 5: zapis wygenerowany z danych ksiąg jest dowodem, gdy znane jest jego pochodzenie — zapis różnicy z pochodzeniem jest protokołem",
+          "pytanie otwarte (przegląd MON-19): czy różnica groszowa jest kosztem i przychodem podatkowym — praktyka interpretacyjna się różni; Rhea śledzi różnicę podatkową, nie rozstrzyga jej w księgach"
+        ]
       }
     },
     {
       "rule_id": "pl-post-short-difference",
       "priority": 330,
       "effective_from": "2026-01-01",
-      "description": "Niedopłata w granicach tolerancji księguje się: Wn 756 / Ma 201",
+      "description": "Niedopłata w granicach tolerancji księguje się: Wn konto zapisu różnicy (761 albo 760) / Ma 201",
       "spec": {
         "match": {
           "event_type": "object.materialized",
@@ -2716,7 +2736,7 @@
       "rule_id": "pl-post-over-difference",
       "priority": 330,
       "effective_from": "2026-01-01",
-      "description": "Nadpłata w granicach tolerancji (lub cofnięta niedopłata) księguje się: Wn 201 / Ma 756",
+      "description": "Nadpłata w granicach tolerancji (lub cofnięta niedopłata) księguje się: Wn 201 / Ma konto zapisu różnicy (761 albo 760)",
       "spec": {
         "match": {
           "event_type": "object.materialized",
@@ -2957,6 +2977,38 @@
         ],
         "scope": "pl"
       }
+    },
+    {
+      "rule_id": "pl-set-cost-account",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Konto kosztowe dostawcy, jak je podano — jeśli jest w planie kont; konto spoza planu nie pasuje i czeka",
+      "spec": {
+        "match": {
+          "event_type": "company.cost_account.set",
+          "where": [
+            {
+              "formula": "=any(a in objects(account, code, $.account) : a.code = $.account)"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "company",
+            "target": "=$.company",
+            "set": {
+              "cost_account": "=$.account"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "practice",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 10 ust. 1 pkt 3 lit. a: zakładowy plan kont ustala jednostka — przypisanie dostawcy do konta kosztów to jej wybór, zapisany jak każda reguła"
+        ]
+      }
     }
   ],
   "activities": [
@@ -3091,6 +3143,33 @@
           }
         ],
         "emits": "company.form.declared",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "set_cost_account",
+      "domain": "finance",
+      "description": "Firma mówi, czym są faktury tego dostawcy: konto kosztowe z planu kont (np. 402 zużycie materiałów i energii dla paliwa, 403 usługi obce, 409 pozostałe koszty rodzajowe, 330 towary) — tam trafią jego zakupy bez dokumentu dostawy",
+      "spec": {
+        "inputs": [
+          {
+            "name": "company",
+            "type": "ref<company>",
+            "required": true
+          },
+          {
+            "name": "account",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "company.cost_account.set",
         "who": [
           "human"
         ]
@@ -3435,6 +3514,39 @@
       "payload": {
         "code": "756",
         "name": "Różnice kursowe i zaokrąglenia",
+        "type": "expense",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.created",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/account/750",
+      "payload": {
+        "code": "750",
+        "name": "Przychody finansowe",
+        "type": "revenue",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.created",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/account/751",
+      "payload": {
+        "code": "751",
+        "name": "Koszty finansowe",
+        "type": "expense",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.created",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/account/761",
+      "payload": {
+        "code": "761",
+        "name": "Pozostałe koszty operacyjne",
         "type": "expense",
         "market": "pl"
       }

@@ -3147,3 +3147,36 @@ The first pack version out of the review (packs/pl/REVIEW.md, causes 1 and 2).
   find the late document in the next open month and nothing in the closed one; the
   Poland story files September's JPK, then books a late September invoice in October
   and finds the original refused for a correction.
+
+## 2026-10-16 — Poland pack v20: purchases land in costs, penny differences in other operating items
+
+The review's cause 4 (packs/pl/REVIEW.md, FB-06, FB-14, MON-19); the late-document half of
+cause 5 shipped in the kernel the same day.
+
+- **A purchase is a cost.** Every purchase used to book Wn 300 and only the warehouse
+  pack's PZ ever cleared 300, so services, rent and fuel never reached the profit and
+  loss account. Now the debit's account is a formula: a purchase naming a delivery note
+  (`for_document`) still waits on 300 for its PZ; any other goes to the supplier's
+  declared cost account, or 403 (services) when none is declared. 403 is the default
+  because a small firm's typical unexplained invoice is a service, and a wrong kind of
+  cost leaves profit, the CIT advance and the CIT-8 right — staying on 300 left them
+  all wrong. `set_cost_account` (company v6, `cost_account`) declares a supplier's
+  account; an account outside the chart matches nothing and waits silently (an `any`
+  over the chart, not a `ref` — a failing ref would resurface on every pass).
+- **Penny differences.** The incoming policy's tolerance account is 761 (other
+  operating costs) and the difference record picks the account by direction: a shortfall
+  761, an overpayment 760 (other operating income) — not 756, which is the financial
+  group's exchange account (art. 3 ust. 1 pkt 32 lit. d against art. 30 ust. 4). A
+  reversal flips the direction but keeps the policy's account, so the record rule asks
+  whether the difference undoes one (`coalesce($.doc.reversal_of, 0) > 0`) and sends it
+  back through the account it came in on; a difference from before v20 keeps 756 both
+  ways. The posting rules are unchanged: they post to the record's account. The tax
+  side of a grosz (MON-19) is the review's one genuinely open question and stays in the
+  warrant, undecided.
+- **The chart** gains 750, 751 and 761. 756 now holds only the conversion rounding plug
+  of the convert clause (one account by the sub-language's design); realised exchange
+  differences arrive with the currency version.
+- **Test:** `TestWherePurchasesAndPenniesLand` — fuel on 402 by the declared account, a
+  service on 403, goods with a WZ on 300, an account outside the chart waiting; a grosz
+  short on 761, two grosze over on 760, the short match undone and its grosz back out of
+  761. The M3 story's service purchase moved from 300 to 403.
