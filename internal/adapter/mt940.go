@@ -83,6 +83,7 @@ func (m MT940) Pass(ctx context.Context, reads Reads) ([]core.Event, error) {
 					"direction": l.Direction, "reference": l.Reference, "counterparty": l.Counterparty,
 					"counterparty_account": l.CounterpartyAccount, "account": st.Account,
 					"statement": st.Number, "line": lines, "raw86": l.Raw86, "document": hash,
+					"code": l.Code,
 				}
 				if l.Reversal {
 					fact["reversal"] = true
@@ -129,6 +130,7 @@ type StatementLine struct {
 	Date                string // value date, YYYY-MM-DD
 	Direction           string // "credit" | "debit": the effect on the account
 	Reversal            bool   // RC/RD in :61:: the entry reverses an earlier one
+	Code                string // the transaction type in :61: — NTRF a transfer, NCHG a charge, NINT interest
 	Amount              int64  // minor units, never negative
 	Reference           string // the title, as the dialect gives it; else the whole :86:
 	Counterparty        string
@@ -282,7 +284,7 @@ func parseStatement(tags []mt940Tag, prev *Statement) (Statement, error) {
 				return st, fmt.Errorf(":61: amount %q: %w", m[5], err)
 			}
 			line := StatementLine{Seq: len(st.Lines) + 1, Date: day.Format("2006-01-02"), Amount: amount,
-				Reversal: strings.HasPrefix(m[3], "R")}
+				Reversal: strings.HasPrefix(m[3], "R"), Code: m[6]}
 			switch m[3] {
 			case "C", "RD":
 				line.Direction, sum = "credit", sum+amount

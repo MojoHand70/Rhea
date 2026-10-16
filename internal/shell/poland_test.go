@@ -105,16 +105,17 @@ func TestM3PolandPack(t *testing.T) {
 	// Load the pack: 19 types (the invoices with their open amounts and
 	// dates, the bank operation, the matching difference, the company with
 	// its declared form), 12 views (the two grids, the briefing and the two
-	// queues among them), 34 draft rules, four doors (the KSeF channel,
-	// identify_company, declare_company_form, set_cost_account), 34
-	// master-data events.
+	// queues among them), 39 draft rules, six doors (the KSeF channel,
+	// identify_company, declare_company_form, set_cost_account,
+	// declare_company_accounts, classify_bank_operation), 37 master-data
+	// events.
 	packPath := filepath.Join("..", "..", "packs", "pl", "pack.json")
 	sum, err := pack.Load(ctx, s, packPath, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 19 || sum.Views != 12 || sum.Rules != 34 || sum.Activities != 4 || sum.Events != 34 || sum.Skipped != 0 ||
-		sum.Bundle != "pack-pl-v20" {
+	if sum.Types != 19 || sum.Views != 12 || sum.Rules != 39 || sum.Activities != 6 || sum.Events != 37 || sum.Skipped != 0 ||
+		sum.Bundle != "pack-pl-v21" {
 		t.Fatalf("first load: %+v", sum)
 	}
 	// Idempotent: a reload changes nothing.
@@ -122,7 +123,7 @@ func TestM3PolandPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Skipped != 103 || sum.Bundle != "" {
+	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Skipped != 113 || sum.Bundle != "" {
 		t.Fatalf("reload: %+v", sum)
 	}
 
@@ -135,18 +136,18 @@ func TestM3PolandPack(t *testing.T) {
 
 	// Nothing is installed yet: the chart of accounts sits in the worklist,
 	// because the pack's rules are drafts behind the human gate.
-	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 34 {
-		t.Fatalf("worklist = %d, want 34 pack events waiting", len(wl))
+	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 37 {
+		t.Fatalf("worklist = %d, want 37 pack events waiting", len(wl))
 	}
 
 	// Approving the pack's bundle IS the installation: its types, views and
 	// rules activate together, and the chart of accounts and the VAT rates
 	// materialize from the waiting events.
-	post("/api/bundles/pack-pl-v20/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-pl-v21/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {
 		t.Fatalf("worklist not cleared after approvals: %d", len(wl))
 	}
-	if accs, _ := s.ObjectsByType(ctx, "account"); len(accs) != 29 {
+	if accs, _ := s.ObjectsByType(ctx, "account"); len(accs) != 32 {
 		t.Fatalf("accounts = %d, want the chart of accounts", len(accs))
 	}
 	if rates, _ := s.ObjectsByType(ctx, "vat_rate"); len(rates) != 5 {

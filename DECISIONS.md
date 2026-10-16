@@ -3201,3 +3201,43 @@ cause 5 shipped in the kernel the same day.
 - **Test:** `TestADoorsRefInputReadsAsALink` — a person says a line is the owner's
   money; the rule reads the line's direction in its condition and its title and amount
   in its effect; a debit matches nothing; replay reproduces it.
+
+## 2026-10-16 — Poland pack v21: a bank line says what it is before it is booked
+
+The review's cause 3 (packs/pl/REVIEW.md, MON-07, MON-08, MON-18, ZUS-08, OWN-02/03/05/07).
+
+- **Recognised on arrival.** `pl-bank-operation` gives each line its kind by one formula,
+  in order: a fee (`NCHG`, `NCOM`) or interest (`NINT`) by the transaction code the MT940
+  reader now keeps from :61: (`code`; an additive field, so the reader's code version
+  stays 1, as the KSeF reader's additive fields did); a transfer between the company's
+  own accounts (the counterparty is a company of kind self by its IBAN); a payment to
+  the tax micro-account, the ZUS contribution account or from/to the owner's private
+  account — each as the company declared it through `declare_company_accounts` (company
+  v7; an omitted account keeps its value, read through the door's link). Everything
+  else is a `transfer`: a customer's or supplier's payment, booked and matched as before
+  — so the personas, whose lines are all trade payments, see no change.
+- **Booked where it belongs.** One rule posts every explained kind on its own side of
+  130: tax 225, ZUS 229, own transfer 149 (cash in transit), owner 249 (settlements to be
+  explained — a loan, capital or a dividend for a company; a sole trader's own money),
+  bank fee 403, interest received 750, paid 751. An explained line is settled at once
+  (open 0) and never enters the matching. Accounts 149, 229, 249 join the chart.
+- **A person's word.** A transfer nothing settled can be classified through
+  `classify_bank_operation` (owner, tax, ZUS, own, fee, interest): the line moves off the
+  trade settlements by its open amount (a credit Wn 201 / Ma the kind's account, a debit
+  Wn the account / Ma 202) and stops waiting; a second word on an explained line matches
+  nothing. Reading the line's amount and direction is the door link shipped the same day.
+- **Not yet.** Tax and ZUS payments are not matched to the liabilities they pay (a VAT
+  settlement does not post its closing entry yet, ZUS declarations are not objects); the
+  VAT account of split payment is not modelled; card lines keep their old path.
+- **The company form against the legal form.** Both declaration rules now also require a
+  legal person to declare CIT on full books and a natural person not to declare CIT,
+  reading `$.company.legal_form` through the door's link (undeclared: no constraint).
+- **A debt found.** A literal in a money field is stored as written — `"0"` became the text
+  "0", not 0 minor units — because literals bypass coercion except for enums. The rules
+  here use `"=0"`. Literals should coerce by their field's type like formulas do
+  (invariant 6); a kernel fix of its own.
+- **Test:** `TestABankLineSaysWhatItIs` — seven lines: VAT to the micro-account, ZUS,
+  the owner's deposit, a charge, interest, a transfer to the own account, a stranger's
+  700; each on its account, only the stranger's waiting; a person says it was the
+  owner's and it moves from 201 to 249; a second word matches nothing; a legal person
+  declaring the scale waits, CIT on full books is taken.

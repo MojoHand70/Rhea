@@ -1,7 +1,7 @@
 {
   "pack": "pl",
-  "version": 20,
-  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami; poranek: gospodarz mówi, co zaksięgowano i co czeka, z faktów, które policzyło jądro; dziś: otwarte zadania i należności w kolejności pilności, z zatwierdzeniami, które czekają; KSeF na zewnątrz: faktury sprzedaży idą do KSeF jako FA(3) jedną sesją interaktywną, dowód (numer KSeF, UPO) i odmowa (kod, słowa Ministerstwa) są zdarzeniami, odmowa staje się zadaniem na dziś; koniec miesiąca: faktury niosą okres VAT, zamknięcie miesiąca (period.closed) daje rozliczenie VAT jako obiekt policzony regułą — każda liczba deklaracji ma pochodzenie; plik JPK_V7M z rozliczenia i faktur miesiąca (writer rynku), firma zna swój urząd skarbowy, e-mail i formę prawną, faktura zakupu z KSeF niesie numer KSeF; firma mówi, kim jest dla urzędu (identify_company): e-mail, urząd skarbowy, forma prawna, właściciel; v19 (przegląd pakietu, 2026-10-16): daty, które decydują o okresie VAT — faktura sprzedaży niesie datę sprzedaży (P_6, a gdy jej nie podano, datę wystawienia) i okres VAT według obowiązku podatkowego; faktura zakupu niesie datę sprzedaży u dostawcy i datę otrzymania (dla KSeF: dzień nadania numeru), a odliczenie przypada na późniejszy z tych miesięcy; firma mówi, czym jest (declare_company_form): status VAT (czynny albo zwolniony, z przepisem zwolnienia), forma ksiąg i forma opodatkowania od wskazanej daty; firma zwolniona nie rozlicza VAT i nie składa JPK_V7, a VAT od jej zakupów jest kosztem; faktury bez VAT (zw, 0%) księgują się bez linii VAT; każda zmieniona reguła nazywa swoje źródło; v20 (przegląd, 2026-10-16): zakup trafia w koszty — usługa albo wydatek bez dokumentu dostawy na konto kosztowe dostawcy (set_cost_account), a gdy go nie podano, na 403 usługi obce; zakup z dokumentem dostawy (WZ) czeka na 300 na rozliczenie z przyjęciem (PZ); różnice groszowe rozliczeń: niedopłata 761, nadpłata 760 (pozostałe operacyjne), cofnięcie wraca tym kontem, którym weszło; konta 750, 751, 761 w planie kont",
+  "version": 21,
+  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami; poranek: gospodarz mówi, co zaksięgowano i co czeka, z faktów, które policzyło jądro; dziś: otwarte zadania i należności w kolejności pilności, z zatwierdzeniami, które czekają; KSeF na zewnątrz: faktury sprzedaży idą do KSeF jako FA(3) jedną sesją interaktywną, dowód (numer KSeF, UPO) i odmowa (kod, słowa Ministerstwa) są zdarzeniami, odmowa staje się zadaniem na dziś; koniec miesiąca: faktury niosą okres VAT, zamknięcie miesiąca (period.closed) daje rozliczenie VAT jako obiekt policzony regułą — każda liczba deklaracji ma pochodzenie; plik JPK_V7M z rozliczenia i faktur miesiąca (writer rynku), firma zna swój urząd skarbowy, e-mail i formę prawną, faktura zakupu z KSeF niesie numer KSeF; firma mówi, kim jest dla urzędu (identify_company): e-mail, urząd skarbowy, forma prawna, właściciel; v19 (przegląd pakietu, 2026-10-16): daty, które decydują o okresie VAT — faktura sprzedaży niesie datę sprzedaży (P_6, a gdy jej nie podano, datę wystawienia) i okres VAT według obowiązku podatkowego; faktura zakupu niesie datę sprzedaży u dostawcy i datę otrzymania (dla KSeF: dzień nadania numeru), a odliczenie przypada na późniejszy z tych miesięcy; firma mówi, czym jest (declare_company_form): status VAT (czynny albo zwolniony, z przepisem zwolnienia), forma ksiąg i forma opodatkowania od wskazanej daty; firma zwolniona nie rozlicza VAT i nie składa JPK_V7, a VAT od jej zakupów jest kosztem; faktury bez VAT (zw, 0%) księgują się bez linii VAT; każda zmieniona reguła nazywa swoje źródło; v20 (przegląd, 2026-10-16): zakup trafia w koszty — usługa albo wydatek bez dokumentu dostawy na konto kosztowe dostawcy (set_cost_account), a gdy go nie podano, na 403 usługi obce; zakup z dokumentem dostawy (WZ) czeka na 300 na rozliczenie z przyjęciem (PZ); różnice groszowe rozliczeń: niedopłata 761, nadpłata 760 (pozostałe operacyjne), cofnięcie wraca tym kontem, którym weszło; konta 750, 751, 761 w planie kont; v21 (przegląd, 2026-10-16): pozycja wyciągu najpierw mówi, czym jest — opłata i odsetki po kodzie banku, przelew między własnymi rachunkami, wpłata na mikrorachunek podatkowy, na rachunek składkowy ZUS, pieniądze właściciela — a dopiero reszta jest zapłatą kontrahenta, którą się rozlicza z fakturami; każda księguje się na swoje konto (149, 225, 229, 249, 403, 750/751); osoba może przeklasyfikować pozycję, której nic nie rozliczyło (classify_bank_operation); deklaracja formy firmy sprawdza formę prawną (spółka: CIT i pełne księgi)",
   "requires": [
     "company",
     "account",
@@ -150,7 +150,7 @@
     },
     {
       "name": "bank_operation",
-      "version": 2,
+      "version": 3,
       "domain": "finance",
       "is_document": false,
       "label_field": "title",
@@ -211,7 +211,12 @@
             "transfer",
             "card",
             "fee",
-            "other"
+            "other",
+            "interest",
+            "tax",
+            "zus",
+            "own",
+            "owner"
           ],
           "required": false
         },
@@ -245,6 +250,7 @@
         }
       },
       "amendable": [
+        "kind",
         "open"
       ]
     },
@@ -762,7 +768,7 @@
     },
     {
       "name": "company",
-      "version": 6,
+      "version": 7,
       "domain": "finance",
       "is_document": false,
       "label_field": "name",
@@ -870,6 +876,21 @@
           "name": "cost_account",
           "type": "string",
           "required": false
+        },
+        {
+          "name": "tax_account",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "zus_account",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "owner_account",
+          "type": "string",
+          "required": false
         }
       ],
       "amendable": [
@@ -884,7 +905,10 @@
         "books",
         "income_tax",
         "form_from",
-        "cost_account"
+        "cost_account",
+        "tax_account",
+        "zus_account",
+        "owner_account"
       ]
     },
     {
@@ -2201,7 +2225,7 @@
       "rule_id": "pl-bank-operation",
       "priority": 100,
       "effective_from": "2026-01-01",
-      "description": "Pozycja wyciągu bankowego staje się operacją bankową, otwartą na swoją kwotę (rynek pl: kanał bankowy pakietu stempluje go)",
+      "description": "Pozycja wyciągu bankowego staje się operacją bankową i najpierw mówi, czym jest: opłata (NCHG, NCOM) i odsetki (NINT) po kodzie banku; przelew między własnymi rachunkami, wpłata na mikrorachunek podatkowy, na rachunek składkowy ZUS, pieniądze właściciela — po rachunku drugiej strony, jak go podała firma; reszta to zapłata kontrahenta (transfer), otwarta na swoją kwotę do rozliczenia z fakturami (rynek pl: kanał bankowy pakietu stempluje go)",
       "spec": {
         "match": {
           "event_type": "bank.statement.line",
@@ -2225,19 +2249,28 @@
               "counterparty": "=$.counterparty",
               "counterparty_account": "=$.counterparty_account",
               "account": "=$.account",
-              "kind": "transfer",
+              "kind": "=if(coalesce($.code, \"\") = \"NCHG\" or coalesce($.code, \"\") = \"NCOM\", \"fee\", if(coalesce($.code, \"\") = \"NINT\", \"interest\", if(any(c in objects(company, iban, coalesce($.counterparty_account, \"-\")) : c.kind = \"self\"), \"own\", if(any(c in objects(company, tax_account, coalesce($.counterparty_account, \"-\")) : c.kind = \"self\"), \"tax\", if(any(c in objects(company, zus_account, coalesce($.counterparty_account, \"-\")) : c.kind = \"self\"), \"zus\", if(any(c in objects(company, owner_account, coalesce($.counterparty_account, \"-\")) : c.kind = \"self\"), \"owner\", \"transfer\"))))))",
               "open": "=$.amount",
               "settlement_status": "unsettled"
             }
           }
         }
+      },
+      "warrant": {
+        "basis": "statute",
+        "citations": [
+          "Ordynacja podatkowa art. 61b § 1 (mikrorachunek podatkowy) i ustawa o systemie ubezpieczeń społecznych art. 47 ust. 4 (rachunek składkowy): wpłata podatku i składek ma swój rachunek — po nim ją poznać",
+          "przegląd MON-07: każdą pozycję najpierw klasyfikuje się, a dopiero potem księguje i rozlicza; nieznana czeka na osobę",
+          "SWIFT MT940 :61: kod transakcji — NTRF przelew, NCHG opłata, NCOM prowizja, NINT odsetki"
+        ],
+        "scope": "pl"
       }
     },
     {
       "rule_id": "pl-post-incoming-payment",
       "priority": 200,
       "effective_from": "2026-01-01",
-      "description": "Wpływ na rachunek księguje się: Wn 130 / Ma 201",
+      "description": "Wpływ na rachunek księguje się: Wn 130 / Ma 201 — gdy operacja jest zapłatą kontrahenta (transfer)",
       "spec": {
         "match": {
           "event_type": "object.materialized",
@@ -2251,6 +2284,11 @@
               "path": "$.state.direction",
               "op": "eq",
               "value": "credit"
+            },
+            {
+              "path": "$.state.kind",
+              "op": "eq",
+              "value": "transfer"
             }
           ]
         },
@@ -2276,7 +2314,7 @@
       "rule_id": "pl-post-outgoing-payment",
       "priority": 200,
       "effective_from": "2026-01-01",
-      "description": "Wypływ z rachunku księguje się: Wn 202 / Ma 130",
+      "description": "Wypływ z rachunku księguje się: Wn 202 / Ma 130 — gdy operacja jest zapłatą kontrahenta (transfer)",
       "spec": {
         "match": {
           "event_type": "object.materialized",
@@ -2290,6 +2328,11 @@
               "path": "$.state.direction",
               "op": "eq",
               "value": "debit"
+            },
+            {
+              "path": "$.state.kind",
+              "op": "eq",
+              "value": "transfer"
             }
           ]
         },
@@ -2315,7 +2358,7 @@
       "rule_id": "pl-match-incoming",
       "priority": 300,
       "effective_from": "2026-01-01",
-      "description": "Wpłata rozlicza się z otwartymi fakturami sprzedaży płatnika (po IBAN): po numerze w tytule; po numerze do 2 gr różnicy (niedopłata 761, nadpłata 760); po kwocie; kilka faktur (do 4); nazwana faktura częściowo; najstarsze w kolejności",
+      "description": "Wpłata rozlicza się z otwartymi fakturami sprzedaży płatnika (po IBAN): po numerze w tytule; po numerze do 2 gr różnicy (niedopłata 761, nadpłata 760); po kwocie; kilka faktur (do 4); nazwana faktura częściowo; najstarsze w kolejności — gdy operacja jest zapłatą kontrahenta (transfer)",
       "spec": {
         "match": {
           "event_type": "object.materialized",
@@ -2329,6 +2372,11 @@
               "path": "$.state.direction",
               "op": "eq",
               "value": "credit"
+            },
+            {
+              "path": "$.state.kind",
+              "op": "eq",
+              "value": "transfer"
             }
           ]
         },
@@ -2393,7 +2441,7 @@
       "rule_id": "pl-match-outgoing",
       "priority": 300,
       "effective_from": "2026-01-01",
-      "description": "Wypłata rozlicza się z otwartymi fakturami zakupu odbiorcy przelewu (po IBAN): po numerze; po kwocie; kilka faktur; nazwana częściowo; najstarsze",
+      "description": "Wypłata rozlicza się z otwartymi fakturami zakupu odbiorcy przelewu (po IBAN): po numerze; po kwocie; kilka faktur; nazwana częściowo; najstarsze — gdy operacja jest zapłatą kontrahenta (transfer)",
       "spec": {
         "match": {
           "event_type": "object.materialized",
@@ -2407,6 +2455,11 @@
               "path": "$.state.direction",
               "op": "eq",
               "value": "debit"
+            },
+            {
+              "path": "$.state.kind",
+              "op": "eq",
+              "value": "transfer"
             }
           ]
         },
@@ -2891,7 +2944,7 @@
       "rule_id": "pl-declare-company-form",
       "priority": 100,
       "effective_from": "2026-01-01",
-      "description": "Firma mówi, czym jest, bez przepisu zwolnienia: czynny podatnik VAT, forma ksiąg i forma opodatkowania od wskazanej daty; deklaracja sprzeczna (ryczałt bez ewidencji ryczałtowej, CIT bez pełnych ksiąg, zwolnienie bez przepisu) nie pasuje do żadnej reguły i czeka",
+      "description": "Firma mówi, czym jest, bez przepisu zwolnienia: czynny podatnik VAT, forma ksiąg i forma opodatkowania od wskazanej daty; deklaracja sprzeczna (ryczałt bez ewidencji ryczałtowej, CIT bez pełnych ksiąg, zwolnienie bez przepisu) nie pasuje do żadnej reguły i czeka; spółka (osoba prawna) płaci CIT i prowadzi pełne księgi, osoba fizyczna nie płaci CIT",
       "spec": {
         "match": {
           "event_type": "company.form.declared",
@@ -2901,7 +2954,7 @@
               "op": "absent"
             },
             {
-              "formula": "=$.vat_status = \"active\" and ($.income_tax = \"ryczalt\") = ($.books = \"ryczalt\") and ($.income_tax <> \"cit\" or $.books = \"full\")"
+              "formula": "=$.vat_status = \"active\" and ($.income_tax = \"ryczalt\") = ($.books = \"ryczalt\") and ($.income_tax <> \"cit\" or $.books = \"full\") and (coalesce($.company.legal_form, \"\") <> \"legal_entity\" or ($.income_tax = \"cit\" and $.books = \"full\")) and (coalesce($.company.legal_form, \"\") <> \"natural_person\" or $.income_tax <> \"cit\")"
             }
           ]
         },
@@ -2936,7 +2989,7 @@
       "rule_id": "pl-declare-company-form-exemption",
       "priority": 100,
       "effective_from": "2026-01-01",
-      "description": "Firma mówi, czym jest, z przepisem zwolnienia z VAT (podmiotowego — art. 113 ust. 1 — albo przedmiotowego z art. 43 ust. 1): status VAT, przepis, forma ksiąg i forma opodatkowania od wskazanej daty; przepis trafia na faktury (P_19A)",
+      "description": "Firma mówi, czym jest, z przepisem zwolnienia z VAT (podmiotowego — art. 113 ust. 1 — albo przedmiotowego z art. 43 ust. 1): status VAT, przepis, forma ksiąg i forma opodatkowania od wskazanej daty; przepis trafia na faktury (P_19A); spółka (osoba prawna) płaci CIT i prowadzi pełne księgi, osoba fizyczna nie płaci CIT",
       "spec": {
         "match": {
           "event_type": "company.form.declared",
@@ -2946,7 +2999,7 @@
               "op": "exists"
             },
             {
-              "formula": "=($.income_tax = \"ryczalt\") = ($.books = \"ryczalt\") and ($.income_tax <> \"cit\" or $.books = \"full\")"
+              "formula": "=($.income_tax = \"ryczalt\") = ($.books = \"ryczalt\") and ($.income_tax <> \"cit\" or $.books = \"full\") and (coalesce($.company.legal_form, \"\") <> \"legal_entity\" or ($.income_tax = \"cit\" and $.books = \"full\")) and (coalesce($.company.legal_form, \"\") <> \"natural_person\" or $.income_tax <> \"cit\")"
             }
           ]
         },
@@ -3007,6 +3060,193 @@
         "scope": "pl",
         "citations": [
           "ustawa o rachunkowości art. 10 ust. 1 pkt 3 lit. a: zakładowy plan kont ustala jednostka — przypisanie dostawcy do konta kosztów to jej wybór, zapisany jak każda reguła"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-declare-company-accounts",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Rachunki firmy, jak je podała: mikrorachunek podatkowy, rachunek składkowy ZUS, rachunek właściciela; pominięty zostaje, jaki był",
+      "spec": {
+        "match": {
+          "event_type": "company.accounts.declared"
+        },
+        "effect": {
+          "amend": {
+            "type": "company",
+            "target": "=$.company",
+            "set": {
+              "tax_account": "=coalesce($.tax_account, coalesce($.company.tax_account, \"\"))",
+              "zus_account": "=coalesce($.zus_account, coalesce($.company.zus_account, \"\"))",
+              "owner_account": "=coalesce($.owner_account, coalesce($.company.owner_account, \"\"))"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "citations": [
+          "Ordynacja podatkowa art. 61b § 1: wpłata do urzędu skarbowego „przy użyciu (...) indywidualnego rachunku podatkowego (mikrorachunek podatkowy)”",
+          "ustawa o systemie ubezpieczeń społecznych art. 47 ust. 4: składki „opłaca się jedną wpłatą na przydzielony przez Zakład numer rachunku składkowego”"
+        ],
+        "scope": "pl"
+      }
+    },
+    {
+      "rule_id": "pl-explain-bank-operation",
+      "priority": 150,
+      "effective_from": "2026-01-01",
+      "description": "Operacja bankowa, która wie, czym jest (opłata, odsetki, podatek, ZUS, własny rachunek, właściciel), nie czeka na rozliczenie z fakturą: nic nie zostaje otwarte",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "bank_operation"
+            },
+            {
+              "formula": "=$.state.kind <> \"transfer\""
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "bank_operation",
+            "target": "=$.object_id",
+            "set": {
+              "open": "=0",
+              "settlement_status": "settled"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "practice",
+        "scope": "pl",
+        "citations": [
+          "rozliczenie z fakturami dotyczy zapłat kontrahentów; podatek, składka, opłata czy przelew własny są wyjaśnione tym, czym są (przegląd MON-07, MON-08, ZUS-08, MON-18)"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-explained-bank-operation",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Operacja bankowa, która wie, czym jest, księguje się po swojej stronie rachunku 130 i na swoim koncie: podatek 225, ZUS 229, przelew własny 149 (środki w drodze), właściciel 249, opłata bankowa 403, odsetki otrzymane 750, zapłacone 751",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "bank_operation"
+            },
+            {
+              "formula": "=$.state.kind <> \"transfer\" and $.state.kind <> \"card\" and $.state.kind <> \"other\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "=$.state.currency",
+            "lines": [
+              {
+                "account": "=if($.state.direction = \"debit\", if($.state.kind = \"tax\", \"225\", if($.state.kind = \"zus\", \"229\", if($.state.kind = \"own\", \"149\", if($.state.kind = \"owner\", \"249\", if($.state.kind = \"fee\", \"403\", if($.state.direction = \"credit\", \"750\", \"751\")))))), \"130\")",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "=if($.state.direction = \"debit\", \"130\", if($.state.kind = \"tax\", \"225\", if($.state.kind = \"zus\", \"229\", if($.state.kind = \"own\", \"149\", if($.state.kind = \"owner\", \"249\", if($.state.kind = \"fee\", \"403\", if($.state.direction = \"credit\", \"750\", \"751\")))))))",
+                "credit": "=$.state.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "citations": [
+          "wzorcowy plan kont: 225 pozostałe rozrachunki publicznoprawne, 229 rozrachunki z ZUS, 149 środki pieniężne w drodze, 249 pozostałe rozrachunki, 403 usługi obce (opłaty bankowe), 750/751 przychody i koszty finansowe (odsetki)",
+          "ustawa o rachunkowości art. 3 ust. 1 pkt 32: odsetki są przychodami i kosztami finansowymi",
+          "przegląd OWN-03/OWN-07: pieniądze właściciela nie są przychodem ani kosztem — rozrachunek z nim (249), dopóki osoba nie powie, czym są (pożyczka, kapitał, dywidenda)"
+        ],
+        "scope": "pl"
+      }
+    },
+    {
+      "rule_id": "pl-reclassify-bank-operation",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Pozycja, o której osoba powiedziała, czym jest, przechodzi z rozrachunków z kontrahentami na swoje konto: wpływ Wn 201 / Ma konto, wypływ Wn konto / Ma 202 — o kwotę, która została otwarta",
+      "spec": {
+        "match": {
+          "event_type": "bank_operation.classified",
+          "where": [
+            {
+              "formula": "=$.operation.kind = \"transfer\" and $.operation.settlement_status = \"unsettled\" and $.operation.open > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "=$.operation.currency",
+            "lines": [
+              {
+                "account": "=if($.operation.direction = \"credit\", \"201\", if($.kind = \"tax\", \"225\", if($.kind = \"zus\", \"229\", if($.kind = \"own\", \"149\", if($.kind = \"owner\", \"249\", if($.kind = \"fee\", \"403\", if($.operation.direction = \"credit\", \"750\", \"751\")))))))",
+                "debit": "=$.operation.open"
+              },
+              {
+                "account": "=if($.operation.direction = \"credit\", if($.kind = \"tax\", \"225\", if($.kind = \"zus\", \"229\", if($.kind = \"own\", \"149\", if($.kind = \"owner\", \"249\", if($.kind = \"fee\", \"403\", if($.operation.direction = \"credit\", \"750\", \"751\")))))), \"202\")",
+                "credit": "=$.operation.open"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "practice",
+        "scope": "pl",
+        "citations": [
+          "przegląd MON-07, OWN-03, OWN-05: pozycję, której nie rozpoznał rachunek, klasyfikuje osoba — decyzja z jej nazwiskiem jest zdarzeniem, a przeksięgowanie ją wykonuje"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-classify-bank-operation",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Pozycja, o której osoba powiedziała, czym jest, ma ten rodzaj i nie czeka już na rozliczenie z fakturą",
+      "spec": {
+        "match": {
+          "event_type": "bank_operation.classified",
+          "where": [
+            {
+              "formula": "=$.operation.kind = \"transfer\" and $.operation.settlement_status = \"unsettled\" and $.operation.open > 0"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "bank_operation",
+            "target": "=$.operation",
+            "set": {
+              "kind": "=$.kind",
+              "open": "=0",
+              "settlement_status": "settled"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "practice",
+        "scope": "pl",
+        "citations": [
+          "przegląd MON-07: nieznana pozycja czeka na osobę; jej słowo wyjaśnia pozycję"
         ]
       }
     }
@@ -3170,6 +3410,78 @@
           }
         ],
         "emits": "company.cost_account.set",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "declare_company_accounts",
+      "domain": "finance",
+      "description": "Firma podaje rachunki, które rozpoznają pozycje wyciągu: mikrorachunek podatkowy (z generatora na podatki.gov.pl), rachunek składkowy ZUS i prywatny rachunek właściciela — każdy tak, jak stoi na wyciągu (PL i 26 cyfr, bez spacji); pominięty zostaje, jaki był",
+      "spec": {
+        "inputs": [
+          {
+            "name": "company",
+            "type": "ref<company>",
+            "required": true
+          },
+          {
+            "name": "tax_account",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "zus_account",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "owner_account",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "company.accounts.declared",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "classify_bank_operation",
+      "domain": "finance",
+      "description": "Osoba mówi, czym jest pozycja wyciągu, której nic nie rozliczyło: pieniądze właściciela, podatek, ZUS, przelew własny, opłata albo odsetki — pozycja przechodzi z rozrachunków z kontrahentami na swoje konto i przestaje czekać",
+      "spec": {
+        "inputs": [
+          {
+            "name": "operation",
+            "type": "ref<bank_operation>",
+            "required": true
+          },
+          {
+            "name": "kind",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "owner",
+              "tax",
+              "zus",
+              "own",
+              "fee",
+              "interest"
+            ]
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "bank_operation.classified",
         "who": [
           "human"
         ]
@@ -3548,6 +3860,39 @@
         "code": "761",
         "name": "Pozostałe koszty operacyjne",
         "type": "expense",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.created",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/account/149",
+      "payload": {
+        "code": "149",
+        "name": "Środki pieniężne w drodze",
+        "type": "bank",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.created",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/account/229",
+      "payload": {
+        "code": "229",
+        "name": "Rozrachunki z ZUS",
+        "type": "creditor",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.created",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/account/249",
+      "payload": {
+        "code": "249",
+        "name": "Pozostałe rozrachunki",
+        "type": "debtor",
         "market": "pl"
       }
     }
