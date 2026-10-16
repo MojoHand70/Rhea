@@ -2428,6 +2428,101 @@ about the company, not a second pack; and the open questions, written
 down with their readings and run on real books, are what Rhea brings to
 the people who write Polish standards.*
 
+## The face: how it looks, the shapes objects take, talking about them (KK, 2026-10-16)
+
+KK, on item 4 of the plan: the face cannot be avoided, and besides the
+AI idea it must engage and amaze — different, elegant, simple but
+complete. Objects will stack up (documents, accounts, journals and
+transactions, T-entries, the trial balance, the statements, cash flow,
+aging, fixed assets, clients, suppliers, partners, employees), and
+people will want to comment on them and discuss them. KK brought a list
+of the 2026 interface trends; this is the reading KK agreed to.
+
+**The trends, read against Rhea.** Half the list is fashion that will
+date. Glass behind figures hurts reading; a loud palette fights the
+colours bookkeeping already uses for meaning (overdue, open, matched,
+refused); spatial computing misses people who run a business from a
+phone. The other half is what Rhea already is. Generative UI (Google's
+A2UI: the AI composes a screen from a fixed set of safe components) is
+the view the agent drafts and a closed set of surface primitives draws,
+with a record of every step. Agents doing tasks is the host. Explainable
+AI is provenance — the one thing nobody else can show, because nobody
+else keeps it — so it is the face's main visual idea, not a footnote.
+Calm technology is the decisions of the day: a quiet day is a nearly
+empty screen, and empty is the luxury. Kept with a twist: depth only
+where it means something (a layer sits above the thing it came from);
+the bento grid for the morning briefing only, never for a ledger; the
+human touch as the trade's own materials — the ruled ledger, the
+T-account, the stamp, the signature — not fake roughness; voice and
+camera for getting things in (a photo of a receipt, a forwarded PDF, a
+spoken answer to her question), not for moving around.
+
+**The look comes from the concierge.** Luxury is restraint: space,
+beautiful type, exact figures, nothing that shouts. A calm warm ground;
+dark figures in a typeface whose digits align; one colour that belongs
+to her, used rarely. Depth only for "where it came from", motion only
+for "something happened". Three moves carry the difference:
+
+1. *The number opens.* Any amount, anywhere, unfolds layer above layer
+   into its origin — the account, the entries, the document, the
+   original file, the rule and its approval, the article in its warrant
+   — as one continuous zoom down and back, never a jump to another page.
+   `/api/explain` is the walk; the zoom takes it one layer at a time.
+2. *Things find each other.* A payment slides onto its invoice and they
+   become one settled item; a closed month looks closed.
+3. *The sentence is the dashboard.* The briefing is prose whose every
+   figure is live and opens like any other number — the host's second
+   law already makes every spoken figure a kernel fact.
+
+**Six shapes, not thirty screens.** The face never learns what an
+invoice is: each object type takes one of a few shapes, the pack says
+which, and designing the shapes well styles every object that will ever
+exist — the closed primitive set of the design language, grown by the
+shapes objects take. *Card*: who or what it is, key facts, what is
+open, its history (client, supplier, partner, employee, fixed asset,
+account). *Paper*: the document as a document — header, lines, totals —
+with the original file beside it (invoice, PZ/WZ, bank statement, JPK,
+KSeF receipt). *Ledger*: dense rows, aligned figures, running balance,
+grouped by day (the journal, transactions, an account's transactions).
+*Statement*: a tree of totals that folds and unfolds, each line opening
+into its ledger (trial balance, income statement, balance sheet, cash
+flow). *Buckets*: a ledger split by age or period (aging, VAT by
+period). *Chain*: one business event as linked steps (order → WZ →
+invoice → payment → match), shown on every object so the gaps stand
+out. The T-account is not a place to browse but the explanation of one
+booking — "this is what this invoice did to your books": for the owner,
+money moving between named pots; one switch shows the accountant debit
+and credit. No network graph: it wins the demo and loses Tuesday.
+
+**Talking about objects.** Anyone comments on an object, or on one
+figure on it ("why is this in 761?"). A comment is a fact like any
+other: in the object's history, through replay. She is in every thread,
+and "why?" is answered at once from provenance, before the accountant
+has to reply. A thread can end in a decision — "book this supplier to
+402 from now on" becomes a draft rule at the gate, the correction she
+remembers; that is what "say it once, never again" looks like on
+screen. It matters because the accountant is the channel: the email and
+photo traffic between an owner and their accountant moves onto the
+objects themselves. The kernel has no comment door yet; it will be a
+common door and its rule, like any other.
+
+**Two people, two densities.** The owner on the phone: decisions, the
+briefing, "why?", photos in; a statement there is one column of amounts
+in a folding tree, the last period a swipe away. The accountant at the
+desk: density, keyboard, ledgers side by side, many companies — where
+the paid seat lives, so not an afterthought. The same six shapes at two
+densities; the phone is the primary screen, not an adaptation.
+
+**The first build.** "The number opens", on a phone, against the real
+JSON API, on a simulated company's data. If that one moment feels right,
+the rest of the face follows from it.
+
+One line: *the look comes from the concierge, not from the trend list —
+calm, exact, one colour of her own, depth only for where a number came
+from and motion only for what happened; every object takes one of six
+shapes the pack declares; comments live on the objects and can end in a
+rule; and the first thing built is a number that opens.*
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
