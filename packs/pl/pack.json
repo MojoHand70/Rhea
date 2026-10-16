@@ -1,7 +1,7 @@
 {
   "pack": "pl",
-  "version": 21,
-  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami; poranek: gospodarz mówi, co zaksięgowano i co czeka, z faktów, które policzyło jądro; dziś: otwarte zadania i należności w kolejności pilności, z zatwierdzeniami, które czekają; KSeF na zewnątrz: faktury sprzedaży idą do KSeF jako FA(3) jedną sesją interaktywną, dowód (numer KSeF, UPO) i odmowa (kod, słowa Ministerstwa) są zdarzeniami, odmowa staje się zadaniem na dziś; koniec miesiąca: faktury niosą okres VAT, zamknięcie miesiąca (period.closed) daje rozliczenie VAT jako obiekt policzony regułą — każda liczba deklaracji ma pochodzenie; plik JPK_V7M z rozliczenia i faktur miesiąca (writer rynku), firma zna swój urząd skarbowy, e-mail i formę prawną, faktura zakupu z KSeF niesie numer KSeF; firma mówi, kim jest dla urzędu (identify_company): e-mail, urząd skarbowy, forma prawna, właściciel; v19 (przegląd pakietu, 2026-10-16): daty, które decydują o okresie VAT — faktura sprzedaży niesie datę sprzedaży (P_6, a gdy jej nie podano, datę wystawienia) i okres VAT według obowiązku podatkowego; faktura zakupu niesie datę sprzedaży u dostawcy i datę otrzymania (dla KSeF: dzień nadania numeru), a odliczenie przypada na późniejszy z tych miesięcy; firma mówi, czym jest (declare_company_form): status VAT (czynny albo zwolniony, z przepisem zwolnienia), forma ksiąg i forma opodatkowania od wskazanej daty; firma zwolniona nie rozlicza VAT i nie składa JPK_V7, a VAT od jej zakupów jest kosztem; faktury bez VAT (zw, 0%) księgują się bez linii VAT; każda zmieniona reguła nazywa swoje źródło; v20 (przegląd, 2026-10-16): zakup trafia w koszty — usługa albo wydatek bez dokumentu dostawy na konto kosztowe dostawcy (set_cost_account), a gdy go nie podano, na 403 usługi obce; zakup z dokumentem dostawy (WZ) czeka na 300 na rozliczenie z przyjęciem (PZ); różnice groszowe rozliczeń: niedopłata 761, nadpłata 760 (pozostałe operacyjne), cofnięcie wraca tym kontem, którym weszło; konta 750, 751, 761 w planie kont; v21 (przegląd, 2026-10-16): pozycja wyciągu najpierw mówi, czym jest — opłata i odsetki po kodzie banku, przelew między własnymi rachunkami, wpłata na mikrorachunek podatkowy, na rachunek składkowy ZUS, pieniądze właściciela — a dopiero reszta jest zapłatą kontrahenta, którą się rozlicza z fakturami; każda księguje się na swoje konto (149, 225, 229, 249, 403, 750/751); osoba może przeklasyfikować pozycję, której nic nie rozliczyło (classify_bank_operation); deklaracja formy firmy sprawdza formę prawną (spółka: CIT i pełne księgi)",
+  "version": 22,
+  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami; poranek: gospodarz mówi, co zaksięgowano i co czeka, z faktów, które policzyło jądro; dziś: otwarte zadania i należności w kolejności pilności, z zatwierdzeniami, które czekają; KSeF na zewnątrz: faktury sprzedaży idą do KSeF jako FA(3) jedną sesją interaktywną, dowód (numer KSeF, UPO) i odmowa (kod, słowa Ministerstwa) są zdarzeniami, odmowa staje się zadaniem na dziś; koniec miesiąca: faktury niosą okres VAT, zamknięcie miesiąca (period.closed) daje rozliczenie VAT jako obiekt policzony regułą — każda liczba deklaracji ma pochodzenie; plik JPK_V7M z rozliczenia i faktur miesiąca (writer rynku), firma zna swój urząd skarbowy, e-mail i formę prawną, faktura zakupu z KSeF niesie numer KSeF; firma mówi, kim jest dla urzędu (identify_company): e-mail, urząd skarbowy, forma prawna, właściciel; v19 (przegląd pakietu, 2026-10-16): daty, które decydują o okresie VAT — faktura sprzedaży niesie datę sprzedaży (P_6, a gdy jej nie podano, datę wystawienia) i okres VAT według obowiązku podatkowego; faktura zakupu niesie datę sprzedaży u dostawcy i datę otrzymania (dla KSeF: dzień nadania numeru), a odliczenie przypada na późniejszy z tych miesięcy; firma mówi, czym jest (declare_company_form): status VAT (czynny albo zwolniony, z przepisem zwolnienia), forma ksiąg i forma opodatkowania od wskazanej daty; firma zwolniona nie rozlicza VAT i nie składa JPK_V7, a VAT od jej zakupów jest kosztem; faktury bez VAT (zw, 0%) księgują się bez linii VAT; każda zmieniona reguła nazywa swoje źródło; v20 (przegląd, 2026-10-16): zakup trafia w koszty — usługa albo wydatek bez dokumentu dostawy na konto kosztowe dostawcy (set_cost_account), a gdy go nie podano, na 403 usługi obce; zakup z dokumentem dostawy (WZ) czeka na 300 na rozliczenie z przyjęciem (PZ); różnice groszowe rozliczeń: niedopłata 761, nadpłata 760 (pozostałe operacyjne), cofnięcie wraca tym kontem, którym weszło; konta 750, 751, 761 w planie kont; v21 (przegląd, 2026-10-16): pozycja wyciągu najpierw mówi, czym jest — opłata i odsetki po kodzie banku, przelew między własnymi rachunkami, wpłata na mikrorachunek podatkowy, na rachunek składkowy ZUS, pieniądze właściciela — a dopiero reszta jest zapłatą kontrahenta, którą się rozlicza z fakturami; każda księguje się na swoje konto (149, 225, 229, 249, 403, 750/751); osoba może przeklasyfikować pozycję, której nic nie rozliczyło (classify_bank_operation); deklaracja formy firmy sprawdza formę prawną (spółka: CIT i pełne księgi); v22 (przegląd, 2026-10-16): waluty — faktura w walucie obcej niesie netto i VAT w złotych po kursie średnim NBP z ostatniego dnia roboczego przed dniem sprzedaży (kanał pl-nbp), księgi przeliczają po tym samym kursie, a zapłatę po kursie z jej dnia; różnica kursowa zrealizowana przy rozliczeniu trafia na 750 albo 751 i cofa się tym samym kontem; rozliczenie VAT, JPK i faktura w KSeF (P_14_xW) liczą VAT w złotych",
   "requires": [
     "company",
     "account",
@@ -913,7 +913,7 @@
     },
     {
       "name": "sales_invoice",
-      "version": 6,
+      "version": 7,
       "domain": "finance",
       "is_document": true,
       "label_field": "number",
@@ -1001,6 +1001,16 @@
           "name": "vat_period",
           "type": "string",
           "required": false
+        },
+        {
+          "name": "net_pln",
+          "type": "money",
+          "required": false
+        },
+        {
+          "name": "vat_pln",
+          "type": "money",
+          "required": false
         }
       ],
       "lifecycle": {
@@ -1021,7 +1031,7 @@
     },
     {
       "name": "purchase_invoice",
-      "version": 5,
+      "version": 6,
       "domain": "finance",
       "is_document": true,
       "label_field": "number",
@@ -1108,6 +1118,16 @@
         {
           "name": "ksef_ref",
           "type": "string",
+          "required": false
+        },
+        {
+          "name": "net_pln",
+          "type": "money",
+          "required": false
+        },
+        {
+          "name": "vat_pln",
+          "type": "money",
           "required": false
         }
       ],
@@ -1377,13 +1397,13 @@
     },
     {
       "view_id": "rejestr-vat-sprzedazy",
-      "version": 4,
+      "version": 5,
       "notion": "analysis",
       "title": "Rejestr VAT sprzedaży",
       "domain": "finance",
       "function": "vat",
       "spec": {
-        "sql": "SELECT month, rate, n AS net, v AS vat, g AS gross FROM (SELECT json_extract_string(i.state,'$.vat_period') AS month, json_extract_string(r.state,'$.code') AS rate, SUM(CAST(json_extract(i.state,'$.net') AS BIGINT)) AS n, SUM(CAST(json_extract(i.state,'$.vat') AS BIGINT)) AS v, SUM(CAST(json_extract(i.state,'$.gross') AS BIGINT)) AS g FROM objects i JOIN objects r ON json_extract_string(i.state,'$.vat_rate') = r.object_id JOIN objects c ON json_extract_string(i.state,'$.seller') = c.object_id WHERE c.object_type = 'company' AND json_extract_string(c.state,'$.country') = 'PL' AND i.object_type = 'sales_invoice' AND r.object_type = 'vat_rate' GROUP BY 1, 2) ORDER BY month, rate",
+        "sql": "SELECT month, rate, n AS net, v AS vat, g AS gross FROM (SELECT json_extract_string(i.state,'$.vat_period') AS month, json_extract_string(r.state,'$.code') AS rate, SUM(CAST(COALESCE(json_extract(i.state,'$.net_pln'), json_extract(i.state,'$.net')) AS BIGINT)) AS n, SUM(CAST(COALESCE(json_extract(i.state,'$.vat_pln'), json_extract(i.state,'$.vat')) AS BIGINT)) AS v, SUM(CAST(json_extract(i.state,'$.gross') AS BIGINT)) AS g FROM objects i JOIN objects r ON json_extract_string(i.state,'$.vat_rate') = r.object_id JOIN objects c ON json_extract_string(i.state,'$.seller') = c.object_id WHERE c.object_type = 'company' AND json_extract_string(c.state,'$.country') = 'PL' AND i.object_type = 'sales_invoice' AND r.object_type = 'vat_rate' GROUP BY 1, 2) ORDER BY month, rate",
         "columns": [
           {
             "field": "month",
@@ -1452,13 +1472,13 @@
     },
     {
       "view_id": "rejestr-vat-zakupu",
-      "version": 2,
+      "version": 3,
       "notion": "analysis",
       "title": "Rejestr VAT zakupu",
       "domain": "finance",
       "function": "vat",
       "spec": {
-        "sql": "SELECT month, rate, n AS net, v AS vat, g AS gross FROM (SELECT json_extract_string(i.state,'$.vat_period') AS month, json_extract_string(r.state,'$.code') AS rate, SUM(CAST(json_extract(i.state,'$.net') AS BIGINT)) AS n, SUM(CAST(json_extract(i.state,'$.vat') AS BIGINT)) AS v, SUM(CAST(json_extract(i.state,'$.gross') AS BIGINT)) AS g FROM objects i JOIN objects r ON json_extract_string(i.state,'$.vat_rate') = r.object_id JOIN objects c ON json_extract_string(i.state,'$.owner') = c.object_id WHERE c.object_type = 'company' AND json_extract_string(c.state,'$.country') = 'PL' AND i.object_type = 'purchase_invoice' AND r.object_type = 'vat_rate' GROUP BY 1, 2) ORDER BY month, rate",
+        "sql": "SELECT month, rate, n AS net, v AS vat, g AS gross FROM (SELECT json_extract_string(i.state,'$.vat_period') AS month, json_extract_string(r.state,'$.code') AS rate, SUM(CAST(COALESCE(json_extract(i.state,'$.net_pln'), json_extract(i.state,'$.net')) AS BIGINT)) AS n, SUM(CAST(COALESCE(json_extract(i.state,'$.vat_pln'), json_extract(i.state,'$.vat')) AS BIGINT)) AS v, SUM(CAST(json_extract(i.state,'$.gross') AS BIGINT)) AS g FROM objects i JOIN objects r ON json_extract_string(i.state,'$.vat_rate') = r.object_id JOIN objects c ON json_extract_string(i.state,'$.owner') = c.object_id WHERE c.object_type = 'company' AND json_extract_string(c.state,'$.country') = 'PL' AND i.object_type = 'purchase_invoice' AND r.object_type = 'vat_rate' GROUP BY 1, 2) ORDER BY month, rate",
         "columns": [
           {
             "field": "month",
@@ -1696,7 +1716,7 @@
       "rule_id": "pl-book-sales-invoice",
       "priority": 100,
       "effective_from": "2026-01-01",
-      "description": "Wystawiona faktura sprzedaży staje się dokumentem sales_invoice; kwota otwarta zaczyna się od brutto, status od open; data sprzedaży to data dostawy lub wykonania usługi, a gdy faktura jej nie podaje — data wystawienia; okres VAT = miesiąc obowiązku podatkowego, czyli miesiąc sprzedaży (nie wystawienia)",
+      "description": "Wystawiona faktura sprzedaży staje się dokumentem sales_invoice; kwota otwarta zaczyna się od brutto, status od open; data sprzedaży to data dostawy lub wykonania usługi, a gdy faktura jej nie podaje — data wystawienia; okres VAT = miesiąc obowiązku podatkowego, czyli miesiąc sprzedaży (nie wystawienia); netto i VAT w złotych po kursie średnim NBP z ostatniego dnia roboczego przed dniem sprzedaży (dla PLN — te same kwoty)",
       "spec": {
         "match": {
           "event_type": "sales.invoice.issued",
@@ -1727,19 +1747,25 @@
               "open": "=$.gross",
               "status": "open",
               "vat_period": "=month(coalesce($.sale_date, $.issue_date))",
-              "sale_date": "=coalesce($.sale_date, $.issue_date)"
+              "sale_date": "=coalesce($.sale_date, $.issue_date)",
+              "net_pln": "=round($.net * fx($.currency, \"PLN\", coalesce($.sale_date, $.issue_date)), 2, half_up)",
+              "vat_pln": "=round($.vat * fx($.currency, \"PLN\", coalesce($.sale_date, $.issue_date)), 2, half_up)"
             }
           }
         }
       },
-      "version": 3,
+      "version": 4,
       "warrant": {
         "basis": "statute",
         "citations": [
           "ustawa o VAT art. 19a ust. 1: „Obowiązek podatkowy powstaje z chwilą dokonania dostawy towarów lub wykonania usługi”",
           "ustawa o VAT art. 106i ust. 1: fakturę wystawia się nie później niż 15. dnia miesiąca następującego po miesiącu dostawy — stąd sprzedaż wrześniowa z fakturą październikową należy do września",
           "FA(3) P_6 (art. 106e ust. 1 pkt 6): „Data dokonania lub zakończenia dostawy towarów lub wykonania usługi (...) o ile taka data jest określona i różni się od daty wystawienia faktury”",
-          "poza tą regułą (kolejne wersje): usługi okresowe (art. 19a ust. 3), media, najem i stała obsługa (ust. 5 pkt 4, ust. 7), zaliczki (ust. 8)"
+          "poza tą regułą (kolejne wersje): usługi okresowe (art. 19a ust. 3), media, najem i stała obsługa (ust. 5 pkt 4, ust. 7), zaliczki (ust. 8)",
+          "ustawa o VAT art. 31a ust. 1: kwoty w walucie obcej przelicza się na złote według kursu średniego NBP z ostatniego dnia roboczego poprzedzającego dzień powstania obowiązku podatkowego",
+          "ustawa o VAT art. 106e ust. 11: kwota podatku na fakturze w walucie obcej jest wykazana w złotych",
+          "ustawa o rachunkowości art. 30 ust. 2 pkt 2: po kursie średnim NBP z dnia poprzedzającego; ustawa o CIT art. 12 ust. 2, ustawa o PIT art. 11a ust. 1: przychód — po kursie z ostatniego dnia roboczego przed jego dniem",
+          "kurs „dnia d” w Rhea to kurs, po którym przelicza się dokument z dnia d (kanał pl-nbp publikuje go z tabeli z ostatniego dnia roboczego przed d) — stąd fx(waluta, \"PLN\", dzień sprzedaży)"
         ],
         "scope": "pl"
       }
@@ -1748,7 +1774,7 @@
       "rule_id": "pl-post-sales-invoice",
       "priority": 200,
       "effective_from": "2026-01-01",
-      "description": "Faktura sprzedaży z VAT księguje się: 201 brutto / 700 netto, 222 VAT",
+      "description": "Faktura sprzedaży z VAT księguje się: 201 brutto / 700 netto, 222 VAT; w walucie obcej — po kursie z dnia sprzedaży, tym samym co VAT w złotych",
       "spec": {
         "match": {
           "event_type": "sales.invoice.issued",
@@ -1783,7 +1809,7 @@
             "book": "pl-stat",
             "convert": {
               "to": "PLN",
-              "date": "=$.issue_date",
+              "date": "=coalesce($.sale_date, $.issue_date)",
               "rounding": "half_up",
               "rounding_account": "756"
             }
@@ -1794,7 +1820,8 @@
         "basis": "practice",
         "scope": "pl",
         "citations": [
-          "wzorcowy plan kont dla małych i średnich przedsiębiorstw: Wn 201 rozrachunki z odbiorcami / Ma 70x przychody ze sprzedaży, Ma 222 VAT należny"
+          "wzorcowy plan kont dla małych i średnich przedsiębiorstw: Wn 201 rozrachunki z odbiorcami / Ma 70x przychody ze sprzedaży, Ma 222 VAT należny",
+          "ustawa o rachunkowości art. 30 ust. 2 pkt 2: po kursie średnim NBP z dnia poprzedzającego; ustawa o CIT art. 12 ust. 2, ustawa o PIT art. 11a ust. 1: przychód — po kursie z ostatniego dnia roboczego przed jego dniem"
         ]
       }
     },
@@ -1802,7 +1829,7 @@
       "rule_id": "pl-post-sales-invoice-no-vat",
       "priority": 200,
       "effective_from": "2026-01-01",
-      "description": "Faktura sprzedaży bez VAT (zwolniona, 0%, sprzedawca zwolniony) księguje się: 201 brutto / 700 netto — bez linii VAT, której kwota byłaby zerem",
+      "description": "Faktura sprzedaży bez VAT (zwolniona, 0%, sprzedawca zwolniony) księguje się: 201 brutto / 700 netto — bez linii VAT, której kwota byłaby zerem; w walucie obcej — po kursie z dnia sprzedaży, tym samym co VAT w złotych",
       "spec": {
         "match": {
           "event_type": "sales.invoice.issued",
@@ -1833,7 +1860,7 @@
             "book": "pl-stat",
             "convert": {
               "to": "PLN",
-              "date": "=$.issue_date",
+              "date": "=coalesce($.sale_date, $.issue_date)",
               "rounding": "half_up",
               "rounding_account": "756"
             }
@@ -1844,7 +1871,8 @@
         "basis": "statute",
         "citations": [
           "ustawa o VAT art. 113 ust. 1 (zwolnienie podmiotowe) i art. 43 (zwolnienia przedmiotowe): sprzedaż bez podatku należnego",
-          "wzorcowy plan kont: Wn 201 / Ma 70x"
+          "wzorcowy plan kont: Wn 201 / Ma 70x",
+          "ustawa o rachunkowości art. 30 ust. 2 pkt 2: po kursie średnim NBP z dnia poprzedzającego; ustawa o CIT art. 12 ust. 2, ustawa o PIT art. 11a ust. 1: przychód — po kursie z ostatniego dnia roboczego przed jego dniem"
         ],
         "scope": "pl"
       }
@@ -1941,7 +1969,7 @@
       "rule_id": "pl-book-purchase-invoice",
       "priority": 100,
       "effective_from": "2026-01-01",
-      "description": "Faktura zakupu spoza KSeF (bez numeru KSeF) staje się dokumentem purchase_invoice: dostawca i nabywca po NIP, kwoty takie, jak podaje dokument; kwota otwarta zaczyna się od brutto, status od open; data sprzedaży u dostawcy (P_6, inaczej data faktury) i data otrzymania (KSeF: dzień nadania numeru; inny dokument: dzień, w którym wpłynął); okres VAT = późniejszy z miesięcy sprzedaży i otrzymania — najwcześniejszy, w którym wolno odliczyć",
+      "description": "Faktura zakupu spoza KSeF (bez numeru KSeF) staje się dokumentem purchase_invoice: dostawca i nabywca po NIP, kwoty takie, jak podaje dokument; kwota otwarta zaczyna się od brutto, status od open; data sprzedaży u dostawcy (P_6, inaczej data faktury) i data otrzymania (KSeF: dzień nadania numeru; inny dokument: dzień, w którym wpłynął); okres VAT = późniejszy z miesięcy sprzedaży i otrzymania — najwcześniejszy, w którym wolno odliczyć; netto i VAT w złotych po kursie średnim NBP z ostatniego dnia roboczego przed dniem sprzedaży (dla PLN — te same kwoty)",
       "spec": {
         "match": {
           "event_type": "purchase.invoice.received",
@@ -1974,12 +2002,14 @@
               "status": "open",
               "vat_period": "=month(max(coalesce($.sale_date, $.invoice_date), coalesce($.received_date, $.invoice_date)))",
               "sale_date": "=coalesce($.sale_date, $.invoice_date)",
-              "received_date": "=coalesce($.received_date, $.invoice_date)"
+              "received_date": "=coalesce($.received_date, $.invoice_date)",
+              "net_pln": "=round($.net * fx($.currency, \"PLN\", coalesce($.sale_date, $.invoice_date)), 2, half_up)",
+              "vat_pln": "=round($.vat * fx($.currency, \"PLN\", coalesce($.sale_date, $.invoice_date)), 2, half_up)"
             }
           }
         }
       },
-      "version": 4,
+      "version": 5,
       "warrant": {
         "basis": "statute",
         "citations": [
@@ -1987,7 +2017,11 @@
           "ustawa o VAT art. 86 ust. 10b pkt 1: „nie wcześniej niż w rozliczeniu za okres, w którym podatnik otrzymał fakturę”",
           "ustawa o VAT art. 106na ust. 3: „Faktura ustrukturyzowana jest uznana za otrzymaną przy użyciu Krajowego Systemu e-Faktur w dniu przydzielenia w tym systemie numeru identyfikującego tę fakturę”",
           "ustawa o VAT art. 86 ust. 11: późniejsze odliczenie — w jednym z trzech następnych okresów — to wybór osoby, zapisywany poprawką z powodem",
-          "poza tą regułą: dostawca na metodzie kasowej (P_16 = 1) — odliczenie dopiero w okresie zapłaty (art. 21 ust. 1)"
+          "poza tą regułą: dostawca na metodzie kasowej (P_16 = 1) — odliczenie dopiero w okresie zapłaty (art. 21 ust. 1)",
+          "ustawa o VAT art. 31a ust. 1: kwoty w walucie obcej przelicza się na złote według kursu średniego NBP z ostatniego dnia roboczego poprzedzającego dzień powstania obowiązku podatkowego",
+          "ustawa o VAT art. 106e ust. 11: kwota podatku na fakturze w walucie obcej jest wykazana w złotych",
+          "ustawa o rachunkowości art. 30 ust. 2 pkt 2: po kursie średnim NBP z dnia poprzedzającego; ustawa o CIT art. 12 ust. 2, ustawa o PIT art. 11a ust. 1: przychód — po kursie z ostatniego dnia roboczego przed jego dniem",
+          "kurs „dnia d” w Rhea to kurs, po którym przelicza się dokument z dnia d (kanał pl-nbp publikuje go z tabeli z ostatniego dnia roboczego przed d) — stąd fx(waluta, \"PLN\", dzień sprzedaży)"
         ],
         "scope": "pl"
       }
@@ -1996,7 +2030,7 @@
       "rule_id": "pl-book-purchase-invoice-ksef",
       "priority": 100,
       "effective_from": "2026-01-01",
-      "description": "Faktura zakupu z numerem KSeF (do ewidencji JPK) staje się dokumentem purchase_invoice: dostawca i nabywca po NIP, kwoty takie, jak podaje dokument; kwota otwarta zaczyna się od brutto, status od open; data sprzedaży u dostawcy (P_6, inaczej data faktury) i data otrzymania (KSeF: dzień nadania numeru; inny dokument: dzień, w którym wpłynął); okres VAT = późniejszy z miesięcy sprzedaży i otrzymania — najwcześniejszy, w którym wolno odliczyć",
+      "description": "Faktura zakupu z numerem KSeF (do ewidencji JPK) staje się dokumentem purchase_invoice: dostawca i nabywca po NIP, kwoty takie, jak podaje dokument; kwota otwarta zaczyna się od brutto, status od open; data sprzedaży u dostawcy (P_6, inaczej data faktury) i data otrzymania (KSeF: dzień nadania numeru; inny dokument: dzień, w którym wpłynął); okres VAT = późniejszy z miesięcy sprzedaży i otrzymania — najwcześniejszy, w którym wolno odliczyć; netto i VAT w złotych po kursie średnim NBP z ostatniego dnia roboczego przed dniem sprzedaży (dla PLN — te same kwoty)",
       "spec": {
         "match": {
           "event_type": "purchase.invoice.received",
@@ -2030,12 +2064,14 @@
               "vat_period": "=month(max(coalesce($.sale_date, $.invoice_date), coalesce($.received_date, $.invoice_date)))",
               "ksef_ref": "=$.ksef_ref",
               "sale_date": "=coalesce($.sale_date, $.invoice_date)",
-              "received_date": "=coalesce($.received_date, $.invoice_date)"
+              "received_date": "=coalesce($.received_date, $.invoice_date)",
+              "net_pln": "=round($.net * fx($.currency, \"PLN\", coalesce($.sale_date, $.invoice_date)), 2, half_up)",
+              "vat_pln": "=round($.vat * fx($.currency, \"PLN\", coalesce($.sale_date, $.invoice_date)), 2, half_up)"
             }
           }
         }
       },
-      "version": 2,
+      "version": 3,
       "warrant": {
         "basis": "statute",
         "citations": [
@@ -2043,7 +2079,11 @@
           "ustawa o VAT art. 86 ust. 10b pkt 1: „nie wcześniej niż w rozliczeniu za okres, w którym podatnik otrzymał fakturę”",
           "ustawa o VAT art. 106na ust. 3: „Faktura ustrukturyzowana jest uznana za otrzymaną przy użyciu Krajowego Systemu e-Faktur w dniu przydzielenia w tym systemie numeru identyfikującego tę fakturę”",
           "ustawa o VAT art. 86 ust. 11: późniejsze odliczenie — w jednym z trzech następnych okresów — to wybór osoby, zapisywany poprawką z powodem",
-          "poza tą regułą: dostawca na metodzie kasowej (P_16 = 1) — odliczenie dopiero w okresie zapłaty (art. 21 ust. 1)"
+          "poza tą regułą: dostawca na metodzie kasowej (P_16 = 1) — odliczenie dopiero w okresie zapłaty (art. 21 ust. 1)",
+          "ustawa o VAT art. 31a ust. 1: kwoty w walucie obcej przelicza się na złote według kursu średniego NBP z ostatniego dnia roboczego poprzedzającego dzień powstania obowiązku podatkowego",
+          "ustawa o VAT art. 106e ust. 11: kwota podatku na fakturze w walucie obcej jest wykazana w złotych",
+          "ustawa o rachunkowości art. 30 ust. 2 pkt 2: po kursie średnim NBP z dnia poprzedzającego; ustawa o CIT art. 12 ust. 2, ustawa o PIT art. 11a ust. 1: przychód — po kursie z ostatniego dnia roboczego przed jego dniem",
+          "kurs „dnia d” w Rhea to kurs, po którym przelicza się dokument z dnia d (kanał pl-nbp publikuje go z tabeli z ostatniego dnia roboczego przed d) — stąd fx(waluta, \"PLN\", dzień sprzedaży)"
         ],
         "scope": "pl"
       }
@@ -2052,7 +2092,7 @@
       "rule_id": "pl-post-purchase-invoice",
       "priority": 200,
       "effective_from": "2026-01-01",
-      "description": "Faktura zakupu z VAT do odliczenia (nabywca czynny podatnik VAT) księguje się: Wn koszt netto (konto dostawcy, inaczej 403; zakup z dokumentem dostawy — 300 do rozliczenia z PZ), Wn 221 VAT naliczony / Ma 202 brutto",
+      "description": "Faktura zakupu z VAT do odliczenia (nabywca czynny podatnik VAT) księguje się: Wn koszt netto (konto dostawcy, inaczej 403; zakup z dokumentem dostawy — 300 do rozliczenia z PZ), Wn 221 VAT naliczony / Ma 202 brutto; w walucie obcej — po kursie z dnia sprzedaży, tym samym co VAT w złotych",
       "spec": {
         "match": {
           "event_type": "purchase.invoice.received",
@@ -2087,7 +2127,7 @@
             "book": "pl-stat",
             "convert": {
               "to": "PLN",
-              "date": "=$.invoice_date",
+              "date": "=coalesce($.sale_date, $.invoice_date)",
               "rounding": "half_up",
               "rounding_account": "756"
             }
@@ -2100,7 +2140,8 @@
           "ustawa o VAT art. 86 ust. 1: podatnikowi przysługuje prawo do obniżenia podatku należnego o podatek naliczony — w zakresie, w jakim zakupy służą czynnościom opodatkowanym",
           "ustawa o rachunkowości art. 3 ust. 1 pkt 31 i art. 6 ust. 1: koszty okresu ujmuje się w okresie, którego dotyczą — zakup usługi jest kosztem, nie rozliczeniem zakupu",
           "wzorcowy plan kont: zespół 4 — koszty według rodzajów (402 zużycie materiałów i energii, 403 usługi obce, 409 pozostałe); konto 300 rozlicza zakup towarów i materiałów z ich przyjęciem (PZ) i wraca do zera",
-          "domyślne 403 dla zakupu bez dokumentu dostawy i bez konta dostawcy: najczęstszy koszt małej firmy; zysk się nie zmienia, gdy rodzaj kosztu okaże się inny — zmienia go set_cost_account"
+          "domyślne 403 dla zakupu bez dokumentu dostawy i bez konta dostawcy: najczęstszy koszt małej firmy; zysk się nie zmienia, gdy rodzaj kosztu okaże się inny — zmienia go set_cost_account",
+          "ustawa o rachunkowości art. 30 ust. 2 pkt 2: po kursie średnim NBP z dnia poprzedzającego; ustawa o CIT art. 12 ust. 2, ustawa o PIT art. 11a ust. 1: przychód — po kursie z ostatniego dnia roboczego przed jego dniem"
         ],
         "scope": "pl"
       }
@@ -2109,7 +2150,7 @@
       "rule_id": "pl-post-purchase-invoice-gross",
       "priority": 200,
       "effective_from": "2026-01-01",
-      "description": "Faktura zakupu bez VAT do odliczenia — bez VAT (zw, 0%) albo kupiona przez firmę zwolnioną z VAT — księguje się brutto: Wn koszt (konto dostawcy, inaczej 403; z dokumentem dostawy — 300) / Ma 202; VAT, którego nie wolno odliczyć, jest częścią kosztu",
+      "description": "Faktura zakupu bez VAT do odliczenia — bez VAT (zw, 0%) albo kupiona przez firmę zwolnioną z VAT — księguje się brutto: Wn koszt (konto dostawcy, inaczej 403; z dokumentem dostawy — 300) / Ma 202; VAT, którego nie wolno odliczyć, jest częścią kosztu; w walucie obcej — po kursie z dnia sprzedaży, tym samym co VAT w złotych",
       "spec": {
         "match": {
           "event_type": "purchase.invoice.received",
@@ -2140,7 +2181,7 @@
             "book": "pl-stat",
             "convert": {
               "to": "PLN",
-              "date": "=$.invoice_date",
+              "date": "=coalesce($.sale_date, $.invoice_date)",
               "rounding": "half_up",
               "rounding_account": "756"
             }
@@ -2154,7 +2195,8 @@
           "rozporządzenie w sprawie KPiR § 2 pkt 2: cena zakupu pomniejszona tylko o podatek „podlegający odliczeniu zgodnie z odrębnymi przepisami”",
           "ustawa o rachunkowości art. 28 ust. 2: cena nabycia obejmuje podatek, którego nie można odliczyć",
           "ustawa o rachunkowości art. 3 ust. 1 pkt 31 i art. 6 ust. 1: koszty okresu ujmuje się w okresie, którego dotyczą — zakup usługi jest kosztem, nie rozliczeniem zakupu",
-          "wzorcowy plan kont: zespół 4 — koszty według rodzajów (402 zużycie materiałów i energii, 403 usługi obce, 409 pozostałe); konto 300 rozlicza zakup towarów i materiałów z ich przyjęciem (PZ) i wraca do zera"
+          "wzorcowy plan kont: zespół 4 — koszty według rodzajów (402 zużycie materiałów i energii, 403 usługi obce, 409 pozostałe); konto 300 rozlicza zakup towarów i materiałów z ich przyjęciem (PZ) i wraca do zera",
+          "ustawa o rachunkowości art. 30 ust. 2 pkt 2: po kursie średnim NBP z dnia poprzedzającego; ustawa o CIT art. 12 ust. 2, ustawa o PIT art. 11a ust. 1: przychód — po kursie z ostatniego dnia roboczego przed jego dniem"
         ],
         "scope": "pl"
       }
@@ -2270,7 +2312,7 @@
       "rule_id": "pl-post-incoming-payment",
       "priority": 200,
       "effective_from": "2026-01-01",
-      "description": "Wpływ na rachunek księguje się: Wn 130 / Ma 201 — gdy operacja jest zapłatą kontrahenta (transfer)",
+      "description": "Wpływ na rachunek księguje się: Wn 130 / Ma 201 — gdy operacja jest zapłatą kontrahenta (transfer); w walucie obcej — po kursie z dnia operacji",
       "spec": {
         "match": {
           "event_type": "object.materialized",
@@ -2305,7 +2347,13 @@
                 "account": "201",
                 "credit": "=$.state.amount"
               }
-            ]
+            ],
+            "convert": {
+              "to": "PLN",
+              "date": "=$.state.date",
+              "rounding": "half_up",
+              "rounding_account": "756"
+            }
           }
         }
       }
@@ -2314,7 +2362,7 @@
       "rule_id": "pl-post-outgoing-payment",
       "priority": 200,
       "effective_from": "2026-01-01",
-      "description": "Wypływ z rachunku księguje się: Wn 202 / Ma 130 — gdy operacja jest zapłatą kontrahenta (transfer)",
+      "description": "Wypływ z rachunku księguje się: Wn 202 / Ma 130 — gdy operacja jest zapłatą kontrahenta (transfer); w walucie obcej — po kursie z dnia operacji",
       "spec": {
         "match": {
           "event_type": "object.materialized",
@@ -2349,7 +2397,13 @@
                 "account": "130",
                 "credit": "=$.state.amount"
               }
-            ]
+            ],
+            "convert": {
+              "to": "PLN",
+              "date": "=$.state.date",
+              "rounding": "half_up",
+              "rounding_account": "756"
+            }
           }
         }
       }
@@ -2358,7 +2412,7 @@
       "rule_id": "pl-match-incoming",
       "priority": 300,
       "effective_from": "2026-01-01",
-      "description": "Wpłata rozlicza się z otwartymi fakturami sprzedaży płatnika (po IBAN): po numerze w tytule; po numerze do 2 gr różnicy (niedopłata 761, nadpłata 760); po kwocie; kilka faktur (do 4); nazwana faktura częściowo; najstarsze w kolejności — gdy operacja jest zapłatą kontrahenta (transfer)",
+      "description": "Wpłata rozlicza się z otwartymi fakturami sprzedaży płatnika (po IBAN): po numerze w tytule; po numerze do 2 gr różnicy (niedopłata 761, nadpłata 760); po kwocie; kilka faktur (do 4); nazwana faktura częściowo; najstarsze w kolejności — gdy operacja jest zapłatą kontrahenta (transfer); w walucie obcej — porównanie w walucie zapłaty po kursach NBP, różnica kursowa zapisana",
       "spec": {
         "match": {
           "event_type": "object.materialized",
@@ -2432,7 +2486,14 @@
               {
                 "strategy": "oldest_first"
               }
-            ]
+            ],
+            "convert": {
+              "functional": "PLN",
+              "date_side": "payment",
+              "rounding": "half_up",
+              "rate_up_account": "750",
+              "rate_down_account": "751"
+            }
           }
         }
       }
@@ -2441,7 +2502,7 @@
       "rule_id": "pl-match-outgoing",
       "priority": 300,
       "effective_from": "2026-01-01",
-      "description": "Wypłata rozlicza się z otwartymi fakturami zakupu odbiorcy przelewu (po IBAN): po numerze; po kwocie; kilka faktur; nazwana częściowo; najstarsze — gdy operacja jest zapłatą kontrahenta (transfer)",
+      "description": "Wypłata rozlicza się z otwartymi fakturami zakupu odbiorcy przelewu (po IBAN): po numerze; po kwocie; kilka faktur; nazwana częściowo; najstarsze — gdy operacja jest zapłatą kontrahenta (transfer); w walucie obcej — porównanie w walucie zapłaty po kursach NBP, różnica kursowa zapisana",
       "spec": {
         "match": {
           "event_type": "object.materialized",
@@ -2508,7 +2569,14 @@
               {
                 "strategy": "oldest_first"
               }
-            ]
+            ],
+            "convert": {
+              "functional": "PLN",
+              "date_side": "payment",
+              "rounding": "half_up",
+              "rate_up_account": "750",
+              "rate_down_account": "751"
+            }
           }
         }
       }
@@ -2703,15 +2771,13 @@
       "rule_id": "pl-record-difference",
       "priority": 320,
       "effective_from": "2026-01-01",
-      "description": "Tolerowana różnica staje się zapisem różnicy rozliczenia, z kontem: niedopłata — konto polityki (761 pozostałe koszty operacyjne), nadpłata — 760 pozostałe przychody operacyjne; cofnięcie rozliczenia wraca tym kontem, którym różnica weszła",
+      "description": "Różnica rozliczenia staje się zapisem różnicy, z kontem: różnica groszowa w granicach tolerancji — niedopłata 761, nadpłata 760; różnica kursowa — zysk 750 (kurs wzrósł przy należności albo spadł przy zobowiązaniu), strata 751; cofnięcie rozliczenia wraca tym kontem, którym różnica weszła",
       "spec": {
         "match": {
           "event_type": "objects.matched",
           "where": [
             {
-              "path": "$.matching",
-              "op": "eq",
-              "value": "pl-incoming-payments"
+              "formula": "=$.matching = \"pl-incoming-payments\" or $.matching = \"pl-outgoing-payments\""
             },
             {
               "path": "$.differences[0]",
@@ -2729,7 +2795,7 @@
               "amount": "=$.line.amount",
               "currency": "=$.line.currency",
               "direction": "=$.line.direction",
-              "account": "=if($.line.account = \"756\", \"756\", if(($.line.direction = \"short\") <> (coalesce($.doc.reversal_of, 0) > 0), $.line.account, \"760\"))",
+              "account": "=if($.line.kind = \"fx\", if((($.line.direction = \"up\") = ($.doc.matching = \"pl-incoming-payments\")) <> (coalesce($.doc.reversal_of, 0) > 0), \"750\", \"751\"), if($.line.account = \"756\", \"756\", if(($.line.direction = \"short\") <> (coalesce($.doc.reversal_of, 0) > 0), $.line.account, \"760\")))",
               "date": "=$.root.date"
             }
           }
@@ -2742,7 +2808,8 @@
           "ustawa o rachunkowości art. 4 ust. 4: uproszczenia w polityce rachunkowości, „jeżeli nie wywiera to istotnie ujemnego wpływu” na obraz jednostki — tolerancja 2 gr jest takim uproszczeniem",
           "ustawa o rachunkowości art. 3 ust. 1 pkt 32 lit. d: pozostałe koszty i przychody operacyjne obejmują odpisanie należności i zobowiązań; różnice kursowe należą do finansowych (art. 30 ust. 4) — stąd 760/761, nie 756",
           "ustawa o rachunkowości art. 20 ust. 5: zapis wygenerowany z danych ksiąg jest dowodem, gdy znane jest jego pochodzenie — zapis różnicy z pochodzeniem jest protokołem",
-          "pytanie otwarte (przegląd MON-19): czy różnica groszowa jest kosztem i przychodem podatkowym — praktyka interpretacyjna się różni; Rhea śledzi różnicę podatkową, nie rozstrzyga jej w księgach"
+          "pytanie otwarte (przegląd MON-19): czy różnica groszowa jest kosztem i przychodem podatkowym — praktyka interpretacyjna się różni; Rhea śledzi różnicę podatkową, nie rozstrzyga jej w księgach",
+          "ustawa o rachunkowości art. 30 ust. 4: różnice kursowe zrealizowane przy zapłacie należności i zobowiązań zalicza się do przychodów lub kosztów finansowych (750/751)"
         ]
       }
     },
@@ -2826,10 +2893,10 @@
     },
     {
       "rule_id": "pl-settle-vat",
-      "version": 2,
+      "version": 3,
       "priority": 100,
       "effective_from": "2026-01-01",
-      "description": "Zamknięcie miesiąca w księdze pl-stat rozlicza VAT: podstawy i podatek należny po stawkach z faktur sprzedaży tego okresu, podatek naliczony z faktur zakupu, nadwyżka z poprzedniego miesiąca; do zapłaty, gdy należny przewyższa naliczony, inaczej nadwyżka do przeniesienia (ustawa o VAT art. 86, 87, 99; pozycje JPK_V7M P_10–P_62); do zapłaty i do przeniesienia w pełnych złotych (Ordynacja podatkowa art. 63 §1: należny i naliczony zaokrąglone, potem różnica); firma zwolniona z VAT nie rozlicza VAT i nie składa deklaracji (ustawa o VAT art. 99 ust. 7)",
+      "description": "Zamknięcie miesiąca w księdze pl-stat rozlicza VAT: podstawy i podatek należny po stawkach z faktur sprzedaży tego okresu, podatek naliczony z faktur zakupu, nadwyżka z poprzedniego miesiąca; do zapłaty, gdy należny przewyższa naliczony, inaczej nadwyżka do przeniesienia (ustawa o VAT art. 86, 87, 99; pozycje JPK_V7M P_10–P_62); do zapłaty i do przeniesienia w pełnych złotych (Ordynacja podatkowa art. 63 §1: należny i naliczony zaokrąglone, potem różnica); firma zwolniona z VAT nie rozlicza VAT i nie składa deklaracji (ustawa o VAT art. 99 ust. 7); kwoty w złotych (faktura w walucie obcej — jej netto i VAT w złotych)",
       "spec": {
         "match": {
           "event_type": "period.closed",
@@ -2850,21 +2917,21 @@
             "fields": {
               "period": "=month($.period)",
               "book": "=$.book",
-              "sales_net_23": "=sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"23\": i.net)",
-              "sales_vat_23": "=sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"23\": i.vat)",
-              "sales_net_8": "=sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"8\": i.net)",
-              "sales_vat_8": "=sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"8\": i.vat)",
-              "sales_net_5": "=sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"5\": i.net)",
-              "sales_vat_5": "=sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"5\": i.vat)",
-              "sales_net_0": "=sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"0\": i.net)",
-              "sales_net_exempt": "=sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"zw\": i.net)",
-              "output_vat": "=sum(i in objects(sales_invoice, vat_period, month($.period)): i.vat)",
-              "purchase_net": "=sum(i in objects(purchase_invoice, vat_period, month($.period)): i.net)",
-              "purchase_vat": "=sum(i in objects(purchase_invoice, vat_period, month($.period)): i.vat)",
+              "sales_net_23": "=sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"23\": coalesce(i.net_pln, i.net))",
+              "sales_vat_23": "=sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"23\": coalesce(i.vat_pln, i.vat))",
+              "sales_net_8": "=sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"8\": coalesce(i.net_pln, i.net))",
+              "sales_vat_8": "=sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"8\": coalesce(i.vat_pln, i.vat))",
+              "sales_net_5": "=sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"5\": coalesce(i.net_pln, i.net))",
+              "sales_vat_5": "=sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"5\": coalesce(i.vat_pln, i.vat))",
+              "sales_net_0": "=sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"0\": coalesce(i.net_pln, i.net))",
+              "sales_net_exempt": "=sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"zw\": coalesce(i.net_pln, i.net))",
+              "output_vat": "=sum(i in objects(sales_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat))",
+              "purchase_net": "=sum(i in objects(purchase_invoice, vat_period, month($.period)): coalesce(i.net_pln, i.net))",
+              "purchase_vat": "=sum(i in objects(purchase_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat))",
               "carried_in": "=sum(s in objects(vat_settlement, period, month(add_months($.period, -1))): s.vat_carry)",
-              "input_vat": "=(sum(i in objects(purchase_invoice, vat_period, month($.period)): i.vat) + sum(s in objects(vat_settlement, period, month(add_months($.period, -1))): s.vat_carry))",
-              "vat_due": "=if(round(sum(i in objects(sales_invoice, vat_period, month($.period)): i.vat), 0, half_up) - round((sum(i in objects(purchase_invoice, vat_period, month($.period)): i.vat) + sum(s in objects(vat_settlement, period, month(add_months($.period, -1))): s.vat_carry)), 0, half_up) > 0, round(sum(i in objects(sales_invoice, vat_period, month($.period)): i.vat), 0, half_up) - round((sum(i in objects(purchase_invoice, vat_period, month($.period)): i.vat) + sum(s in objects(vat_settlement, period, month(add_months($.period, -1))): s.vat_carry)), 0, half_up), sum(i in objects(sales_invoice, vat_period, month($.period)): i.vat) - sum(i in objects(sales_invoice, vat_period, month($.period)): i.vat))",
-              "vat_carry": "=if(round((sum(i in objects(purchase_invoice, vat_period, month($.period)): i.vat) + sum(s in objects(vat_settlement, period, month(add_months($.period, -1))): s.vat_carry)), 0, half_up) - round(sum(i in objects(sales_invoice, vat_period, month($.period)): i.vat), 0, half_up) > 0, round((sum(i in objects(purchase_invoice, vat_period, month($.period)): i.vat) + sum(s in objects(vat_settlement, period, month(add_months($.period, -1))): s.vat_carry)), 0, half_up) - round(sum(i in objects(sales_invoice, vat_period, month($.period)): i.vat), 0, half_up), sum(i in objects(sales_invoice, vat_period, month($.period)): i.vat) - sum(i in objects(sales_invoice, vat_period, month($.period)): i.vat))",
+              "input_vat": "=(sum(i in objects(purchase_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)) + sum(s in objects(vat_settlement, period, month(add_months($.period, -1))): s.vat_carry))",
+              "vat_due": "=if(round(sum(i in objects(sales_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)), 0, half_up) - round((sum(i in objects(purchase_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)) + sum(s in objects(vat_settlement, period, month(add_months($.period, -1))): s.vat_carry)), 0, half_up) > 0, round(sum(i in objects(sales_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)), 0, half_up) - round((sum(i in objects(purchase_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)) + sum(s in objects(vat_settlement, period, month(add_months($.period, -1))): s.vat_carry)), 0, half_up), sum(i in objects(sales_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)) - sum(i in objects(sales_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)))",
+              "vat_carry": "=if(round((sum(i in objects(purchase_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)) + sum(s in objects(vat_settlement, period, month(add_months($.period, -1))): s.vat_carry)), 0, half_up) - round(sum(i in objects(sales_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)), 0, half_up) > 0, round((sum(i in objects(purchase_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)) + sum(s in objects(vat_settlement, period, month(add_months($.period, -1))): s.vat_carry)), 0, half_up) - round(sum(i in objects(sales_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)), 0, half_up), sum(i in objects(sales_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)) - sum(i in objects(sales_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)))",
               "closed_on": "=$.period"
             }
           }
@@ -2876,7 +2943,9 @@
           "ustawa o VAT art. 86 i 87: podatek należny pomniejszony o naliczony; nadwyżka przenoszona na następny okres",
           "ustawa o VAT art. 99 ust. 1: deklaracje za okresy miesięczne do 25. dnia następnego miesiąca; ust. 7: obowiązek nie dotyczy podatników zwolnionych na podstawie art. 113",
           "Ordynacja podatkowa art. 63 § 1: podstawy i kwoty podatków zaokrągla się do pełnych złotych",
-          "rozporządzenie w sprawie JPK_V7: pozycje P_10–P_62 deklaracji"
+          "rozporządzenie w sprawie JPK_V7: pozycje P_10–P_62 deklaracji",
+          "ustawa o VAT art. 31a ust. 1: kwoty w walucie obcej przelicza się na złote według kursu średniego NBP z ostatniego dnia roboczego poprzedzającego dzień powstania obowiązku podatkowego",
+          "ustawa o VAT art. 106e ust. 11: kwota podatku na fakturze w walucie obcej jest wykazana w złotych"
         ],
         "scope": "pl"
       }
@@ -3135,7 +3204,7 @@
       "rule_id": "pl-post-explained-bank-operation",
       "priority": 200,
       "effective_from": "2026-01-01",
-      "description": "Operacja bankowa, która wie, czym jest, księguje się po swojej stronie rachunku 130 i na swoim koncie: podatek 225, ZUS 229, przelew własny 149 (środki w drodze), właściciel 249, opłata bankowa 403, odsetki otrzymane 750, zapłacone 751",
+      "description": "Operacja bankowa, która wie, czym jest, księguje się po swojej stronie rachunku 130 i na swoim koncie: podatek 225, ZUS 229, przelew własny 149 (środki w drodze), właściciel 249, opłata bankowa 403, odsetki otrzymane 750, zapłacone 751; w walucie obcej — po kursie z dnia operacji",
       "spec": {
         "match": {
           "event_type": "object.materialized",
@@ -3163,7 +3232,13 @@
                 "account": "=if($.state.direction = \"debit\", \"130\", if($.state.kind = \"tax\", \"225\", if($.state.kind = \"zus\", \"229\", if($.state.kind = \"own\", \"149\", if($.state.kind = \"owner\", \"249\", if($.state.kind = \"fee\", \"403\", if($.state.direction = \"credit\", \"750\", \"751\")))))))",
                 "credit": "=$.state.amount"
               }
-            ]
+            ],
+            "convert": {
+              "to": "PLN",
+              "date": "=$.state.date",
+              "rounding": "half_up",
+              "rounding_account": "756"
+            }
           }
         }
       },
@@ -3204,7 +3279,13 @@
                 "account": "=if($.operation.direction = \"credit\", if($.kind = \"tax\", \"225\", if($.kind = \"zus\", \"229\", if($.kind = \"own\", \"149\", if($.kind = \"owner\", \"249\", if($.kind = \"fee\", \"403\", if($.operation.direction = \"credit\", \"750\", \"751\")))))), \"202\")",
                 "credit": "=$.operation.open"
               }
-            ]
+            ],
+            "convert": {
+              "to": "PLN",
+              "date": "=$.operation.date",
+              "rounding": "half_up",
+              "rounding_account": "756"
+            }
           }
         }
       },
@@ -3248,6 +3329,53 @@
         "citations": [
           "przegląd MON-07: nieznana pozycja czeka na osobę; jej słowo wyjaśnia pozycję"
         ]
+      }
+    },
+    {
+      "rule_id": "pl-post-fx-difference",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Różnica kursowa zrealizowana przy rozliczeniu wyrównuje rozrachunek (201 przy wpłacie, 202 przy wypłacie) w złotych: zysk Wn rozrachunek / Ma 750, strata Wn 751 / Ma rozrachunek; cofnięta — odwrotnie, tym samym kontem",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "matching_difference"
+            },
+            {
+              "path": "$.state.kind",
+              "op": "eq",
+              "value": "fx"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "=$.state.currency",
+            "lines": [
+              {
+                "account": "=if(($.state.direction = \"up\") = ($.state.matching = \"pl-incoming-payments\"), if($.state.matching = \"pl-incoming-payments\", \"201\", \"202\"), $.state.account)",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "=if(($.state.direction = \"up\") = ($.state.matching = \"pl-incoming-payments\"), $.state.account, if($.state.matching = \"pl-incoming-payments\", \"201\", \"202\"))",
+                "credit": "=$.state.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "citations": [
+          "ustawa o rachunkowości art. 30 ust. 4: zrealizowane różnice kursowe — przychody albo koszty finansowe",
+          "ustawa o CIT art. 15a, ustawa o PIT art. 24c: różnice kursowe z faktycznie zapłaconych kwot w walucie obcej"
+        ],
+        "scope": "pl"
       }
     }
   ],

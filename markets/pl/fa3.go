@@ -34,6 +34,7 @@ type FA3Invoice struct {
 	ExemptionBasis string
 	Net, VAT       int64
 	Gross          int64
+	VATPLN         int64     // P_14_xW: the VAT in złoty of an invoice in another currency
 	Lines          []FA3Line // empty: one line for the whole net
 	Term           string    // payment term, YYYY-MM-DD; empty omits it
 	Account        string    // the seller's IBAN; empty omits it
@@ -220,6 +221,14 @@ func WriteFA3(inv FA3Invoice) ([]byte, error) {
 	totals := []faAmount{{XMLName: xml.Name{Local: "P_13_" + slot}, Value: core.FormatMoney(inv.Net)}}
 	if !zeroRateSlot(slot) {
 		totals = append(totals, faAmount{XMLName: xml.Name{Local: "P_14_" + slot}, Value: core.FormatMoney(inv.VAT)})
+		// art. 106e ust. 11: an invoice in another currency states its VAT
+		// in złoty (P_14_xW), converted as the VAT act's chapter VI says.
+		if inv.Currency != "" && inv.Currency != "PLN" {
+			if inv.VATPLN == 0 && inv.VAT != 0 {
+				return nil, fmt.Errorf("invoice %s: an invoice in %s states its VAT in złoty (P_14_%sW) — none given", inv.Number, inv.Currency, slot)
+			}
+			totals = append(totals, faAmount{XMLName: xml.Name{Local: "P_14_" + slot + "W"}, Value: core.FormatMoney(inv.VATPLN)})
+		}
 	}
 	var lines []faLine
 	for n, l := range inv.Lines {

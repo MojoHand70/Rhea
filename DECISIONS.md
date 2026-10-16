@@ -3281,3 +3281,39 @@ The review's cause 3 (packs/pl/REVIEW.md, MON-07, MON-08, MON-18, ZUS-08, OWN-02
 - **Tests.** `TestNBPRatesForEveryDay` (a weekend on Friday's table, Monday on Friday's,
   Tuesday on Monday's; a second pass adds nothing); `TestNBPLive` (gated by
   `RHEA_LIVE_NBP`) read the real tables for 21–30 September 2026 on the day it shipped.
+
+## 2026-10-16 — Poland pack v22: currencies
+
+The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13).
+
+- **The invoice carries złoty.** `sales_invoice` v8 and `purchase_invoice` v7 gain `net_pln`
+  and `vat_pln`: `round($.net * fx($.currency, "PLN", sale date), 2, half_up)` — the NBP
+  average of the last working day before the sale (the `pl-nbp` channel publishes that
+  rate under the sale's date). For złoty invoices the rate is exactly 1.
+- **One rate for the books and the VAT.** The invoice entries convert at the same date
+  (the sale date, where the issue date stood), so 222 and 221 hold exactly the invoice's
+  VAT in złoty and the VAT account cannot drift from the return. Bank lines — trade
+  payments, explained kinds, a person's reclassification — convert at the rate of their
+  own day.
+- **Realised exchange differences.** Both payment matchings now declare `convert`
+  (functional PLN, settled at the payment's date). The difference record picks 750 when
+  the rate rose on what a customer owes or fell on what we owe, 751 otherwise, and a
+  reversal goes back through the account it came in on; `pl-post-fx-difference` squares
+  the receivable or the payable against it. The difference record now covers outgoing
+  payments too.
+- **The settlement, the registers, the JPK and the invoice in złoty.** Every sum of the VAT
+  settlement reads `coalesce(i.vat_pln, i.vat)` (invoices from before v22 are złoty
+  invoices); the registers likewise; the JPK writer reads the złoty amounts; the FA(3)
+  writer states P_14_xW for an invoice in another currency (art. 106e ust. 11) and refuses
+  one without it.
+- **A known limit.** The matching engine dates an invoice by its issue date (it also orders
+  by it), while the books convert at the sale date. A foreign-currency invoice issued on
+  a later day than its sale leaves the rate gap of those days on the receivable when it is
+  paid. Rare; an invoice side dated by its rate date is the fix when the engine can read
+  a missing date as none.
+- **Validated:** the euro invoice's FA(3) with P_14_1W against the Ministry's XSD.
+- **Test:** `TestAnInvoiceInEuro` — NBP rates through the channel, a euro sale and purchase
+  at Monday's average, the customer paying a day later (gain 6.15 zł on 750), the supplier
+  paid on 1 October (loss 1.84 zł on 751), both settlements square to zero in złoty,
+  September settled and filed in złoty, the invoice sent with its VAT in złoty, and the
+  customer's match undone with its gain back out of 750.

@@ -270,8 +270,7 @@ func WriteJPKV7M(ctx context.Context, reads adapter.Reads, params map[string]str
 		} else {
 			row.BFK = "1" // issued outside KSeF
 		}
-		net, _ := minorUnits(inv.State["net"])
-		vat, _ := minorUnits(inv.State["vat"])
+		net, vat := plnAmounts(inv.State)
 		code := text(rates[text(inv.State["vat_rate"])]["code"])
 		switch code {
 		case "23", "22":
@@ -302,8 +301,7 @@ func WriteJPKV7M(ctx context.Context, reads adapter.Reads, params map[string]str
 		}
 		supplierID, _ := inv.State["supplier"].(string)
 		supplier := companies[supplierID]
-		net, _ := minorUnits(inv.State["net"])
-		vat, _ := minorUnits(inv.State["vat"])
+		net, vat := plnAmounts(inv.State)
 		row := jpkPurchase{
 			LpZakupu:      len(doc.Ewidencja.ZakupWiersz) + 1,
 			NrDostawcy:    nipOf(supplier, nil),
@@ -431,6 +429,19 @@ func nipOf(c map[string]any, fallback any) string {
 		return NIPDigits(v)
 	}
 	return NIPDigits(text(fallback))
+}
+
+// plnAmounts are an invoice's net and VAT in złoty: the amounts it carries
+// in złoty (an invoice in another currency, converted at its booking), or its
+// own when it was issued in złoty or before it carried them.
+func plnAmounts(state map[string]any) (net, vat int64) {
+	net, okN := minorUnits(state["net_pln"])
+	vat, okV := minorUnits(state["vat_pln"])
+	if !okN || !okV {
+		net, _ = minorUnits(state["net"])
+		vat, _ = minorUnits(state["vat"])
+	}
+	return net, vat
 }
 
 func text(v any) string {
