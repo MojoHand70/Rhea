@@ -2524,7 +2524,7 @@ shapes the pack declares; comments live on the objects and can end in a
 rule; and the first thing built is a number that opens.*
 
 **The first build (2026-10-16).** KK: "let's not wait". One phone page
-in its own repository (`~/rheaface`, local until KK names the remote),
+in its own private repository (`~/rheaface`, MojoHand70/rheaface),
 Polish, on Helios Studio: nine months through the real kernel and pack
 v22 into the database `rhea_face`, captured from the JSON API — objects,
 views, every explanation chain, rules with warrants, doors, approvals, and
