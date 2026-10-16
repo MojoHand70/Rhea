@@ -61,19 +61,16 @@ func TestJPKV7M(t *testing.T) {
 	if tr, err := x.TriggerActivity(ctx, "identify_company", map[string]any{"company": selfID, "email": "biuro@rhea-test.pl", "tax_office": "1471", "legal_form": "legal_entity", "occurred_at": "2026-09-01"}, "krzysztof", ""); err != nil || tr.Booked != 1 {
 		t.Fatalf("identify_company: %+v %v", tr, err)
 	}
-	// Before the close there is no settlement: records only, no declaration.
-	f, err := adapter.Render(ctx, s, "jpk_v7m", map[string]string{"period": "2026-09", "created": "2026-10-05T10:00:00Z"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if strings.Contains(string(f.Bytes), "<Deklaracja>") || !strings.Contains(string(f.Bytes), "<LiczbaWierszySprzedazy>2</LiczbaWierszySprzedazy>") {
-		t.Fatalf("before the close:\n%s", f.Bytes)
+	// Before the close there is no settlement, and an original JPK_V7M
+	// without its declaration is no filing: the writer refuses it.
+	if _, err := adapter.Render(ctx, s, "jpk_v7m", map[string]string{"period": "2026-09", "created": "2026-10-05T10:00:00Z"}); err == nil || !strings.Contains(err.Error(), "close the month first") {
+		t.Fatalf("before the close: %v", err)
 	}
 	// The close: the settlement, then the declaration.
 	if tr, err := x.TriggerActivity(ctx, "close_period", map[string]any{"period": "2026-09-30", "book": "pl-stat", "occurred_at": "2026-10-05"}, "krzysztof", ""); err != nil || tr.Booked != 1 {
 		t.Fatalf("close: %+v %v", tr, err)
 	}
-	f, err = adapter.Render(ctx, s, "jpk_v7m", map[string]string{"period": "2026-09", "created": "2026-10-05T10:00:00Z"})
+	f, err := adapter.Render(ctx, s, "jpk_v7m", map[string]string{"period": "2026-09", "created": "2026-10-05T10:00:00Z"})
 	if err != nil {
 		t.Fatal(err)
 	}

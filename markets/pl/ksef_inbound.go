@@ -96,8 +96,23 @@ func (k KSeFInbound) Pass(ctx context.Context, reads adapter.Reads) ([]core.Even
 		if inv.Account != "" {
 			fact["supplier_account"] = inv.Account
 		}
+		// The supplier's tax point: the sale date when the invoice states
+		// one, the issue date otherwise (VAT art. 19a ust. 1; FA(3) gives P_6
+		// only when it differs from P_1).
+		fact["sale_date"] = inv.IssueDate
+		if inv.SaleDate != "" {
+			fact["sale_date"] = inv.SaleDate
+		}
+		// Received: a KSeF invoice on the day KSeF numbered it (art. 106na
+		// ust. 3) — the date inside its number; a file without one on the day
+		// it reached the store.
+		fact["received_date"] = inv.IssueDate
+		if on, ok := d.State["received_on"].(string); ok && on != "" {
+			fact["received_date"] = on
+		}
 		if ref := strings.TrimSuffix(name, ".xml"); ksefRefPattern.MatchString(ref) {
 			fact["ksef_ref"] = ref
+			fact["received_date"] = ref[11:15] + "-" + ref[15:17] + "-" + ref[17:19]
 		}
 		payload, err := json.Marshal(fact)
 		if err != nil {
@@ -127,6 +142,7 @@ var ksefRefPattern = regexp.MustCompile(`^\d{10}-\d{8}-[0-9A-F]{12}-[0-9A-F]{2}$
 // Invoice is what the reader takes from a Faktura.
 type Invoice struct {
 	Number, IssueDate                    string
+	SaleDate                             string // P_6: stated only when it is not the issue date
 	SellerNIP, SellerName, SellerCountry string
 	BuyerNIP, BuyerCountry               string // the country defaults to PL, as the seller's does
 	Currency                             string
@@ -153,6 +169,7 @@ type fa struct {
 		Currency  string   `xml:"KodWaluty"`
 		IssueDate string   `xml:"P_1"`
 		Number    string   `xml:"P_2"`
+		SaleDate  string   `xml:"P_6"`
 		WZ        []string `xml:"WZ"`
 		Net1      string   `xml:"P_13_1"`
 		Net2      string   `xml:"P_13_2"`
@@ -214,6 +231,7 @@ func ParseFA(b []byte) (Invoice, error) {
 	}
 	inv := Invoice{
 		Number: strings.TrimSpace(f.Body.Number), IssueDate: strings.TrimSpace(f.Body.IssueDate),
+		SaleDate:  strings.TrimSpace(f.Body.SaleDate),
 		SellerNIP: strings.TrimSpace(f.Seller.NIP), SellerName: strings.TrimSpace(f.Seller.Name),
 		SellerCountry: strings.TrimSpace(f.Seller.Country), BuyerNIP: strings.TrimSpace(f.Buyer.NIP),
 		BuyerCountry: strings.TrimSpace(f.Buyer.Country),
@@ -230,6 +248,9 @@ func ParseFA(b []byte) (Invoice, error) {
 	}
 	if _, err := time.Parse("2006-01-02", inv.IssueDate); err != nil {
 		return inv, fmt.Errorf("issue date (P_1) %q is not a date", inv.IssueDate)
+	}
+	if _, err := time.Parse("2006-01-02", inv.SaleDate); inv.SaleDate != "" && err != nil {
+		return inv, fmt.Errorf("sale date (P_6) %q is not a date", inv.SaleDate)
 	}
 	if inv.SellerCountry == "" {
 		inv.SellerCountry = "PL"

@@ -1,7 +1,7 @@
 {
   "pack": "pl",
-  "version": 18,
-  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami; poranek: gospodarz mówi, co zaksięgowano i co czeka, z faktów, które policzyło jądro; dziś: otwarte zadania i należności w kolejności pilności, z zatwierdzeniami, które czekają; KSeF na zewnątrz: faktury sprzedaży idą do KSeF jako FA(3) jedną sesją interaktywną, dowód (numer KSeF, UPO) i odmowa (kod, słowa Ministerstwa) są zdarzeniami, odmowa staje się zadaniem na dziś; koniec miesiąca: faktury niosą okres VAT, zamknięcie miesiąca (period.closed) daje rozliczenie VAT jako obiekt policzony regułą — każda liczba deklaracji ma pochodzenie; plik JPK_V7M z rozliczenia i faktur miesiąca (writer rynku), firma zna swój urząd skarbowy, e-mail i formę prawną, faktura zakupu z KSeF niesie numer KSeF; firma mówi, kim jest dla urzędu (identify_company): e-mail, urząd skarbowy, forma prawna, właściciel",
+  "version": 19,
+  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami; poranek: gospodarz mówi, co zaksięgowano i co czeka, z faktów, które policzyło jądro; dziś: otwarte zadania i należności w kolejności pilności, z zatwierdzeniami, które czekają; KSeF na zewnątrz: faktury sprzedaży idą do KSeF jako FA(3) jedną sesją interaktywną, dowód (numer KSeF, UPO) i odmowa (kod, słowa Ministerstwa) są zdarzeniami, odmowa staje się zadaniem na dziś; koniec miesiąca: faktury niosą okres VAT, zamknięcie miesiąca (period.closed) daje rozliczenie VAT jako obiekt policzony regułą — każda liczba deklaracji ma pochodzenie; plik JPK_V7M z rozliczenia i faktur miesiąca (writer rynku), firma zna swój urząd skarbowy, e-mail i formę prawną, faktura zakupu z KSeF niesie numer KSeF; firma mówi, kim jest dla urzędu (identify_company): e-mail, urząd skarbowy, forma prawna, właściciel; v19 (przegląd pakietu, 2026-10-16): daty, które decydują o okresie VAT — faktura sprzedaży niesie datę sprzedaży (P_6, a gdy jej nie podano, datę wystawienia) i okres VAT według obowiązku podatkowego; faktura zakupu niesie datę sprzedaży u dostawcy i datę otrzymania (dla KSeF: dzień nadania numeru), a odliczenie przypada na późniejszy z tych miesięcy; firma mówi, czym jest (declare_company_form): status VAT (czynny albo zwolniony, z przepisem zwolnienia), forma ksiąg i forma opodatkowania od wskazanej daty; firma zwolniona nie rozlicza VAT i nie składa JPK_V7, a VAT od jej zakupów jest kosztem; faktury bez VAT (zw, 0%) księgują się bez linii VAT; każda zmieniona reguła nazywa swoje źródło",
   "requires": [
     "company",
     "account",
@@ -762,7 +762,7 @@
     },
     {
       "name": "company",
-      "version": 4,
+      "version": 5,
       "domain": "finance",
       "is_document": false,
       "label_field": "name",
@@ -825,6 +825,46 @@
           "name": "owner",
           "type": "ref<person>",
           "required": false
+        },
+        {
+          "name": "vat_status",
+          "type": "enum",
+          "required": false,
+          "values": [
+            "active",
+            "exempt"
+          ]
+        },
+        {
+          "name": "vat_exemption_basis",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "books",
+          "type": "enum",
+          "required": false,
+          "values": [
+            "full",
+            "kpir",
+            "ryczalt"
+          ]
+        },
+        {
+          "name": "income_tax",
+          "type": "enum",
+          "required": false,
+          "values": [
+            "cit",
+            "skala",
+            "liniowy",
+            "ryczalt"
+          ]
+        },
+        {
+          "name": "form_from",
+          "type": "date",
+          "required": false
         }
       ],
       "amendable": [
@@ -833,12 +873,17 @@
         "email",
         "tax_office",
         "legal_form",
-        "owner"
+        "owner",
+        "vat_status",
+        "vat_exemption_basis",
+        "books",
+        "income_tax",
+        "form_from"
       ]
     },
     {
       "name": "sales_invoice",
-      "version": 5,
+      "version": 6,
       "domain": "finance",
       "is_document": true,
       "label_field": "number",
@@ -852,6 +897,11 @@
           "name": "issue_date",
           "type": "date",
           "required": true
+        },
+        {
+          "name": "sale_date",
+          "type": "date",
+          "required": false
         },
         {
           "name": "seller",
@@ -941,7 +991,7 @@
     },
     {
       "name": "purchase_invoice",
-      "version": 4,
+      "version": 5,
       "domain": "finance",
       "is_document": true,
       "label_field": "number",
@@ -955,6 +1005,16 @@
           "name": "invoice_date",
           "type": "date",
           "required": true
+        },
+        {
+          "name": "sale_date",
+          "type": "date",
+          "required": false
+        },
+        {
+          "name": "received_date",
+          "type": "date",
+          "required": false
         },
         {
           "name": "supplier",
@@ -1287,13 +1347,13 @@
     },
     {
       "view_id": "rejestr-vat-sprzedazy",
-      "version": 3,
+      "version": 4,
       "notion": "analysis",
       "title": "Rejestr VAT sprzedaży",
       "domain": "finance",
       "function": "vat",
       "spec": {
-        "sql": "SELECT month, rate, n AS net, v AS vat, g AS gross FROM (SELECT substr(json_extract_string(i.state,'$.issue_date'),1,7) AS month, json_extract_string(r.state,'$.code') AS rate, SUM(CAST(json_extract(i.state,'$.net') AS BIGINT)) AS n, SUM(CAST(json_extract(i.state,'$.vat') AS BIGINT)) AS v, SUM(CAST(json_extract(i.state,'$.gross') AS BIGINT)) AS g FROM objects i JOIN objects r ON json_extract_string(i.state,'$.vat_rate') = r.object_id JOIN objects c ON json_extract_string(i.state,'$.seller') = c.object_id WHERE c.object_type = 'company' AND json_extract_string(c.state,'$.country') = 'PL' AND i.object_type = 'sales_invoice' AND r.object_type = 'vat_rate' GROUP BY 1, 2) ORDER BY month, rate",
+        "sql": "SELECT month, rate, n AS net, v AS vat, g AS gross FROM (SELECT json_extract_string(i.state,'$.vat_period') AS month, json_extract_string(r.state,'$.code') AS rate, SUM(CAST(json_extract(i.state,'$.net') AS BIGINT)) AS n, SUM(CAST(json_extract(i.state,'$.vat') AS BIGINT)) AS v, SUM(CAST(json_extract(i.state,'$.gross') AS BIGINT)) AS g FROM objects i JOIN objects r ON json_extract_string(i.state,'$.vat_rate') = r.object_id JOIN objects c ON json_extract_string(i.state,'$.seller') = c.object_id WHERE c.object_type = 'company' AND json_extract_string(c.state,'$.country') = 'PL' AND i.object_type = 'sales_invoice' AND r.object_type = 'vat_rate' GROUP BY 1, 2) ORDER BY month, rate",
         "columns": [
           {
             "field": "month",
@@ -1362,13 +1422,13 @@
     },
     {
       "view_id": "rejestr-vat-zakupu",
-      "version": 1,
+      "version": 2,
       "notion": "analysis",
       "title": "Rejestr VAT zakupu",
       "domain": "finance",
       "function": "vat",
       "spec": {
-        "sql": "SELECT month, rate, n AS net, v AS vat, g AS gross FROM (SELECT substr(json_extract_string(i.state,'$.invoice_date'),1,7) AS month, json_extract_string(r.state,'$.code') AS rate, SUM(CAST(json_extract(i.state,'$.net') AS BIGINT)) AS n, SUM(CAST(json_extract(i.state,'$.vat') AS BIGINT)) AS v, SUM(CAST(json_extract(i.state,'$.gross') AS BIGINT)) AS g FROM objects i JOIN objects r ON json_extract_string(i.state,'$.vat_rate') = r.object_id JOIN objects c ON json_extract_string(i.state,'$.owner') = c.object_id WHERE c.object_type = 'company' AND json_extract_string(c.state,'$.country') = 'PL' AND i.object_type = 'purchase_invoice' AND r.object_type = 'vat_rate' GROUP BY 1, 2) ORDER BY month, rate",
+        "sql": "SELECT month, rate, n AS net, v AS vat, g AS gross FROM (SELECT json_extract_string(i.state,'$.vat_period') AS month, json_extract_string(r.state,'$.code') AS rate, SUM(CAST(json_extract(i.state,'$.net') AS BIGINT)) AS n, SUM(CAST(json_extract(i.state,'$.vat') AS BIGINT)) AS v, SUM(CAST(json_extract(i.state,'$.gross') AS BIGINT)) AS g FROM objects i JOIN objects r ON json_extract_string(i.state,'$.vat_rate') = r.object_id JOIN objects c ON json_extract_string(i.state,'$.owner') = c.object_id WHERE c.object_type = 'company' AND json_extract_string(c.state,'$.country') = 'PL' AND i.object_type = 'purchase_invoice' AND r.object_type = 'vat_rate' GROUP BY 1, 2) ORDER BY month, rate",
         "columns": [
           {
             "field": "month",
@@ -1606,7 +1666,7 @@
       "rule_id": "pl-book-sales-invoice",
       "priority": 100,
       "effective_from": "2026-01-01",
-      "description": "Wystawiona faktura sprzedaży staje się dokumentem sales_invoice; kwota otwarta zaczyna się od brutto, status od open; okres VAT = miesiąc wystawienia",
+      "description": "Wystawiona faktura sprzedaży staje się dokumentem sales_invoice; kwota otwarta zaczyna się od brutto, status od open; data sprzedaży to data dostawy lub wykonania usługi, a gdy faktura jej nie podaje — data wystawienia; okres VAT = miesiąc obowiązku podatkowego, czyli miesiąc sprzedaży (nie wystawienia)",
       "spec": {
         "match": {
           "event_type": "sales.invoice.issued",
@@ -1636,18 +1696,29 @@
               "buyer_nip": "=$.buyer_nip",
               "open": "=$.gross",
               "status": "open",
-              "vat_period": "=month($.issue_date)"
+              "vat_period": "=month(coalesce($.sale_date, $.issue_date))",
+              "sale_date": "=coalesce($.sale_date, $.issue_date)"
             }
           }
         }
       },
-      "version": 2
+      "version": 3,
+      "warrant": {
+        "basis": "statute",
+        "citations": [
+          "ustawa o VAT art. 19a ust. 1: „Obowiązek podatkowy powstaje z chwilą dokonania dostawy towarów lub wykonania usługi”",
+          "ustawa o VAT art. 106i ust. 1: fakturę wystawia się nie później niż 15. dnia miesiąca następującego po miesiącu dostawy — stąd sprzedaż wrześniowa z fakturą październikową należy do września",
+          "FA(3) P_6 (art. 106e ust. 1 pkt 6): „Data dokonania lub zakończenia dostawy towarów lub wykonania usługi (...) o ile taka data jest określona i różni się od daty wystawienia faktury”",
+          "poza tą regułą (kolejne wersje): usługi okresowe (art. 19a ust. 3), media, najem i stała obsługa (ust. 5 pkt 4, ust. 7), zaliczki (ust. 8)"
+        ],
+        "scope": "pl"
+      }
     },
     {
       "rule_id": "pl-post-sales-invoice",
       "priority": 200,
       "effective_from": "2026-01-01",
-      "description": "Faktura sprzedaży księguje się: 201 brutto / 700 netto, 222 VAT",
+      "description": "Faktura sprzedaży z VAT księguje się: 201 brutto / 700 netto, 222 VAT",
       "spec": {
         "match": {
           "event_type": "sales.invoice.issued",
@@ -1656,6 +1727,9 @@
               "path": "$.market",
               "op": "eq",
               "value": "pl"
+            },
+            {
+              "formula": "=$.vat > 0"
             }
           ]
         },
@@ -1685,6 +1759,64 @@
             }
           }
         }
+      },
+      "warrant": {
+        "basis": "practice",
+        "scope": "pl",
+        "citations": [
+          "wzorcowy plan kont dla małych i średnich przedsiębiorstw: Wn 201 rozrachunki z odbiorcami / Ma 70x przychody ze sprzedaży, Ma 222 VAT należny"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-sales-invoice-no-vat",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Faktura sprzedaży bez VAT (zwolniona, 0%, sprzedawca zwolniony) księguje się: 201 brutto / 700 netto — bez linii VAT, której kwota byłaby zerem",
+      "spec": {
+        "match": {
+          "event_type": "sales.invoice.issued",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            },
+            {
+              "formula": "=not ($.vat > 0)"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "currency": "=$.currency",
+            "lines": [
+              {
+                "account": "201",
+                "debit": "=$.gross"
+              },
+              {
+                "account": "700",
+                "credit": "=$.net"
+              }
+            ],
+            "book": "pl-stat",
+            "convert": {
+              "to": "PLN",
+              "date": "=$.issue_date",
+              "rounding": "half_up",
+              "rounding_account": "756"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "citations": [
+          "ustawa o VAT art. 113 ust. 1 (zwolnienie podmiotowe) i art. 43 (zwolnienia przedmiotowe): sprzedaż bez podatku należnego",
+          "wzorcowy plan kont: Wn 201 / Ma 70x"
+        ],
+        "scope": "pl"
       }
     },
     {
@@ -1779,7 +1911,7 @@
       "rule_id": "pl-book-purchase-invoice",
       "priority": 100,
       "effective_from": "2026-01-01",
-      "description": "Faktura zakupu z KSeF staje się dokumentem purchase_invoice: dostawca i nabywca po NIP, kwoty takie, jak podaje dokument; kwota otwarta zaczyna się od brutto, status od open; okres VAT = miesiąc faktury (odliczenie w miesiącu otrzymania; zmiana przez poprawkę); faktura spoza KSeF (bez numeru KSeF)",
+      "description": "Faktura zakupu spoza KSeF (bez numeru KSeF) staje się dokumentem purchase_invoice: dostawca i nabywca po NIP, kwoty takie, jak podaje dokument; kwota otwarta zaczyna się od brutto, status od open; data sprzedaży u dostawcy (P_6, inaczej data faktury) i data otrzymania (KSeF: dzień nadania numeru; inny dokument: dzień, w którym wpłynął); okres VAT = późniejszy z miesięcy sprzedaży i otrzymania — najwcześniejszy, w którym wolno odliczyć",
       "spec": {
         "match": {
           "event_type": "purchase.invoice.received",
@@ -1810,18 +1942,31 @@
               "currency": "=$.currency",
               "open": "=$.gross",
               "status": "open",
-              "vat_period": "=month($.invoice_date)"
+              "vat_period": "=month(max(coalesce($.sale_date, $.invoice_date), coalesce($.received_date, $.invoice_date)))",
+              "sale_date": "=coalesce($.sale_date, $.invoice_date)",
+              "received_date": "=coalesce($.received_date, $.invoice_date)"
             }
           }
         }
       },
-      "version": 3
+      "version": 4,
+      "warrant": {
+        "basis": "statute",
+        "citations": [
+          "ustawa o VAT art. 86 ust. 10: prawo do odliczenia powstaje „w rozliczeniu za okres, w którym w odniesieniu do nabytych (...) towarów i usług powstał obowiązek podatkowy”",
+          "ustawa o VAT art. 86 ust. 10b pkt 1: „nie wcześniej niż w rozliczeniu za okres, w którym podatnik otrzymał fakturę”",
+          "ustawa o VAT art. 106na ust. 3: „Faktura ustrukturyzowana jest uznana za otrzymaną przy użyciu Krajowego Systemu e-Faktur w dniu przydzielenia w tym systemie numeru identyfikującego tę fakturę”",
+          "ustawa o VAT art. 86 ust. 11: późniejsze odliczenie — w jednym z trzech następnych okresów — to wybór osoby, zapisywany poprawką z powodem",
+          "poza tą regułą: dostawca na metodzie kasowej (P_16 = 1) — odliczenie dopiero w okresie zapłaty (art. 21 ust. 1)"
+        ],
+        "scope": "pl"
+      }
     },
     {
       "rule_id": "pl-book-purchase-invoice-ksef",
       "priority": 100,
       "effective_from": "2026-01-01",
-      "description": "Faktura zakupu z KSeF staje się dokumentem purchase_invoice z numerem KSeF (do ewidencji JPK): dostawca i nabywca po NIP, kwoty takie, jak podaje dokument; kwota otwarta zaczyna się od brutto, status od open; okres VAT = miesiąc faktury",
+      "description": "Faktura zakupu z numerem KSeF (do ewidencji JPK) staje się dokumentem purchase_invoice: dostawca i nabywca po NIP, kwoty takie, jak podaje dokument; kwota otwarta zaczyna się od brutto, status od open; data sprzedaży u dostawcy (P_6, inaczej data faktury) i data otrzymania (KSeF: dzień nadania numeru; inny dokument: dzień, w którym wpłynął); okres VAT = późniejszy z miesięcy sprzedaży i otrzymania — najwcześniejszy, w którym wolno odliczyć",
       "spec": {
         "match": {
           "event_type": "purchase.invoice.received",
@@ -1852,19 +1997,32 @@
               "currency": "=$.currency",
               "open": "=$.gross",
               "status": "open",
-              "vat_period": "=month($.invoice_date)",
-              "ksef_ref": "=$.ksef_ref"
+              "vat_period": "=month(max(coalesce($.sale_date, $.invoice_date), coalesce($.received_date, $.invoice_date)))",
+              "ksef_ref": "=$.ksef_ref",
+              "sale_date": "=coalesce($.sale_date, $.invoice_date)",
+              "received_date": "=coalesce($.received_date, $.invoice_date)"
             }
           }
         }
       },
-      "version": 1
+      "version": 2,
+      "warrant": {
+        "basis": "statute",
+        "citations": [
+          "ustawa o VAT art. 86 ust. 10: prawo do odliczenia powstaje „w rozliczeniu za okres, w którym w odniesieniu do nabytych (...) towarów i usług powstał obowiązek podatkowy”",
+          "ustawa o VAT art. 86 ust. 10b pkt 1: „nie wcześniej niż w rozliczeniu za okres, w którym podatnik otrzymał fakturę”",
+          "ustawa o VAT art. 106na ust. 3: „Faktura ustrukturyzowana jest uznana za otrzymaną przy użyciu Krajowego Systemu e-Faktur w dniu przydzielenia w tym systemie numeru identyfikującego tę fakturę”",
+          "ustawa o VAT art. 86 ust. 11: późniejsze odliczenie — w jednym z trzech następnych okresów — to wybór osoby, zapisywany poprawką z powodem",
+          "poza tą regułą: dostawca na metodzie kasowej (P_16 = 1) — odliczenie dopiero w okresie zapłaty (art. 21 ust. 1)"
+        ],
+        "scope": "pl"
+      }
     },
     {
       "rule_id": "pl-post-purchase-invoice",
       "priority": 200,
       "effective_from": "2026-01-01",
-      "description": "Faktura zakupu księguje się: Wn 300 netto, Wn 221 VAT naliczony / Ma 202 brutto",
+      "description": "Faktura zakupu z VAT do odliczenia (nabywca czynny podatnik VAT) księguje się: Wn 300 netto, Wn 221 VAT naliczony / Ma 202 brutto",
       "spec": {
         "match": {
           "event_type": "purchase.invoice.received",
@@ -1873,6 +2031,9 @@
               "path": "$.market",
               "op": "eq",
               "value": "pl"
+            },
+            {
+              "formula": "=$.vat > 0 and coalesce(ref(company, vat_id, $.buyer_nip).vat_status, \"active\") = \"active\""
             }
           ]
         },
@@ -1902,6 +2063,66 @@
             }
           }
         }
+      },
+      "warrant": {
+        "basis": "statute",
+        "citations": [
+          "ustawa o VAT art. 86 ust. 1: podatnikowi przysługuje prawo do obniżenia podatku należnego o podatek naliczony — w zakresie, w jakim zakupy służą czynnościom opodatkowanym",
+          "wzorcowy plan kont: Wn 300 rozliczenie zakupu, Wn 221 VAT naliczony / Ma 202 rozrachunki z dostawcami"
+        ],
+        "scope": "pl"
+      }
+    },
+    {
+      "rule_id": "pl-post-purchase-invoice-gross",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Faktura zakupu bez VAT do odliczenia — bez VAT (zw, 0%) albo kupiona przez firmę zwolnioną z VAT — księguje się brutto: Wn 300 brutto / Ma 202 brutto; VAT, którego nie wolno odliczyć, jest częścią kosztu",
+      "spec": {
+        "match": {
+          "event_type": "purchase.invoice.received",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            },
+            {
+              "formula": "=not ($.vat > 0 and coalesce(ref(company, vat_id, $.buyer_nip).vat_status, \"active\") = \"active\")"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "currency": "=$.currency",
+            "lines": [
+              {
+                "account": "300",
+                "debit": "=$.gross"
+              },
+              {
+                "account": "202",
+                "credit": "=$.gross"
+              }
+            ],
+            "book": "pl-stat",
+            "convert": {
+              "to": "PLN",
+              "date": "=$.invoice_date",
+              "rounding": "half_up",
+              "rounding_account": "756"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "citations": [
+          "ustawa o PIT art. 23 ust. 1 pkt 43 lit. a: podatek naliczony jest kosztem, „jeżeli podatnik zwolniony jest od podatku od towarów i usług”",
+          "rozporządzenie w sprawie KPiR § 2 pkt 2: cena zakupu pomniejszona tylko o podatek „podlegający odliczeniu zgodnie z odrębnymi przepisami”",
+          "ustawa o rachunkowości art. 28 ust. 2: cena nabycia obejmuje podatek, którego nie można odliczyć"
+        ],
+        "scope": "pl"
       }
     },
     {
@@ -2532,10 +2753,10 @@
     },
     {
       "rule_id": "pl-settle-vat",
-      "version": 1,
+      "version": 2,
       "priority": 100,
       "effective_from": "2026-01-01",
-      "description": "Zamknięcie miesiąca w księdze pl-stat rozlicza VAT: podstawy i podatek należny po stawkach z faktur sprzedaży tego okresu, podatek naliczony z faktur zakupu, nadwyżka z poprzedniego miesiąca; do zapłaty, gdy należny przewyższa naliczony, inaczej nadwyżka do przeniesienia (ustawa o VAT art. 86, 87, 99; pozycje JPK_V7M P_10–P_62); do zapłaty i do przeniesienia w pełnych złotych (Ordynacja podatkowa art. 63 §1: należny i naliczony zaokrąglone, potem różnica)",
+      "description": "Zamknięcie miesiąca w księdze pl-stat rozlicza VAT: podstawy i podatek należny po stawkach z faktur sprzedaży tego okresu, podatek naliczony z faktur zakupu, nadwyżka z poprzedniego miesiąca; do zapłaty, gdy należny przewyższa naliczony, inaczej nadwyżka do przeniesienia (ustawa o VAT art. 86, 87, 99; pozycje JPK_V7M P_10–P_62); do zapłaty i do przeniesienia w pełnych złotych (Ordynacja podatkowa art. 63 §1: należny i naliczony zaokrąglone, potem różnica); firma zwolniona z VAT nie rozlicza VAT i nie składa deklaracji (ustawa o VAT art. 99 ust. 7)",
       "spec": {
         "match": {
           "event_type": "period.closed",
@@ -2544,6 +2765,9 @@
               "path": "$.book",
               "op": "eq",
               "value": "pl-stat"
+            },
+            {
+              "formula": "=not any(c in objects(company, kind, \"self\") : coalesce(c.vat_status, \"active\") = \"exempt\")"
             }
           ]
         },
@@ -2572,6 +2796,16 @@
             }
           }
         }
+      },
+      "warrant": {
+        "basis": "statute",
+        "citations": [
+          "ustawa o VAT art. 86 i 87: podatek należny pomniejszony o naliczony; nadwyżka przenoszona na następny okres",
+          "ustawa o VAT art. 99 ust. 1: deklaracje za okresy miesięczne do 25. dnia następnego miesiąca; ust. 7: obowiązek nie dotyczy podatników zwolnionych na podstawie art. 113",
+          "Ordynacja podatkowa art. 63 § 1: podstawy i kwoty podatków zaokrągla się do pełnych złotych",
+          "rozporządzenie w sprawie JPK_V7: pozycje P_10–P_62 deklaracji"
+        ],
+        "scope": "pl"
       }
     },
     {
@@ -2631,6 +2865,97 @@
             }
           }
         }
+      }
+    },
+    {
+      "rule_id": "pl-declare-company-form",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Firma mówi, czym jest, bez przepisu zwolnienia: czynny podatnik VAT, forma ksiąg i forma opodatkowania od wskazanej daty; deklaracja sprzeczna (ryczałt bez ewidencji ryczałtowej, CIT bez pełnych ksiąg, zwolnienie bez przepisu) nie pasuje do żadnej reguły i czeka",
+      "spec": {
+        "match": {
+          "event_type": "company.form.declared",
+          "where": [
+            {
+              "path": "$.vat_exemption_basis",
+              "op": "absent"
+            },
+            {
+              "formula": "=$.vat_status = \"active\" and ($.income_tax = \"ryczalt\") = ($.books = \"ryczalt\") and ($.income_tax <> \"cit\" or $.books = \"full\")"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "company",
+            "target": "=$.company",
+            "set": {
+              "vat_status": "=$.vat_status",
+              "books": "=$.books",
+              "income_tax": "=$.income_tax",
+              "form_from": "=$.from",
+              "vat_exemption_basis": ""
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "citations": [
+          "ustawa o VAT art. 96 ust. 1 i 3: rejestracja jako podatnik VAT czynny; zwolnieni (art. 113, art. 43) mogą się zarejestrować",
+          "ustawa o VAT art. 113 ust. 1 i 4: zwolnienie podmiotowe i rezygnacja z niego przed początkiem miesiąca",
+          "ustawa o PIT art. 9a ust. 1–2: skala, chyba że podatnik złoży oświadczenie o ryczałcie albo podatku liniowym; ustawa o zryczałtowanym podatku dochodowym art. 9 ust. 3",
+          "ustawa o PIT art. 24a ust. 1 i 3: KPiR albo księgi rachunkowe; ryczałtowcy prowadzą ewidencję przychodów (ustawa o zryczałtowanym podatku dochodowym art. 15 ust. 1)",
+          "ustawa o rachunkowości art. 2 ust. 1 pkt 2 i ust. 2: księgi rachunkowe obowiązkowo powyżej progu przychodów albo z wyboru, zgłoszonego przed rokiem obrotowym",
+          "ustawa o CIT: osoba prawna płaci CIT i prowadzi księgi rachunkowe — stąd CIT tylko z pełnymi księgami"
+        ],
+        "scope": "pl"
+      }
+    },
+    {
+      "rule_id": "pl-declare-company-form-exemption",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Firma mówi, czym jest, z przepisem zwolnienia z VAT (podmiotowego — art. 113 ust. 1 — albo przedmiotowego z art. 43 ust. 1): status VAT, przepis, forma ksiąg i forma opodatkowania od wskazanej daty; przepis trafia na faktury (P_19A)",
+      "spec": {
+        "match": {
+          "event_type": "company.form.declared",
+          "where": [
+            {
+              "path": "$.vat_exemption_basis",
+              "op": "exists"
+            },
+            {
+              "formula": "=($.income_tax = \"ryczalt\") = ($.books = \"ryczalt\") and ($.income_tax <> \"cit\" or $.books = \"full\")"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "company",
+            "target": "=$.company",
+            "set": {
+              "vat_status": "=$.vat_status",
+              "books": "=$.books",
+              "income_tax": "=$.income_tax",
+              "form_from": "=$.from",
+              "vat_exemption_basis": "=$.vat_exemption_basis"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "citations": [
+          "ustawa o VAT art. 96 ust. 1 i 3: rejestracja jako podatnik VAT czynny; zwolnieni (art. 113, art. 43) mogą się zarejestrować",
+          "ustawa o VAT art. 113 ust. 1 i 4: zwolnienie podmiotowe i rezygnacja z niego przed początkiem miesiąca",
+          "ustawa o PIT art. 9a ust. 1–2: skala, chyba że podatnik złoży oświadczenie o ryczałcie albo podatku liniowym; ustawa o zryczałtowanym podatku dochodowym art. 9 ust. 3",
+          "ustawa o PIT art. 24a ust. 1 i 3: KPiR albo księgi rachunkowe; ryczałtowcy prowadzą ewidencję przychodów (ustawa o zryczałtowanym podatku dochodowym art. 15 ust. 1)",
+          "ustawa o rachunkowości art. 2 ust. 1 pkt 2 i ust. 2: księgi rachunkowe obowiązkowo powyżej progu przychodów albo z wyboru, zgłoszonego przed rokiem obrotowym",
+          "ustawa o CIT: osoba prawna płaci CIT i prowadzi księgi rachunkowe — stąd CIT tylko z pełnymi księgami",
+          "ustawa o VAT art. 106e ust. 1 pkt 19: faktura dokumentująca sprzedaż zwolnioną wskazuje przepis, na podstawie którego podatnik stosuje zwolnienie"
+        ],
+        "scope": "pl"
       }
     }
   ],
@@ -2704,6 +3029,68 @@
           }
         ],
         "emits": "company.identified",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "declare_company_form",
+      "domain": "finance",
+      "description": "Firma mówi, czym jest, od wskazanego dnia: status VAT (czynny albo zwolniony) i — przy zwolnieniu — przepis, na którym się opiera (np. „art. 113 ust. 1 ustawy o VAT”), forma ksiąg (pełne księgi, KPiR, ewidencja ryczałtowa) i forma opodatkowania (CIT, skala, liniowy, ryczałt)",
+      "spec": {
+        "inputs": [
+          {
+            "name": "company",
+            "type": "ref<company>",
+            "required": true
+          },
+          {
+            "name": "vat_status",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "active",
+              "exempt"
+            ]
+          },
+          {
+            "name": "vat_exemption_basis",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "books",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "full",
+              "kpir",
+              "ryczalt"
+            ]
+          },
+          {
+            "name": "income_tax",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "cit",
+              "skala",
+              "liniowy",
+              "ryczalt"
+            ]
+          },
+          {
+            "name": "from",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "company.form.declared",
         "who": [
           "human"
         ]

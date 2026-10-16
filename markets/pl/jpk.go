@@ -137,6 +137,7 @@ type jpkSale struct {
 	NazwaKontrahenta string `xml:"NazwaKontrahenta"`
 	DowodSprzedazy   string `xml:"DowodSprzedazy"`
 	DataWystawienia  string `xml:"DataWystawienia"`
+	DataSprzedazy    string `xml:"DataSprzedazy,omitempty"` // the sale date, when not the issue date
 	NrKSeF           string `xml:"NrKSeF,omitempty"`
 	BFK              string `xml:"BFK,omitempty"`
 	K10              string `xml:"K_10,omitempty"`
@@ -159,7 +160,8 @@ type jpkPurchase struct {
 	NrDostawcy    string `xml:"NrDostawcy"`
 	NazwaDostawcy string `xml:"NazwaDostawcy"`
 	DowodZakupu   string `xml:"DowodZakupu"`
-	DataZakupu    string `xml:"DataZakupu"`
+	DataZakupu    string `xml:"DataZakupu"`           // the purchase document's issue date
+	DataWplywu    string `xml:"DataWplywu,omitempty"` // its receipt, when not that day
 	NrKSeF        string `xml:"NrKSeF,omitempty"`
 	BFK           string `xml:"BFK,omitempty"`
 	K42           string `xml:"K_42,omitempty"`
@@ -207,6 +209,9 @@ func WriteJPKV7M(ctx context.Context, reads adapter.Reads, params map[string]str
 	}
 	if self == nil {
 		return adapter.File{}, fmt.Errorf("jpk_v7m: no company of kind self — whose return is this?")
+	}
+	if self["vat_status"] == "exempt" {
+		return adapter.File{}, fmt.Errorf("jpk_v7m: %s is exempt from VAT — an exempt company files no JPK_V7", text(self["name"]))
 	}
 	taxpayer, err := jpkTaxpayerOf(self, persons)
 	if err != nil {
@@ -257,6 +262,9 @@ func WriteJPKV7M(ctx context.Context, reads adapter.Reads, params map[string]str
 			DowodSprzedazy:   text(inv.State["number"]),
 			DataWystawienia:  text(inv.State["issue_date"]),
 		}
+		if sale := text(inv.State["sale_date"]); sale != "" && sale != row.DataWystawienia {
+			row.DataSprzedazy = sale
+		}
 		if ref := ksefOf[inv.ID]; ref != "" {
 			row.NrKSeF = ref
 		} else {
@@ -303,6 +311,9 @@ func WriteJPKV7M(ctx context.Context, reads adapter.Reads, params map[string]str
 			DowodZakupu:   text(inv.State["number"]),
 			DataZakupu:    text(inv.State["invoice_date"]),
 			K42:           core.FormatMoney(net), K43: core.FormatMoney(vat),
+		}
+		if got := text(inv.State["received_date"]); got != "" && got != row.DataZakupu {
+			row.DataWplywu = got
 		}
 		if ref := text(inv.State["ksef_ref"]); ref != "" {
 			row.NrKSeF = ref
@@ -360,6 +371,11 @@ func WriteJPKV7M(ctx context.Context, reads adapter.Reads, params map[string]str
 				WariantFormularzaDekl: 23},
 			PozycjeSzczegolowe: p, Pouczenia: 1,
 		}
+	}
+	// An original JPK_V7M is the records and the declaration together; the
+	// declaration is the close's, so a month not yet closed has none to file.
+	if doc.Deklaracja == nil {
+		return adapter.File{}, fmt.Errorf("jpk_v7m: %s has no VAT settlement — close the month first; the declaration is what the close derives", period)
 	}
 	body, err := xml.MarshalIndent(doc, "", "  ")
 	if err != nil {

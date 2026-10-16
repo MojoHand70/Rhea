@@ -3061,3 +3061,59 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
 - **Tests:** `TestFormulaCoalesce` (stated and silent sale dates, the later of tax point
   and receipt, arity, kinds); `TestConditionReadsThroughALink` lists a company that
   never declared its books and finds its sale in the ledger by the stand-in.
+
+## 2026-10-16 — Poland pack v19: the dates that decide the VAT month, and the company says what it is
+
+The first pack version out of the review (packs/pl/REVIEW.md, causes 1 and 2).
+
+- **The sale's month is the sale's.** `sales_invoice` v6 carries `sale_date` (FA(3) P_6;
+  the issue date when the invoice states none) and `vat_period = month(sale date)` —
+  the tax point of art. 19a ust. 1, where the issue month had stood. A September sale
+  invoiced on 3 October settles in September. The registers group by `vat_period`.
+  The FA(3) writer writes P_6 when the sale was on another day; the JPK writes
+  DataSprzedazy. Periodic services, utilities and rent, and advances keep their own
+  tax points (art. 19a ust. 3, 5, 7, 8) — later versions, named in the rule's warrant.
+- **A purchase is deductible from the later of the supplier's tax point and its
+  receipt** (art. 86 ust. 10 and 10b pkt 1). `purchase_invoice` v5 carries `sale_date`
+  and `received_date`; `vat_period = month(max(...))`. A KSeF invoice is received the day
+  KSeF numbered it (art. 106na ust. 3): the reader takes the date inside the KSeF
+  number; any other file was received the day it reached the store, which the
+  document door now stamps into its payload (`date`, as verb facts already carried)
+  and the documents pack v4 keeps as `received_document.received_on`; the PDF reader
+  passes it on too. The JPK writes DataWplywu where receipt and issue differ. The
+  later deduction art. 86 ust. 11 allows is a person's choice, an amendment with a
+  reason — not modelled yet; a cash-method supplier (P_16) neither.
+- **The company says what it is** through `declare_company_form`: VAT status (active or
+  exempt) with the provision of an exemption, books (full, KPiR, ryczałt), income tax
+  (CIT, skala, liniowy, ryczałt), and from when. Two rules, split on the provision's
+  presence; both read a formula condition that refuses what the law does not allow —
+  ryczałt tax without the ryczałt record, CIT without full books, an exemption without
+  its provision — so an impossible declaration matches nothing and waits. Legal form
+  against tax form is not checked yet (the payload names the company by id, and the
+  rule cannot read its legal form without a ref-read by id).
+- **What reads it now.** Purchase VAT is booked as deductible only for a buyer whose
+  status is active (`coalesce(..., "active")`: undeclared is the law's default for a
+  registered company); an exempt buyer's purchase books gross (PIT art. 23 ust. 1 pkt
+  43 lit. a). The VAT settlement fires only when no company of kind self is exempt (art.
+  99 ust. 7). The JPK writer refuses an exempt company. The FA(3) writer writes P_19 =
+  1 with P_19A, the declared provision — "zwolnienie z VAT" in P_19C was no legal basis
+  — and refuses an exempt invoice whose seller declared none. Books and income tax are
+  declared now and read when the sole trader's records arrive.
+- **Invoices without VAT book at all.** A posting line must be positive, so a zero-VAT
+  invoice (exempt, 0%, an exempt seller) failed its whole event — an insurance invoice
+  could not be booked. The posting rules split on `$.vat > 0`: with VAT, the three
+  lines; without, two (201/700, and 300/202 gross).
+- **The JPK refuses a month without its declaration** (JPK-11): an original JPK_V7M
+  is the records and the declaration together, and the declaration is the close's.
+- **The invoice dates are optional on the shared types.** The German and intercompany
+  packs write the same `sales_invoice` and `purchase_invoice`; a required sale date
+  broke them. The Polish rules always fill both dates.
+- **Validated:** an exempt invoice with P_19A and a sale-dated invoice with P_6 against
+  the FA(3) XSD; the September and October JPK files with DataSprzedazy, DataWplywu,
+  NrKSeF and BFK against the JPK_V7M(3) XSD — the Ministry's schemas, lxml, 2026-10-16.
+  The golden files are unchanged.
+- **Tests:** `TestTheDatesThatDecideTheVATMonth` (a September sale invoiced in October,
+  a KSeF purchase numbered in October, a mailed one received in October — through the
+  reader, the close of both months and both JPK files); `TestAnExemptSoleTrader` (two
+  impossible declarations wait, the exempt sole trader's sale and purchase book without
+  VAT, its invoice names art. 113 ust. 1, its close settles nothing, its JPK is refused).

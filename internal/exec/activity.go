@@ -164,6 +164,14 @@ func (x *Executor) TriggerActivity(ctx context.Context, name string, inputs map[
 	if err != nil {
 		return Triggered{}, fmt.Errorf("activity %s: %w", name, err)
 	}
+	// A document's fact carries its business date in the payload, as a
+	// verb's does: the day a file arrived is when an invoice was received,
+	// and the readers that turn the file into its typed event read it there.
+	if len(built.Files) > 0 {
+		if built.Payload, err = withDate(built.Payload, built.OccurredAt); err != nil {
+			return Triggered{}, err
+		}
+	}
 	// Ref inputs name objects; the door vouches they exist and are what the
 	// declaration says — the same courtesy ref() pays at rule expansion.
 	for _, ref := range built.Refs {

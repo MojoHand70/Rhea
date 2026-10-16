@@ -140,6 +140,12 @@ func (r *PDFInvoice) Pass(ctx context.Context, reads Reads) ([]core.Event, error
 		fact["document"] = hash
 		fact["reader"] = who
 		fact["confidence"] = confidence.FloatString(2)
+		// An invoice outside KSeF is received the day its file reached the
+		// store; a file from before the store kept that day, on its own date.
+		fact["received_date"] = fact["invoice_date"]
+		if on, ok := d.State["received_on"].(string); ok && on != "" {
+			fact["received_date"] = on
+		}
 		payload, err := json.Marshal(fact)
 		if err != nil {
 			return out, err

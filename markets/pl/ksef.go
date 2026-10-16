@@ -253,9 +253,12 @@ func (k KSeF) invoiceFor(inv core.Object, companies, rates map[string]map[string
 	if system == "" {
 		system = "Rhea"
 	}
+	saleDate, _ := inv.State["sale_date"].(string)
+	basis, _ := companies[sellerID(inv)]["vat_exemption_basis"].(string)
 	return FA3Invoice{
 		Seller: seller, Buyer: buyer, Currency: currency, IssueDate: issueDate, Number: number,
-		RateCode: code, Net: net, VAT: vat, Gross: gross, Account: account,
+		SaleDate: saleDate, RateCode: code, ExemptionBasis: basis,
+		Net: net, VAT: vat, Gross: gross, Account: account,
 		Created: today + "T08:00:00Z", SystemInfo: system,
 	}, nil
 }

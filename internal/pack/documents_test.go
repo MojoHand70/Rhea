@@ -24,7 +24,7 @@ func TestDocumentsPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 2 || sum.Rules != 3 || sum.Views != 1 || sum.Bundle != "pack-common-documents-v3" {
+	if sum.Types != 2 || sum.Rules != 3 || sum.Views != 1 || sum.Bundle != "pack-common-documents-v4" {
 		t.Fatalf("load: %+v", sum)
 	}
 	if _, _, errs, err := x.ApproveBundle(ctx, sum.Bundle, "krzysztof", "2026-10-01"); err != nil || len(errs) != 0 {
@@ -52,7 +52,7 @@ func TestDocumentsPack(t *testing.T) {
 		t.Fatal(err)
 	}
 	if o.State["name"] != "2026-10.sta" || o.State["status"] != "received" || o.State["source"] != "the bank's site" ||
-		o.State["media_type"] != "text/plain" || o.State["size"] != float64(len(data)) {
+		o.State["media_type"] != "text/plain" || o.State["size"] != float64(len(data)) || o.State["received_on"] != "2026-10-11" {
 		t.Fatalf("state = %v", o.State)
 	}
 	if o.SourceEventID != tr.EventID || o.RuleID != "register-received-document" {

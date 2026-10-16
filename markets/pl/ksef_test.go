@@ -230,12 +230,29 @@ func TestWriteFA3(t *testing.T) {
 	if err := xml.Unmarshal(body, &doc); err != nil || doc.XMLName.Space != pl.FA3Namespace {
 		t.Fatalf("well-formed in the namespace: %v %v", err, doc.XMLName)
 	}
-	// Exempt: the slot without VAT, P_12 zw, the exemption declared.
-	body, err = pl.WriteFA3(pl.FA3Invoice{Seller: pl.FA3Party{NIP: "8058083055", Name: "X"}, Buyer: pl.FA3Party{NIP: "5265877635"},
-		Currency: "PLN", IssueDate: "2026-09-21", Number: "FV/5/2026", RateCode: "zw", Net: 5000, Gross: 5000, Created: "2026-09-21T08:00:00Z"})
+	// Exempt: the slot without VAT, P_12 zw, the exemption declared by the
+	// provision the seller is exempt under (art. 106e ust. 1 pkt 19).
+	exempt := pl.FA3Invoice{Seller: pl.FA3Party{NIP: "8058083055", Name: "X"}, Buyer: pl.FA3Party{NIP: "5265877635"},
+		Currency: "PLN", IssueDate: "2026-09-21", Number: "FV/5/2026", RateCode: "zw", Net: 5000, Gross: 5000, Created: "2026-09-21T08:00:00Z"}
+	if _, err := pl.WriteFA3(exempt); err == nil || !strings.Contains(err.Error(), "P_19A") {
+		t.Fatalf("an exempt invoice without its provision: %v", err)
+	}
+	exempt.ExemptionBasis = "art. 113 ust. 1 ustawy o VAT"
+	body, err = pl.WriteFA3(exempt)
 	if err != nil || !strings.Contains(string(body), "<P_13_7>50.00</P_13_7>") || strings.Contains(string(body), "P_14_7") ||
-		!strings.Contains(string(body), "<P_12>zw</P_12>") || !strings.Contains(string(body), "<P_19>1</P_19>") || strings.Contains(string(body), "P_19N") {
+		!strings.Contains(string(body), "<P_12>zw</P_12>") || !strings.Contains(string(body), "<P_19>1</P_19>") ||
+		!strings.Contains(string(body), "<P_19A>art. 113 ust. 1 ustawy o VAT</P_19A>") || strings.Contains(string(body), "P_19C") || strings.Contains(string(body), "P_19N") {
 		t.Fatalf("exempt: %v\n%s", err, body)
+	}
+	// The sale date: P_6 when the sale was on another day, nothing when the same.
+	sale := pl.FA3Invoice{Seller: pl.FA3Party{NIP: "8058083055", Name: "X"}, Buyer: pl.FA3Party{NIP: "5265877635"},
+		Currency: "PLN", IssueDate: "2026-10-03", SaleDate: "2026-09-30", Number: "FV/7/2026", RateCode: "23", Net: 10000, VAT: 2300, Gross: 12300, Created: "2026-10-03T08:00:00Z"}
+	if body, err = pl.WriteFA3(sale); err != nil || !strings.Contains(string(body), "</P_2>\n    <P_6>2026-09-30</P_6>") {
+		t.Fatalf("sale date: %v\n%s", err, body)
+	}
+	sale.SaleDate = sale.IssueDate
+	if body, _ = pl.WriteFA3(sale); strings.Contains(string(body), "P_6") {
+		t.Fatalf("a sale on the issue day writes no P_6:\n%s", body)
 	}
 	// Zero rate: 0 KR in the line, the 6_1 slot, no VAT element.
 	body, _ = pl.WriteFA3(pl.FA3Invoice{Seller: pl.FA3Party{NIP: "8058083055", Name: "X"}, Buyer: pl.FA3Party{NIP: "5265877635"},

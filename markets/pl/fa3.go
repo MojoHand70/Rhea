@@ -26,14 +26,19 @@ type FA3Invoice struct {
 	IssueDate     string // P_1, YYYY-MM-DD
 	Number        string // P_2
 	WZ            []string
+	SaleDate      string // P_6: the date of the sale, written only when it is not the issue date
 	RateCode      string // the pack's vat_rate code: 23, 8, 5, 0, zw
-	Net, VAT      int64
-	Gross         int64
-	Lines         []FA3Line // empty: one line for the whole net
-	Term          string    // payment term, YYYY-MM-DD; empty omits it
-	Account       string    // the seller's IBAN; empty omits it
-	Created       string    // DataWytworzeniaFa, RFC 3339
-	SystemInfo    string
+	// ExemptionBasis is the provision an exempt invoice is exempt under
+	// (P_19A): "art. 113 ust. 1 ustawy o VAT" for the turnover exemption, the
+	// art. 43 ust. 1 point for an exempt activity — what the seller declared.
+	ExemptionBasis string
+	Net, VAT       int64
+	Gross          int64
+	Lines          []FA3Line // empty: one line for the whole net
+	Term           string    // payment term, YYYY-MM-DD; empty omits it
+	Account        string    // the seller's IBAN; empty omits it
+	Created        string    // DataWytworzeniaFa, RFC 3339
+	SystemInfo     string
 }
 
 // FA3Party is one side: NIP as digits, name, country code, one address line.
@@ -108,6 +113,7 @@ type faBody struct {
 	P1            string        `xml:"P_1"` // issue date
 	P2            string        `xml:"P_2"` // number
 	WZ            []string      `xml:"WZ,omitempty"`
+	P6            string        `xml:"P_6,omitempty"` // sale date, when not the issue date
 	Totals        []faAmount    // P_13_k, P_14_k
 	P15           string        `xml:"P_15"` // gross
 	Adnotacje     faAnnotations `xml:"Adnotacje"`
@@ -133,7 +139,8 @@ type faAnnotations struct {
 
 type faExemption struct {
 	P19  string `xml:"P_19,omitempty"`
-	P19C string `xml:"P_19C,omitempty"` // the legal basis, free text
+	P19A string `xml:"P_19A,omitempty"` // the provision of the act or a regulation under it
+	P19C string `xml:"P_19C,omitempty"` // another legal basis, free text
 	P19N string `xml:"P_19N,omitempty"`
 }
 
@@ -230,7 +237,16 @@ func WriteFA3(inv FA3Invoice) ([]byte, error) {
 	annotations := faAnnotations{P16: "2", P17: "2", P18: "2", P18A: "2",
 		Zwolnienie: faExemption{P19N: "1"}, NoweSrodki: faNone22{P22N: "1"}, P23: "2", PMarzy: faNoneMarzy{PMarzyN: "1"}}
 	if slot == "7" {
-		annotations.Zwolnienie = faExemption{P19: "1", P19C: "zwolnienie z VAT"}
+		// art. 106e ust. 1 pkt 19: an exempt invoice names the provision —
+		// "zwolnienie z VAT" is no legal basis, and the seller says which.
+		if inv.ExemptionBasis == "" {
+			return nil, fmt.Errorf("invoice %s: an exempt invoice names the provision it is exempt under (P_19A) — the company declares it with its VAT status", inv.Number)
+		}
+		annotations.Zwolnienie = faExemption{P19: "1", P19A: inv.ExemptionBasis}
+	}
+	saleDate := ""
+	if inv.SaleDate != inv.IssueDate {
+		saleDate = inv.SaleDate
 	}
 	var payment *faPayment
 	if inv.Term != "" || inv.Account != "" {
@@ -263,7 +279,7 @@ func WriteFA3(inv FA3Invoice) ([]byte, error) {
 		Podmiot1: party(inv.Seller),
 		Podmiot2: faBuyer{Dane: party(inv.Buyer).Dane, Adres: party(inv.Buyer).Adres, JST: "2", GV: "2"},
 		Fa: faBody{
-			KodWaluty: inv.Currency, P1: inv.IssueDate, P2: inv.Number, WZ: inv.WZ,
+			KodWaluty: inv.Currency, P1: inv.IssueDate, P2: inv.Number, WZ: inv.WZ, P6: saleDate,
 			Totals: totals, P15: core.FormatMoney(inv.Gross), Adnotacje: annotations,
 			RodzajFaktury: "VAT", FaWiersz: lines, Platnosc: payment,
 		},
