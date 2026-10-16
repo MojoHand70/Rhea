@@ -76,6 +76,9 @@ func (s *Server) mux() http.Handler {
 	mux.HandleFunc("GET /api/worklist", s.handleWorklist)
 	mux.HandleFunc("GET /api/types", s.handleTypes)
 	mux.HandleFunc("GET /api/explain", s.handleExplain)
+	mux.HandleFunc("GET /api/objects", s.handleObjects)
+	mux.HandleFunc("GET /api/objects/{id}", s.handleObject)
+	mux.HandleFunc("GET /api/said", s.handleSaid)
 	mux.HandleFunc("GET /api/files", s.handleFiles)
 	mux.HandleFunc("GET /api/files/{writer}", s.handleFile)
 	mux.HandleFunc("POST /api/files/{writer}/issue", s.handleIssueFile)
@@ -454,12 +457,16 @@ func (s *Server) serveAnalysis(ctx context.Context, w http.ResponseWriter, vd *c
 	// fresh. At M0 scale this is cheap. Columns pair up with the spec's
 	// declarations by position; a declared money column arrives from DuckDB
 	// as minor units (BIGINT, invariant 6) and crosses as the decimal string.
-	cols, rows, err := s.analysisData(ctx, spec)
+	cols, rows, rowsOf, err := s.analysisData(ctx, spec)
 	if err != nil {
 		writeErr(w, 500, err)
 		return
 	}
-	writeJSON(w, 200, map[string]any{"view": vd, "columns": cols, "rows": rows})
+	out := map[string]any{"view": vd, "columns": cols, "rows": rows}
+	if rowsOf != nil {
+		out["row_objects"] = rowsOf // what each row is made of: ?view=&row=&col= on /api/explain says how
+	}
+	writeJSON(w, 200, out)
 }
 
 // --- live screens -----------------------------------------------------------
@@ -528,10 +535,19 @@ func (s *Server) handleRules(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 500, err)
 		return
 	}
-	if rules == nil {
-		rules = []core.Rule{}
+	approvals, err := s.ruleApprovals(r.Context())
+	if err != nil {
+		writeErr(w, 500, err)
+		return
 	}
-	writeJSON(w, 200, rules)
+	out := make([]ruleOut, len(rules))
+	for i, ru := range rules {
+		out[i] = ruleOut{Rule: ru}
+		if a, ok := approvals[approvalKey(ru.ID, ru.Version)]; ok && ru.Status != core.StatusDraft {
+			out[i].Approval = &a
+		}
+	}
+	writeJSON(w, 200, out)
 }
 
 func (s *Server) handleDraft(w http.ResponseWriter, r *http.Request) {

@@ -2575,6 +2575,27 @@ approved like a rule. What the kernel owes for it: a person-scoped
 preference door (layout, shortcut, its withdrawal) and a view a person
 can own.
 
+**From the prototype to the product (KK: "let's go", 2026-10-16).** The
+drawing carries over; what changes is underneath. Five steps, in order:
+(1) the kernel answers everything the face reads — the objects with
+their provenance, who approved each rule, the host's words, "why?" on a
+view's cell — so nothing is read past the API (done the same day,
+DECISIONS); (2) the face talks to the kernel live, asking for what is on
+screen, from its own small server in front of the kernel, and its
+decisions write through the doors that already exist; (3) the pack
+supplies the words — field labels, the shape each type takes, the
+statements (the VAT settlement's layout, profit, ageing), and the
+accounts' roles (which is the bank, which the receivables), so the face
+computes no figure of its own; (4) Rhea understands words on her own
+side: the "understand, then pick one act" step behind one endpoint of
+the kernel, the same closed set and the same no-digits check, a
+candidate for the local model; with it a person-scoped preference door
+and a comment door; (5) installable on the phone as a web app first
+(native only if that proves too little), behind the security floor. Then
+the accountant's desk density. Open for KK: web app or native; Anthropic
+or the local model for understanding (measure both on the same fifty
+phrases); hosting waits for the platform.
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,

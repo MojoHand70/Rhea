@@ -66,7 +66,7 @@ func (s *Server) serveNarrative(ctx context.Context, w http.ResponseWriter, vd *
 				writeErr(w, 500, err)
 				return
 			}
-			cols, rows, err := s.analysisData(ctx, as)
+			cols, rows, _, err := s.analysisData(ctx, as)
 			if err != nil {
 				writeErr(w, 500, err)
 				return
@@ -282,42 +282,65 @@ func unspokenFacts(words string, facts []byte) []string {
 func amountColumn(t string) bool { return t == "money" || t == "int" }
 
 // analysisData runs an analysis view's query on the read side, typed.
-func (s *Server) analysisData(ctx context.Context, spec core.AnalysisSpec) ([]columnOut, [][]cellOut, error) {
+// analysisData runs an analysis view. The row-lineage column (core.
+// RowsOfColumn), when the view's SQL has one, is taken out of the columns
+// and returned beside the rows: what each row is made of, never a figure —
+// so the host's facts, which carry the rows, never carry object ids.
+func (s *Server) analysisData(ctx context.Context, spec core.AnalysisSpec) ([]columnOut, [][]cellOut, [][]string, error) {
 	if _, err := project.Rebuild(ctx, s.Store, s.DuckPath); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	cols, rows, err := project.Query(ctx, s.DuckPath, spec.SQL)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	outCols := make([]columnOut, len(cols))
+	of := -1
+	var outCols []columnOut
 	for i, c := range cols {
-		outCols[i] = columnOut{Field: c, Label: c}
-		if i < len(spec.Columns) {
-			sc := spec.Columns[i]
+		if c == core.RowsOfColumn {
+			of = i
+			continue
+		}
+		col := columnOut{Field: c, Label: c}
+		if k := len(outCols); k < len(spec.Columns) {
+			sc := spec.Columns[k]
 			if sc.Field != "" {
-				outCols[i].Field = sc.Field
+				col.Field = sc.Field
 			}
 			if sc.Label != "" {
-				outCols[i].Label = sc.Label
+				col.Label = sc.Label
 			}
-			outCols[i].Type = sc.Type
+			col.Type = sc.Type
 		}
+		outCols = append(outCols, col)
 	}
 	outRows := make([][]cellOut, len(rows))
+	var rowsOf [][]string
+	if of >= 0 {
+		rowsOf = make([][]string, len(rows))
+	}
 	for i, r := range rows {
-		outRows[i] = make([]cellOut, len(r))
+		outRows[i] = make([]cellOut, 0, len(outCols))
 		for j, v := range r {
-			if outCols[j].Type == "money" && v != "" {
+			if j == of {
+				if v != "" {
+					rowsOf[i] = strings.Split(v, ",")
+				} else {
+					rowsOf[i] = []string{}
+				}
+				continue
+			}
+			k := len(outRows[i])
+			if outCols[k].Type == "money" && v != "" {
 				if minor, err := parseInt(v); err == nil {
-					outRows[i][j] = cellOut{V: core.FormatMoney(minor)}
+					outRows[i] = append(outRows[i], cellOut{V: core.FormatMoney(minor)})
 					continue
 				}
 			}
-			outRows[i][j] = cellOut{V: v}
+			outRows[i] = append(outRows[i], cellOut{V: v})
 		}
 	}
-	return outCols, outRows, nil
+	return outCols, outRows, rowsOf, nil
 }
 
 // model names the host's author on the door: the model the agent runs.

@@ -630,6 +630,11 @@ type ColumnSpec struct {
 	// ObjectType and ignore this; analysis columns have no ObjectType, so the
 	// view declares them. Empty means undeclared: renderers get a bare string.
 	Type string `json:"type,omitempty"`
+	// SumOf names, for an analysis column that totals its row's objects,
+	// the fields it sums — the first one present on each object, the way
+	// the SQL coalesces them (["vat_pln", "vat"]). With it, "why?" on a cell
+	// lists each object's part and says whether the parts make the cell.
+	SumOf []string `json:"sum_of,omitempty"`
 }
 
 // DetailSpec: spec of a `detail` notion.
@@ -648,6 +653,13 @@ type AnalysisSpec struct {
 	SQL     string       `json:"sql"`
 	Columns []ColumnSpec `json:"columns"`
 }
+
+// RowsOfColumn is the analysis column through which a view says what each
+// of its rows is made of: the comma-separated ids of the objects the row
+// aggregates (string_agg(object_id, ',')). It is never shown as a column;
+// it is what "why?" on a cell answers with, and what the kernel checks the
+// cell against when the column declares SumOf.
+const RowsOfColumn = "_of"
 
 // SchedulingSpec: spec of a `scheduling` notion (SPEC M5) — time-axis
 // placement of objects: which type, and which date field places each one.

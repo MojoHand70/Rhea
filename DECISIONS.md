@@ -3317,3 +3317,41 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   paid on 1 October (loss 1.84 zł on 751), both settlements square to zero in złoty,
   September settled and filed in złoty, the invoice sent with its VAT in złoty, and the
   customer's match undone with its gain back out of 750.
+
+## 2026-10-16 — the face reads only the API: objects, approvals, the host's words, and "why?" on a cell
+
+- **Why.** The face is built apart (DIRECTION, "The face"): its first snapshot had to read
+  three things from the database — the objects with their provenance, who approved each
+  rule, what the host said — and it composed a VAT register cell from the invoices by
+  itself. Step 1 of making the prototype the product: the API answers all four, and the
+  face's capture now reads nothing else.
+- **`GET /api/objects?type=T` and `GET /api/objects/{id}`** — the objects as the kernel
+  holds them (money in minor units, refs as ids) with `source_event_id`, `rule_id`,
+  `rule_version`. Scoped by the company like every read. No paging yet: the face asks
+  per type; paging comes with the live face (step 2).
+- **`/api/rules` carries each active version's `approval`** — `approved_by`,
+  `approved_at` (the business date), `bundle` when it came as a bundle member, `reason`
+  for a correction, `event_id`. Read from `rule.approved` (names the version it made) and
+  `bundle.approved` (names the drafts it activated; each became the next version).
+  Definitions are installation-wide, so approvals are read across the whole log.
+- **`GET /api/said?view=V&n=N`** — what the host said, newest first, as the log keeps it.
+  Reading the narrative view still speaks anew; a face showing this morning's words reads
+  them here instead of asking her to speak again.
+- **A view says what its rows are made of.** An analysis view's SQL may end with a column
+  named `_of` (`core.RowsOfColumn`): the comma-separated ids of the objects the row
+  aggregates (`string_agg(object_id, ',')`). The kernel takes it out of the columns and
+  serves it beside the rows as `row_objects`; the host's facts never carry it (her words
+  are checked against the facts' numbers, and an id is not one). A column may declare
+  `sum_of` — the fields it sums, first present wins, as the SQL coalesces them. Chosen over
+  a structured analysis notion: views stay SQL, the author declares lineage in the same
+  query that aggregates, and the kernel, not the face, checks it.
+- **`GET /api/explain?view=V&row=N&col=F`** — "why?" on a cell: the row's objects in log
+  order with their labels, each one's part and which field gave it, the total and `sums`:
+  whether the parts make the cell. A view without `_of` is refused, never guessed.
+- **Poland pack v23** — both VAT registers (sprzedaży v6, zakupu v4) declare `_of` and
+  `sum_of` (net: net_pln|net, vat: vat_pln|vat, gross). Same rows, same columns.
+- **Test:** `TestFaceReads` — two invoices, the objects with provenance, a pack rule
+  approved through its bundle and a rule through its own door, the register row naming
+  both invoices, "why?" on September's VAT: 230.00 + 115.00 = 345.00 and the check holds,
+  a column that sums nothing lists without parts, a view without lineage refused, the
+  host's register facts free of ids, her words newest first.

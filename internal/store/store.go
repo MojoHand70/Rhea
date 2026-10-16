@@ -42,6 +42,9 @@ var chainSQL string
 //go:embed queries/bundle_rejection.sql
 var bundleRejectionSQL string
 
+//go:embed queries/events_of_types.sql
+var eventsOfTypesSQL string
+
 type Store struct {
 	Pool *pgxpool.Pool
 }
@@ -332,6 +335,16 @@ const eventCols = `event_id, kind, event_type, to_char(occurred_at,'YYYY-MM-DD')
 func (s *Store) EventsByKind(ctx context.Context, kind string) ([]core.Event, error) {
 	rows, err := s.Pool.Query(ctx,
 		`SELECT `+eventCols+` FROM event WHERE kind = $1 AND ($2 = '' OR company = $2) ORDER BY event_id`, kind, CompanyOf(ctx))
+	if err != nil {
+		return nil, err
+	}
+	return scanEvents(rows)
+}
+
+// EventsOfTypes returns the events of the named types in log order, within
+// the context's company (empty: the whole log).
+func (s *Store) EventsOfTypes(ctx context.Context, types []string) ([]core.Event, error) {
+	rows, err := s.Pool.Query(ctx, eventsOfTypesSQL, types, CompanyOf(ctx))
 	if err != nil {
 		return nil, err
 	}

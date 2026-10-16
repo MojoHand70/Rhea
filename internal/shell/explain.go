@@ -98,6 +98,10 @@ func (s *Server) indexChains(ctx context.Context) (*chainIndex, error) {
 
 func (s *Server) handleExplain(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	if r.URL.Query().Get("view") != "" {
+		s.explainCell(w, r) // a cell of a view: the objects its row is made of
+		return
+	}
 	ix, err := s.indexChains(ctx)
 	if err != nil {
 		writeErr(w, 500, err)
@@ -129,7 +133,7 @@ func (s *Server) handleExplain(w http.ResponseWriter, r *http.Request) {
 		}
 		start = id
 	default:
-		writeErr(w, 400, fmt.Errorf("explain wants ?object= or ?event="))
+		writeErr(w, 400, fmt.Errorf("explain wants ?object=, ?event= or ?view=&row=&col="))
 		return
 	}
 
