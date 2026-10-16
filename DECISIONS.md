@@ -3180,3 +3180,24 @@ cause 5 shipped in the kernel the same day.
   service on 403, goods with a WZ on 300, an account outside the chart waiting; a grosz
   short on 761, two grosze over on 760, the short match undone and its grosz back out of
   761. The M3 story's service purchase moved from 300 to 403.
+
+## 2026-10-16 — a door's ref input reads as a link
+
+- **What.** A raw fact that came through a declared door has the door's shape: when a
+  rule fires on it, the payload's root is typed by a synthetic type built from the
+  door's inputs (`door:<name>`, the exact version the fact recorded), so a `ref<T>`
+  input reads as a link — `$.line.amount`, `coalesce($.company.legal_form, "")` — in
+  conditions and effects alike. The door already vouches that the object exists and is
+  of the declared type, so this is the "direct ids rejected by design" stance (E4)
+  kept: only ids the door vouched are followed, never an id a payload merely carries.
+  Facts rules derive, facts with no door, and the open door's passthrough (a `json`
+  input) read as before.
+- **Why now.** The bank work needs a person's word on a bank line ("this is the owner's
+  deposit") to book the line's own amount, and the company form needs the company's
+  legal form; both name an object through a door.
+- **How.** The firing's context carries the door (`withDoor`), and the formula
+  environment types the root from it (`doorShape`, reading `GetActivityVersion`); a copy
+  through a link is a copy — no Calc, the walk explains it by rule, fact and object.
+- **Test:** `TestADoorsRefInputReadsAsALink` — a person says a line is the owner's
+  money; the rule reads the line's direction in its condition and its title and amount
+  in its effect; a debit matches nothing; replay reproduces it.

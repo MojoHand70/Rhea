@@ -122,6 +122,24 @@ func (s *Store) GetActivity(ctx context.Context, name string) (core.Activity, er
 	return acts[0], nil
 }
 
+// GetActivityVersion returns one exact version of an activity, any status:
+// the door a recorded fact came through, as it was declared then.
+func (s *Store) GetActivityVersion(ctx context.Context, name string, version int) (core.Activity, error) {
+	rows, err := s.Pool.Query(ctx,
+		`SELECT `+activityCols+` FROM activity WHERE name = $1 AND version = $2`, name, version)
+	if err != nil {
+		return core.Activity{}, err
+	}
+	acts, err := scanActivities(rows)
+	if err != nil {
+		return core.Activity{}, err
+	}
+	if len(acts) == 0 {
+		return core.Activity{}, fmt.Errorf("activity %s v%d not found", name, version)
+	}
+	return acts[0], nil
+}
+
 // GetActiveActivity returns the offered version of one activity — the door a
 // trigger goes through. A draft or superseded verb is not a door.
 func (s *Store) GetActiveActivity(ctx context.Context, name string) (core.Activity, error) {

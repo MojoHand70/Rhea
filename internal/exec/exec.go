@@ -336,6 +336,9 @@ func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []cor
 		return state, true, nil
 	}
 	fire := func(ev core.Event, evPayload any, cause int) error {
+		// A fact that came through a door has the door's shape: its ref
+		// inputs, vouched by the door, read as links.
+		ctx := withDoor(ctx, ev)
 		idBase := fmt.Sprintf("%d", root.ID)
 		if cause >= 0 {
 			idBase = nodes[cause].idBase()
@@ -872,6 +875,15 @@ func (x *Executor) env(ctx context.Context, payload any, lookup core.Lookup, get
 		ok bool
 	}
 	memo := map[string]known{}
+	typed := typedPrefixes(payload)
+	shape, isDoor := x.doorShape(ctx)
+	if isDoor {
+		if typed == nil {
+			typed = map[string]string{}
+		}
+		typed["$"] = shape.Name
+		memo[shape.Name] = known{shape, true}
+	}
 	return &core.Env{
 		Lookup: lookup,
 		Get:    get,
@@ -883,9 +895,54 @@ func (x *Executor) env(ctx context.Context, payload any, lookup core.Lookup, get
 			memo[name] = known{t, err == nil}
 			return t, err == nil
 		},
-		Typed:         typedPrefixes(payload),
+		Typed:         typed,
 		MaxCollection: x.MaxCollection,
 	}
+}
+
+// doorKey carries, on the context of one firing, the door a raw fact came
+// through.
+type doorKey struct{}
+
+type doorRef struct {
+	name    string
+	version int
+}
+
+// withDoor marks a firing on a fact that came through a declared door. Facts
+// rules derive, and facts with no door, carry nothing.
+func withDoor(ctx context.Context, ev core.Event) context.Context {
+	if ev.Kind != core.KindRaw || ev.ActivityName == "" {
+		return ctx
+	}
+	return context.WithValue(ctx, doorKey{}, doorRef{ev.ActivityName, ev.ActivityVersion})
+}
+
+// doorShape is a door fact's payload as a type: the door's inputs as fields,
+// so a ref input — an object the door vouched exists and is what the
+// declaration says — reads as a link ($.operation.amount). A door whose
+// payload is passed through (a json input: the open door) has no shape of
+// its own.
+func (x *Executor) doorShape(ctx context.Context) (core.ObjectType, bool) {
+	d, ok := ctx.Value(doorKey{}).(doorRef)
+	if !ok || x.Store == nil {
+		return core.ObjectType{}, false
+	}
+	act, err := x.Store.GetActivityVersion(ctx, d.name, d.version)
+	if err != nil {
+		return core.ObjectType{}, false
+	}
+	t := core.ObjectType{Name: "door:" + d.name, Version: d.version}
+	for _, in := range act.Spec.Inputs {
+		if in.Type == "json" {
+			return core.ObjectType{}, false
+		}
+		if in.Type == "file" || in.Name == "occurred_at" {
+			continue
+		}
+		t.Fields = append(t.Fields, core.FieldDef{Name: in.Name, Type: in.Type, Values: in.Values})
+	}
+	return t, true
 }
 
 func typedPrefixes(payload any) map[string]string {
