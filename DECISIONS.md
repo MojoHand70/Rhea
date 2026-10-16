@@ -3234,8 +3234,10 @@ The review's cause 3 (packs/pl/REVIEW.md, MON-07, MON-08, MON-18, ZUS-08, OWN-02
   reading `$.company.legal_form` through the door's link (undeclared: no constraint).
 - **A debt found.** A literal in a money field is stored as written — `"0"` became the text
   "0", not 0 minor units — because literals bypass coercion except for enums. The rules
-  here use `"=0"`. Literals should coerce by their field's type like formulas do
-  (invariant 6); a kernel fix of its own.
+  here use `"=0"`. Paid the same day: a literal in a money, int or decimal field now
+  runs through the formula engine and is coerced by its field like any computed value
+  (`TestLiteralNumbersAreCoerced`); a literal that is not a number is refused, not
+  stored. No pack wrote a number as a literal, so nothing booked differently.
 - **Test:** `TestABankLineSaysWhatItIs` — seven lines: VAT to the micro-account, ZUS,
   the owner's deposit, a charge, interest, a transfer to the own account, a stranger's
   700; each on its account, only the stranger's waiting; a person says it was the

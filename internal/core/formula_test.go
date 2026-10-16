@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -405,5 +406,23 @@ func TestFormulaCoalesce(t *testing.T) {
 	wantErr(t, "=coalesce($.sale_date)", silent, "date", nil, "")
 	if _, err := ParseFormula(`coalesce(true, "x")`); err == nil {
 		t.Fatalf("coalesce of a truth value and a string was admitted")
+	}
+}
+
+// A number written as a literal is coerced by its field: "0" into a money
+// field is zero minor units, not the text "0"; what is not a number is
+// refused rather than stored.
+func TestLiteralNumbersAreCoerced(t *testing.T) {
+	for raw, want := range map[string]any{"0": int64(0), "12.50": int64(1250), "-3": int64(-300)} {
+		if v, _ := evalFormula(t, raw, `{}`, "money", nil); v != want {
+			t.Fatalf("%q into money = %#v, want %#v", raw, v, want)
+		}
+	}
+	if v, _ := evalFormula(t, "7", `{}`, "int", nil); fmt.Sprint(v) != "7" {
+		t.Fatalf("7 into int = %#v", v)
+	}
+	wantErr(t, "abc", `{}`, "money", nil, "not a money")
+	if v, _ := evalFormula(t, "open", `{}`, "string", nil); v != "open" {
+		t.Fatalf("a string literal stays as written: %#v", v)
 	}
 }

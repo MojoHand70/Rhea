@@ -169,6 +169,22 @@ func (t Template) Eval(payload any, fd FieldDef, lookup Lookup) (any, error) {
 // for the derived event to carry; copies and resolutions return nil.
 func (t Template) Evaluate(payload any, fd FieldDef, env *Env) (any, *Calc, error) {
 	if t.kind == "literal" {
+		switch fd.Type {
+		case "money", "int", "decimal":
+			// A number written as a literal is a number: coerced by its
+			// field as a computed value is — money in minor units, never the
+			// text it was written as (invariant 6).
+			f, err := ParseFormula(t.raw)
+			if err != nil {
+				return nil, nil, fmt.Errorf("%q is not a %s: %w", t.raw, fd.Type, err)
+			}
+			v, _, err := f.run(payload, &Env{})
+			if err != nil {
+				return nil, nil, err
+			}
+			out, err := toField(v, fd, false)
+			return out, nil, err
+		}
 		v, err := checked(t.raw, fd)
 		return v, nil, err
 	}
