@@ -3259,3 +3259,25 @@ The review's cause 3 (packs/pl/REVIEW.md, MON-07, MON-08, MON-18, ZUS-08, OWN-02
   Poland pack's rates channel decides that the rate published under date `d` is the one
   a document dated `d` converts at (the NBP average of the last working day before it).
 - **Test:** `TestFormulaFX`.
+
+## 2026-10-16 — the NBP channel: a rate for every day a document can be dated
+
+- **What.** `markets/pl/nbp.go`, adapter `nbp` (code version 1), declared by its own small
+  pack `packs/pl/nbp.json` (`pl-nbp` v1: the channel and `pl-register-fx-rate`). A pass
+  reads table A (the NBP's average rates) from the public Web API and publishes, for every
+  calendar day of its window and every currency it follows (EUR, USD, GBP, CHF by
+  default), `fx.rate.published` with code `CUR/PLN/day` and the rate of the last table
+  published *before* that day — the rate Polish law converts a document of that day at
+  (VAT art. 31a ust. 1, UoR art. 30 ust. 2 pkt 2, PIT art. 11a, CIT art. 12 ust. 2).
+  Weekends and holidays fall back to the last table by construction; the table's
+  number and date ride on the event. The window defaults to the last 31 days through
+  today; `RHEA_NBP_FROM` reaches further back.
+- **Why the day, not the table.** The kernel's convert, the matching engine and `fx()` all
+  read a rate by `from/to/date`; making the date the document's date puts "the working
+  day before" in one place — the market's channel — and keeps every rule simple.
+- **Exact.** Rates decode as `json.Number` and stay the bank's decimal text; no floats.
+  The API refuses Go's default user agent ("forbidden by administrative rules"), so the
+  client names itself.
+- **Tests.** `TestNBPRatesForEveryDay` (a weekend on Friday's table, Monday on Friday's,
+  Tuesday on Monday's; a second pass adds nothing); `TestNBPLive` (gated by
+  `RHEA_LIVE_NBP`) read the real tables for 21–30 September 2026 on the day it shipped.

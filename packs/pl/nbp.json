@@ -1,0 +1,77 @@
+{
+  "pack": "pl-nbp",
+  "version": 1,
+  "description": "Kursy średnie NBP (tabela A): dokument w walucie obcej przelicza się po kursie średnim z ostatniego dnia roboczego przed jego datą — kanał publikuje na każdy dzień kurs, po którym przelicza się dokument z tego dnia",
+  "requires": [
+    "fx_rate"
+  ],
+  "warrant": {
+    "basis": "statute",
+    "citations": [
+      "ustawa o VAT art. 31a ust. 1: kwoty w walucie obcej przelicza się na złote według kursu średniego danej waluty obcej ogłoszonego przez NBP na ostatni dzień roboczy poprzedzający dzień powstania obowiązku podatkowego",
+      "ustawa o rachunkowości art. 30 ust. 2 pkt 2: po kursie średnim ogłoszonym dla danej waluty przez NBP z dnia poprzedzającego ten dzień",
+      "ustawa o PIT art. 11a ust. 1, ustawa o CIT art. 12 ust. 2: przychody w walutach obcych przelicza się po kursie średnim NBP z ostatniego dnia roboczego poprzedzającego dzień uzyskania przychodu"
+    ],
+    "scope": "pl"
+  },
+  "rules": [
+    {
+      "rule_id": "pl-register-fx-rate",
+      "priority": 10,
+      "effective_from": "2026-01-01",
+      "description": "Kurs opublikowany przez kanał NBP staje się kursem (fx_rate): waluta/PLN/dzień — kurs, po którym przelicza się dokument z tego dnia",
+      "spec": {
+        "match": {
+          "event_type": "fx.rate.published",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "fx_rate",
+            "fields": {
+              "code": "=$.code",
+              "base": "=$.base",
+              "quote": "=$.quote",
+              "date": "=$.date",
+              "rate": "=$.rate"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "activities": [
+    {
+      "name": "nbp",
+      "domain": "finance",
+      "description": "Kanał kursów NBP: tabela A (kursy średnie) z API NBP; na każdy dzień okna i każdą śledzoną walutę kurs z ostatniej tabeli przed tym dniem jako fx.rate.published",
+      "spec": {
+        "inputs": [],
+        "emits": "fx.rate.published",
+        "who": [
+          "adapter"
+        ],
+        "channel": {
+          "adapter": "nbp",
+          "code_version": 1,
+          "format": "NBP Web API, tabela A (kursy średnie), JSON",
+          "identity": "waluta i dzień: CUR/PLN/dzień",
+          "confidence": {
+            "policy": "exact"
+          },
+          "events": [
+            "fx.rate.published"
+          ],
+          "volume": "stream",
+          "market": "pl"
+        }
+      }
+    }
+  ]
+}
