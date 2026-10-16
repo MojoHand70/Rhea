@@ -2551,6 +2551,30 @@ also surfaced a true gap worth showing: open sales invoices 101 475,00,
 account 201 101 375,00 — the 100,00 is the stray payment sitting on 201
 with no invoice, until someone says what it is.
 
+**KK's first impressions (2026-10-16): intent and usage, not only
+decisions.** The look holds. Lists lead with the counterparty, the
+document number below. Two corrections to the brief. *Chat is not
+hidden*: "chat only as the escape hatch" was too strict — the
+conversation is one tap away on every screen, because it is where the
+person says what they want. *The face learns from use*: what a person
+asks often becomes a one-tap function, and a person shapes the face by
+saying so ("show the counterparty first"). Built the same day: Rhea in
+the middle of the tab bar; the model only picks one act from a closed
+set (a figure, a list, open a thing, the list layout, keep a shortcut, go
+to a screen, or nothing) and the face shows it from the books, so her
+words carry no digit — the agent proposes, the deterministic side shows,
+the same split as the kernel's; the second identical ask, she offers to
+keep it as a shortcut on Today, which shows its live figure and opens
+without the model; "what I remember about you" lists it all and forgets
+on request. In the page the browser keeps this; in Rhea it is the host
+remembering: a person's preference or shortcut is a fact in the log
+about that person, a correction supersedes it, and nothing about it
+needs the gate — while a change to what everyone sees (a shared view,
+a new column the pack declares) is a new view version drafted and
+approved like a rule. What the kernel owes for it: a person-scoped
+preference door (layout, shortcut, its withdrawal) and a view a person
+can own.
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
