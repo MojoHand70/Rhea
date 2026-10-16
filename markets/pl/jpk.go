@@ -334,6 +334,16 @@ func WriteJPKV7M(ctx context.Context, reads adapter.Reads, params map[string]str
 		if st.State["period"] != period {
 			continue
 		}
+		// The original is the month as the close settled it. A document
+		// booked late into a settled month — its entries in an open month,
+		// its VAT in this one — makes the records disagree with the
+		// declaration: what is owed then is a correction, not this file.
+		settledOut, _ := minorUnits(st.State["output_vat"])
+		settledIn, _ := minorUnits(st.State["purchase_vat"])
+		if settledOut != outputVAT || settledIn != inputVAT {
+			return adapter.File{}, fmt.Errorf("jpk_v7m: %s changed after its close — the records now say VAT %s due and %s to deduct, the settlement %s and %s; a late document owes a correction of the return (CelZlozenia 2), which Rhea does not write yet",
+				period, core.FormatMoney(outputVAT), core.FormatMoney(inputVAT), core.FormatMoney(settledOut), core.FormatMoney(settledIn))
+		}
 		p := jpkPositions{}
 		whole := func(field string) int64 {
 			m, _ := minorUnits(st.State[field])

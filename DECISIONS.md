@@ -3117,3 +3117,33 @@ The first pack version out of the review (packs/pl/REVIEW.md, causes 1 and 2).
   reader, the close of both months and both JPK files); `TestAnExemptSoleTrader` (two
   impossible declarations wait, the exempt sole trader's sale and purchase book without
   VAT, its invoice names art. 113 ust. 1, its close settles nothing, its JPK is refused).
+
+## 2026-10-16 — a late document is never refused: it books in the first open month
+
+- **What.** A closed month still takes no posting — but a document dated in it is no
+  longer refused into the worklist. When a chain meets a period lock, the executor
+  re-dates the chain to the first day of the first month after it, in the same year,
+  that the locked book has open, and books it there (`firstOpenMonth`, the same move
+  backfill already made for a chain bound for a closed period). The raw fact keeps its
+  own date in the log; its derived events and entries carry the booking date. Review
+  FB-16: the accounting act requires every event in the books (art. 20 ust. 1, art. 24
+  ust. 3), so "a closed month is a closed month, even for what was late" (the M3 story)
+  is superseded — the closed month stays closed, the document is booked.
+- **Not across the year.** If every later month of the year is closed, the document
+  waits with the reason: a year closes only with its statement, and a December
+  document must not slip into January by itself. December's VAT close and the year's
+  close are still one lock in Rhea — separating the VAT month from the book's year is
+  owed (the year end).
+- **A chain moves whole.** An event whose chain posts in two books, one closed, books
+  in the first month the closed book has open — both halves together, as an event is
+  never half-explained (TestParallelBooks).
+- **What a late invoice owes.** Its VAT month is still the sale's: a late September sale
+  belongs to September's return, which was settled at the close. The JPK writer
+  therefore refuses to render an original whose records no longer agree with the
+  month's settlement (sales VAT against `output_vat`, purchase VAT against
+  `purchase_vat`) and names what is owed: a correction of the return (CelZlozenia 2),
+  which Rhea does not write yet. Before, the same invoice was simply lost to the books.
+- **Tests:** TestDoubleEntry, TestCascade, TestParallelBooks and TestCohabitation now
+  find the late document in the next open month and nothing in the closed one; the
+  Poland story files September's JPK, then books a late September invoice in October
+  and finds the original refused for a correction.

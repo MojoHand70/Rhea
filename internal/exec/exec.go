@@ -4,6 +4,7 @@
 package exec
 
 import (
+	"errors"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -233,6 +234,25 @@ func (x *Executor) evaluate(ctx context.Context, ev core.Event, rules []core.Rul
 		return o.State, true, nil
 	}
 	nodes, err := x.expandChain(ctx, ev, rules, payload, lookup, get, nil, nil)
+	var locked *PeriodLockedError
+	if errors.As(err, &locked) {
+		// A late document is never refused (UoR art. 20 ust. 1, art. 24
+		// ust. 3): its entries land in the first open month of the same
+		// year, while the fact keeps its own date in the log — the chain is
+		// booked as backfill books a chain bound for a closed period.
+		open, ferr := firstOpenMonth(lookup, locked.Book, locked.Month)
+		if ferr != nil {
+			return false, ferr
+		}
+		if open == "" {
+			return false, fmt.Errorf("%w, and so is every later month of its year — a late document does not cross into the next year by itself", err)
+		}
+		forwarded := ev
+		forwarded.OccurredAt = open + "-01"
+		if nodes, err = x.expandChain(ctx, forwarded, rules, payload, lookup, get, nil, nil); err == nil && len(nodes) > 0 {
+			return true, x.book(ctx, forwarded, nodes)
+		}
+	}
 	if err != nil {
 		return false, err
 	}

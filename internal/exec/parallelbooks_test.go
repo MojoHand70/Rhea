@@ -10,6 +10,7 @@ package exec_test
 // ledgers exactly.
 
 import (
+	"fmt"
 	"context"
 	"reflect"
 	"strings"
@@ -178,36 +179,50 @@ func TestParallelBooks(t *testing.T) {
 	}
 
 	// Independence, both directions: a group adjustment still books into
-	// September, a statutory correction is refused — and the refusal names
-	// the book.
+	// September; a statutory correction posts nothing into the closed
+	// statutory September — it books in the first open month, October
+	// (DECISIONS 2026-10-16, late documents).
 	submit("adj-1", "group.adjustment.recorded", "2026-09-25", `{"amount":"7.00","currency":"PLN"}`)
 	if n, errs := x.ProcessPending(ctx); n != 1 || len(errs) != 0 {
 		t.Fatalf("open group book: fired %d, errs %v", n, errs)
 	}
 	submit("corr-1", "stat.correction.recorded", "2026-09-26", `{"amount":"3.00","currency":"PLN"}`)
-	if n, errs := x.ProcessPending(ctx); n != 0 || len(errs) == 0 ||
-		!strings.Contains(errs[0].Error(), "locked for book pl-stat") {
+	if n, errs := x.ProcessPending(ctx); n != 1 || len(errs) != 0 {
 		t.Fatalf("closed statutory book: fired %d, errs %v", n, errs)
 	}
+	inMonth := func(book, month string) int {
+		t.Helper()
+		ps, _ := x.Store.ObjectsByType(ctx, "posting")
+		k := 0
+		for _, p := range ps {
+			if p.State["book"] == book && strings.HasPrefix(fmt.Sprint(p.State["date"]), month) {
+				k++
+			}
+		}
+		return k
+	}
+	if inMonth("pl-stat", "2026-10") != 2 {
+		t.Fatalf("the statutory correction is not in October")
+	}
 
-	// A mixed event — both books match, one is closed — refuses whole: an
-	// event is never half-explained. The open-book half of the story is a
-	// different event in an open period (the korekta, DIRECTION's backfill
-	// stance), decided by a human from the worklist.
+	// A mixed event — both books match, one is closed — books whole in the
+	// first month the closed book has open: an event is never half-explained,
+	// so its group half moves with it.
 	submit("sale-2", "sale.recorded", "2026-09-27", `{"gross":"50.00","currency":"PLN"}`)
-	if n, errs := x.ProcessPending(ctx); n != 0 || len(errs) == 0 ||
-		!strings.Contains(errs[0].Error(), "locked for book pl-stat") {
+	if n, errs := x.ProcessPending(ctx); n != 1 || len(errs) != 0 {
 		t.Fatalf("mixed event in a half-closed month: fired %d, errs %v", n, errs)
 	}
-	balance(map[string][2]int64{"pl-stat": {10000, 10000}, "group": {10700, 10700}})
+	if inMonth("pl-stat", "2026-10") != 4 || inMonth("group", "2026-10") != 2 {
+		t.Fatalf("the mixed event's entries are not together in October")
+	}
+	balance(map[string][2]int64{"pl-stat": {15300, 15300}, "group": {15700, 15700}})
 
 	// October is open for both books; the lock was per (book, month).
 	submit("sale-3", "sale.recorded", "2026-10-02", `{"gross":"20.00","currency":"PLN"}`)
-	if n, errs := x.ProcessPending(ctx); n != 1 || len(errs) == 0 {
-		// sale-2 keeps failing in the same pass — that error stays
+	if n, errs := x.ProcessPending(ctx); n != 1 || len(errs) != 0 {
 		t.Fatalf("october: fired %d, errs %v", n, errs)
 	}
-	balance(map[string][2]int64{"pl-stat": {12000, 12000}, "group": {12700, 12700}})
+	balance(map[string][2]int64{"pl-stat": {17300, 17300}, "group": {17700, 17700}})
 
 	// Determinism: replay reproduces both ledgers exactly.
 	before, _ := x.Store.AllObjects(ctx)

@@ -446,15 +446,31 @@ func TestDoubleEntry(t *testing.T) {
 		t.Fatal("unbalanced entry left postings behind")
 	}
 
-	// Period lock: lock September, then a September invoice is refused.
+	// Period lock: lock September; a late September invoice posts nothing
+	// into September — it books in the first open month, October, while the
+	// fact keeps its own date (DECISIONS 2026-10-16, late documents).
 	submit("lock-09", "period.locked", "2026-09-30", `{"month":"2026-09"}`)
 	if n, _ := x.ProcessPending(ctx); n != 1 {
 		t.Fatal("lock did not book")
 	}
 	submit("inv-2", "invoice.received", "2026-09-20",
 		`{"currency":"PLN","lines":[{"amount":"10.00"}]}`)
-	if n, errs := x.ProcessPending(ctx); n != 0 || len(errs) == 0 || !strings.Contains(errs[0].Error(), "locked") {
-		t.Fatalf("locked period: booked %d, errs %v", n, errs)
+	if n, errs := x.ProcessPending(ctx); n != 1 || len(errs) != 1 || !strings.Contains(errs[0].Error(), "does not balance") {
+		// the unbalanced fee keeps failing in the same pass — that error stays
+		t.Fatalf("late invoice: booked %d, errs %v", n, errs)
+	}
+	booked, _ := x.Store.ObjectsByType(ctx, "posting")
+	forwarded := 0
+	for _, p := range booked {
+		if p.State["date"] == "2026-09-20" {
+			t.Fatalf("a posting landed in the locked month: %v", p.State)
+		}
+		if p.State["date"] == "2026-10-01" {
+			forwarded++
+		}
+	}
+	if forwarded == 0 {
+		t.Fatal("the late invoice's entry is not in the first open month")
 	}
 	// An October invoice still books.
 	submit("inv-3", "invoice.received", "2026-10-02",
@@ -707,8 +723,9 @@ func TestCascade(t *testing.T) {
 			postings[0].SourceEventID, notes[0].SourceEventID, movementEv)
 	}
 
-	// A locked period refuses the whole chain: no postings means no movement
-	// either — the event is never half-explained.
+	// A locked period never takes the chain: the late receipt books whole in
+	// the first open month — the movement and its entries together, dated
+	// November 1, nothing in October; the event is never half-explained.
 	submit("lock-10", "period.locked", "2026-09-30", `{"month":"2026-10"}`)
 	if n, _ := x.ProcessPending(ctx); n != 1 {
 		t.Fatal("lock did not book")
@@ -716,17 +733,30 @@ func TestCascade(t *testing.T) {
 	submit("gr-3", "goods.received", "2026-10-05",
 		`{"item":"WID-1","location":"MAIN","qty":5,"date":"2026-10-05","value":"250.00"}`)
 	n, errs := x.ProcessPending(ctx)
-	if n != 0 || len(errs) == 0 || !strings.Contains(errs[0].Error(), "locked") {
-		t.Fatalf("locked chain: booked %d, errs %v", n, errs)
+	if n != 1 || len(errs) != 0 {
+		t.Fatalf("late chain: booked %d, errs %v", n, errs)
 	}
-	if ms, _ := x.Store.ObjectsByType(ctx, "stock_movement"); len(ms) != 2 {
-		t.Fatal("refused chain left a movement behind")
+	if ms, _ := x.Store.ObjectsByType(ctx, "stock_movement"); len(ms) != 3 {
+		t.Fatal("the late chain lost its movement")
+	}
+	late := 0
+	all, _ := x.Store.ObjectsByType(ctx, "posting")
+	for _, p := range all {
+		if strings.HasPrefix(fmt.Sprint(p.State["date"]), "2026-10") {
+			t.Fatalf("a posting landed in locked October: %v", p.State)
+		}
+		if p.State["date"] == "2026-11-01" {
+			late++
+		}
+	}
+	if late == 0 {
+		t.Fatal("the late chain's entries are not in November")
 	}
 
 	// A cyclic rule — a note firing on the note's own materialization — mints
 	// a fresh cause-qualified id each generation, so the depth cap is what
 	// stops it, naming the looping rule and the id that shows the loop.
-	// (Approved directly: the locked receipt still reports from the worklist.)
+	// (Approved directly.)
 	draft("echo-note", 400, core.RuleSpec{
 		Match: core.Match{EventType: core.EventObjectMaterialized, Where: []core.Condition{
 			{Path: "$.object_type", Op: "eq", Value: "valuation_note"},
@@ -744,11 +774,13 @@ func TestCascade(t *testing.T) {
 	if n != 0 || !strings.Contains(joined, "exceeded") || !strings.Contains(joined, "echo-note") {
 		t.Fatalf("cycle: booked %d, errs %v", n, errs)
 	}
-	if ns, _ := x.Store.ObjectsByType(ctx, "valuation_note"); len(ns) != 1 {
+	// One note per receipt that booked — the first and the late one — and
+	// none from the cycle.
+	if ns, _ := x.Store.ObjectsByType(ctx, "valuation_note"); len(ns) != 2 {
 		t.Fatal("cyclic chain booked notes")
 	}
-	if wl, _ := x.Store.UnmatchedRawEvents(ctx); len(wl) != 2 {
-		t.Fatalf("worklist = %d, want the locked and the cyclic receipt", len(wl))
+	if wl, _ := x.Store.UnmatchedRawEvents(ctx); len(wl) != 1 {
+		t.Fatalf("worklist = %d, want the cyclic receipt", len(wl))
 	}
 
 	// The derived namespace cannot be submitted from outside.

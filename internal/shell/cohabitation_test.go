@@ -258,9 +258,24 @@ func TestCohabitation(t *testing.T) {
 	post("/api/events", map[string]any{
 		"event_type": "period.locked", "occurred_at": "2026-09-30", "dedup_key": "lock-a-09",
 		"payload": map[string]any{"month": "2026-09", "book": "pl-stat"}}, nil)
-	if r := invoice("fv-a3", "2026-09-28", "pl", "5250001111", "FV 2/09/2026", "10.00", "2.30", "12.30", "23", "PLN"); r["booked"].(float64) != 0 ||
-		!strings.Contains(fmt.Sprint(r["errors"]), "locked for book pl-stat") {
+	// A late Alfa invoice posts nothing into Alfa's closed September: it
+	// books in the first open month (DECISIONS 2026-10-16, late documents).
+	if r := invoice("fv-a3", "2026-09-28", "pl", "5250001111", "FV 2/09/2026", "10.00", "2.30", "12.30", "23", "PLN"); r["booked"].(float64) != 1 {
 		t.Fatalf("alfa after close: %v", r)
+	}
+	if ps, _ := s.ObjectsByType(ctx, "posting"); func() bool {
+		late := 0
+		for _, p := range ps {
+			if p.State["book"] == "pl-stat" && strings.HasPrefix(fmt.Sprint(p.State["date"]), "2026-09-28") {
+				return false
+			}
+			if p.State["book"] == "pl-stat" && p.State["date"] == "2026-10-01" {
+				late++
+			}
+		}
+		return late == 0
+	}() {
+		t.Fatal("alfa's late invoice is not in October")
 	}
 	if r := invoice("re-b2", "2026-09-29", "de", "DE811111111", "RE 2026-002", "100.00", "19.00", "119.00", "19", "EUR"); r["booked"].(float64) != 1 {
 		t.Fatalf("beta after alfa's close: %v", r)
@@ -305,7 +320,7 @@ func TestCohabitation(t *testing.T) {
 	if pis, _ := s.ObjectsByType(ctx, "purchase_invoice"); len(pis) != 1 || pis[0].RuleID != "pl-book-purchase-invoice" {
 		t.Fatalf("purchase invoices = %d", len(pis))
 	}
-	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 3 { // fv-a3 (locked) + fv-x (unroutable) + er-b1 (no German purchase side)
+	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 2 { // fv-x (unroutable) + er-b1 (no German purchase side); late fv-a3 booked in October
 		t.Fatalf("worklist = %d", len(wl))
 	}
 

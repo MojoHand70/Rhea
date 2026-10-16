@@ -471,10 +471,10 @@ func TestM3PolandPack(t *testing.T) {
 		t.Fatalf("close_period: %+v %v", closed, err)
 	}
 	// The worklist is re-read when the world changes: the unbalanced
-	// September invoice still waiting there is now refused by the lock, and
-	// says so — a closed month is a closed month, even for what was late.
-	if len(closed.Errors) != 1 || !strings.Contains(closed.Errors[0].Error(), "2026-09 is locked for book pl-stat") {
-		t.Fatalf("the late invoice meets the lock: %v", closed.Errors)
+	// September invoice still waiting there would now book in October, and
+	// still refuses for its own reason — its arithmetic lies.
+	if len(closed.Errors) != 1 || !strings.Contains(closed.Errors[0].Error(), "does not balance") {
+		t.Fatalf("the unbalanced invoice after the close: %v", closed.Errors)
 	}
 	settlements, _ := s.ObjectsByType(ctx, "vat_settlement")
 	if len(settlements) != 1 {
@@ -520,20 +520,6 @@ func TestM3PolandPack(t *testing.T) {
 	if calc := settled.Object.Calc["vat_due"]; !strings.Contains(calc.Formula, "objects(sales_invoice, vat_period, month($.period))") || len(calc.Inputs) == 0 {
 		t.Fatalf("the settlement's arithmetic is baked with its inputs: %+v", calc)
 	}
-	// September is closed: a late September posting is refused into the
-	// worklist, naming the lock; October still books.
-	post("/api/events", map[string]any{
-		"event_type": "sales.invoice.issued", "occurred_at": "2026-09-25", "dedup_key": "fv-late",
-		"payload": map[string]any{
-			"number": "FV 3/09/2026", "issue_date": "2026-09-25", "market": "pl", "intragroup": "no",
-			"seller_nip": "5250001111", "buyer_nip": "5260001246",
-			"net": "100.00", "vat": "23.00", "gross": "123.00", "vat_rate": "23", "currency": "PLN",
-		},
-	}, &resp)
-	if resp["booked"].(float64) != 0 || resp["errors"] == nil || !strings.Contains(fmt.Sprint(resp["errors"]), "2026-09 is locked") {
-		t.Fatalf("a posting into the closed month: %v", resp)
-	}
-
 	// The file: the market's writer renders JPK_V7M(3) from the settlement
 	// and the month's invoices; the kernel renders it by name and hands it
 	// over through the issue_document door — the bytes under their hash, the
@@ -581,6 +567,43 @@ func TestM3PolandPack(t *testing.T) {
 	blob, err := s.GetBlob(ctx, docs[0].State["hash"].(string))
 	if err != nil || string(blob.Bytes) != file {
 		t.Fatalf("the bytes under the hash are the file rendered: %v", err)
+	}
+
+	// After the return is filed, a September invoice turns up late. It is
+	// never refused (DECISIONS 2026-10-16, late documents): nothing posts
+	// into the closed September — its entries land in October — while its
+	// VAT still belongs to September, the month of the sale. September's
+	// records and its filed declaration now disagree, so the writer no longer
+	// renders the original: what is owed is a correction of the return.
+	post("/api/events", map[string]any{
+		"event_type": "sales.invoice.issued", "occurred_at": "2026-09-25", "dedup_key": "fv-late",
+		"payload": map[string]any{
+			"number": "FV 3/09/2026", "issue_date": "2026-09-25", "market": "pl", "intragroup": "no",
+			"seller_nip": "5250001111", "buyer_nip": "5260001246",
+			"net": "100.00", "vat": "23.00", "gross": "123.00", "vat_rate": "23", "currency": "PLN",
+		},
+	}, &resp)
+	if resp["booked"].(float64) != 1 {
+		t.Fatalf("the late invoice: %v", resp)
+	}
+	for _, p := range func() []core.Object { ps, _ := s.ObjectsByType(ctx, "posting"); return ps }() {
+		if p.SourceEventID == int64(resp["event_id"].(float64)) && p.State["date"] != "2026-10-01" {
+			t.Fatalf("the late invoice's entry is not in October: %v", p.State)
+		}
+	}
+	for _, inv := range func() []core.Object { is, _ := s.ObjectsByType(ctx, "sales_invoice"); return is }() {
+		if inv.State["number"] == "FV 3/09/2026" && inv.State["vat_period"] != "2026-09" {
+			t.Fatalf("the late invoice's VAT month: %v", inv.State)
+		}
+	}
+	res, err = ts.Client().Get(ts.URL + "/api/files/jpk_v7m?period=2026-09&created=2026-10-25T10:00:00Z")
+	if err != nil {
+		t.Fatal(err)
+	}
+	refusal, _ := io.ReadAll(res.Body)
+	res.Body.Close()
+	if res.StatusCode == 200 || !strings.Contains(string(refusal), "correction") {
+		t.Fatalf("the original after a late invoice: %d %s", res.StatusCode, refusal)
 	}
 
 	// Determinism holds for a whole market loaded at runtime.

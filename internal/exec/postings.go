@@ -8,6 +8,7 @@ package exec
 
 import (
 	"fmt"
+	"time"
 
 	"rhea/internal/core"
 )
@@ -67,18 +68,10 @@ func ExpandPostings(p *core.PostingsTemplate, postingType core.ObjectType, ev co
 	// from before books existed matches no book and locks nothing from here
 	// on (DECISIONS 2026-10-04, E1).
 	month := ev.OccurredAt[:7]
-	monthLocks, err := lookup("period_lock", "month", month)
-	if err != nil {
+	if locked, err := monthLocked(lookup, book, month); err != nil {
 		return nil, err
-	}
-	if len(monthLocks) > 0 {
-		bookLocks, err := lookup("period_lock", "book", book)
-		if err != nil {
-			return nil, err
-		}
-		if intersects(monthLocks, bookLocks) {
-			return nil, &PeriodLockedError{Month: month, Book: book}
-		}
+	} else if locked {
+		return nil, &PeriodLockedError{Month: month, Book: book}
 	}
 
 	currency, err := evalString(p.Currency, payload, env)
@@ -287,6 +280,41 @@ type PeriodLockedError struct{ Month, Book string }
 
 func (e *PeriodLockedError) Error() string {
 	return fmt.Sprintf("period %s is locked for book %s", e.Month, e.Book)
+}
+
+// monthLocked reports whether a period_lock names this (book, month).
+func monthLocked(lookup core.Lookup, book, month string) (bool, error) {
+	monthLocks, err := lookup("period_lock", "month", month)
+	if err != nil || len(monthLocks) == 0 {
+		return false, err
+	}
+	bookLocks, err := lookup("period_lock", "book", book)
+	if err != nil {
+		return false, err
+	}
+	return intersects(monthLocks, bookLocks), nil
+}
+
+// firstOpenMonth is where a late document's entries land: the first month
+// after the locked one, in the same year, that the book has not locked; ""
+// when the year's later months are all closed — a year closes only with its
+// statement, so a late document never crosses into the next one by itself.
+func firstOpenMonth(lookup core.Lookup, book, locked string) (string, error) {
+	t, err := time.Parse("2006-01", locked)
+	if err != nil {
+		return "", err
+	}
+	for m := t.AddDate(0, 1, 0); m.Year() == t.Year(); m = m.AddDate(0, 1, 0) {
+		month := m.Format("2006-01")
+		closed, err := monthLocked(lookup, book, month)
+		if err != nil {
+			return "", err
+		}
+		if !closed {
+			return month, nil
+		}
+	}
+	return "", nil
 }
 
 // intersects reports whether two id lists share an element — the lock check
