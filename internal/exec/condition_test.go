@@ -38,13 +38,18 @@ func TestConditionReadsThroughALink(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	// A company that never declared its books keeps them full — the formula
+	// names that stand-in; a field read without one would be an error.
 	keeps := func(books string) core.Condition {
-		return core.Condition{Formula: `=ref(company, vat_id, $.seller_nip).books = "` + books + `"`}
+		return core.Condition{Formula: `=coalesce(ref(company, vat_id, $.seller_nip).books, "full") = "` + books + `"`}
 	}
 	specs := map[string]core.RuleSpec{
 		"register-company": {Match: core.Match{EventType: "company.registered"},
 			Effect: core.Effect{Object: core.ObjectTemplate{Type: "company",
 				Fields: map[string]string{"name": "=$.name", "vat_id": "=$.vat_id", "books": "=$.books"}}}},
+		"list-company": {Match: core.Match{EventType: "company.listed"},
+			Effect: core.Effect{Object: core.ObjectTemplate{Type: "company",
+				Fields: map[string]string{"name": "=$.name", "vat_id": "=$.vat_id"}}}},
 		"declare-books": {Match: core.Match{EventType: "company.books.declared"},
 			Effect: core.Effect{Amend: &core.AmendTemplate{Type: "company",
 				Target: "=ref(company, vat_id, $.vat_id)", Set: map[string]string{"books": "=$.books"}}}},
@@ -73,12 +78,15 @@ func TestConditionReadsThroughALink(t *testing.T) {
 	// A seller nobody registered: the link does not resolve, so the sale waits
 	// rather than land in either book.
 	submitRaw(t, x, "s3", "sale.recorded", "2026-04-11", `{"number":"FV/3","seller_nip":"9999999999"}`)
-	if n, errs := x.ProcessPending(ctx); n != 4 || len(errs) != 1 || !strings.Contains(errs[0].Error(), "no company") {
+	// A company that never said: the stand-in decides.
+	submitRaw(t, x, "l", "company.listed", "2026-04-12", `{"name":"Kowalska","vat_id":"5250000002"}`)
+	submitRaw(t, x, "s4", "sale.recorded", "2026-04-13", `{"number":"K/1","seller_nip":"5250000002"}`)
+	if n, errs := x.ProcessPending(ctx); n != 6 || len(errs) != 1 || !strings.Contains(errs[0].Error(), "no company") {
 		t.Fatalf("booked %d, errs %v", n, errs)
 	}
 	ledger, _ := x.Store.ObjectsByType(ctx, "ledger_sale")
 	kpir, _ := x.Store.ObjectsByType(ctx, "kpir_entry")
-	if len(ledger) != 1 || ledger[0].State["number"] != "FV/1" || ledger[0].RuleID != "sale-in-the-ledger" ||
+	if len(ledger) != 2 || ledger[0].State["number"] != "FV/1" || ledger[0].RuleID != "sale-in-the-ledger" || ledger[1].State["number"] != "K/1" ||
 		len(kpir) != 1 || kpir[0].State["number"] != "FV/2" || kpir[0].RuleID != "sale-in-kpir" {
 		t.Fatalf("ledger %+v, kpir %+v", ledger, kpir)
 	}

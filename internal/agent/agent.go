@@ -193,9 +193,9 @@ const ruleShape = `{
 // ruleGrammar is the rule language: templates, the three effects, cascade.
 const ruleGrammar = `Use "where" conditions only for constraints the user's intent actually implies.
 A condition is a path test, or a formula when it must read through a link to a record the event
-names: {"formula": "=ref(company, vat_id, $.seller_nip).vat_status = \"active\""} holds when that
-company says so (a field the record lacks makes the formula false; a record that does not exist
-makes the event wait).
+names: {"formula": "=coalesce(ref(company, vat_id, $.seller_nip).vat_status, \"active\") = \"active\""}
+holds when that company says so, or never said (coalesce names the stand-in for a field the record
+may lack; without one, a missing field is an error). A record that does not exist makes the event wait.
 Priority orders firing among rules matching the same event: lower fires first.
 Pick one not taken by the active rules listed in the request.
 

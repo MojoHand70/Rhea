@@ -257,9 +257,10 @@ func conditionFormula(text string) (*Formula, error) {
 
 // Holds evaluates one match condition: a path condition against the payload
 // alone, a formula condition with the environment the rule's effect gets —
-// lookups and state reads at this point in the log. A formula reading a
-// field that is not there compares as null and does not hold; a link that
-// does not resolve is an error, and the event waits.
+// lookups and state reads at this point in the log. As everywhere in the
+// formula language, a field that is not there is an error unless the formula
+// names its stand-in (coalesce(ref(company, vat_id, $.nip).books, "full"));
+// a link that does not resolve is an error too, and the event waits.
 func (c Condition) Holds(payload any, env *Env) (bool, error) {
 	if c.Formula == "" {
 		return EvalCondition(payload, c)

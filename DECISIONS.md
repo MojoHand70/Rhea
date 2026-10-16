@@ -3019,8 +3019,10 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
 - **Where it reads.** The executor evaluates conditions in the environment the rule's
   effect gets (`x.env` over the chain-visible lookup and getter): the state at this
   point in the log, so replay decides every condition the same way (invariant 4 — the
-  test replays and finds each sale in the same book). A field the record lacks
-  compares as null and the condition is false; a link that does not resolve is an
+  test replays and finds each sale in the same book). A field the record lacks is an
+  error, as everywhere in the formula language, unless the formula names its stand-in
+  with `coalesce` (below; corrected the same day — the first note said such a field
+  compared as null, which the language never did); a link that does not resolve is an
   error and the event waits in the worklist — unroutable beats misrouted, as for
   markets.
 - **The gate.** `Validate` admits a formula condition only if it parses and its
@@ -3039,3 +3041,23 @@ decision are fixed here, the rest (stale voices, the registers in foreign curren
   record selects, a sale from an unregistered seller waits, replay reproduces it, and
   the gate refuses a condition that is not true-or-false, one that is both formula and
   path, one without its "=", and one reading a field the company does not declare.
+
+## 2026-10-16 — coalesce: a missing value is an error unless the formula names its stand-in
+
+- **What.** `coalesce(a, b)` joins the formula language: `a`, unless it is not there,
+  then `b`. Inside its first argument, path and field reads are optional — a key the
+  payload or the record lacks reads as null instead of failing (`opPath`/`opField`
+  with b = 1, set lexically by the compiler); everywhere else a missing value stays an
+  error. The same stance as rounding: precision is lost only where declared, a value
+  is defaulted only where the formula says what stands in.
+- **Why.** Invoices state some facts only when they differ from another: FA(3) P_6,
+  the sale date, appears only when it is not the issue date, so the tax point is
+  `coalesce($.sale_date, $.issue_date)`. And a company that never declared its form has
+  the law's default: `coalesce(ref(company, vat_id, $.seller_nip).vat_status,
+  "active")`. Splitting each such rule on `exists`/`absent` would double the pack.
+- **What stays strict.** A `ref()` that resolves to nothing is still an error inside
+  coalesce — the record must exist; only its field may be silent. Arithmetic and
+  ordering on a null still fail with the read's origin named.
+- **Tests:** `TestFormulaCoalesce` (stated and silent sale dates, the later of tax point
+  and receipt, arity, kinds); `TestConditionReadsThroughALink` lists a company that
+  never declared its books and finds its sale in the ledger by the stand-in.

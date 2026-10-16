@@ -36,7 +36,8 @@ import (
 //	          | "fold" "(" ident "in" expr "," ident "=" expr ":" expr ")"   one accumulator
 //
 // Functions: round(x, places, method) with method ∈ half_up half_even down up;
-// if(c, a, b); abs(x); min(a, b); max(a, b); end_of_month(d); add_months(d, n);
+// if(c, a, b); coalesce(a, b) — a, unless it is missing, then b; abs(x);
+// min(a, b); max(a, b); end_of_month(d); add_months(d, n);
 // month(d) — the period a date falls in, "YYYY-MM", the key periods share;
 // ref(T, field, v) — the id of the single T whose field equals v;
 // objects(T, field, v) — the T objects whose field equals v, as a list.
@@ -866,6 +867,24 @@ func (e *checkEnv) checkCall(n *node, rounded bool) (ty, error) {
 			return anyT, err
 		}
 		return join(a, b), nil
+	case "coalesce":
+		// an optional field and its stand-in: the sale date, or the issue
+		// date when the invoice states none
+		if err := argc(2); err != nil {
+			return anyT, err
+		}
+		a, err := e.check(n.args[0], rounded)
+		if err != nil {
+			return anyT, err
+		}
+		b, err := e.check(n.args[1], rounded)
+		if err != nil {
+			return anyT, err
+		}
+		if err := comparable(a.kind, b.kind); err != nil {
+			return anyT, fmt.Errorf("at %d: coalesce: %w", n.pos, err)
+		}
+		return join(a, b), nil
 	case "abs":
 		if err := argc(1); err != nil {
 			return anyT, err
@@ -1082,10 +1101,10 @@ type opcode uint8
 
 const (
 	opConst     opcode = iota // push consts[a]
-	opPath                    // push the value at paths[a], recorded as an input
+	opPath                    // push the value at paths[a], recorded as an input; b = 1: null if not there
 	opVar                     // push slots[a]
 	opSetVar                  // slots[a] = pop
-	opField                   // pop v, push v.names[a], recorded as an input
+	opField                   // pop v, push v.names[a], recorded as an input; b = 1: null if not there
 	opNeg                     //
 	opNot                     //
 	opBin                     // binary op names[a]
@@ -1127,6 +1146,16 @@ type program struct {
 type compiler struct {
 	p      *program
 	scopes []map[string]int
+	// optional > 0 while generating coalesce's first argument: its path and
+	// field reads yield null for what is not there, instead of failing.
+	optional int
+}
+
+func (c *compiler) opt() int {
+	if c.optional > 0 {
+		return 1
+	}
+	return 0
 }
 
 func (c *compiler) name(s string) int {
@@ -1188,13 +1217,13 @@ func (c *compiler) gen(n *node) {
 		c.emit(opConst, len(c.p.consts)-1)
 	case nPath:
 		c.p.paths = append(c.p.paths, n.path)
-		c.emit(opPath, len(c.p.paths)-1)
+		c.emit(opPath, len(c.p.paths)-1, c.opt())
 	case nVar:
 		slot, _ := c.lookupVar(n.text)
 		c.emit(opVar, slot)
 	case nField:
 		c.gen(n.args[0])
-		c.emit(opField, c.name(n.field))
+		c.emit(opField, c.name(n.field), c.opt())
 	case nUnary:
 		c.gen(n.args[0])
 		if n.text == "not" {
@@ -1227,6 +1256,14 @@ func (c *compiler) gen(n *node) {
 		}
 		c.emit(op, c.name(n.text), c.name(n.field))
 	case nCall:
+		if n.text == "coalesce" {
+			c.optional++
+			c.gen(n.args[0])
+			c.optional--
+			c.gen(n.args[1])
+			c.emit(opCall, c.name(n.text), 2)
+			return
+		}
 		if n.text == "if" {
 			c.gen(n.args[0])
 			jElse := c.emit(opJmpF, 0)

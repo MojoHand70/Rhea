@@ -382,3 +382,28 @@ func TestFormulaSyntaxErrors(t *testing.T) {
 		}
 	}
 }
+
+// coalesce: an optional field and its stand-in. A sale states its date only
+// when it differs from the issue date (FA(3) P_6), so the tax point is the
+// sale date or, failing that, the issue date; a purchase is deductible from
+// the later of its tax point and its receipt.
+func TestFormulaCoalesce(t *testing.T) {
+	stated := `{"issue_date": "2026-10-03", "sale_date": "2026-09-28", "received_date": "2026-10-04"}`
+	silent := `{"issue_date": "2026-10-03"}`
+	if v, _ := evalFormula(t, "=month(coalesce($.sale_date, $.issue_date))", stated, "string", nil); v != "2026-09" {
+		t.Fatalf("stated sale date: %v", v)
+	}
+	if v, _ := evalFormula(t, "=month(coalesce($.sale_date, $.issue_date))", silent, "string", nil); v != "2026-10" {
+		t.Fatalf("no sale date: %v", v)
+	}
+	if v, _ := evalFormula(t, "=coalesce($.sale_date, $.issue_date)", silent, "date", nil); v != "2026-10-03" {
+		t.Fatalf("into a date field: %v", v)
+	}
+	if v, _ := evalFormula(t, "=month(max(coalesce($.sale_date, $.issue_date), coalesce($.received_date, $.issue_date)))", stated, "string", nil); v != "2026-10" {
+		t.Fatalf("the later of tax point and receipt: %v", v)
+	}
+	wantErr(t, "=coalesce($.sale_date)", silent, "date", nil, "")
+	if _, err := ParseFormula(`coalesce(true, "x")`); err == nil {
+		t.Fatalf("coalesce of a truth value and a string was admitted")
+	}
+}

@@ -119,7 +119,7 @@ func (m *vm) exec(p *program) (Value, error) {
 		case opConst:
 			m.push(p.consts[in.a])
 		case opPath:
-			v, err := m.load(p.paths[in.a])
+			v, err := m.load(p.paths[in.a], in.b == 1)
 			if err != nil {
 				return Value{}, err
 			}
@@ -129,7 +129,7 @@ func (m *vm) exec(p *program) (Value, error) {
 		case opSetVar:
 			m.slots[in.a] = m.pop()
 		case opField:
-			v, err := m.member(m.pop(), p.names[in.a])
+			v, err := m.member(m.pop(), p.names[in.a], in.b == 1)
 			if err != nil {
 				return Value{}, err
 			}
@@ -242,9 +242,9 @@ func (m *vm) record(v Value) {
 // object state typed by the catalog; from there field kinds come from the
 // type, and a ref field's id is followed through the link when the path
 // continues past it. A [*] fans out into a list.
-func (m *vm) load(path []pathSeg) (Value, error) {
+func (m *vm) load(path []pathSeg, optional bool) (Value, error) {
 	root := Value{Kind: KObject, Raw: m.root, Origin: "$", Type: m.env.Typed["$"]}
-	v, err := m.walk(root, path, "$")
+	v, err := m.walk(root, path, "$", optional)
 	if err != nil {
 		return Value{}, err
 	}
@@ -252,10 +252,10 @@ func (m *vm) load(path []pathSeg) (Value, error) {
 	return v, nil
 }
 
-func (m *vm) walk(cur Value, path []pathSeg, keys string) (Value, error) {
+func (m *vm) walk(cur Value, path []pathSeg, keys string, optional bool) (Value, error) {
 	for i, seg := range path {
 		keys += "." + seg.key
-		next, err := m.member(cur, seg.key)
+		next, err := m.member(cur, seg.key, optional)
 		if err != nil {
 			return Value{}, err
 		}
@@ -273,7 +273,7 @@ func (m *vm) walk(cur Value, path []pathSeg, keys string) (Value, error) {
 				for _, el := range next.List {
 					rv := el
 					if len(rest) > 0 {
-						if rv, err = m.walk(el, rest, keys); err != nil {
+						if rv, err = m.walk(el, rest, keys, optional); err != nil {
 							return Value{}, err
 						}
 					}
@@ -296,8 +296,10 @@ func (m *vm) walk(cur Value, path []pathSeg, keys string) (Value, error) {
 
 // member reads one field: of an object (typed by the catalog when the
 // object's type is known), or of the object behind a ref — the read through
-// a link, which needs state and is itself recorded as an input.
-func (m *vm) member(v Value, key string) (Value, error) {
+// a link, which needs state and is itself recorded as an input. A field that
+// is not there is an error, unless the read is optional — inside coalesce's
+// first argument, where the formula says what stands in — and then null.
+func (m *vm) member(v Value, key string, optional bool) (Value, error) {
 	switch v.Kind {
 	case KObject:
 		mp, ok := v.Raw.(map[string]any)
@@ -306,6 +308,9 @@ func (m *vm) member(v Value, key string) (Value, error) {
 		}
 		raw, ok := mp[key]
 		if !ok {
+			if optional {
+				return Value{Kind: KNull, Origin: v.Origin + "." + key}, nil
+			}
 			return Value{}, fmt.Errorf("%s.%s: missing", v.Origin, key)
 		}
 		origin := v.Origin + "." + key
@@ -330,8 +335,11 @@ func (m *vm) member(v Value, key string) (Value, error) {
 		}
 		m.record(v) // the link itself: which object was read
 		obj := Value{Kind: KObject, Raw: state, Type: v.Type, Origin: v.Origin}
-		return m.member(obj, key)
+		return m.member(obj, key, optional)
 	case KNull:
+		if optional {
+			return Value{Kind: KNull, Origin: v.Origin + "." + key}, nil
+		}
 		return Value{}, fmt.Errorf("%s.%s: %s is missing", v.Origin, key, v.Origin)
 	}
 	return Value{}, fmt.Errorf("cannot read field %q of %s (%s) — fields are read from objects, or through a link", key, v.Origin, v.Kind)
@@ -813,6 +821,11 @@ func call(name string, args []Value) (Value, error) {
 			k = KDecimal
 		}
 		return Value{Kind: k, Num: roundRat(r, int(places), args[2].Str)}, nil
+	case "coalesce":
+		if args[0].Kind == KNull {
+			return args[1], nil
+		}
+		return args[0], nil
 	case "abs":
 		r, k, err := toNum(args[0])
 		if err != nil {
