@@ -2523,6 +2523,34 @@ from and motion only for what happened; every object takes one of six
 shapes the pack declares; comments live on the objects and can end in a
 rule; and the first thing built is a number that opens.*
 
+**The first build (2026-10-16).** KK: "let's not wait". One phone page
+in its own repository (`~/rheaface`, local until KK names the remote),
+Polish, on Helios Studio: nine months through the real kernel and pack
+v22 into the database `rhea_face`, captured from the JSON API — objects,
+views, every explanation chain, rules with warrants, doors, approvals, and
+the host's real morning words. Today is the decisions (close September,
+say what the stray 100 zł is), her words with all 27 figures live, the
+morning's figures; any figure opens out of itself into its account, its
+entries, the document, the fact, the rule and the article. The September
+close shown on the page is the kernel's own result, captured ahead; the
+page writes nothing. What building it found the kernel owes the face:
+(1) "why?" on a view cell — explain answers for objects, but a register
+cell or a trial-balance balance has no composition in the API, so the page
+composes it from the period's invoices or the account's postings and
+checks the sum; the kernel should serve it. (2) The shapes, the
+statements (which positions make the VAT settlement) and the words (field
+labels, the chart's group names) are a stand-in table in the page; they
+belong in the pack. (3) Comments have no door; the thread on each object
+is the page's own, her answers composed from provenance without a model.
+(4) Her morning words pass both laws but list all fifteen open invoices
+one by one — a concierge says the oldest and the total; the narrative's
+voice wants a brevity rule. (5) Unpaid supplier invoices since January
+have no door to offer as a decision (nothing says "paid outside the
+bank" or "remind"), so the page can only show them. The page's own check
+also surfaced a true gap worth showing: open sales invoices 101 475,00,
+account 201 101 375,00 — the 100,00 is the stray payment sitting on 201
+with no invoice, until someone says what it is.
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
