@@ -426,3 +426,40 @@ func TestLiteralNumbersAreCoerced(t *testing.T) {
 		t.Fatalf("a string literal stays as written: %#v", v)
 	}
 }
+
+// fx: the rate a document dated d converts at, read from the market's
+// fx_rate master data by code — the inverse pair inverted, 1 for one
+// currency, an error (the event waits) when none was published.
+func TestFormulaFX(t *testing.T) {
+	rates := map[string]map[string]any{
+		"fx_rate-1": {"code": "EUR/PLN/2026-09-29", "rate": "4.2650"},
+		"fx_rate-2": {"code": "PLN/USD/2026-09-29", "rate": "0.25"},
+	}
+	env := &Env{
+		Lookup: func(typ, field string, value any) ([]string, error) {
+			var ids []string
+			for id, st := range rates {
+				if typ == "fx_rate" && st[field] == value {
+					ids = append(ids, id)
+				}
+			}
+			return ids, nil
+		},
+		Get: func(id string) (map[string]any, bool, error) { st, ok := rates[id]; return st, ok, nil },
+	}
+	p := `{"currency": "EUR", "vat": "23.00", "sale_date": "2026-09-29"}`
+	v, calc := evalFormula(t, `=round($.vat * fx($.currency, "PLN", $.sale_date), 2, half_up)`, p, "money", env)
+	if v != int64(9810) || calc.Inputs["fx_rate EUR/PLN/2026-09-29"] != "4.2650" {
+		t.Fatalf("23.00 EUR at 4.2650 = %v (inputs %v)", v, calc.Inputs)
+	}
+	if v, _ := evalFormula(t, `=fx("USD", "PLN", "2026-09-29")`, p, "decimal", env); v != "4" {
+		t.Fatalf("the inverse pair inverted: %v", v)
+	}
+	if v, _ := evalFormula(t, `=$.vat * fx("PLN", "PLN", $.sale_date)`, `{"vat": "23.00", "sale_date": "2026-09-29"}`, "money", env); v != int64(2300) {
+		t.Fatalf("one currency: %v", v)
+	}
+	wantErr(t, `=fx($.currency, "PLN", "2026-09-30")`, p, "decimal", env, "no fx_rate for EUR/PLN on 2026-09-30")
+	if _, err := ParseFormula(`fx("EUR", "PLN")`); err == nil {
+		t.Fatal("fx with two arguments")
+	}
+}

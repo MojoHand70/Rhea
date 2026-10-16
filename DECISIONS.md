@@ -3243,3 +3243,19 @@ The review's cause 3 (packs/pl/REVIEW.md, MON-07, MON-08, MON-18, ZUS-08, OWN-02
   700; each on its account, only the stranger's waiting; a person says it was the
   owner's and it moves from 201 to 249; a second word matches nothing; a legal person
   declaring the scale waits, CIT on full books is taken.
+
+## 2026-10-16 — fx(): a rate inside a formula
+
+- `fx(from, to, d)` joins the formula language: the rate converting `from` into `to` for a
+  document dated `d`, read from the same `fx_rate` master data postings' convert and the
+  matching engine read — by code `from/to/d`, the inverse pair inverted, exactly 1 when
+  the currencies are one, an error when no rate was published (the event waits:
+  unexplainable beats guessed). The rate read is an input of the formula's Calc.
+- **Why.** VAT on a foreign-currency invoice is owed in złoty (VAT art. 31a, art. 106e
+  ust. 11): the invoice itself must carry its VAT in PLN, so the rule that books it must
+  compute `round($.vat * fx($.currency, "PLN", $.sale_date), 2, half_up)` — a value on
+  the document, not only a conversion inside a posting.
+- **What the date means is the market's.** The kernel reads the code it is given; the
+  Poland pack's rates channel decides that the rate published under date `d` is the one
+  a document dated `d` converts at (the NBP average of the last working day before it).
+- **Test:** `TestFormulaFX`.

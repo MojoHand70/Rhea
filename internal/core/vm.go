@@ -180,6 +180,14 @@ func (m *vm) exec(p *program) (Value, error) {
 			for i := in.b - 1; i >= 0; i-- {
 				args[i] = m.pop()
 			}
+			if p.names[in.a] == "fx" {
+				v, err := m.fx(args[0], args[1], args[2])
+				if err != nil {
+					return Value{}, err
+				}
+				m.push(v)
+				continue
+			}
 			v, err := call(p.names[in.a], args)
 			if err != nil {
 				return Value{}, err
@@ -360,6 +368,51 @@ func (m *vm) ref(typ, field string, v Value) (Value, error) {
 	origin := fmt.Sprintf("ref(%s, %s, %s)", typ, field, key)
 	m.inputs[origin] = id
 	return Value{Kind: KRef, Str: id, Type: typ, Origin: id}, nil
+}
+
+// fx reads the rate converting from into to for a document dated d — the
+// fx_rate master data postings' convert and the matching engine read, by its
+// code from/to/d or the inverse pair inverted. The rate read is an input.
+func (m *vm) fx(from, to, d Value) (Value, error) {
+	if from.Str == to.Str {
+		return Value{Kind: KDecimal, Num: big.NewRat(1, 1)}, nil
+	}
+	if m.env.Lookup == nil || m.env.Get == nil {
+		return Value{}, fmt.Errorf("fx() needs object state, none available here")
+	}
+	read := func(code string) (*big.Rat, bool, error) {
+		ids, err := m.env.Lookup("fx_rate", "code", code)
+		if err != nil || len(ids) != 1 {
+			return nil, false, err
+		}
+		state, ok, err := m.env.Get(ids[0])
+		if err != nil || !ok {
+			return nil, false, err
+		}
+		text, _ := state["rate"].(string)
+		r, err := parseDecimal(text)
+		if err != nil || r.Sign() <= 0 {
+			return nil, false, fmt.Errorf("fx_rate %s: %q is not a positive decimal", code, text)
+		}
+		m.inputs["fx_rate "+code] = text
+		return r, true, nil
+	}
+	code := from.Str + "/" + to.Str + "/" + d.Str
+	r, ok, err := read(code)
+	if err != nil {
+		return Value{}, err
+	}
+	if !ok {
+		inv, ok, err := read(to.Str + "/" + from.Str + "/" + d.Str)
+		if err != nil {
+			return Value{}, err
+		}
+		if !ok {
+			return Value{}, fmt.Errorf("no fx_rate for %s/%s on %s", from.Str, to.Str, d.Str)
+		}
+		r = new(big.Rat).Inv(inv)
+	}
+	return Value{Kind: KDecimal, Num: r, Origin: "fx_rate " + code}, nil
 }
 
 // objects reads a keyed collection of state: every typ whose field equals

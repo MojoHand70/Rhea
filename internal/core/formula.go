@@ -39,6 +39,9 @@ import (
 // if(c, a, b); coalesce(a, b) — a, unless it is missing, then b; abs(x);
 // min(a, b); max(a, b); end_of_month(d); add_months(d, n);
 // month(d) — the period a date falls in, "YYYY-MM", the key periods share;
+// fx(from, to, d) — the rate converting from into to for a document dated d:
+// the fx_rate whose code is from/to/d (or its inverse, inverted), 1 when the
+// currencies are one, an error when the market published none;
 // ref(T, field, v) — the id of the single T whose field equals v;
 // objects(T, field, v) — the T objects whose field equals v, as a list.
 // Division is admitted only under a round(): where precision can be lost,
@@ -925,6 +928,20 @@ func (e *checkEnv) checkCall(n *node, rounded bool) (ty, error) {
 			return anyT, fmt.Errorf("at %d: end_of_month wants a date, got %s", n.pos, d.kind)
 		}
 		return ty{kind: KDate}, nil
+	case "fx":
+		if err := argc(3); err != nil {
+			return anyT, err
+		}
+		for i, want := range []string{"a currency", "a currency", "a date"} {
+			x, err := e.check(n.args[i], rounded)
+			if err != nil {
+				return anyT, err
+			}
+			if x.kind != KString && x.kind != KAny && !(i == 2 && x.kind == KDate) {
+				return anyT, fmt.Errorf("at %d: fx wants %s as argument %d, got %s", n.pos, want, i+1, x.kind)
+			}
+		}
+		return ty{kind: KDecimal}, nil
 	case "month":
 		if err := argc(1); err != nil {
 			return anyT, err
