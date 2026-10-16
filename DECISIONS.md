@@ -3355,3 +3355,15 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   both invoices, "why?" on September's VAT: 230.00 + 115.00 = 345.00 and the check holds,
   a column that sums nothing lists without parts, a view without lineage refused, the
   host's register facts free of ids, her words newest first.
+
+## 2026-10-16 — the face live: an object names its root; analysis reads take turns
+
+- **`root_event_id` on `/api/objects`.** Each object carries the raw event its chain starts
+  from (a recursive walk of `cause_event_id`, `queries/object_roots.sql`). A face finds the
+  document a posting books — the invoice, the bank line — by the root they share, without
+  reading every chain; chains are fetched only when a sheet opens.
+- **One analysis read at a time.** Each analysis read rebuilds the DuckDB projection and
+  queries it; two at once collided on the rebuild ("Catalog write-write conflict") or could
+  read a table mid-rebuild. Found by the live face, which asks for its reports together. The
+  shell now holds one lock around rebuild-and-query. Performance stays a non-goal; this is
+  correctness. `TestFaceReads` asks for eight reports at once.

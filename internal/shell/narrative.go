@@ -287,6 +287,8 @@ func amountColumn(t string) bool { return t == "money" || t == "int" }
 // and returned beside the rows: what each row is made of, never a figure —
 // so the host's facts, which carry the rows, never carry object ids.
 func (s *Server) analysisData(ctx context.Context, spec core.AnalysisSpec) ([]columnOut, [][]cellOut, [][]string, error) {
+	s.duck.Lock() // the rebuild and the read are one step: no other rebuild between them
+	defer s.duck.Unlock()
 	if _, err := project.Rebuild(ctx, s.Store, s.DuckPath); err != nil {
 		return nil, nil, nil, err
 	}

@@ -17,9 +17,16 @@ import (
 // who approved each active rule, what the host said, and what a view's cell
 // is made of. A face built apart reads only this API; nothing here writes.
 
+// objectOut is an object with the raw event its chain starts from: the fact
+// it ultimately explains, shared by everything that fact became.
+type objectOut struct {
+	core.Object
+	RootEventID int64 `json:"root_event_id"`
+}
+
 // handleObjects lists one type's objects, each with its state as the
 // kernel holds it (money in minor units, refs as ids) and its provenance:
-// the event, rule and rule version that made it.
+// the event, rule and rule version that made it, and the chain's root.
 func (s *Server) handleObjects(w http.ResponseWriter, r *http.Request) {
 	typ := r.URL.Query().Get("type")
 	if typ == "" {
@@ -31,10 +38,16 @@ func (s *Server) handleObjects(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 500, err)
 		return
 	}
-	if objs == nil {
-		objs = []core.Object{}
+	roots, err := s.Store.ObjectRoots(r.Context(), typ)
+	if err != nil {
+		writeErr(w, 500, err)
+		return
 	}
-	writeJSON(w, 200, map[string]any{"type": typ, "objects": objs})
+	out := make([]objectOut, len(objs))
+	for i, o := range objs {
+		out[i] = objectOut{Object: o, RootEventID: roots[o.ID]}
+	}
+	writeJSON(w, 200, map[string]any{"type": typ, "objects": out})
 }
 
 func (s *Server) handleObject(w http.ResponseWriter, r *http.Request) {
@@ -43,7 +56,12 @@ func (s *Server) handleObject(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 404, err)
 		return
 	}
-	writeJSON(w, 200, o)
+	roots, err := s.Store.ObjectRoots(r.Context(), o.Type)
+	if err != nil {
+		writeErr(w, 500, err)
+		return
+	}
+	writeJSON(w, 200, objectOut{Object: o, RootEventID: roots[o.ID]})
 }
 
 // handleSaid is what the host said in a narrative view, newest first: the

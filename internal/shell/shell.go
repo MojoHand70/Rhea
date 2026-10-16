@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"rhea/internal/adapter"
@@ -31,6 +32,10 @@ type Server struct {
 	Clock adapter.Clock
 	// Network is where Rhea learns across installations; nil runs alone.
 	Network *network.Network
+	// duck serializes the analysis side: each analysis read rebuilds the
+	// DuckDB projection and queries it, and two at once collide on the
+	// rebuild ("write-write conflict") or read a table mid-rebuild.
+	duck sync.Mutex
 }
 
 // knowledge is what Rhea has learned across installations, or nil when no

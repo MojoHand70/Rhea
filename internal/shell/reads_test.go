@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http/httptest"
 	"path/filepath"
 	"strings"
@@ -97,10 +98,35 @@ func TestFaceReads(t *testing.T) {
 		t.Fatalf("objects: %+v", objs.Objects)
 	}
 	first := objs.Objects[0].ID
-	var one core.Object
+	var one struct {
+		core.Object
+		Root int64 `json:"root_event_id"`
+	}
 	get("/api/objects/"+first, 200, &one)
 	if one.ID != first || one.State["number"] != "FV 1/09/2026" {
 		t.Fatalf("object: %+v", one)
+	}
+	// Every object names the fact its chain starts from: the invoice and the
+	// entry it booked share the sales.invoice.issued event.
+	invoice, err := s.GetEvent(ctx, one.Root)
+	if err != nil || invoice.Kind != core.KindRaw || invoice.Type != "sales.invoice.issued" || invoice.DedupKey != "fv-1" {
+		t.Fatalf("the invoice's root %d: %+v %v", one.Root, invoice, err)
+	}
+	var posts struct {
+		Objects []struct {
+			ID   string `json:"object_id"`
+			Root int64  `json:"root_event_id"`
+		} `json:"objects"`
+	}
+	get("/api/objects?type=posting", 200, &posts)
+	booked := 0
+	for _, p := range posts.Objects {
+		if p.Root == one.Root {
+			booked++
+		}
+	}
+	if booked != 3 {
+		t.Fatalf("postings sharing the invoice's root: %d of %+v", booked, posts.Objects)
 	}
 	get("/api/objects", 400, nil)
 	get("/api/objects/no-such-thing", 404, nil)
@@ -145,6 +171,31 @@ func TestFaceReads(t *testing.T) {
 	if len(reg.Columns) != 5 || len(reg.Rows) != 1 || len(reg.Rows[0]) != 5 || len(reg.RowObjects) != 1 || len(reg.RowObjects[0]) != 2 {
 		t.Fatalf("register: %+v", reg)
 	}
+	// Faces ask for several reports at once (and people open two tabs): the
+	// analysis reads take turns instead of colliding on the rebuild.
+	errs := make(chan string, 8)
+	for i := 0; i < 8; i++ {
+		go func(i int) {
+			v := []string{"rejestr-vat-sprzedazy", "trial-balance", "rejestr-vat-zakupu", "rozliczenie-vat"}[i%4]
+			res, err := ts.Client().Get(ts.URL + "/api/views/" + v)
+			if err != nil {
+				errs <- err.Error()
+				return
+			}
+			res.Body.Close()
+			if res.StatusCode != 200 {
+				errs <- fmt.Sprintf("%s: %d", v, res.StatusCode)
+				return
+			}
+			errs <- ""
+		}(i)
+	}
+	for i := 0; i < 8; i++ {
+		if e := <-errs; e != "" {
+			t.Fatalf("reports at once: %s", e)
+		}
+	}
+
 	// "Why?" on the cell: the invoices, each one's part, and the check.
 	var why struct {
 		V       string `json:"v"`

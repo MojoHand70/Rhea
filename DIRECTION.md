@@ -2592,9 +2592,33 @@ the kernel, the same closed set and the same no-digits check, a
 candidate for the local model; with it a person-scoped preference door
 and a comment door; (5) installable on the phone as a web app first
 (native only if that proves too little), behind the security floor. Then
-the accountant's desk density. Open for KK: web app or native; Anthropic
-or the local model for understanding (measure both on the same fifty
-phrases); hosting waits for the platform.
+the accountant's desk density. KK decided the same day: **a web app**
+(installable from the browser, no app store); **Anthropic** understands
+the person's words; **hosting on white01 at OVH** for now. The kernel
+stays bound to the machine; the face's server is the only door from the
+internet, and it opens a closed set of the kernel's routes.
+
+**Step 2 done the same day, with the understanding step of step 4.** The
+face's own server (Go, in the face's repository, no kernel code) serves
+the web app — installable, with a manifest, an offline shell and her mark
+as the icon — opens only the reads the page needs and three doors (close
+a month, say what a bank line is, a supplier's cost account), signs every
+decision with the configured person, keeps the company scope its own, and
+refuses to listen beyond the machine without a password. The page boots
+from the API and fetches a chain, a fact or a register cell only when a
+sheet opens; the kernel's live stream refreshes what is on screen.
+Decisions write: September closed through its door gave the same VAT the
+kernel computed before; the stray 100 zł classified as the owner's money
+moved off the receivables. One call placed differently from the plan:
+*the understanding step lives in the face's server, not the kernel* — the
+acts it chooses among (a figure, a list, a layout, a shortcut, a screen)
+are the face's vocabulary, the kernel stays smaller, and the open kernel
+needs no model to run; the model is Anthropic's (`FACE_MODEL`, default
+Claude Opus 5.5 at low effort), its answer is data the page checks
+against the closed set, and her words still carry no digit. Found on the
+way and fixed in the kernel: two analysis reads at once collided on the
+DuckDB rebuild (DECISIONS). Next: white01 — the address, a name for the
+app (HTTPS needs one), and the kernel's database there.
 
 ## Language decisions with a recorded destination
 

@@ -45,6 +45,9 @@ var bundleRejectionSQL string
 //go:embed queries/events_of_types.sql
 var eventsOfTypesSQL string
 
+//go:embed queries/object_roots.sql
+var objectRootsSQL string
+
 type Store struct {
 	Pool *pgxpool.Pool
 }
@@ -349,6 +352,26 @@ func (s *Store) EventsOfTypes(ctx context.Context, types []string) ([]core.Event
 		return nil, err
 	}
 	return scanEvents(rows)
+}
+
+// ObjectRoots maps each object of one type to the raw event its chain
+// starts from, within the context's company.
+func (s *Store) ObjectRoots(ctx context.Context, typ string) (map[string]int64, error) {
+	rows, err := s.Pool.Query(ctx, objectRootsSQL, typ, CompanyOf(ctx))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]int64{}
+	for rows.Next() {
+		var id string
+		var root int64
+		if err := rows.Scan(&id, &root); err != nil {
+			return nil, err
+		}
+		out[id] = root
+	}
+	return out, rows.Err()
 }
 
 // EarliestFactDate is the business date of the log's first raw fact: where
