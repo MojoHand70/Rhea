@@ -104,8 +104,9 @@ func TestM3PolandPack(t *testing.T) {
 
 	// Load the pack: 19 types (the invoices with their open amounts and
 	// dates, the bank operation, the matching difference, the company with
-	// its declared form), 12 views (the two grids, the briefing and the two
-	// queues among them), 40 draft rules, six doors (the KSeF channel,
+	// its declared form), 17 views (the two grids, the briefing and the two
+	// queues among them; the words, the VAT declaration as a statement, the
+	// morning figures, profit and receivables by age), 40 draft rules, six doors (the KSeF channel,
 	// identify_company, declare_company_form, set_cost_account,
 	// declare_company_accounts, classify_bank_operation), 37 master-data
 	// events.
@@ -114,8 +115,8 @@ func TestM3PolandPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 19 || sum.Views != 12 || sum.Rules != 40 || sum.Activities != 6 || sum.Events != 37 || sum.Skipped != 0 ||
-		sum.Bundle != "pack-pl-v23" {
+	if sum.Types != 19 || sum.Views != 17 || sum.Rules != 40 || sum.Activities != 6 || sum.Events != 37 || sum.Skipped != 0 ||
+		sum.Bundle != "pack-pl-v24" {
 		t.Fatalf("first load: %+v", sum)
 	}
 	// Idempotent: a reload changes nothing.
@@ -123,7 +124,7 @@ func TestM3PolandPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Skipped != 114 || sum.Bundle != "" {
+	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Skipped != 119 || sum.Bundle != "" {
 		t.Fatalf("reload: %+v", sum)
 	}
 
@@ -143,7 +144,7 @@ func TestM3PolandPack(t *testing.T) {
 	// Approving the pack's bundle IS the installation: its types, views and
 	// rules activate together, and the chart of accounts and the VAT rates
 	// materialize from the waiting events.
-	post("/api/bundles/pack-pl-v23/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-pl-v24/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {
 		t.Fatalf("worklist not cleared after approvals: %d", len(wl))
 	}

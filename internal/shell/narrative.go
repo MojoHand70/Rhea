@@ -292,7 +292,8 @@ func (s *Server) analysisData(ctx context.Context, spec core.AnalysisSpec) ([]co
 	if _, err := project.Rebuild(ctx, s.Store, s.DuckPath); err != nil {
 		return nil, nil, nil, err
 	}
-	cols, rows, err := project.Query(ctx, s.DuckPath, spec.SQL)
+	sql := strings.ReplaceAll(spec.SQL, core.TodayInSQL, "DATE '"+s.Clock.TodayUTC()+"'")
+	cols, rows, err := project.Query(ctx, s.DuckPath, sql)
 	if err != nil {
 		return nil, nil, nil, err
 	}

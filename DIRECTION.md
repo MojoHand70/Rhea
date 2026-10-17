@@ -2629,6 +2629,22 @@ restore (626 objects rebuilt). The kernel cannot be reached from outside;
 the face asks for a password until sign-in arrives with the security
 step, and signs every decision as krzysztof.
 
+**Step 3 done, 2026-10-17.** The face names nothing and computes no
+figure of its own. The Poland pack (v24) carries the words — every type,
+field, value, event and door in Polish, the shape each type takes, the
+groups of the chart — as a `words` view; the VAT declaration as a
+`statement` view the kernel fills with the settlement's own figures; and
+three reports the face used to add up itself: the morning's figures,
+profit since January, receivables by age on the kernel's day, each row
+naming what it is made of so the face opens it. The kernel's figures
+matched the face's old sums to the grosz. Live on white01 the same day,
+the books untouched. Still the face's: its own chrome (tabs, sentences
+around the books), presentation (bar widths, a ledger's running balance),
+and which views make which screen — by the views' names, for now; the
+pack declaring its screens is the next refinement. Found on the way: the
+host sometimes writes amounts the Polish way (44 900,00) and the face read
+only the last group — fixed in the face.
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,

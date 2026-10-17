@@ -1,7 +1,7 @@
 {
   "pack": "pl",
-  "version": 23,
-  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami; poranek: gospodarz mówi, co zaksięgowano i co czeka, z faktów, które policzyło jądro; dziś: otwarte zadania i należności w kolejności pilności, z zatwierdzeniami, które czekają; KSeF na zewnątrz: faktury sprzedaży idą do KSeF jako FA(3) jedną sesją interaktywną, dowód (numer KSeF, UPO) i odmowa (kod, słowa Ministerstwa) są zdarzeniami, odmowa staje się zadaniem na dziś; koniec miesiąca: faktury niosą okres VAT, zamknięcie miesiąca (period.closed) daje rozliczenie VAT jako obiekt policzony regułą — każda liczba deklaracji ma pochodzenie; plik JPK_V7M z rozliczenia i faktur miesiąca (writer rynku), firma zna swój urząd skarbowy, e-mail i formę prawną, faktura zakupu z KSeF niesie numer KSeF; firma mówi, kim jest dla urzędu (identify_company): e-mail, urząd skarbowy, forma prawna, właściciel; v19 (przegląd pakietu, 2026-10-16): daty, które decydują o okresie VAT — faktura sprzedaży niesie datę sprzedaży (P_6, a gdy jej nie podano, datę wystawienia) i okres VAT według obowiązku podatkowego; faktura zakupu niesie datę sprzedaży u dostawcy i datę otrzymania (dla KSeF: dzień nadania numeru), a odliczenie przypada na późniejszy z tych miesięcy; firma mówi, czym jest (declare_company_form): status VAT (czynny albo zwolniony, z przepisem zwolnienia), forma ksiąg i forma opodatkowania od wskazanej daty; firma zwolniona nie rozlicza VAT i nie składa JPK_V7, a VAT od jej zakupów jest kosztem; faktury bez VAT (zw, 0%) księgują się bez linii VAT; każda zmieniona reguła nazywa swoje źródło; v20 (przegląd, 2026-10-16): zakup trafia w koszty — usługa albo wydatek bez dokumentu dostawy na konto kosztowe dostawcy (set_cost_account), a gdy go nie podano, na 403 usługi obce; zakup z dokumentem dostawy (WZ) czeka na 300 na rozliczenie z przyjęciem (PZ); różnice groszowe rozliczeń: niedopłata 761, nadpłata 760 (pozostałe operacyjne), cofnięcie wraca tym kontem, którym weszło; konta 750, 751, 761 w planie kont; v21 (przegląd, 2026-10-16): pozycja wyciągu najpierw mówi, czym jest — opłata i odsetki po kodzie banku, przelew między własnymi rachunkami, wpłata na mikrorachunek podatkowy, na rachunek składkowy ZUS, pieniądze właściciela — a dopiero reszta jest zapłatą kontrahenta, którą się rozlicza z fakturami; każda księguje się na swoje konto (149, 225, 229, 249, 403, 750/751); osoba może przeklasyfikować pozycję, której nic nie rozliczyło (classify_bank_operation); deklaracja formy firmy sprawdza formę prawną (spółka: CIT i pełne księgi); v22 (przegląd, 2026-10-16): waluty — faktura w walucie obcej niesie netto i VAT w złotych po kursie średnim NBP z ostatniego dnia roboczego przed dniem sprzedaży (kanał pl-nbp), księgi przeliczają po tym samym kursie, a zapłatę po kursie z jej dnia; różnica kursowa zrealizowana przy rozliczeniu trafia na 750 albo 751 i cofa się tym samym kontem; rozliczenie VAT, JPK i faktura w KSeF (P_14_xW) liczą VAT w złotych; v23 (twarz, 2026-10-16): rejestry VAT mówią, z jakich faktur jest każdy wiersz (kolumna _of), a każda kolumna kwot — co sumuje; „dlaczego?” na komórce rejestru odpowiada fakturami i sprawdza, że składają się na kwotę",
+  "version": 24,
+  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami; poranek: gospodarz mówi, co zaksięgowano i co czeka, z faktów, które policzyło jądro; dziś: otwarte zadania i należności w kolejności pilności, z zatwierdzeniami, które czekają; KSeF na zewnątrz: faktury sprzedaży idą do KSeF jako FA(3) jedną sesją interaktywną, dowód (numer KSeF, UPO) i odmowa (kod, słowa Ministerstwa) są zdarzeniami, odmowa staje się zadaniem na dziś; koniec miesiąca: faktury niosą okres VAT, zamknięcie miesiąca (period.closed) daje rozliczenie VAT jako obiekt policzony regułą — każda liczba deklaracji ma pochodzenie; plik JPK_V7M z rozliczenia i faktur miesiąca (writer rynku), firma zna swój urząd skarbowy, e-mail i formę prawną, faktura zakupu z KSeF niesie numer KSeF; firma mówi, kim jest dla urzędu (identify_company): e-mail, urząd skarbowy, forma prawna, właściciel; v19 (przegląd pakietu, 2026-10-16): daty, które decydują o okresie VAT — faktura sprzedaży niesie datę sprzedaży (P_6, a gdy jej nie podano, datę wystawienia) i okres VAT według obowiązku podatkowego; faktura zakupu niesie datę sprzedaży u dostawcy i datę otrzymania (dla KSeF: dzień nadania numeru), a odliczenie przypada na późniejszy z tych miesięcy; firma mówi, czym jest (declare_company_form): status VAT (czynny albo zwolniony, z przepisem zwolnienia), forma ksiąg i forma opodatkowania od wskazanej daty; firma zwolniona nie rozlicza VAT i nie składa JPK_V7, a VAT od jej zakupów jest kosztem; faktury bez VAT (zw, 0%) księgują się bez linii VAT; każda zmieniona reguła nazywa swoje źródło; v20 (przegląd, 2026-10-16): zakup trafia w koszty — usługa albo wydatek bez dokumentu dostawy na konto kosztowe dostawcy (set_cost_account), a gdy go nie podano, na 403 usługi obce; zakup z dokumentem dostawy (WZ) czeka na 300 na rozliczenie z przyjęciem (PZ); różnice groszowe rozliczeń: niedopłata 761, nadpłata 760 (pozostałe operacyjne), cofnięcie wraca tym kontem, którym weszło; konta 750, 751, 761 w planie kont; v21 (przegląd, 2026-10-16): pozycja wyciągu najpierw mówi, czym jest — opłata i odsetki po kodzie banku, przelew między własnymi rachunkami, wpłata na mikrorachunek podatkowy, na rachunek składkowy ZUS, pieniądze właściciela — a dopiero reszta jest zapłatą kontrahenta, którą się rozlicza z fakturami; każda księguje się na swoje konto (149, 225, 229, 249, 403, 750/751); osoba może przeklasyfikować pozycję, której nic nie rozliczyło (classify_bank_operation); deklaracja formy firmy sprawdza formę prawną (spółka: CIT i pełne księgi); v22 (przegląd, 2026-10-16): waluty — faktura w walucie obcej niesie netto i VAT w złotych po kursie średnim NBP z ostatniego dnia roboczego przed dniem sprzedaży (kanał pl-nbp), księgi przeliczają po tym samym kursie, a zapłatę po kursie z jej dnia; różnica kursowa zrealizowana przy rozliczeniu trafia na 750 albo 751 i cofa się tym samym kontem; rozliczenie VAT, JPK i faktura w KSeF (P_14_xW) liczą VAT w złotych; v23 (twarz, 2026-10-16): rejestry VAT mówią, z jakich faktur jest każdy wiersz (kolumna _of), a każda kolumna kwot — co sumuje; „dlaczego?” na komórce rejestru odpowiada fakturami i sprawdza, że składają się na kwotę; v24 (twarz, krok 3, 2026-10-17): pakiet mówi słowami twarzy — słownik (nazwy typów, pól, wartości, zdarzeń, drzwi, zespołów planu kont i kształt każdego typu), deklaracja VAT jako zestawienie pozycji rozliczenia, a liczby, które twarz liczyła sama, liczy jądro: rano w liczbach (rachunek, należności, zobowiązania, VAT, co zrobiono), wynik od początku roku, należności według wieku na dzień jądra",
   "requires": [
     "company",
     "account",
@@ -1672,6 +1672,784 @@
           {
             "field": "vat_carry",
             "label": "Do przeniesienia"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "slownik",
+      "version": 1,
+      "notion": "words",
+      "title": "Słownik",
+      "domain": "finance",
+      "function": "language",
+      "spec": {
+        "lang": "pl",
+        "types": {
+          "account": {
+            "label": "Konto",
+            "plural": "Konta",
+            "shape": "ledger"
+          },
+          "bank_account": {
+            "label": "Rachunek bankowy",
+            "plural": "Rachunki bankowe",
+            "shape": "card"
+          },
+          "bank_operation": {
+            "label": "Pozycja wyciągu",
+            "plural": "Pozycje wyciągu",
+            "shape": "paper"
+          },
+          "company": {
+            "label": "Firma",
+            "plural": "Firmy",
+            "shape": "card"
+          },
+          "contractor": {
+            "label": "Kontrahent",
+            "plural": "Kontrahenci",
+            "shape": "card"
+          },
+          "fixed_asset": {
+            "label": "Środek trwały",
+            "plural": "Środki trwałe",
+            "shape": "card"
+          },
+          "fx_rate": {
+            "label": "Kurs waluty",
+            "plural": "Kursy walut",
+            "shape": "card"
+          },
+          "invoice": {
+            "label": "Faktura",
+            "plural": "Faktury",
+            "shape": "paper"
+          },
+          "issued_document": {
+            "label": "Dokument wydany",
+            "plural": "Dokumenty wydane",
+            "shape": "card"
+          },
+          "ksef_submission": {
+            "label": "Wysyłka do KSeF",
+            "plural": "Wysyłki do KSeF",
+            "shape": "card"
+          },
+          "lease_contract": {
+            "label": "Umowa leasingu",
+            "plural": "Umowy leasingu",
+            "shape": "card"
+          },
+          "matching_difference": {
+            "label": "Różnica rozliczenia",
+            "plural": "Różnice rozliczeń",
+            "shape": "card"
+          },
+          "mileage_entry": {
+            "label": "Wpis ewidencji przebiegu",
+            "plural": "Ewidencja przebiegu",
+            "shape": "card"
+          },
+          "period_lock": {
+            "label": "Zamknięcie miesiąca",
+            "plural": "Zamknięte miesiące",
+            "shape": "card"
+          },
+          "person": {
+            "label": "Osoba",
+            "plural": "Osoby",
+            "shape": "card"
+          },
+          "posting": {
+            "label": "Zapis księgowy",
+            "plural": "Zapisy księgowe",
+            "shape": "card"
+          },
+          "purchase_invoice": {
+            "label": "Faktura zakupu",
+            "plural": "Faktury zakupu",
+            "shape": "paper"
+          },
+          "received_document": {
+            "label": "Dokument przyjęty",
+            "plural": "Dokumenty przyjęte",
+            "shape": "card"
+          },
+          "recurring_invoice_template": {
+            "label": "Szablon faktury cyklicznej",
+            "plural": "Szablony faktur cyklicznych",
+            "shape": "card"
+          },
+          "sales_invoice": {
+            "label": "Faktura sprzedaży",
+            "plural": "Faktury sprzedaży",
+            "shape": "paper"
+          },
+          "settlement": {
+            "label": "Rozliczenie",
+            "plural": "Rozliczenia",
+            "shape": "card"
+          },
+          "stocktake": {
+            "label": "Inwentaryzacja",
+            "plural": "Inwentaryzacje",
+            "shape": "card"
+          },
+          "task": {
+            "label": "Zadanie",
+            "plural": "Zadania",
+            "shape": "card"
+          },
+          "task_schedule": {
+            "label": "Harmonogram zadań",
+            "plural": "Harmonogramy zadań",
+            "shape": "card"
+          },
+          "tax_declaration": {
+            "label": "Deklaracja podatkowa",
+            "plural": "Deklaracje podatkowe",
+            "shape": "card"
+          },
+          "vat_rate": {
+            "label": "Stawka VAT",
+            "plural": "Stawki VAT",
+            "shape": "card"
+          },
+          "vat_settlement": {
+            "label": "Rozliczenie VAT",
+            "plural": "Rozliczenia VAT",
+            "shape": "statement"
+          },
+          "vehicle": {
+            "label": "Pojazd",
+            "plural": "Pojazdy",
+            "shape": "card"
+          }
+        },
+        "fields": {
+          "accepted_at": "Przyjęta",
+          "accepted_date": "Data przyjęcia",
+          "account": "Konto",
+          "active": "Aktywny",
+          "address": "Adres",
+          "amortization_type": "Metoda amortyzacji",
+          "amount": "Kwota",
+          "assignee": "Osoba odpowiedzialna",
+          "bank": "Bank",
+          "base": "Podstawa",
+          "birth_date": "Data urodzenia",
+          "book": "Księga",
+          "books": "Forma ksiąg",
+          "buyer": "Nabywca",
+          "buyer_nip": "NIP nabywcy",
+          "cadence": "Cykl",
+          "carried_in": "Nadwyżka z poprzedniego miesiąca",
+          "cash_method": "Metoda kasowa",
+          "category": "Kategoria",
+          "closed_on": "Zamknięty na dzień",
+          "code": "Kod",
+          "coefficient": "Współczynnik",
+          "comment": "Komentarz",
+          "contractor": "Kontrahent",
+          "cost_account": "Konto kosztów",
+          "counterparty": "Druga strona",
+          "counterparty_account": "Rachunek drugiej strony",
+          "country": "Kraj",
+          "currency": "Waluta",
+          "customer": "Odbiorca",
+          "date": "Data",
+          "day_of_month": "Dzień miesiąca",
+          "default": "Domyślny",
+          "deputy": "Zastępca",
+          "description": "Opis",
+          "direction": "Kierunek",
+          "document_id": "Dokument",
+          "document_type": "Rodzaj dokumentu",
+          "due_date": "Termin",
+          "email": "E-mail",
+          "end": "Koniec",
+          "engine_capacity": "Pojemność silnika",
+          "entry": "Zapis",
+          "family_name": "Nazwisko",
+          "form_from": "Forma od dnia",
+          "given_name": "Imię",
+          "gross": "Brutto",
+          "handle": "Identyfikator",
+          "hash": "Skrót",
+          "iban": "Rachunek",
+          "income_tax": "Podatek dochodowy",
+          "initial_value": "Wartość początkowa",
+          "input_vat": "VAT naliczony razem",
+          "intragroup": "W grupie",
+          "invoice": "Faktura",
+          "invoice_date": "Data faktury",
+          "invoice_hash": "Skrót dokumentu",
+          "issue_date": "Data wystawienia",
+          "issue_from": "Wystawiaj od",
+          "issue_to": "Wystawiaj do",
+          "kind": "Rodzaj",
+          "km": "Kilometry",
+          "ksef_ref": "Numer KSeF",
+          "kst": "Symbol KŚT",
+          "last_run": "Ostatnio",
+          "legal_form": "Forma prawna",
+          "line": "Linia",
+          "liquidation_date": "Data likwidacji",
+          "liquidation_reason": "Przyczyna likwidacji",
+          "matching": "Polityka rozliczeń",
+          "media_type": "Rodzaj pliku",
+          "mirror_of": "Lustro faktury",
+          "month": "Miesiąc",
+          "name": "Nazwa",
+          "net": "Netto",
+          "net_pln": "Netto w złotych",
+          "next_issue": "Następne wystawienie",
+          "next_run": "Następnie",
+          "nip": "NIP",
+          "number": "Numer",
+          "open": "Do zapłaty",
+          "operation": "Operacja",
+          "output_vat": "VAT należny",
+          "owner": "Właściciel",
+          "owner_account": "Prywatny rachunek właściciela",
+          "ownership": "Własność",
+          "params": "Parametry",
+          "payment_status": "Status płatności",
+          "payment_term_days": "Termin płatności (dni)",
+          "percent": "Procent",
+          "period": "Okres",
+          "prior_balance_depreciation": "Umorzenie bilansowe przed przyjęciem",
+          "prior_tax_depreciation": "Umorzenie podatkowe przed przyjęciem",
+          "priority": "Pilność",
+          "purchase_date": "Data zakupu",
+          "purchase_net": "Zakupy netto",
+          "purchase_vat": "VAT naliczony",
+          "quote": "Kurs",
+          "rate": "Stawka",
+          "reason": "Powód",
+          "received_date": "Data otrzymania",
+          "received_on": "Otrzymano",
+          "registration": "Numer rejestracyjny",
+          "regon": "REGON",
+          "requester": "Zlecający",
+          "role": "Rola",
+          "route_end": "Dokąd",
+          "route_start": "Skąd",
+          "sale_date": "Data sprzedaży",
+          "sales_net_0": "Sprzedaż netto 0%",
+          "sales_net_23": "Sprzedaż netto 23%",
+          "sales_net_5": "Sprzedaż netto 5%",
+          "sales_net_8": "Sprzedaż netto 8%",
+          "sales_net_exempt": "Sprzedaż zwolniona",
+          "sales_vat_23": "VAT 23%",
+          "sales_vat_5": "VAT 5%",
+          "sales_vat_8": "VAT 8%",
+          "seller": "Sprzedawca",
+          "seller_nip": "NIP sprzedawcy",
+          "send_email": "Wysyłaj e-mailem",
+          "send_to_ksef": "Wysyłaj do KSeF",
+          "sent_at": "Wysłana",
+          "settlement_status": "Rozliczenie",
+          "side": "Strona",
+          "size": "Rozmiar",
+          "source": "Źródło",
+          "start": "Początek",
+          "status": "Status",
+          "supplier": "Dostawca",
+          "tax_account": "Mikrorachunek podatkowy",
+          "tax_office": "Urząd skarbowy",
+          "template_invoice": "Faktura wzorcowa",
+          "title": "Tytuł",
+          "total": "Razem",
+          "tx_amount": "Kwota w walucie",
+          "tx_currency": "Waluta operacji",
+          "type": "Typ",
+          "upo": "UPO",
+          "value": "Wartość",
+          "vat": "VAT",
+          "vat_carry": "Do przeniesienia",
+          "vat_deducted": "VAT odliczony",
+          "vat_deduction_limit": "Limit odliczenia VAT",
+          "vat_due": "Do zapłaty",
+          "vat_exemption_basis": "Podstawa zwolnienia",
+          "vat_id": "NIP",
+          "vat_period": "Okres VAT",
+          "vat_pln": "VAT w złotych",
+          "vat_rate": "Stawka VAT",
+          "vat_status": "Status VAT",
+          "vehicle": "Pojazd",
+          "very_important": "Bardzo ważne",
+          "writer": "Rodzaj pliku",
+          "zus_account": "Rachunek składkowy ZUS",
+          "reference": "Tytuł",
+          "lines": "Pozycje",
+          "market": "Rynek",
+          "payment_days": "Termin płatności (dni)",
+          "supplier_nip": "NIP dostawcy",
+          "item": "Towar lub usługa",
+          "qty": "Ilość",
+          "price": "Cena",
+          "unit": "Jednostka",
+          "bank_operation.open": "Nierozliczone",
+          "bank_operation.account": "Rachunek",
+          "bank_operation.title": "Tytuł",
+          "company.kind": "Rola",
+          "purchase_invoice.owner": "Nabywca",
+          "matching_difference.account": "Konto",
+          "vat_settlement.vat_due": "Do zapłaty",
+          "vat_rate.code": "Stawka"
+        },
+        "values": {
+          "account.type": {
+            "asset": "aktywa",
+            "bank": "środki pieniężne",
+            "clearing": "rozliczeniowe",
+            "creditor": "zobowiązania",
+            "debtor": "należności",
+            "equity": "kapitał",
+            "expense": "koszty",
+            "liability": "pasywa",
+            "revenue": "przychody",
+            "tax": "podatki"
+          },
+          "bank_operation.direction": {
+            "credit": "wpływ",
+            "debit": "wypływ"
+          },
+          "matching_difference.direction": {
+            "short": "niedopłata",
+            "over": "nadpłata"
+          },
+          "direction": {
+            "credit": "Ma",
+            "debit": "Wn",
+            "up": "w górę",
+            "down": "w dół",
+            "short": "niedopłata",
+            "over": "nadpłata"
+          },
+          "posting.side": {
+            "debit": "Wn",
+            "credit": "Ma"
+          },
+          "side": {
+            "debit": "Wn",
+            "credit": "Ma"
+          },
+          "company.kind": {
+            "customer": "Odbiorca",
+            "supplier": "Dostawca",
+            "self": "My"
+          },
+          "bank_operation.kind": {
+            "transfer": "Zapłata kontrahenta",
+            "card": "Karta",
+            "fee": "Opłata bankowa",
+            "other": "Inna",
+            "interest": "Odsetki",
+            "tax": "Podatek",
+            "zus": "ZUS",
+            "own": "Przelew własny",
+            "owner": "Pieniądze właściciela"
+          },
+          "kind": {
+            "car": "samochód osobowy",
+            "motorcycle": "motocykl",
+            "truck": "samochód ciężarowy",
+            "customer": "odbiorca",
+            "supplier": "dostawca",
+            "self": "my",
+            "fee": "opłata",
+            "financial": "finansowy",
+            "operational": "operacyjny",
+            "rental": "najem",
+            "interest": "odsetki",
+            "other": "inny",
+            "own": "własny",
+            "owner": "właściciel",
+            "tax": "podatek",
+            "transfer": "przelew",
+            "zus": "ZUS",
+            "card": "karta",
+            "jpk_v7": "JPK_V7",
+            "vat7": "VAT-7",
+            "pit": "PIT",
+            "pcc3": "PCC-3",
+            "zus_dra": "ZUS DRA",
+            "tolerance": "w tolerancji"
+          },
+          "sales_invoice.status": {
+            "open": "Otwarta",
+            "paid": "Zapłacona"
+          },
+          "purchase_invoice.status": {
+            "open": "Otwarta",
+            "paid": "Zapłacona"
+          },
+          "ksef_submission.status": {
+            "accepted": "Przyjęta",
+            "rejected": "Odrzucona"
+          },
+          "status": {
+            "accepted": "przyjęty",
+            "active": "aktywny",
+            "approved": "zatwierdzony",
+            "away": "nieobecny",
+            "blocked": "zablokowany",
+            "cancelled": "anulowany",
+            "closed": "zamknięty",
+            "corrected": "skorygowany",
+            "done": "zrobione",
+            "draft": "szkic",
+            "issued": "wystawiony",
+            "left": "odszedł",
+            "open": "otwarte",
+            "paid": "zapłacone",
+            "read": "przeczytany",
+            "received": "przyjęty",
+            "rejected": "odrzucony",
+            "set_aside": "odłożone"
+          },
+          "settlement_status": {
+            "private": "prywatna",
+            "settled": "rozliczona",
+            "unsettled": "czeka"
+          },
+          "legal_form": {
+            "legal_entity": "osoba prawna",
+            "natural_person": "osoba fizyczna"
+          },
+          "vat_status": {
+            "active": "czynny",
+            "exempt": "zwolniony"
+          },
+          "books": {
+            "full": "pełne księgi",
+            "kpir": "KPiR",
+            "ryczalt": "ewidencja przychodów"
+          },
+          "income_tax": {
+            "cit": "CIT",
+            "liniowy": "liniowy",
+            "ryczalt": "ryczałt",
+            "skala": "skala podatkowa"
+          },
+          "amortization_type": {
+            "degressive": "degresywna",
+            "linear": "liniowa",
+            "none": "brak",
+            "one_off": "jednorazowa"
+          },
+          "priority": {
+            "critical": "krytyczna",
+            "high": "wysoka",
+            "low": "niska",
+            "medium": "średnia",
+            "problem": "problem"
+          },
+          "category": {
+            "accounting": "księgowość",
+            "agent": "Rhea",
+            "contractor_payments": "płatności kontrahentów",
+            "invoices": "faktury",
+            "month_close": "zamknięcie miesiąca",
+            "other": "inne",
+            "reminders": "przypomnienia",
+            "taxes": "podatki"
+          },
+          "cadence": {
+            "monthly": "co miesiąc",
+            "other": "inny",
+            "weekly": "co tydzień",
+            "yearly": "co rok"
+          },
+          "payment_status": {
+            "awaiting": "oczekuje",
+            "paid": "zapłacona",
+            "partial": "częściowo",
+            "unpaid": "niezapłacona"
+          },
+          "ownership": {
+            "leasing": "leasing",
+            "own": "własny",
+            "private": "prywatny",
+            "rental": "najem"
+          },
+          "cash_method": {
+            "yes": "tak",
+            "no": "nie"
+          },
+          "very_important": {
+            "yes": "tak",
+            "no": "nie"
+          },
+          "active": {
+            "yes": "tak",
+            "no": "nie"
+          },
+          "send_to_ksef": {
+            "yes": "tak",
+            "no": "nie"
+          },
+          "send_email": {
+            "yes": "tak",
+            "no": "nie"
+          },
+          "default": {
+            "yes": "tak",
+            "no": "nie"
+          },
+          "intragroup": {
+            "yes": "tak",
+            "no": "nie"
+          },
+          "basis": {
+            "statute": "ustawa",
+            "practice": "praktyka",
+            "standard": "standard",
+            "interpretation": "interpretacja",
+            "ruling": "orzecznictwo",
+            "regulation": "rozporządzenie"
+          }
+        },
+        "events": {
+          "account.created": "Konto założone",
+          "bank.statement.line": "Pozycja wyciągu bankowego",
+          "bank_operation.classified": "Pozycja wyciągu nazwana",
+          "company.accounts.declared": "Firma podała swoje rachunki",
+          "company.cost_account.set": "Konto kosztów dostawcy ustalone",
+          "company.form.declared": "Firma podała swoją formę",
+          "company.identified": "Firma podała swoje dane",
+          "company.registered": "Firma zarejestrowana",
+          "delivery.received": "Dostawa przyjęta",
+          "document.issued": "Dokument wydany",
+          "document.read": "Dokument przeczytany",
+          "document.received": "Dokument przyjęty",
+          "fx.rate.published": "Kurs NBP opublikowany",
+          "ksef.invoice.rejected": "KSeF odrzucił fakturę",
+          "ksef.invoice.submitted": "KSeF przyjął fakturę",
+          "object.materialized": "Powstał obiekt",
+          "object.amended": "Obiekt zmieniony",
+          "objects.matched": "Wpłata dopasowana do dokumentu",
+          "objects.unmatched": "Dopasowanie cofnięte",
+          "period.closed": "Miesiąc zamknięty",
+          "person.deputy_appointed": "Wyznaczono zastępcę",
+          "person.identified": "Osoba podała swoje dane",
+          "person.registered": "Osoba dodana",
+          "person.status_changed": "Zmieniono status osoby",
+          "purchase.invoice.received": "Faktura zakupu otrzymana",
+          "sales.invoice.issued": "Faktura sprzedaży wystawiona",
+          "vat_rate.defined": "Stawka VAT ustalona",
+          "host.said": "Rhea powiedziała",
+          "rule.approved": "Reguła zatwierdzona",
+          "bundle.approved": "Pakiet zatwierdzony",
+          "activity.approved": "Drzwi zatwierdzone"
+        },
+        "doors": {
+          "appoint_deputy": "wyznaczenie zastępcy",
+          "approve_activity": "zatwierdzenie drzwi",
+          "approve_backfill": "zatwierdzenie wyjaśnienia wstecz",
+          "approve_bundle": "zatwierdzenie pakietu",
+          "approve_rule": "zatwierdzenie reguły",
+          "classify_bank_operation": "nazwanie pozycji wyciągu",
+          "clock": "zegar",
+          "close_period": "zamknięcie miesiąca",
+          "confirm_reading": "potwierdzenie odczytu",
+          "declare_company_accounts": "rachunki firmy",
+          "declare_company_form": "forma firmy",
+          "draft_bundle": "szkic pakietu",
+          "draft_rule": "szkic reguły",
+          "host_said": "słowa Rhei",
+          "identify_company": "dane firmy",
+          "identify_person": "dane osoby",
+          "issue_document": "wydanie dokumentu",
+          "ksef": "kanał KSeF",
+          "pair_items": "dopasowanie",
+          "receive_document": "przyjęcie dokumentu",
+          "register_person": "dodanie osoby",
+          "reject_bundle": "odrzucenie pakietu",
+          "set_cost_account": "konto kosztów dostawcy",
+          "set_person_status": "status osoby",
+          "submit_event": "otwarte drzwi",
+          "unpair_items": "cofnięcie dopasowania"
+        },
+        "account_groups": {
+          "0": "Aktywa trwałe",
+          "1": "Środki pieniężne, rachunki bankowe i inne krótkoterminowe aktywa finansowe",
+          "2": "Rozrachunki i roszczenia",
+          "3": "Materiały i towary",
+          "4": "Koszty według rodzajów i ich rozliczenie",
+          "5": "Koszty według typów działalności i ich rozliczenie",
+          "6": "Produkty i rozliczenia międzyokresowe",
+          "7": "Przychody i koszty związane z ich osiągnięciem",
+          "8": "Kapitały (fundusze) własne, fundusze specjalne i wynik finansowy"
+        }
+      }
+    },
+    {
+      "view_id": "deklaracja-vat",
+      "version": 1,
+      "notion": "statement",
+      "title": "Deklaracja VAT",
+      "domain": "finance",
+      "function": "vat",
+      "spec": {
+        "object_type": "vat_settlement",
+        "sections": [
+          {
+            "title": "Deklaracja",
+            "rows": [
+              {
+                "field": "output_vat"
+              },
+              {
+                "op": "-",
+                "field": "purchase_vat"
+              },
+              {
+                "op": "-",
+                "field": "carried_in"
+              },
+              {
+                "op": "=",
+                "field": "vat_due",
+                "note": "w pełnych złotych (Ordynacja podatkowa art. 63 § 1)"
+              },
+              {
+                "field": "vat_carry",
+                "nonzero": true
+              }
+            ]
+          },
+          {
+            "title": "Podstawy",
+            "rows": [
+              {
+                "field": "sales_net_23"
+              },
+              {
+                "field": "sales_net_8",
+                "nonzero": true
+              },
+              {
+                "field": "sales_net_5",
+                "nonzero": true
+              },
+              {
+                "field": "sales_net_0",
+                "nonzero": true
+              },
+              {
+                "field": "sales_net_exempt",
+                "nonzero": true
+              },
+              {
+                "field": "purchase_net"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "rano",
+      "version": 1,
+      "notion": "analysis",
+      "title": "Rano w liczbach",
+      "domain": "finance",
+      "function": "briefing",
+      "spec": {
+        "sql": "WITH acc AS (SELECT object_id, json_extract_string(state,'$.code') AS code FROM objects WHERE object_type = 'account'), post AS (SELECT json_extract_string(p.state,'$.account') AS account, CASE WHEN json_extract_string(p.state,'$.side') = 'debit' THEN CAST(json_extract(p.state,'$.amount') AS BIGINT) ELSE -CAST(json_extract(p.state,'$.amount') AS BIGINT) END AS signed FROM objects p WHERE p.object_type = 'posting' AND COALESCE(json_extract_string(p.state,'$.book'), 'main') = 'pl-stat'), bank AS (SELECT a.object_id AS id, COALESCE(SUM(p.signed), 0) AS bal, COUNT(p.signed) AS n FROM acc a LEFT JOIN post p ON p.account = a.object_id WHERE a.code = '130' GROUP BY a.object_id), openinv AS (SELECT object_id, object_type, CAST(json_extract(state,'$.open') AS BIGINT) AS open FROM objects WHERE object_type IN ('sales_invoice', 'purchase_invoice') AND CAST(COALESCE(json_extract(state,'$.open'), '0') AS BIGINT) > 0), vat AS (SELECT object_id, json_extract_string(state,'$.period') AS period, CAST(json_extract(state,'$.vat_due') AS BIGINT) AS due FROM objects WHERE object_type = 'vat_settlement' ORDER BY period DESC LIMIT 1), counted AS (SELECT object_id, object_type, json_extract_string(state,'$.status') AS status, json_extract_string(state,'$.settlement_status') AS sstatus FROM objects WHERE object_type IN ('ksef_submission', 'bank_operation', 'matching_difference', 'period_lock')) SELECT key, label, amount, count, note, o AS _of FROM (SELECT 1 AS k, 'bank' AS key, 'Na rachunku bieżącym' AS label, bal AS amount, n AS count, 'zapisów od początku roku' AS note, id AS o FROM bank UNION ALL SELECT 2, 'receivables', 'Należności', COALESCE(SUM(open), 0), COUNT(*), 'otwartych faktur sprzedaży', string_agg(object_id, ',' ORDER BY object_id) FROM openinv WHERE object_type = 'sales_invoice' UNION ALL SELECT 3, 'payables', 'Dla dostawców', COALESCE(SUM(open), 0), COUNT(*), 'faktur zakupu do zapłaty', string_agg(object_id, ',' ORDER BY object_id) FROM openinv WHERE object_type = 'purchase_invoice' UNION ALL SELECT 4, 'vat_due', 'VAT do zapłaty', due, NULL, period, object_id FROM vat UNION ALL SELECT 5, 'ksef', 'Faktury przyjęte w KSeF', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'ksef_submission' AND status = 'accepted' UNION ALL SELECT 6, 'bank_lines', 'Pozycje wyciągu przeczytane', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'bank_operation' UNION ALL SELECT 7, 'settled', 'Pozycje wyciągu rozliczone', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'bank_operation' AND sstatus = 'settled' UNION ALL SELECT 8, 'differences', 'Różnice groszowe zamknięte w tolerancji', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'matching_difference' UNION ALL SELECT 9, 'closed', 'Zamknięte miesiące', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'period_lock') ORDER BY k",
+        "columns": [
+          {
+            "field": "key",
+            "label": "Klucz",
+            "type": "string"
+          },
+          {
+            "field": "label",
+            "label": "Co",
+            "type": "string"
+          },
+          {
+            "field": "amount",
+            "label": "Kwota",
+            "type": "money"
+          },
+          {
+            "field": "count",
+            "label": "Ile",
+            "type": "int"
+          },
+          {
+            "field": "note",
+            "label": "Uwaga",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "wynik",
+      "version": 1,
+      "notion": "analysis",
+      "title": "Wynik od początku roku",
+      "domain": "finance",
+      "function": "analysis",
+      "spec": {
+        "sql": "WITH bal AS (SELECT a.object_id AS id, json_extract_string(a.state,'$.type') AS typ, SUM(CASE WHEN json_extract_string(p.state,'$.side') = 'debit' THEN CAST(json_extract(p.state,'$.amount') AS BIGINT) ELSE -CAST(json_extract(p.state,'$.amount') AS BIGINT) END) AS b FROM objects p JOIN objects a ON json_extract_string(p.state,'$.account') = a.object_id WHERE p.object_type = 'posting' AND a.object_type = 'account' AND COALESCE(json_extract_string(p.state,'$.book'), 'main') = 'pl-stat' GROUP BY 1, 2) SELECT op, line, amount, o AS _of FROM (SELECT 1 AS k, '' AS op, 'Przychody' AS line, -COALESCE(SUM(b), 0) AS amount, string_agg(id, ',' ORDER BY id) AS o FROM bal WHERE typ = 'revenue' UNION ALL SELECT 2, '-', 'Koszty', COALESCE(SUM(b), 0), string_agg(id, ',' ORDER BY id) FROM bal WHERE typ = 'expense' UNION ALL SELECT 3, '=', 'Wynik przed opodatkowaniem', -COALESCE(SUM(b), 0), string_agg(id, ',' ORDER BY id) FROM bal WHERE typ IN ('revenue', 'expense')) ORDER BY k",
+        "columns": [
+          {
+            "field": "op",
+            "label": "",
+            "type": "string"
+          },
+          {
+            "field": "line",
+            "label": "Pozycja",
+            "type": "string"
+          },
+          {
+            "field": "amount",
+            "label": "Kwota",
+            "type": "money"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "naleznosci-wiek",
+      "version": 1,
+      "notion": "analysis",
+      "title": "Należności według wieku",
+      "domain": "finance",
+      "function": "rozrachunki",
+      "spec": {
+        "sql": "WITH b(k, bucket, lo, hi) AS (VALUES (1, 'do 30 dni', 0, 30), (2, '31–60 dni', 31, 60), (3, '61–90 dni', 61, 90), (4, '91–180 dni', 91, 180), (5, 'ponad 180 dni', 181, 100000)), inv AS (SELECT object_id, CAST(json_extract(state,'$.open') AS BIGINT) AS open, date_diff('day', CAST(json_extract_string(state,'$.issue_date') AS DATE), {{today}}) AS age FROM objects WHERE object_type = 'sales_invoice' AND CAST(COALESCE(json_extract(state,'$.open'), '0') AS BIGINT) > 0) SELECT op, bucket, count, open, o AS _of FROM (SELECT b.k, '' AS op, b.bucket, COUNT(i.object_id) AS count, COALESCE(SUM(i.open), 0) AS open, COALESCE(string_agg(i.object_id, ',' ORDER BY i.object_id), '') AS o FROM b LEFT JOIN inv i ON i.age BETWEEN b.lo AND b.hi GROUP BY b.k, b.bucket UNION ALL SELECT 9, '=', 'Razem', COUNT(*), COALESCE(SUM(open), 0), COALESCE(string_agg(object_id, ',' ORDER BY object_id), '') FROM inv) ORDER BY k",
+        "columns": [
+          {
+            "field": "op",
+            "label": "",
+            "type": "string"
+          },
+          {
+            "field": "bucket",
+            "label": "Wiek od wystawienia",
+            "type": "string"
+          },
+          {
+            "field": "count",
+            "label": "Faktur",
+            "type": "int"
+          },
+          {
+            "field": "open",
+            "label": "Do zapłaty",
+            "type": "money",
+            "sum_of": [
+              "open"
+            ]
           }
         ]
       }

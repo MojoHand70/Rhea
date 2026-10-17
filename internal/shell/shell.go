@@ -250,6 +250,10 @@ func (s *Server) handleView(w http.ResponseWriter, r *http.Request) {
 		s.serveNarrative(ctx, w, vd)
 	case "queue":
 		s.serveQueue(ctx, w, vd)
+	case "words":
+		s.serveWords(w, vd)
+	case "statement":
+		s.serveStatement(ctx, w, vd, r.URL.Query().Get("object_id"))
 	default:
 		writeErr(w, 400, fmt.Errorf("notion %q not renderable", vd.Notion))
 	}

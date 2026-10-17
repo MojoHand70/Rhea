@@ -3367,3 +3367,28 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   read a table mid-rebuild. Found by the live face, which asks for its reports together. The
   shell now holds one lock around rebuild-and-query. Performance stays a non-goal; this is
   correctness. `TestFaceReads` asks for eight reports at once.
+
+## 2026-10-17 — step 3: the pack speaks the face's words and the kernel computes its figures
+
+- **Why.** The face carried a table of Polish words, a table of which shape each type takes,
+  the VAT declaration's layout, the account numbers that play the bank and the receivables, and
+  computed the morning's figures, profit and ageing by itself (DIRECTION, the plan from the
+  prototype to the product, step 3). A face built apart must name nothing and compute nothing.
+- **A `words` notion.** A view whose spec is a market's dictionary: types (label, plural, the
+  shape a face draws — paper, card, ledger, statement), fields (`type.field` for one type's),
+  enum values, events, doors, the chart's account groups. The kernel names nothing in any
+  language; `WordsSpec.Check` keeps a face able to use it. The Poland pack's `slownik` names all
+  28 types, every field and every value — `TestThePackSpeaks` fails on anything left unnamed.
+- **A `statement` notion.** One object's own figures laid out as sections of rows, each with its
+  operation (+, −, =) and a note; served with `?object_id=` as the kernel encodes the figures.
+  It computes nothing: the VAT declaration rounds to whole złoty and must not be made to add up
+  to the grosze above it. `deklaracja-vat` replaces the face's layout.
+- **`{{today}}` in analysis SQL** becomes the kernel clock's day as a DATE, so a report that
+  depends on the day reads the kernel's day, not the machine's.
+- **Three reports the face used to compute**, each row saying what it is made of: `rano` (the
+  morning's figures — bank, receivables, payables, the last VAT — and what was done),
+  `wynik` (profit since January by account type), `naleznosci-wiek` (receivables by age on the
+  kernel's day). The account numbers (130) and the book (pl-stat) live in the pack's SQL now.
+- **Schema.** The notion CHECK learns `words` and `statement` through its idempotent migration;
+  `rhea init` brings an existing database along (done on rhea_face and white01).
+- **Poland pack v24.** Five views, nothing else; an installed v23 upgrades in place.

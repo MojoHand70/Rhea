@@ -1,0 +1,211 @@
+package shell_test
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"net/http/httptest"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
+	"rhea/internal/adapter"
+	"rhea/internal/core"
+	"rhea/internal/exec"
+	"rhea/internal/pack"
+	"rhea/internal/shell"
+	"rhea/internal/store/storetest"
+)
+
+// TestThePackSpeaks: the face computes no figure and names nothing on its
+// own (DIRECTION 2026-10-16, step 3). The Poland pack names every type,
+// field and value the kernel holds and the shape each type takes; it lays
+// the VAT settlement out as a declaration without computing; and the
+// figures the face once summed itself — the morning's, profit, receivables
+// by age on the kernel's day — come from the kernel, each row saying what
+// it is made of.
+func TestThePackSpeaks(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	for _, f := range []string{"finance.json", "finance_v2.json", "finance_v3.json", "finance_v4.json",
+		"finance_v5.json", "finance_v6.json", "finance_v7.json", "finance_v8.json"} {
+		seedFromFile(t, s, f)
+	}
+	x := &exec.Executor{Store: s}
+	day := "2026-10-16"
+	srv := &shell.Server{Store: s, Exec: x, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb"),
+		Clock: adapter.Clock{Now: func() time.Time { d, _ := time.Parse("2006-01-02", day); return d.Add(9 * time.Hour) }}}
+	ts := httptest.NewServer(srv.Handler())
+	defer ts.Close()
+	get := func(path string, out any) {
+		t.Helper()
+		res, err := ts.Client().Get(ts.URL + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+		var b bytes.Buffer
+		b.ReadFrom(res.Body)
+		if res.StatusCode != 200 {
+			t.Fatalf("GET %s: %d %s", path, res.StatusCode, b.String())
+		}
+		if err := json.Unmarshal(b.Bytes(), out); err != nil {
+			t.Fatalf("GET %s: %v", path, err)
+		}
+	}
+	for _, p := range []string{"common/people.json", "common/periods.json", "common/documents.json", "pl/pack.json"} {
+		sum, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", p), "test")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, _, _, err := x.ApproveBundle(ctx, sum.Bundle, "krzysztof", "2026-09-01"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := s.InsertRuleVersion(ctx, core.Rule{
+		ID: "register-company", Status: core.StatusDraft, Priority: 10, EffectiveFrom: "2026-01-01", CreatedBy: "human",
+		Description: "register-company",
+		Spec: core.RuleSpec{Match: core.Match{EventType: "company.registered"}, Effect: core.Effect{Object: core.ObjectTemplate{Type: "company",
+			Fields: map[string]string{"name": "=$.name", "kind": "=$.kind", "vat_id": "=$.vat_id", "country": "=$.country"}}}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, _, err := x.ApproveRule(ctx, "register-company", "krzysztof", "2026-09-01"); err != nil {
+		t.Fatal(err)
+	}
+	submit := func(typ, date, key string, payload map[string]any) {
+		t.Helper()
+		tr, err := x.TriggerActivity(ctx, "submit_event", map[string]any{"event_type": typ, "occurred_at": date, "payload": payload}, "test", key)
+		if err != nil || tr.Booked != 1 || len(tr.Errors) > 0 {
+			t.Fatalf("%s: %+v %v", key, tr, err)
+		}
+	}
+	submit("company.registered", "2026-09-01", "self", map[string]any{"name": "Sprzedawca Sp. z o.o.", "kind": "self", "vat_id": "5250001111", "country": "PL"})
+	submit("company.registered", "2026-09-01", "buyer", map[string]any{"name": "Nabywca S.A.", "kind": "customer", "vat_id": "5260001246", "country": "PL"})
+	inv := func(no, date, net, vat, gross string) map[string]any {
+		return map[string]any{"number": no, "issue_date": date, "market": "pl", "intragroup": "no", "seller_nip": "5250001111",
+			"buyer_nip": "5260001246", "net": net, "vat": vat, "gross": gross, "vat_rate": "23", "currency": "PLN"}
+	}
+	submit("sales.invoice.issued", "2026-09-21", "fv-1", inv("FV 1/09/2026", "2026-09-21", "1000.00", "230.00", "1230.00"))
+	submit("sales.invoice.issued", "2026-09-24", "fv-2", inv("FV 2/09/2026", "2026-09-24", "500.00", "115.50", "615.50"))
+	if tr, err := x.TriggerActivity(ctx, "close_period", map[string]any{"period": "2026-09-30", "book": "pl-stat", "occurred_at": "2026-10-05"}, "krzysztof", ""); err != nil || tr.Booked != 1 {
+		t.Fatalf("close September: %+v %v", tr, err)
+	}
+
+	// The words: every type, every field and every value the kernel holds
+	// has a Polish name, and every type a shape.
+	var words struct {
+		Words core.WordsSpec `json:"words"`
+	}
+	get("/api/views/slownik", &words)
+	w := words.Words
+	if w.Lang != "pl" || w.Check() != nil {
+		t.Fatalf("words: %s %v", w.Lang, w.Check())
+	}
+	var types []core.ObjectType
+	get("/api/types", &types)
+	var missing []string
+	for _, ty := range types {
+		tw, ok := w.Types[ty.Name]
+		if !ok || tw.Shape == "" {
+			missing = append(missing, "type "+ty.Name)
+		}
+		for _, f := range ty.Fields {
+			if w.Fields[ty.Name+"."+f.Name] == "" && w.Fields[f.Name] == "" {
+				missing = append(missing, "field "+ty.Name+"."+f.Name)
+			}
+			for _, v := range f.Values {
+				if w.Values[ty.Name+"."+f.Name][v] == "" && w.Values[f.Name][v] == "" {
+					missing = append(missing, "value "+ty.Name+"."+f.Name+"="+v)
+				}
+			}
+		}
+	}
+	if len(missing) > 0 {
+		t.Fatalf("the pack leaves unnamed: %s", strings.Join(missing, ", "))
+	}
+
+	// The VAT settlement as a declaration: the settlement's own figures,
+	// ordered and signed; a carry of zero is not shown.
+	var vs struct {
+		Objects []core.Object `json:"objects"`
+	}
+	get("/api/objects?type=vat_settlement", &vs)
+	if len(vs.Objects) != 1 {
+		t.Fatalf("settlements: %+v", vs.Objects)
+	}
+	var st struct {
+		Sections []struct {
+			Title string `json:"title"`
+			Rows  []struct {
+				Op, Field, Note, V string
+			} `json:"rows"`
+		} `json:"sections"`
+	}
+	get("/api/views/deklaracja-vat?object_id="+vs.Objects[0].ID, &st)
+	decl := st.Sections[0].Rows
+	if len(st.Sections) != 2 || len(decl) != 4 || decl[0].Field != "output_vat" || decl[0].V != "345.50" ||
+		decl[1].Op != "-" || decl[3].Op != "=" || decl[3].Field != "vat_due" || decl[3].V != "346.00" || !strings.Contains(decl[3].Note, "pełnych złotych") {
+		t.Fatalf("the declaration: %+v", st)
+	}
+
+	// The morning's figures, from the kernel: what is owed to us and by
+	// whom, the last VAT, and what was done — each row naming its objects.
+	type rows struct {
+		Columns []struct{ Field string } `json:"columns"`
+		Rows    [][]cell                 `json:"rows"`
+		Of      [][]string               `json:"row_objects"`
+	}
+	var rano rows
+	get("/api/views/rano", &rano)
+	byKey := map[string][]string{}
+	ofKey := map[string][]string{}
+	for i, r := range cellVals(rano.Rows) {
+		byKey[r[0]] = r
+		ofKey[r[0]] = rano.Of[i]
+	}
+	if r := byKey["receivables"]; r == nil || r[2] != "1845.50" || r[3] != "2" || len(ofKey["receivables"]) != 2 {
+		t.Fatalf("receivables: %v %v", r, ofKey["receivables"])
+	}
+	if r := byKey["vat_due"]; r == nil || r[2] != "346.00" || r[4] != "2026-09" || ofKey["vat_due"][0] != vs.Objects[0].ID {
+		t.Fatalf("the last VAT: %v", r)
+	}
+	if r := byKey["closed"]; r == nil || r[2] != "" || r[3] != "1" {
+		t.Fatalf("months closed: %v", r)
+	}
+	if r := byKey["bank"]; r == nil || r[2] != "0.00" {
+		t.Fatalf("the bank, before any line: %v", r)
+	}
+
+	// Profit since January: revenue less costs, the accounts each row reads.
+	var wynik rows
+	get("/api/views/wynik", &wynik)
+	wv := cellVals(wynik.Rows)
+	if len(wv) != 3 || wv[0][1] != "Przychody" || wv[0][2] != "1500.00" || wv[1][0] != "-" || wv[2][0] != "=" || wv[2][2] != "1500.00" || len(wynik.Of[0]) != 1 {
+		t.Fatalf("profit: %v %v", wv, wynik.Of)
+	}
+
+	// Receivables by age, on the kernel's day: on 16 October both invoices
+	// are under 30 days; the parts make the total.
+	var age rows
+	get("/api/views/naleznosci-wiek", &age)
+	av := cellVals(age.Rows)
+	if len(av) != 6 || av[0][1] != "do 30 dni" || av[0][2] != "2" || av[0][3] != "1845.50" || av[5][0] != "=" || av[5][3] != "1845.50" {
+		t.Fatalf("by age on %s: %v", day, av)
+	}
+	var why struct {
+		Sums *bool `json:"sums"`
+	}
+	get("/api/explain?view=naleznosci-wiek&row=0&col=open", &why)
+	if why.Sums == nil || !*why.Sums {
+		t.Fatalf("the youngest bucket does not add up")
+	}
+	// The same books on New Year's Eve: the kernel's day moved, so did the age.
+	day = "2026-12-31"
+	get("/api/views/naleznosci-wiek", &age)
+	av = cellVals(age.Rows)
+	if av[0][2] != "0" || av[3][1] != "91–180 dni" || av[3][2] != "2" {
+		t.Fatalf("by age on %s: %v", day, av)
+	}
+}

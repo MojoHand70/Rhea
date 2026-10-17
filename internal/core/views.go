@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -111,3 +112,113 @@ type QueueSpec struct {
 	Limit      int         `json:"limit,omitempty"`
 	Approvals  bool        `json:"approvals,omitempty"`
 }
+
+// WordsSpec: spec of a `words` notion — how a market names what the kernel
+// holds. The kernel names nothing in any language; a pack does: each type
+// (and the shape it takes on a face), each field, the values of enums, the
+// events, the doors, the groups of its chart of accounts. A face shows the
+// words; one without them shows the kernel's names.
+type WordsSpec struct {
+	Lang   string               `json:"lang"`
+	Types  map[string]TypeWords `json:"types,omitempty"`
+	Fields map[string]string    `json:"fields,omitempty"` // field name, or "type.field" for one type's
+	// Values names the values of an enum field (or "type.field"), and of the
+	// few kernel words that are not fields (a warrant's basis).
+	Values        map[string]map[string]string `json:"values,omitempty"`
+	Events        map[string]string            `json:"events,omitempty"`         // event type → its name
+	Doors         map[string]string            `json:"doors,omitempty"`          // activity → its name
+	AccountGroups map[string]string            `json:"account_groups,omitempty"` // a code's first digits → the group's name
+}
+
+// TypeWords names one type and says which shape it takes.
+type TypeWords struct {
+	Label  string `json:"label"`
+	Plural string `json:"plural,omitempty"`
+	Shape  string `json:"shape,omitempty"`
+}
+
+// Shapes are the few forms an object takes on a face (DIRECTION, the
+// face): a document as a document, a card, a ledger, a statement.
+var Shapes = []string{"paper", "card", "ledger", "statement"}
+
+// Check refuses words a face could not use: a language is named, every
+// label says something, every shape is one of Shapes.
+func (w WordsSpec) Check() error {
+	if w.Lang == "" {
+		return fmt.Errorf("words: no language")
+	}
+	for t, tw := range w.Types {
+		if strings.TrimSpace(tw.Label) == "" {
+			return fmt.Errorf("words: type %s has no label", t)
+		}
+		if tw.Shape != "" && !slices.Contains(Shapes, tw.Shape) {
+			return fmt.Errorf("words: type %s takes shape %q, not one of %v", t, tw.Shape, Shapes)
+		}
+	}
+	for _, m := range []map[string]string{w.Fields, w.Events, w.Doors, w.AccountGroups} {
+		for k, v := range m {
+			if strings.TrimSpace(v) == "" {
+				return fmt.Errorf("words: %s has an empty label", k)
+			}
+		}
+	}
+	for f, vals := range w.Values {
+		for k, v := range vals {
+			if strings.TrimSpace(v) == "" {
+				return fmt.Errorf("words: value %s of %s has an empty label", k, f)
+			}
+		}
+	}
+	return nil
+}
+
+// StatementSpec: spec of a `statement` notion — one object's figures laid
+// out as a statement: sections of rows, each a field with the operation
+// that joins it to the rows above it. The figures are the object's own,
+// computed by its rules; the statement orders and signs them and computes
+// nothing (a declaration rounded to whole złoty does not add up to the
+// grosze above it, and must not be made to).
+type StatementSpec struct {
+	ObjectType string             `json:"object_type"`
+	Sections   []StatementSection `json:"sections"`
+}
+
+type StatementSection struct {
+	Title string         `json:"title,omitempty"`
+	Rows  []StatementRow `json:"rows"`
+}
+
+type StatementRow struct {
+	Op      string `json:"op,omitempty"`      // "", "+", "-" or "="
+	Field   string `json:"field"`             // a money field of the type
+	Note    string `json:"note,omitempty"`    // a word under the row: "w pełnych złotych"
+	NonZero bool   `json:"nonzero,omitempty"` // shown only when the figure is not zero
+}
+
+// Check against the type: every row names a money field it has.
+func (s StatementSpec) Check(t ObjectType) error {
+	if s.ObjectType != t.Name {
+		return fmt.Errorf("statement over %s checked against %s", s.ObjectType, t.Name)
+	}
+	if len(s.Sections) == 0 {
+		return fmt.Errorf("statement over %s: no sections", s.ObjectType)
+	}
+	for _, sec := range s.Sections {
+		for _, r := range sec.Rows {
+			if !slices.Contains([]string{"", "+", "-", "="}, r.Op) {
+				return fmt.Errorf("statement over %s: row %s: op %q is not +, -, = or none", s.ObjectType, r.Field, r.Op)
+			}
+			fd, ok := t.Field(r.Field)
+			if !ok || fd.Type != "money" {
+				return fmt.Errorf("statement over %s: %s is not a money field of the type", s.ObjectType, r.Field)
+			}
+		}
+	}
+	return nil
+}
+
+// TodayInSQL is how an analysis view names the business date: the kernel
+// puts the clock's day there as a DATE before the query runs, so a report
+// that depends on the day (receivables by age) reads the kernel's day, not
+// the machine's.
+const TodayInSQL = "{{today}}"
