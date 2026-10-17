@@ -95,6 +95,15 @@ kernel computes it. Never write SQL; a figure needs no rule.
                {"line": "Costs", "op": "-", "where": [{"field": "account.type", "op": "eq", "value": "expense"}]},
                {"line": "Result before tax", "op": "="}],
      "line_label": "Line", "amount_label": "Amount"}}}
+  {"view_id": "sales-by-customer", "notion": "analysis", "title": "Sales by customer and month",
+   "domain": "sales", "function": "analysis", "spec": {"tally": {
+     "of": "sales_invoice", "value": "net",
+     "by": [{"field": "issue_date", "by": "month", "label": "Month"}, {"field": "buyer.name", "label": "Customer"}],
+     "amount_label": "Net"}}}
+Which to add up: a figure about customers, suppliers or documents (sales by customer, purchases
+by supplier, invoices by rate) adds up the documents of that type, grouped through their links
+(an invoice's buyer or supplier); a bookings figure has no customer. A figure about the books
+(a result, costs or revenue by account, a balance) adds up the postings, through their account.
 "of": the type added up — a document type of the catalog, or "posting" (the bookings).
 "value": a money field of it; for postings "debit-credit" (assets, costs) or "credit-debit"
 (revenue, liabilities). "where", and a line's own "where": [{"field", "op", "value"}] with op

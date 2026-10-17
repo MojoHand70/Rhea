@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"rhea/internal/adapter"
+	"rhea/internal/agent"
 	"rhea/internal/core"
 	"rhea/internal/exec"
 	"rhea/internal/pack"
@@ -310,5 +311,67 @@ func TestThePackSpeaks(t *testing.T) {
 	get("/api/explain?view=taught-sales&row=1&col=amount", &why)
 	if why.Sums == nil || !*why.Sums {
 		t.Fatalf("September's sales do not add up on why?")
+	}
+
+	// Teaching it: the author drafts a figure, the card shows its rows
+	// computed now, the person says what is wrong, and the redraft answers
+	// the reason (the conversation is on the record).
+	figure := func(id string) string {
+		return `{"bundle_id": "` + id + `", "description": "Sprzedaż według klientów i miesięcy.",
+		  "warrant": {"basis": "client", "citations": ["the owner asked"], "scope": "this company"},
+		  "view_defs": [{"view_id": "` + id + `", "notion": "analysis", "title": "Sprzedaż według klientów", "domain": "sales", "function": "analysis",
+		    "spec": {"tally": {"of": "sales_invoice", "value": "net", "by": [{"field": "buyer.name", "label": "Klient"},
+		      {"field": "issue_date", "by": "month", "label": "Miesiąc"}], "amount_label": "Netto"}}}]}`
+	}
+	var asked []string
+	answers := []string{figure("sales-by-customer"), figure("sales-by-customer-2")}
+	srv.Agent = &agent.Agent{Complete: func(ctx context.Context, system, user string) (string, error) {
+		asked = append(asked, user)
+		a := answers[0]
+		answers = answers[1:]
+		return a, nil
+	}}
+	post := func(path string, body, out any) {
+		t.Helper()
+		b, _ := json.Marshal(body)
+		res, err := ts.Client().Post(ts.URL+path, "application/json", bytes.NewReader(b))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+		var buf bytes.Buffer
+		buf.ReadFrom(res.Body)
+		if res.StatusCode != 200 {
+			t.Fatalf("POST %s: %d %s", path, res.StatusCode, buf.String())
+		}
+		if out != nil {
+			if err := json.Unmarshal(buf.Bytes(), out); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	var drafted struct {
+		ID    string `json:"bundle_id"`
+		After string `json:"after"`
+	}
+	post("/api/bundles/draft", map[string]any{"intent": "Pokaż sprzedaż według klientów, miesiąc po miesiącu"}, &drafted)
+	var pv []struct {
+		ViewID string   `json:"view_id"`
+		Rows   [][]cell `json:"rows"`
+		Total  int      `json:"total"`
+		Error  string   `json:"error"`
+	}
+	get("/api/bundles/"+drafted.ID+"/preview", &pv)
+	if len(pv) != 1 || pv[0].Error != "" || pv[0].Total != 2 || fmt.Sprint(cellVals(pv[0].Rows)) != fmt.Sprint(cellVals(sales.Rows)) {
+		t.Fatalf("the waiting figure, previewed: %+v", pv)
+	}
+	if _, err := x.TriggerActivity(ctx, "reject_bundle", map[string]any{"bundle_id": drafted.ID, "reason": "chcę też liczbę faktur",
+		"rejected_by": "krzysztof", "occurred_at": day}, "krzysztof", ""); err != nil {
+		t.Fatal(err)
+	}
+	post("/api/bundles/draft", map[string]any{"after": drafted.ID}, &drafted)
+	if drafted.After != "sales-by-customer" || len(asked) != 2 || !strings.Contains(asked[1], "chcę też liczbę faktur") ||
+		!strings.Contains(asked[1], "Pokaż sprzedaż według klientów, miesiąc po miesiącu") {
+		t.Fatalf("the redraft did not answer the reason: %+v\n%s", drafted, asked[len(asked)-1])
 	}
 }

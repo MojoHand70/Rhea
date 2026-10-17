@@ -272,3 +272,55 @@ func (s *Server) handleDraftBundle(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, 200, bv)
 }
+
+// figurePreview is a waiting figure computed on the books as they stand.
+type figurePreview struct {
+	ViewID  string      `json:"view_id"`
+	Title   string      `json:"title"`
+	Columns []columnOut `json:"columns,omitempty"`
+	Rows    [][]cellOut `json:"rows,omitempty"`
+	Total   int         `json:"total"` // rows in all; Rows holds the first few
+	Error   string      `json:"error,omitempty"`
+}
+
+// handlePreviewBundle shows what a waiting bundle's figures would show —
+// its analysis views run now, on the books as they stand — so the person
+// approves what they can read, not a description of it (DIRECTION
+// 2026-10-17: a drafted figure grouped by an account number and labelled
+// "customer" is plain once its rows are on the card).
+func (s *Server) handlePreviewBundle(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	b, err := s.Store.GetBundle(ctx, r.PathValue("id"))
+	if err != nil {
+		writeErr(w, 404, err)
+		return
+	}
+	out := []figurePreview{}
+	for _, m := range b.Members {
+		if m.Kind != core.KindViewDef {
+			continue
+		}
+		v, _, err := s.Store.GetViewDefVersion(ctx, m.Name, m.Version)
+		if err != nil {
+			writeErr(w, 500, err)
+			return
+		}
+		if v.Notion != "analysis" {
+			continue
+		}
+		p := figurePreview{ViewID: v.ID, Title: v.Title}
+		spec, err := s.analysisSpec(ctx, v.Spec)
+		if err == nil {
+			p.Columns, p.Rows, _, err = s.analysisData(ctx, spec)
+		}
+		if err != nil {
+			p.Error = err.Error()
+		}
+		p.Total = len(p.Rows)
+		if len(p.Rows) > 8 {
+			p.Rows = p.Rows[:8]
+		}
+		out = append(out, p)
+	}
+	writeJSON(w, 200, out)
+}

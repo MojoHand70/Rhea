@@ -3459,3 +3459,19 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   installations and times — by `rhea network` under "never taught yet". Simulated customers are
   marked and left out, as with rule shapes.
 - **Owed before the first stranger**: an installation's consent to report, with the security floor.
+
+## 2026-10-17 — approving what you can read: the waiting figure previewed (step 4, the kernel's part)
+
+- **Found live.** Asked „Pokaż sprzedaż netto według klientów, miesiąc po miesiącu”, the author
+  once drafted revenue bookings grouped by account code and labelled the code „Klient” — valid,
+  and wrong. The grammar's only example was over bookings.
+- **The grammar** gains a document example (sales by customer and month) and the rule of thumb:
+  a figure about customers, suppliers or documents adds up the documents through their links; a
+  figure about the books adds up the postings through their account. Six live drafts after it
+  (sales by customer ×3, purchases by supplier, costs by account, output VAT by rate): all sound.
+- **`GET /api/bundles/{id}/preview`**: a waiting bundle's analysis views run now, the first
+  eight rows and the count, an error per figure rather than for the bundle — so the card shows
+  rows, and „700” under „Klient” is plain before anyone approves it.
+- **The correction loop was already the kernel's**: `reject_bundle` with a reason, then a draft
+  `after` it reuses the question and shows the author the refused proposal and the reason. The
+  test walks it for a figure.
