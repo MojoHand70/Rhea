@@ -208,4 +208,64 @@ func TestThePackSpeaks(t *testing.T) {
 	if av[0][2] != "0" || av[3][1] != "91–180 dni" || av[3][2] != "2" {
 		t.Fatalf("by age on %s: %v", day, av)
 	}
+
+	// The result month by month (KK on the phone, 2026-10-17: "the result
+	// for August only"). A sale in August, still open; a supplier's invoice
+	// dated in September arriving after September closed is booked in
+	// October, the first open month — the result counts it where the books
+	// hold it. Each row is made of its month's bookings, and the months
+	// add up to the result since January.
+	submit("sales.invoice.issued", "2026-08-20", "fv-3", inv("FV 1/08/2026", "2026-08-20", "2000.00", "460.00", "2460.00"))
+	submit("purchase.invoice.received", "2026-09-28", "fz-1", map[string]any{"number": "FZ/9/2026", "invoice_date": "2026-09-28", "market": "pl",
+		"supplier_nip": "5260001246", "buyer_nip": "5250001111", "supplier": "Nabywca S.A.",
+		"net": "400.00", "vat": "92.00", "gross": "492.00", "vat_rate": "23", "currency": "PLN"})
+	var months rows
+	get("/api/views/wynik-miesiace", &months)
+	mv := cellVals(months.Rows)
+	want := [][]string{
+		{"2026-08", "", "Przychody", "2000.00"}, {"2026-08", "-", "Koszty", "0.00"}, {"2026-08", "=", "Wynik przed opodatkowaniem", "2000.00"},
+		{"2026-09", "", "Przychody", "1500.00"}, {"2026-09", "-", "Koszty", "0.00"}, {"2026-09", "=", "Wynik przed opodatkowaniem", "1500.00"},
+		{"2026-10", "", "Przychody", "0.00"}, {"2026-10", "-", "Koszty", "400.00"}, {"2026-10", "=", "Wynik przed opodatkowaniem", "-400.00"},
+	}
+	if len(mv) != len(want) {
+		t.Fatalf("month by month: %v", mv)
+	}
+	for i := range want {
+		if strings.Join(mv[i], "|") != strings.Join(want[i], "|") {
+			t.Fatalf("month by month, row %d: %v, want %v", i, mv[i], want[i])
+		}
+	}
+	var postings struct {
+		Objects []core.Object `json:"objects"`
+	}
+	get("/api/objects?type=posting", &postings)
+	dateOf := map[string]string{}
+	for _, p := range postings.Objects {
+		dateOf[p.ID], _ = p.State["date"].(string)
+	}
+	for i, ids := range months.Of {
+		if n := map[int]int{0: 1, 1: 0, 2: 1, 3: 2, 4: 0, 5: 2, 6: 0, 7: 1, 8: 1}[i]; len(ids) != n {
+			t.Fatalf("row %d %v is made of %v, want %d bookings", i, mv[i], ids, n)
+		}
+		for _, id := range ids {
+			if !strings.HasPrefix(dateOf[id], mv[i][0]) {
+				t.Fatalf("row %d (%s) is made of %s, booked %q", i, mv[i][0], id, dateOf[id])
+			}
+		}
+	}
+	if d := dateOf[months.Of[7][0]]; d != "2026-10-01" {
+		t.Fatalf("the late cost was booked %q, want the first open month", d)
+	}
+	get("/api/views/wynik", &wynik)
+	wv = cellVals(wynik.Rows)
+	var sum int64
+	for _, r := range mv {
+		if r[1] == "=" {
+			m, _ := core.ParseMoney(r[3])
+			sum += m
+		}
+	}
+	if wv[0][2] != "3500.00" || wv[1][2] != "400.00" || wv[2][2] != core.FormatMoney(sum) || wv[2][2] != "3100.00" {
+		t.Fatalf("since January %v, the months add up to %s", wv, core.FormatMoney(sum))
+	}
 }

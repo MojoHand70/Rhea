@@ -3392,3 +3392,17 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
 - **Schema.** The notion CHECK learns `words` and `statement` through its idempotent migration;
   `rhea init` brings an existing database along (done on rhea_face and white01).
 - **Poland pack v24.** Five views, nothing else; an installed v23 upgrades in place.
+
+## 2026-10-17 — the result month by month (Poland pack v25)
+
+- **Why.** KK asked the face on his phone „Możesz pokazać wynik za sierpień tylko?”; she said
+  she shows the result only since January — true: `wynik` sums every booking, and nothing in the
+  books cut it by month.
+- **`wynik-miesiace`.** Revenue, costs and the result for each month of the books, in `wynik`'s
+  own rows (op, line, amount) with the month in front. Each row is made of its month's bookings
+  (posting ids, not accounts: an account's balance is the year's, wrong under a month's figure).
+  No `sum_of`: a booking's amount is unsigned and its side decides, so a plain sum would not check.
+- **The month is the booking's.** A late document booked into the first open month counts there,
+  where the closed months left it; the document keeps its own date in the log. The months add up
+  to `wynik` — the test checks both.
+- **Poland pack v25.** One view, nothing else; an installed v24 upgrades through the gate.
