@@ -3441,3 +3441,21 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   `buyer.name`, Polish labels); approved, 18 rows, "why?" adds up. A fallback amount
   (`net_pln` else `net`, as the VAT registers coalesce) is not built: the Poland pack fills
   `net_pln` on every invoice.
+
+## 2026-10-17 — what she was never taught reaches the house (step 3)
+
+- **KK's principle.** Rhea learns from every client what she was never taught — people in the
+  loop: the Rhea team reads it and helps her learn (DIRECTION, "Teaching her a figure").
+- **A built-in door, `note_untaught`** (`host.untaught`): the person's words (stay home), her
+  general description of the missing skill, who asked, and `shared` yes/no with
+  `kept_home_because` — the fact says what left. `POST /api/untaught` decides before it records;
+  `GET /api/untaught` lists them newest first, so the owner sees everything she reported.
+- **The standard for what leaves** (Rhea suggests standards; KK may override): the description
+  only, and only when `core.KeptHome` finds no digit, no `@`, and no word (or stem of a word, so
+  „Novej” is caught by Nova) of a company's or a person's name the installation holds. It errs
+  on keeping a text home. Without a network, or when it cannot be reached, the fact says so.
+- **The house**: an append-only `untaught` table in the network (installation, description,
+  when, synthetic), read counted — one row per description regardless of case and outer spaces,
+  installations and times — by `rhea network` under "never taught yet". Simulated customers are
+  marked and left out, as with rule shapes.
+- **Owed before the first stranger**: an installation's consent to report, with the security floor.

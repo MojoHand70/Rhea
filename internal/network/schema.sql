@@ -26,3 +26,31 @@ BEGIN
     END IF;
 END;
 $$;
+
+-- What installations were asked and had not been taught (DIRECTION 2026-10-17,
+-- "what she was never taught reaches the house"): the host's general
+-- description of the missing skill — never the person's words, a name or a
+-- number, which stay in the installation. The Rhea team reads them counted
+-- across installations. Append-only.
+CREATE TABLE IF NOT EXISTS untaught (
+    untaught_id  BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    installation TEXT NOT NULL,
+    missing      TEXT NOT NULL,
+    noted_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    synthetic    BOOLEAN NOT NULL DEFAULT false
+);
+
+CREATE OR REPLACE FUNCTION forbid_untaught_mutation() RETURNS trigger AS $$
+BEGIN
+    RAISE EXCEPTION 'untaught is append-only (Rhea invariant 1)';
+END;
+$$ LANGUAGE plpgsql;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'untaught_append_only') THEN
+        CREATE TRIGGER untaught_append_only BEFORE UPDATE OR DELETE ON untaught
+            FOR EACH ROW EXECUTE FUNCTION forbid_untaught_mutation();
+    END IF;
+END;
+$$;

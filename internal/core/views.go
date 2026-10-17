@@ -96,6 +96,11 @@ type NarrativeFact struct {
 // log (never a templated welcome: the next words know the last).
 const EventHostSaid = "host.said"
 
+// EventHostUntaught is the raw event the note_untaught door appends: what the
+// host was asked and had not been taught (DIRECTION 2026-10-17) — the
+// person's words, her general description, and whether it reached the house.
+const EventHostUntaught = "host.untaught"
+
 // QueueSpec: spec of a `queue` notion (DIRECTION 2026-10-10, "The host is a
 // concierge": what to do today). The objects of one type that match the
 // conditions — the open ones — ranked by a formula over each object's

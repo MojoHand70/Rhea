@@ -723,6 +723,22 @@ func BuiltinActivities() []Activity {
 			},
 		},
 		{
+			Name: "note_untaught", Domain: "system",
+			Description: "What the host was asked and had not been taught: the person's own words, which stay in this installation, and her general description of the missing skill, which reaches the Rhea team when it carries no number and no name the installation holds — whether it did, and why not, is part of the fact. Rhea learns from every client what she was never taught, with people in the loop.",
+			Spec: ActivitySpec{
+				Inputs: []FieldDef{
+					{Name: "asked", Type: "string", Required: true},
+					{Name: "missing", Type: "string", Required: true},
+					{Name: "asked_by", Type: "string", Required: true},
+					{Name: "shared", Type: "enum", Values: []string{"yes", "no"}, Required: true},
+					{Name: "kept_home_because", Type: "string"},
+					{Name: "occurred_at", Type: "date", Required: true},
+				},
+				Emits: EventHostUntaught,
+				Who:   []string{"human"},
+			},
+		},
+		{
 			Name: "draft_rule", Domain: "system",
 			Description: "Ask for a rule in plain language. Records the request as rule.draft_requested; the agent answers as an actor outside the kernel — a reaction must be deterministic, and drafting is not.",
 			Spec: ActivitySpec{

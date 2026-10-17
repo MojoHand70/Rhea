@@ -21,6 +21,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -76,6 +77,47 @@ func Open(ctx context.Context, dsn string) (*Network, error) {
 }
 
 func (n *Network) Close() { n.Pool.Close() }
+
+//go:embed untaught_note.sql
+var untaughtNoteSQL string
+
+//go:embed untaught_list.sql
+var untaughtListSQL string
+
+// NoteUntaught is one installation telling the house what it was asked and
+// had not been taught (DIRECTION 2026-10-17): her general description only.
+// The caller has kept the person's words, names and numbers at home.
+func (n *Network) NoteUntaught(ctx context.Context, installation, missing string) error {
+	_, err := n.Pool.Exec(ctx, untaughtNoteSQL, installation, missing, Synthetic(installation))
+	return err
+}
+
+// Untaught is one thing installations were never taught, as the team reads it.
+type Untaught struct {
+	Missing       string    `json:"missing"`
+	Installations int       `json:"installations"`
+	Times         int       `json:"times"`
+	Last          time.Time `json:"last"`
+}
+
+// Untaught lists what installations were never taught, most asked first;
+// simulated customers only when asked for.
+func (n *Network) Untaught(ctx context.Context, includeSynthetic bool) ([]Untaught, error) {
+	rows, err := n.Pool.Query(ctx, untaughtListSQL, includeSynthetic)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Untaught
+	for rows.Next() {
+		var u Untaught
+		if err := rows.Scan(&u.Missing, &u.Installations, &u.Times, &u.Last); err != nil {
+			return nil, err
+		}
+		out = append(out, u)
+	}
+	return out, rows.Err()
+}
 
 // Shape is one approved rule as the network sees it: the question it answers
 // (Key), the anonymized answer (Spec), and the answer's identity.

@@ -211,6 +211,16 @@ func main() {
 				fmt.Printf("  %s%d of %d  %s\n", mark, a.Count, a.Of, a.Shape.Fingerprint)
 			}
 		}
+		// What installations were asked and had not been taught: the team's
+		// reading list, for the pack or for teaching her (DIRECTION 2026-10-17).
+		us, err := nw.Untaught(ctx, *synthetic)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("\nnever taught yet: %d description(s)\n", len(us))
+		for _, u := range us {
+			fmt.Printf("  %d installation(s), %d time(s), last %s  %s\n", u.Installations, u.Times, u.Last.Format("2006-01-02"), u.Missing)
+		}
 
 	case "reject":
 		if len(os.Args) < 4 {
