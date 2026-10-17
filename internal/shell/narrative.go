@@ -128,6 +128,52 @@ func (s *Server) serveNarrative(ctx context.Context, w http.ResponseWriter, vd *
 	writeJSON(w, 200, out)
 }
 
+// narrativeFor is the narrative a person hears: the first whose For names
+// their role, else the first that names no role, else none ("").
+func (s *Server) narrativeFor(ctx context.Context, handle string) (string, error) {
+	people, err := s.Store.ObjectsByType(ctx, "person")
+	if err != nil {
+		return "", err
+	}
+	role, found := "", false
+	for _, p := range people {
+		if h, _ := p.State["handle"].(string); h == handle {
+			role, _ = p.State["role"].(string)
+			found = true
+			break
+		}
+	}
+	if !found {
+		return "", fmt.Errorf("no person with the handle %q", handle)
+	}
+	vds, err := s.effectiveViewDefs(ctx)
+	if err != nil {
+		return "", err
+	}
+	general := ""
+	for _, v := range vds {
+		if v.Notion != "narrative" {
+			continue
+		}
+		var spec core.NarrativeSpec
+		if json.Unmarshal(v.Spec, &spec) != nil {
+			continue
+		}
+		if len(spec.For) == 0 {
+			if general == "" {
+				general = v.ID
+			}
+			continue
+		}
+		for _, r := range spec.For {
+			if r == role {
+				return v.ID, nil
+			}
+		}
+	}
+	return general, nil
+}
+
 // saidBefore reads the host's last words on a view, newest first.
 func (s *Server) saidBefore(ctx context.Context, viewID string, n int) ([]string, error) {
 	raws, err := s.Store.EventsByKind(ctx, core.KindRaw)

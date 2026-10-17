@@ -79,9 +79,13 @@ func DerivedDetailView(t ObjectType) ViewDef {
 // computes a number: every number in its words must be one the facts
 // carry, or the words are refused and the facts are shown alone. Its words
 // are logged through the host_said door, so it never repeats itself.
+// For names the roles it speaks to (KK 2026-10-17: the owner wants the
+// result, the accountant what is open): a person whose role a narrative
+// names hears that one, anyone else the narrative that names no role.
 type NarrativeSpec struct {
 	Facts []NarrativeFact `json:"facts"`
 	Voice string          `json:"voice,omitempty"`
+	For   []string        `json:"for,omitempty"`
 }
 
 // NarrativeFact is one view a narrative draws on, under the name the host

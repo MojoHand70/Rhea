@@ -67,8 +67,26 @@ func (s *Server) handleObject(w http.ResponseWriter, r *http.Request) {
 // handleSaid is what the host said in a narrative view, newest first: the
 // words as the log keeps them, so a face shows this morning's briefing
 // without asking the host to speak again (reading the view speaks anew).
+// With person=<handle> the view is that person's: the narrative for their
+// role (narrativeFor).
 func (s *Server) handleSaid(w http.ResponseWriter, r *http.Request) {
 	view := r.URL.Query().Get("view")
+	if h := r.URL.Query().Get("person"); h != "" {
+		if view != "" {
+			writeErr(w, 400, fmt.Errorf("said: a view or a person, not both"))
+			return
+		}
+		v, err := s.narrativeFor(r.Context(), h)
+		if err != nil {
+			writeErr(w, 404, err)
+			return
+		}
+		if v == "" {
+			writeJSON(w, 200, []any{})
+			return
+		}
+		view = v
+	}
 	n := 10
 	if v := r.URL.Query().Get("n"); v != "" {
 		k, err := strconv.Atoi(v)

@@ -1,7 +1,7 @@
 {
   "pack": "pl",
-  "version": 25,
-  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami; poranek: gospodarz mówi, co zaksięgowano i co czeka, z faktów, które policzyło jądro; dziś: otwarte zadania i należności w kolejności pilności, z zatwierdzeniami, które czekają; KSeF na zewnątrz: faktury sprzedaży idą do KSeF jako FA(3) jedną sesją interaktywną, dowód (numer KSeF, UPO) i odmowa (kod, słowa Ministerstwa) są zdarzeniami, odmowa staje się zadaniem na dziś; koniec miesiąca: faktury niosą okres VAT, zamknięcie miesiąca (period.closed) daje rozliczenie VAT jako obiekt policzony regułą — każda liczba deklaracji ma pochodzenie; plik JPK_V7M z rozliczenia i faktur miesiąca (writer rynku), firma zna swój urząd skarbowy, e-mail i formę prawną, faktura zakupu z KSeF niesie numer KSeF; firma mówi, kim jest dla urzędu (identify_company): e-mail, urząd skarbowy, forma prawna, właściciel; v19 (przegląd pakietu, 2026-10-16): daty, które decydują o okresie VAT — faktura sprzedaży niesie datę sprzedaży (P_6, a gdy jej nie podano, datę wystawienia) i okres VAT według obowiązku podatkowego; faktura zakupu niesie datę sprzedaży u dostawcy i datę otrzymania (dla KSeF: dzień nadania numeru), a odliczenie przypada na późniejszy z tych miesięcy; firma mówi, czym jest (declare_company_form): status VAT (czynny albo zwolniony, z przepisem zwolnienia), forma ksiąg i forma opodatkowania od wskazanej daty; firma zwolniona nie rozlicza VAT i nie składa JPK_V7, a VAT od jej zakupów jest kosztem; faktury bez VAT (zw, 0%) księgują się bez linii VAT; każda zmieniona reguła nazywa swoje źródło; v20 (przegląd, 2026-10-16): zakup trafia w koszty — usługa albo wydatek bez dokumentu dostawy na konto kosztowe dostawcy (set_cost_account), a gdy go nie podano, na 403 usługi obce; zakup z dokumentem dostawy (WZ) czeka na 300 na rozliczenie z przyjęciem (PZ); różnice groszowe rozliczeń: niedopłata 761, nadpłata 760 (pozostałe operacyjne), cofnięcie wraca tym kontem, którym weszło; konta 750, 751, 761 w planie kont; v21 (przegląd, 2026-10-16): pozycja wyciągu najpierw mówi, czym jest — opłata i odsetki po kodzie banku, przelew między własnymi rachunkami, wpłata na mikrorachunek podatkowy, na rachunek składkowy ZUS, pieniądze właściciela — a dopiero reszta jest zapłatą kontrahenta, którą się rozlicza z fakturami; każda księguje się na swoje konto (149, 225, 229, 249, 403, 750/751); osoba może przeklasyfikować pozycję, której nic nie rozliczyło (classify_bank_operation); deklaracja formy firmy sprawdza formę prawną (spółka: CIT i pełne księgi); v22 (przegląd, 2026-10-16): waluty — faktura w walucie obcej niesie netto i VAT w złotych po kursie średnim NBP z ostatniego dnia roboczego przed dniem sprzedaży (kanał pl-nbp), księgi przeliczają po tym samym kursie, a zapłatę po kursie z jej dnia; różnica kursowa zrealizowana przy rozliczeniu trafia na 750 albo 751 i cofa się tym samym kontem; rozliczenie VAT, JPK i faktura w KSeF (P_14_xW) liczą VAT w złotych; v23 (twarz, 2026-10-16): rejestry VAT mówią, z jakich faktur jest każdy wiersz (kolumna _of), a każda kolumna kwot — co sumuje; „dlaczego?” na komórce rejestru odpowiada fakturami i sprawdza, że składają się na kwotę; v24 (twarz, krok 3, 2026-10-17): pakiet mówi słowami twarzy — słownik (nazwy typów, pól, wartości, zdarzeń, drzwi, zespołów planu kont i kształt każdego typu), deklaracja VAT jako zestawienie pozycji rozliczenia, a liczby, które twarz liczyła sama, liczy jądro: rano w liczbach (rachunek, należności, zobowiązania, VAT, co zrobiono), wynik od początku roku, należności według wieku na dzień jądra; v25 (twarz, 2026-10-17): wynik miesiąc po miesiącu — przychody, koszty i wynik każdego miesiąca ksiąg, każdy wiersz z zapisów, z których jest; zapis spóźnionego dokumentu liczy się w miesiącu, w którym go zaksięgowano; suma miesięcy to wynik od początku roku",
+  "version": 26,
+  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami; poranek: gospodarz mówi, co zaksięgowano i co czeka, z faktów, które policzyło jądro; dziś: otwarte zadania i należności w kolejności pilności, z zatwierdzeniami, które czekają; KSeF na zewnątrz: faktury sprzedaży idą do KSeF jako FA(3) jedną sesją interaktywną, dowód (numer KSeF, UPO) i odmowa (kod, słowa Ministerstwa) są zdarzeniami, odmowa staje się zadaniem na dziś; koniec miesiąca: faktury niosą okres VAT, zamknięcie miesiąca (period.closed) daje rozliczenie VAT jako obiekt policzony regułą — każda liczba deklaracji ma pochodzenie; plik JPK_V7M z rozliczenia i faktur miesiąca (writer rynku), firma zna swój urząd skarbowy, e-mail i formę prawną, faktura zakupu z KSeF niesie numer KSeF; firma mówi, kim jest dla urzędu (identify_company): e-mail, urząd skarbowy, forma prawna, właściciel; v19 (przegląd pakietu, 2026-10-16): daty, które decydują o okresie VAT — faktura sprzedaży niesie datę sprzedaży (P_6, a gdy jej nie podano, datę wystawienia) i okres VAT według obowiązku podatkowego; faktura zakupu niesie datę sprzedaży u dostawcy i datę otrzymania (dla KSeF: dzień nadania numeru), a odliczenie przypada na późniejszy z tych miesięcy; firma mówi, czym jest (declare_company_form): status VAT (czynny albo zwolniony, z przepisem zwolnienia), forma ksiąg i forma opodatkowania od wskazanej daty; firma zwolniona nie rozlicza VAT i nie składa JPK_V7, a VAT od jej zakupów jest kosztem; faktury bez VAT (zw, 0%) księgują się bez linii VAT; każda zmieniona reguła nazywa swoje źródło; v20 (przegląd, 2026-10-16): zakup trafia w koszty — usługa albo wydatek bez dokumentu dostawy na konto kosztowe dostawcy (set_cost_account), a gdy go nie podano, na 403 usługi obce; zakup z dokumentem dostawy (WZ) czeka na 300 na rozliczenie z przyjęciem (PZ); różnice groszowe rozliczeń: niedopłata 761, nadpłata 760 (pozostałe operacyjne), cofnięcie wraca tym kontem, którym weszło; konta 750, 751, 761 w planie kont; v21 (przegląd, 2026-10-16): pozycja wyciągu najpierw mówi, czym jest — opłata i odsetki po kodzie banku, przelew między własnymi rachunkami, wpłata na mikrorachunek podatkowy, na rachunek składkowy ZUS, pieniądze właściciela — a dopiero reszta jest zapłatą kontrahenta, którą się rozlicza z fakturami; każda księguje się na swoje konto (149, 225, 229, 249, 403, 750/751); osoba może przeklasyfikować pozycję, której nic nie rozliczyło (classify_bank_operation); deklaracja formy firmy sprawdza formę prawną (spółka: CIT i pełne księgi); v22 (przegląd, 2026-10-16): waluty — faktura w walucie obcej niesie netto i VAT w złotych po kursie średnim NBP z ostatniego dnia roboczego przed dniem sprzedaży (kanał pl-nbp), księgi przeliczają po tym samym kursie, a zapłatę po kursie z jej dnia; różnica kursowa zrealizowana przy rozliczeniu trafia na 750 albo 751 i cofa się tym samym kontem; rozliczenie VAT, JPK i faktura w KSeF (P_14_xW) liczą VAT w złotych; v23 (twarz, 2026-10-16): rejestry VAT mówią, z jakich faktur jest każdy wiersz (kolumna _of), a każda kolumna kwot — co sumuje; „dlaczego?” na komórce rejestru odpowiada fakturami i sprawdza, że składają się na kwotę; v24 (twarz, krok 3, 2026-10-17): pakiet mówi słowami twarzy — słownik (nazwy typów, pól, wartości, zdarzeń, drzwi, zespołów planu kont i kształt każdego typu), deklaracja VAT jako zestawienie pozycji rozliczenia, a liczby, które twarz liczyła sama, liczy jądro: rano w liczbach (rachunek, należności, zobowiązania, VAT, co zrobiono), wynik od początku roku, należności według wieku na dzień jądra; v25 (twarz, 2026-10-17): wynik miesiąc po miesiącu — przychody, koszty i wynik każdego miesiąca ksiąg, każdy wiersz z zapisów, z których jest; zapis spóźnionego dokumentu liczy się w miesiącu, w którym go zaksięgowano; suma miesięcy to wynik od początku roku; v26 (poranek, 2026-10-17): poranek według roli — właściciel słyszy najpierw wynik (ten miesiąc do dziś, poprzedni, od stycznia, przed opodatkowaniem), potem pieniądze (rachunek, należności z najstarszą fakturą, zobowiązania), terminy podatkowe jednym zdaniem i to, co czeka; księgowość (rola accountant) słyszy najpierw, co jest otwarte (miesiące do zamknięcia, pozycje wyciągu bez rozliczenia, zadania po terminie), potem terminy z kwotami albo powodem ich braku, wynik na końcu; VAT jest terminem z kwotą, nie nagłówkiem; terminy podatkowe: VAT i JPK_V7M do 25., zaliczka na podatek dochodowy do 20. dnia następnego miesiąca, przesunięte na najbliższy dzień roboczy, gdy wypadają w sobotę albo dzień ustawowo wolny (Wielkanoc i Boże Ciało liczone); kwoty zaliczki księgi jeszcze nie liczą i mówią to wprost; rano w liczbach zaczyna się od wyniku tego miesiąca i od początku roku",
   "requires": [
     "company",
     "account",
@@ -1554,7 +1554,7 @@
     },
     {
       "view_id": "poranek",
-      "version": 1,
+      "version": 2,
       "notion": "narrative",
       "title": "Poranek",
       "domain": "finance",
@@ -1562,23 +1562,51 @@
       "spec": {
         "facts": [
           {
-            "view": "rejestr-vat-sprzedazy",
-            "as": "sprzedaż tego miesiąca (rejestr VAT)"
+            "view": "poranek-wynik",
+            "as": "wynik przed opodatkowaniem: ten miesiąc do dziś, poprzedni miesiąc, od stycznia"
           },
           {
-            "view": "rejestr-vat-zakupu",
-            "as": "zakupy tego miesiąca (rejestr VAT)"
+            "view": "poranek-pieniadze",
+            "as": "pieniądze: rachunek, należności z najstarszą fakturą, zobowiązania"
           },
           {
-            "view": "wplaty-do-rozliczenia",
-            "as": "wpłaty bez rozliczenia"
+            "view": "kalendarz-podatkowy",
+            "as": "najbliższe terminy podatkowe"
           },
           {
-            "view": "wyplaty-do-rozliczenia",
-            "as": "wypłaty bez rozliczenia"
+            "view": "poranek-otwarte",
+            "as": "co czeka"
           }
         ],
-        "voice": "Po polsku, krótko, jak najlepszy concierge: co jest zaksięgowane, co czeka na decyzję właściciela. Bez powitań z szablonu."
+        "voice": "Po polsku, krótko, do właściciela firmy, jak najlepszy concierge. Najpierw wynik: ten miesiąc do dziś obok poprzedniego i wynik od stycznia — to wynik przed opodatkowaniem. Wynik podawaj każdego ranka w liczbach, wszystkie trzy, także gdy się nie zmienił: nie powtarzaj sformułowań z poprzednich dni, ale liczb nie pomijaj. Podatku dochodowego księgi jeszcze nie liczą: możesz powiedzieć, kiedy jest termin zaliczki, ale nigdy nie szacuj jej kwoty. Potem pieniądze: ile jest na rachunku, ile nam winni (suma i najstarsza niezapłacona faktura, nie lista faktur), ile my winni dostawcom. Podatki jednym zdaniem: termin i kwota, gdy jest policzona. Na końcu tylko to, co czeka na decyzję właściciela. Bez powitań z szablonu, bez wyliczania pozycji po kolei."
+      }
+    },
+    {
+      "view_id": "poranek-ksiegowosc",
+      "version": 1,
+      "notion": "narrative",
+      "title": "Poranek księgowości",
+      "domain": "finance",
+      "function": "briefing",
+      "spec": {
+        "for": [
+          "accountant"
+        ],
+        "facts": [
+          {
+            "view": "poranek-otwarte",
+            "as": "co jest otwarte: miesiące do zamknięcia, pozycje wyciągu bez rozliczenia, zadania"
+          },
+          {
+            "view": "kalendarz-podatkowy",
+            "as": "najbliższe terminy podatkowe"
+          },
+          {
+            "view": "poranek-wynik",
+            "as": "wynik przed opodatkowaniem: ten miesiąc do dziś, poprzedni miesiąc, od stycznia"
+          }
+        ],
+        "voice": "Po polsku, rzeczowo, do głównej księgowej albo biura rachunkowego. Najpierw to, co jest otwarte: miesiące do zamknięcia, wpłaty i wypłaty bez rozliczenia (liczba i suma, nie lista), zadania po terminie. Potem najbliższe terminy podatkowe z datą i kwotą, a gdy kwoty nie ma, powiedz dlaczego: miesiąc niezamknięty albo księgi jej jeszcze nie liczą — nigdy jej nie szacuj. Wynik jednym zdaniem, w liczbach, także gdy się nie zmienił: ten miesiąc i od stycznia, przed opodatkowaniem. Bez powitań z szablonu."
       }
     },
     {
@@ -2354,13 +2382,13 @@
     },
     {
       "view_id": "rano",
-      "version": 1,
+      "version": 2,
       "notion": "analysis",
       "title": "Rano w liczbach",
       "domain": "finance",
       "function": "briefing",
       "spec": {
-        "sql": "WITH acc AS (SELECT object_id, json_extract_string(state,'$.code') AS code FROM objects WHERE object_type = 'account'), post AS (SELECT json_extract_string(p.state,'$.account') AS account, CASE WHEN json_extract_string(p.state,'$.side') = 'debit' THEN CAST(json_extract(p.state,'$.amount') AS BIGINT) ELSE -CAST(json_extract(p.state,'$.amount') AS BIGINT) END AS signed FROM objects p WHERE p.object_type = 'posting' AND COALESCE(json_extract_string(p.state,'$.book'), 'main') = 'pl-stat'), bank AS (SELECT a.object_id AS id, COALESCE(SUM(p.signed), 0) AS bal, COUNT(p.signed) AS n FROM acc a LEFT JOIN post p ON p.account = a.object_id WHERE a.code = '130' GROUP BY a.object_id), openinv AS (SELECT object_id, object_type, CAST(json_extract(state,'$.open') AS BIGINT) AS open FROM objects WHERE object_type IN ('sales_invoice', 'purchase_invoice') AND CAST(COALESCE(json_extract(state,'$.open'), '0') AS BIGINT) > 0), vat AS (SELECT object_id, json_extract_string(state,'$.period') AS period, CAST(json_extract(state,'$.vat_due') AS BIGINT) AS due FROM objects WHERE object_type = 'vat_settlement' ORDER BY period DESC LIMIT 1), counted AS (SELECT object_id, object_type, json_extract_string(state,'$.status') AS status, json_extract_string(state,'$.settlement_status') AS sstatus FROM objects WHERE object_type IN ('ksef_submission', 'bank_operation', 'matching_difference', 'period_lock')) SELECT key, label, amount, count, note, o AS _of FROM (SELECT 1 AS k, 'bank' AS key, 'Na rachunku bieżącym' AS label, bal AS amount, n AS count, 'zapisów od początku roku' AS note, id AS o FROM bank UNION ALL SELECT 2, 'receivables', 'Należności', COALESCE(SUM(open), 0), COUNT(*), 'otwartych faktur sprzedaży', string_agg(object_id, ',' ORDER BY object_id) FROM openinv WHERE object_type = 'sales_invoice' UNION ALL SELECT 3, 'payables', 'Dla dostawców', COALESCE(SUM(open), 0), COUNT(*), 'faktur zakupu do zapłaty', string_agg(object_id, ',' ORDER BY object_id) FROM openinv WHERE object_type = 'purchase_invoice' UNION ALL SELECT 4, 'vat_due', 'VAT do zapłaty', due, NULL, period, object_id FROM vat UNION ALL SELECT 5, 'ksef', 'Faktury przyjęte w KSeF', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'ksef_submission' AND status = 'accepted' UNION ALL SELECT 6, 'bank_lines', 'Pozycje wyciągu przeczytane', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'bank_operation' UNION ALL SELECT 7, 'settled', 'Pozycje wyciągu rozliczone', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'bank_operation' AND sstatus = 'settled' UNION ALL SELECT 8, 'differences', 'Różnice groszowe zamknięte w tolerancji', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'matching_difference' UNION ALL SELECT 9, 'closed', 'Zamknięte miesiące', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'period_lock') ORDER BY k",
+        "sql": "WITH res AS (SELECT p.object_id AS id, CAST(json_extract_string(p.state,'$.date') AS DATE) AS day, CASE WHEN json_extract_string(p.state,'$.side') = 'debit' THEN CAST(json_extract(p.state,'$.amount') AS BIGINT) ELSE -CAST(json_extract(p.state,'$.amount') AS BIGINT) END AS b FROM objects p JOIN objects a ON json_extract_string(p.state,'$.account') = a.object_id WHERE p.object_type = 'posting' AND a.object_type = 'account' AND COALESCE(json_extract_string(p.state,'$.book'), 'main') = 'pl-stat' AND json_extract_string(a.state,'$.type') IN ('revenue', 'expense')), acc AS (SELECT object_id, json_extract_string(state,'$.code') AS code FROM objects WHERE object_type = 'account'), post AS (SELECT json_extract_string(p.state,'$.account') AS account, CASE WHEN json_extract_string(p.state,'$.side') = 'debit' THEN CAST(json_extract(p.state,'$.amount') AS BIGINT) ELSE -CAST(json_extract(p.state,'$.amount') AS BIGINT) END AS signed FROM objects p WHERE p.object_type = 'posting' AND COALESCE(json_extract_string(p.state,'$.book'), 'main') = 'pl-stat'), bank AS (SELECT a.object_id AS id, COALESCE(SUM(p.signed), 0) AS bal, COUNT(p.signed) AS n FROM acc a LEFT JOIN post p ON p.account = a.object_id WHERE a.code = '130' GROUP BY a.object_id), openinv AS (SELECT object_id, object_type, CAST(json_extract(state,'$.open') AS BIGINT) AS open FROM objects WHERE object_type IN ('sales_invoice', 'purchase_invoice') AND CAST(COALESCE(json_extract(state,'$.open'), '0') AS BIGINT) > 0), vat AS (SELECT object_id, json_extract_string(state,'$.period') AS period, CAST(json_extract(state,'$.vat_due') AS BIGINT) AS due FROM objects WHERE object_type = 'vat_settlement' ORDER BY period DESC LIMIT 1), counted AS (SELECT object_id, object_type, json_extract_string(state,'$.status') AS status, json_extract_string(state,'$.settlement_status') AS sstatus FROM objects WHERE object_type IN ('ksef_submission', 'bank_operation', 'matching_difference', 'period_lock')) SELECT key, label, amount, count, note, o AS _of FROM (SELECT -1 AS k, 'result_month' AS key, 'Wynik w tym miesiącu' AS label, -COALESCE(SUM(b) FILTER (WHERE day >= CAST(date_trunc('month', {{today}}) AS DATE) AND day <= {{today}}), 0) AS amount, NULL AS count, strftime({{today}}, '%Y-%m') || ', przed opodatkowaniem' AS note, string_agg(id, ',' ORDER BY id) FILTER (WHERE day >= CAST(date_trunc('month', {{today}}) AS DATE) AND day <= {{today}}) AS o FROM res UNION ALL SELECT 0, 'result_year', 'Wynik od początku roku', -COALESCE(SUM(b) FILTER (WHERE year(day) = year({{today}}) AND day <= {{today}}), 0), NULL, strftime({{today}}, '%Y') || ', przed opodatkowaniem', string_agg(id, ',' ORDER BY id) FILTER (WHERE year(day) = year({{today}}) AND day <= {{today}}) FROM res UNION ALL SELECT 1, 'bank', 'Na rachunku bieżącym', bal, n, 'zapisów od początku roku', id FROM bank UNION ALL SELECT 2, 'receivables', 'Należności', COALESCE(SUM(open), 0), COUNT(*), 'otwartych faktur sprzedaży', string_agg(object_id, ',' ORDER BY object_id) FROM openinv WHERE object_type = 'sales_invoice' UNION ALL SELECT 3, 'payables', 'Dla dostawców', COALESCE(SUM(open), 0), COUNT(*), 'faktur zakupu do zapłaty', string_agg(object_id, ',' ORDER BY object_id) FROM openinv WHERE object_type = 'purchase_invoice' UNION ALL SELECT 4, 'vat_due', 'VAT do zapłaty', due, NULL, period, object_id FROM vat UNION ALL SELECT 5, 'ksef', 'Faktury przyjęte w KSeF', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'ksef_submission' AND status = 'accepted' UNION ALL SELECT 6, 'bank_lines', 'Pozycje wyciągu przeczytane', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'bank_operation' UNION ALL SELECT 7, 'settled', 'Pozycje wyciągu rozliczone', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'bank_operation' AND sstatus = 'settled' UNION ALL SELECT 8, 'differences', 'Różnice groszowe zamknięte w tolerancji', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'matching_difference' UNION ALL SELECT 9, 'closed', 'Zamknięte miesiące', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'period_lock') ORDER BY k",
         "columns": [
           {
             "field": "key",
@@ -2381,6 +2409,158 @@
             "field": "count",
             "label": "Ile",
             "type": "int"
+          },
+          {
+            "field": "note",
+            "label": "Uwaga",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "poranek-wynik",
+      "version": 1,
+      "notion": "analysis",
+      "title": "Wynik: ten miesiąc, poprzedni, od stycznia",
+      "domain": "finance",
+      "function": "briefing",
+      "spec": {
+        "sql": "WITH t AS (SELECT {{today}} AS d), p AS (SELECT p.object_id AS id, CAST(json_extract_string(p.state,'$.date') AS DATE) AS day, json_extract_string(a.state,'$.type') AS typ, CASE WHEN json_extract_string(p.state,'$.side') = 'debit' THEN CAST(json_extract(p.state,'$.amount') AS BIGINT) ELSE -CAST(json_extract(p.state,'$.amount') AS BIGINT) END AS b FROM objects p JOIN objects a ON json_extract_string(p.state,'$.account') = a.object_id WHERE p.object_type = 'posting' AND a.object_type = 'account' AND COALESCE(json_extract_string(p.state,'$.book'), 'main') = 'pl-stat' AND json_extract_string(a.state,'$.type') IN ('revenue', 'expense')), w(k, period, lo, hi) AS (SELECT 1, strftime(d, '%Y-%m') || ' do dziś, miesiąc trwa', CAST(date_trunc('month', d) AS DATE), d FROM t UNION ALL SELECT 2, strftime(CAST(date_trunc('month', d) - INTERVAL 1 MONTH AS DATE), '%Y-%m'), CAST(date_trunc('month', d) - INTERVAL 1 MONTH AS DATE), CAST(date_trunc('month', d) - INTERVAL 1 DAY AS DATE) FROM t UNION ALL SELECT 3, strftime(d, '%Y') || ' od stycznia', make_date(year(d), 1, 1), d FROM t) SELECT period, revenue, costs, result, o AS _of FROM (SELECT w.k, w.period, -COALESCE(SUM(p.b) FILTER (WHERE p.typ = 'revenue'), 0) AS revenue, COALESCE(SUM(p.b) FILTER (WHERE p.typ = 'expense'), 0) AS costs, -COALESCE(SUM(p.b), 0) AS result, COALESCE(string_agg(p.id, ',' ORDER BY p.id), '') AS o FROM w LEFT JOIN p ON p.day BETWEEN w.lo AND w.hi GROUP BY w.k, w.period) ORDER BY k",
+        "columns": [
+          {
+            "field": "period",
+            "label": "Okres",
+            "type": "string"
+          },
+          {
+            "field": "revenue",
+            "label": "Przychody",
+            "type": "money"
+          },
+          {
+            "field": "costs",
+            "label": "Koszty",
+            "type": "money"
+          },
+          {
+            "field": "result",
+            "label": "Wynik przed opodatkowaniem",
+            "type": "money"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "poranek-pieniadze",
+      "version": 1,
+      "notion": "analysis",
+      "title": "Pieniądze",
+      "domain": "finance",
+      "function": "briefing",
+      "spec": {
+        "sql": "WITH t AS (SELECT {{today}} AS d), acc AS (SELECT object_id FROM objects WHERE object_type = 'account' AND json_extract_string(state,'$.code') = '130'), bank AS (SELECT COALESCE(SUM(CASE WHEN json_extract_string(p.state,'$.side') = 'debit' THEN CAST(json_extract(p.state,'$.amount') AS BIGINT) ELSE -CAST(json_extract(p.state,'$.amount') AS BIGINT) END), 0) AS bal, string_agg(DISTINCT acc.object_id, ',') AS o FROM acc LEFT JOIN objects p ON p.object_type = 'posting' AND json_extract_string(p.state,'$.account') = acc.object_id AND COALESCE(json_extract_string(p.state,'$.book'), 'main') = 'pl-stat'), inv AS (SELECT i.object_id, i.object_type, CAST(json_extract(i.state,'$.open') AS BIGINT) AS open, date_diff('day', CAST(COALESCE(json_extract_string(i.state,'$.issue_date'), json_extract_string(i.state,'$.invoice_date')) AS DATE), t.d) AS age, json_extract_string(c.state,'$.name') AS party FROM objects i CROSS JOIN t LEFT JOIN objects c ON c.object_id = COALESCE(json_extract_string(i.state,'$.buyer'), json_extract_string(i.state,'$.supplier')) WHERE i.object_type IN ('sales_invoice', 'purchase_invoice') AND CAST(COALESCE(json_extract(i.state,'$.open'), '0') AS BIGINT) > 0), oldest AS (SELECT * FROM inv WHERE object_type = 'sales_invoice' ORDER BY age DESC, object_id LIMIT 1) SELECT key, label, amount, count, days, note, o AS _of FROM (SELECT 1 AS k, 'bank' AS key, 'Na rachunku bieżącym' AS label, bal AS amount, NULL AS count, NULL AS days, NULL AS note, o FROM bank UNION ALL SELECT 2, 'receivables', 'Należności', COALESCE(SUM(open), 0), COUNT(*), NULL, 'otwartych faktur sprzedaży', string_agg(object_id, ',' ORDER BY object_id) FROM inv WHERE object_type = 'sales_invoice' UNION ALL SELECT 3, 'oldest_receivable', 'Najstarsza niezapłacona', open, NULL, age, party, object_id FROM oldest UNION ALL SELECT 4, 'payables', 'Dla dostawców', COALESCE(SUM(open), 0), COUNT(*), NULL, 'faktur zakupu do zapłaty', string_agg(object_id, ',' ORDER BY object_id) FROM inv WHERE object_type = 'purchase_invoice') ORDER BY k",
+        "columns": [
+          {
+            "field": "key",
+            "label": "Klucz",
+            "type": "string"
+          },
+          {
+            "field": "label",
+            "label": "Co",
+            "type": "string"
+          },
+          {
+            "field": "amount",
+            "label": "Kwota",
+            "type": "money"
+          },
+          {
+            "field": "count",
+            "label": "Ile",
+            "type": "int"
+          },
+          {
+            "field": "days",
+            "label": "Dni od wystawienia",
+            "type": "int"
+          },
+          {
+            "field": "note",
+            "label": "Uwaga",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "kalendarz-podatkowy",
+      "version": 1,
+      "notion": "analysis",
+      "title": "Terminy podatkowe",
+      "domain": "finance",
+      "function": "briefing",
+      "spec": {
+        "sql": "WITH t AS (SELECT {{today}} AS d), yrs AS (SELECT DISTINCT y FROM (SELECT year(d) AS y FROM t UNION ALL SELECT year(d) + 1 FROM t)), e1 AS (SELECT y, y % 19 AS a, y // 100 AS b, y % 100 AS c FROM yrs), e2 AS (SELECT y, a, (19 * a + b - b // 4 - (b - (b + 8) // 25 + 1) // 3 + 15) % 30 AS h, b % 4 AS e, c // 4 AS i, c % 4 AS k FROM e1), e3 AS (SELECT y, a, h, (32 + 2 * e + 2 * i - h - k) % 7 AS l FROM e2), easter AS (SELECT make_date(y, (h + l - 7 * ((a + 11 * h + 22 * l) // 451) + 114) // 31, (h + l - 7 * ((a + 11 * h + 22 * l) // 451) + 114) % 31 + 1) AS es FROM e3), off AS (SELECT make_date(y, m, dd) AS day FROM yrs, (VALUES (1, 1), (1, 6), (5, 1), (5, 3), (8, 15), (11, 1), (11, 11), (12, 24), (12, 25), (12, 26)) v(m, dd) UNION ALL SELECT CAST(es + 1 AS DATE) FROM easter UNION ALL SELECT CAST(es + 60 AS DATE) FROM easter), self AS (SELECT json_extract_string(state,'$.vat_status') AS vat_status, json_extract_string(state,'$.income_tax') AS income_tax FROM objects WHERE object_type = 'company' AND json_extract_string(state,'$.kind') = 'self' LIMIT 1), per AS (SELECT CAST(date_trunc('month', d) - INTERVAL 1 MONTH AS DATE) AS p FROM t UNION ALL SELECT CAST(date_trunc('month', d) AS DATE) FROM t), kinds(kind, dd) AS (VALUES ('vat', 25), ('income', 20)), stat AS (SELECT kind, strftime(p, '%Y-%m') AS period, make_date(year(p + INTERVAL 1 MONTH), month(p + INTERVAL 1 MONTH), dd) AS statutory FROM per, kinds), due AS (SELECT kind, period, (SELECT MIN(c) FROM (SELECT CAST(statutory + CAST(g AS INTEGER) AS DATE) AS c FROM range(0, 10) r(g)) WHERE dayofweek(c) NOT IN (0, 6) AND c NOT IN (SELECT day FROM off)) AS due FROM stat), next AS (SELECT kind, period, due FROM due, t WHERE due >= t.d QUALIFY row_number() OVER (PARTITION BY kind ORDER BY due) = 1), vs AS (SELECT object_id, json_extract_string(state,'$.period') AS period, CAST(json_extract(state,'$.vat_due') AS BIGINT) AS vat_due FROM objects WHERE object_type = 'vat_settlement' AND COALESCE(json_extract_string(state,'$.book'), 'pl-stat') = 'pl-stat') SELECT strftime(n.due, '%Y-%m-%d') AS due, CASE WHEN n.kind = 'vat' THEN 'VAT i JPK_V7M' WHEN s.income_tax = 'cit' THEN 'Zaliczka na CIT' WHEN s.income_tax IN ('skala', 'liniowy') THEN 'Zaliczka na PIT' WHEN s.income_tax = 'ryczalt' THEN 'Ryczałt od przychodów' ELSE 'Zaliczka na podatek dochodowy' END AS what, n.period, CASE WHEN n.kind = 'vat' THEN vs.vat_due END AS amount, CASE WHEN n.kind = 'income' THEN 'księgi jeszcze jej nie liczą' WHEN vs.object_id IS NULL THEN 'miesiąc jeszcze niezamknięty' END AS note, vs.object_id AS _of FROM next n LEFT JOIN self s ON true LEFT JOIN vs ON n.kind = 'vat' AND vs.period = n.period WHERE NOT (n.kind = 'vat' AND COALESCE(s.vat_status, 'active') = 'exempt') ORDER BY n.due, n.kind",
+        "columns": [
+          {
+            "field": "due",
+            "label": "Termin",
+            "type": "date"
+          },
+          {
+            "field": "what",
+            "label": "Co",
+            "type": "string"
+          },
+          {
+            "field": "period",
+            "label": "Za okres",
+            "type": "string"
+          },
+          {
+            "field": "amount",
+            "label": "Kwota",
+            "type": "money"
+          },
+          {
+            "field": "note",
+            "label": "Uwaga",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "poranek-otwarte",
+      "version": 1,
+      "notion": "analysis",
+      "title": "Co jest otwarte",
+      "domain": "finance",
+      "function": "briefing",
+      "spec": {
+        "sql": "WITH t AS (SELECT {{today}} AS d), ops AS (SELECT object_id, json_extract_string(state,'$.direction') AS dir, CAST(COALESCE(json_extract(state,'$.open'), json_extract(state,'$.amount')) AS BIGINT) AS open FROM objects WHERE object_type = 'bank_operation' AND json_extract_string(state,'$.settlement_status') = 'unsettled'), tasks AS (SELECT object_id, CAST(json_extract_string(state,'$.due_date') AS DATE) AS due FROM objects WHERE object_type = 'task' AND json_extract_string(state,'$.status') = 'open'), booked AS (SELECT DISTINCT substr(json_extract_string(state,'$.date'), 1, 7) AS month FROM objects WHERE object_type = 'posting' AND COALESCE(json_extract_string(state,'$.book'), 'main') = 'pl-stat'), locked AS (SELECT json_extract_string(state,'$.month') AS month FROM objects WHERE object_type = 'period_lock' AND COALESCE(json_extract_string(state,'$.book'), 'pl-stat') = 'pl-stat'), unclosed AS (SELECT b.month FROM booked b, t WHERE b.month < strftime(t.d, '%Y-%m') AND b.month NOT IN (SELECT month FROM locked)) SELECT key, label, count, amount, note, o AS _of FROM (SELECT 1 AS k, 'unclosed' AS key, 'Miesiące do zamknięcia' AS label, COUNT(*) AS count, NULL AS amount, string_agg(month, ', ' ORDER BY month) AS note, NULL AS o FROM unclosed UNION ALL SELECT 2, 'credits', 'Wpłaty bez rozliczenia', COUNT(*), COALESCE(SUM(open), 0), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM ops WHERE dir = 'credit' UNION ALL SELECT 3, 'debits', 'Wypłaty bez rozliczenia', COUNT(*), COALESCE(SUM(open), 0), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM ops WHERE dir = 'debit' UNION ALL SELECT 4, 'tasks', 'Zadania otwarte', COUNT(*), NULL, CASE WHEN COUNT(*) FILTER (WHERE due < (SELECT d FROM t)) > 0 THEN 'po terminie: ' || COUNT(*) FILTER (WHERE due < (SELECT d FROM t)) END, string_agg(object_id, ',' ORDER BY object_id) FROM tasks) ORDER BY k",
+        "columns": [
+          {
+            "field": "key",
+            "label": "Klucz",
+            "type": "string"
+          },
+          {
+            "field": "label",
+            "label": "Co",
+            "type": "string"
+          },
+          {
+            "field": "count",
+            "label": "Ile",
+            "type": "int"
+          },
+          {
+            "field": "amount",
+            "label": "Kwota",
+            "type": "money"
           },
           {
             "field": "note",

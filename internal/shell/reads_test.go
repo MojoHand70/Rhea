@@ -146,7 +146,7 @@ func TestFaceReads(t *testing.T) {
 	for _, r := range rules {
 		switch r.ID {
 		case "pl-book-sales-invoice":
-			if r.Approval == nil || r.Approval.By != "krzysztof" || r.Approval.Bundle != "pack-pl-v25" || r.Approval.At != "2026-09-01" {
+			if r.Approval == nil || r.Approval.By != "krzysztof" || r.Approval.Bundle != "pack-pl-v26" || r.Approval.At != "2026-09-01" {
 				t.Fatalf("pack rule approval: %+v", r.Approval)
 			}
 			seen++
@@ -222,7 +222,7 @@ func TestFaceReads(t *testing.T) {
 	get("/api/explain?view=rejestr-vat-sprzedazy&row=1&col=vat", 400, nil)
 	get("/api/explain?view=rejestr-vat-sprzedazy&row=0&col=nope", 400, nil)
 
-	// The host's facts carry a register's rows, never what they are made
+	// The host's facts carry a report's rows, never what they are made
 	// of: her words are checked against the facts' numbers, and an id is
 	// not a number she may speak.
 	var brief struct {
@@ -233,18 +233,18 @@ func TestFaceReads(t *testing.T) {
 		} `json:"facts"`
 	}
 	get("/api/views/poranek", 200, &brief)
-	registers := 0
+	reports := 0
 	for _, f := range brief.Facts {
 		if f.Kind != "analysis" {
 			continue
 		}
-		registers++
+		reports++
 		if bytes.Contains(f.Data, []byte("_invoice-")) || bytes.Contains(f.Data, []byte("row_objects")) || bytes.Contains(f.Data, []byte(core.RowsOfColumn)) {
-			t.Fatalf("a register's lineage reached the host's facts (%s): %s", f.View, f.Data)
+			t.Fatalf("a report's lineage reached the host's facts (%s): %s", f.View, f.Data)
 		}
 	}
-	if registers != 2 {
-		t.Fatalf("registers among the host's facts: %d", registers)
+	if reports != 4 {
+		t.Fatalf("reports among the host's facts: %d", reports)
 	}
 
 	// What the host said, newest first, without asking her to speak again.

@@ -3475,3 +3475,31 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
 - **The correction loop was already the kernel's**: `reject_bundle` with a reason, then a draft
   `after` it reuses the question and shows the author the refused proposal and the reason. The
   test walks it for a figure.
+
+## 2026-10-17 — the morning by role, the result first (Poland pack v26)
+
+- **KK.** The morning focused on VAT, "a necessary evil, not the centre"; CIT and the result
+  (revenue against costs, month and quarter) matter more; a CEO wants something different from
+  a chief accountant; industries and companies differ (SaaS, RMK, a dominant cost).
+- **A narrative names the roles it speaks to** (`for`). A person hears the narrative whose `for`
+  names their role, anyone else the one that names none; `GET /api/said?person=<handle>` reads
+  that person's morning. Roles are stored as values like every other (`owner`, `accountant`);
+  the owner's morning names no role, so it stays `poranek` and a face reading it changes nothing.
+- **The owner's morning** speaks from four reports: the result (this month so far, last month,
+  since January, before tax), money (bank, receivables as a total with the oldest invoice, not a
+  list; payables), the tax deadlines, what is open. **The accountant's** (`poranek-ksiegowosc`)
+  leads with what is open (months to close, unexplained bank lines, tasks past due), then the
+  deadlines, the result last. VAT is a deadline with an amount, not the headline. "Rano w
+  liczbach" leads with the result of the month and the year.
+- **Deadlines** (`kalendarz-podatkowy`): VAT and JPK_V7M on the 25th, the income tax advance on
+  the 20th of the next month, moved to the next working day off Saturdays, Sundays and the
+  statutory holidays (Ordynacja art. 12 § 5; Easter Monday and Corpus Christi computed, 24
+  December included). Monthly advances assumed; quarterly and simplified ones come with CIT.
+  The advance has no amount and says so ("księgi jeszcze jej nie liczą"): never estimated as
+  result × rate, because tax-deductible and non-deductible costs, losses and the rate are not in
+  the pack yet (REVIEW: CIT-02, -03, -06, -07). ZUS has no deadline row until it has an object.
+- **Found live** (Sonnet 4.6, both mornings accepted by both laws): told not to repeat herself,
+  the host said "September and the year unchanged" instead of the figures, so a result that
+  holds day to day would drop out. The voices now say: the result in numbers every morning,
+  only the wording changes. "October closed at −200" for a running month: the row now says
+  "miesiąc trwa".
