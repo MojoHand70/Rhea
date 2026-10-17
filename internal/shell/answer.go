@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 
 	"rhea/internal/agent"
@@ -128,11 +129,8 @@ func (s *Server) handleAnswer(w http.ResponseWriter, r *http.Request) {
 	}
 	ask := agent.AnswerAsk{Question: req.Question, Today: s.Clock.TodayUTC(), Tables: tables, Words: s.words(ctx), Books: s.books(ctx)}
 	var (
-		ans   agent.Answer
-		cols  []string
-		types []string
-		rows  [][]string
-		more  bool
+		ans agent.Answer
+		got componentOut
 	)
 	for try := 0; try < 2; try++ {
 		if ans, err = s.Agent.Answer(ctx, ask); err != nil {
@@ -143,13 +141,7 @@ func (s *Server) handleAnswer(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, 200, map[string]any{"question": req.Question, "cannot": ans.Cannot})
 			return
 		}
-		if err = clockless(ans.SQL); err == nil {
-			cols, types, rows, more, err = s.runLocked(ctx, ans.SQL)
-		}
-		if err == nil {
-			err = exact(cols, types)
-		}
-		if err == nil {
+		if got, err = s.runQuery(ctx, ans.SQL, ans.Visual); err == nil {
 			break
 		}
 		log.Printf("answer: %q: %v", req.Question, err)
@@ -159,57 +151,117 @@ func (s *Server) handleAnswer(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 422, fmt.Errorf("answer: the query could not be run: %w", err))
 		return
 	}
+	got.Title, got.Reading = ans.Visual.Title, ans.Reading
 
-	// The lineage column names each row's objects, for "why?"; it is never shown.
-	of := slices.Index(cols, core.RowsOfColumn)
-	var rowsOf [][]string
-	shown := make([]answerColumn, 0, len(cols))
-	for i, c := range cols {
-		if i != of {
-			shown = append(shown, answerColumn{Name: c, Type: types[i]})
-		}
-	}
-	out := make([][]string, len(rows))
-	if of >= 0 {
-		rowsOf = make([][]string, len(rows))
-	}
-	for i, r := range rows {
-		for j, v := range r {
-			if j == of {
-				if v != "" {
-					rowsOf[i] = strings.Split(v, ",")
-				} else {
-					rowsOf[i] = []string{}
-				}
-				continue
-			}
-			out[i] = append(out[i], v)
-		}
-	}
-	names := make([]string, len(shown))
-	for i, c := range shown {
-		names[i] = c.Name
-	}
-	visual := ans.Visual
-	if err := visual.Check(names); err != nil {
-		// a visual that misnames a column falls back to the rows themselves
-		visual = core.Visual{Kind: "table", Title: visual.Title}
-	}
-
-	vis, _ := json.Marshal(visual)
-	told := out
+	vis, _ := json.Marshal(got.Visual)
+	told := got.Rows
 	if len(told) > 50 {
 		told = told[:50]
 	}
-	result, _ := json.Marshal(map[string]any{"columns": names, "rows": told, "more": more || len(out) > len(told)})
+	names := make([]string, len(got.Columns))
+	for i, c := range got.Columns {
+		names[i] = c.Name
+	}
+	result, _ := json.Marshal(map[string]any{"columns": names, "rows": told, "more": got.More || len(got.Rows) > len(told)})
 	t, err := s.Exec.TriggerActivity(ctx, "host_answered", map[string]any{"question": req.Question, "sql": ans.SQL, "reading": ans.Reading,
-		"visual": string(vis), "result": string(result), "rows": len(out), "asked_by": req.AskedBy, "occurred_at": s.Clock.TodayUTC()}, req.AskedBy, "")
+		"visual": string(vis), "result": string(result), "rows": len(got.Rows), "asked_by": req.AskedBy, "occurred_at": s.Clock.TodayUTC()}, req.AskedBy, "")
 	if err != nil {
 		writeErr(w, 500, err)
 		return
 	}
 	writeJSON(w, 200, map[string]any{"event_id": t.EventID, "question": req.Question, "sql": ans.SQL, "reading": ans.Reading,
-		"visual": visual, "columns": shown, "rows": out, "row_objects": rowsOf, "more": more})
+		"visual": got.Visual, "columns": got.Columns, "rows": got.Rows, "row_objects": got.Of, "more": got.More})
+}
+
+// componentOut is one query of hers, run: its rows as a face lays them out.
+type componentOut struct {
+	Title   string         `json:"title,omitempty"`
+	Reading string         `json:"reading,omitempty"`
+	Visual  core.Visual    `json:"visual"`
+	Columns []answerColumn `json:"columns"`
+	Rows    [][]string     `json:"rows"`
+	Of      [][]string     `json:"row_objects,omitempty"`
+	More    bool           `json:"more,omitempty"`
+	Error   string         `json:"error,omitempty"`
+}
+
+// runQuery runs one query of hers — an answer's or a report's component —
+// with every guard: not the machine's clock, the locked session, no float
+// shown. The lineage column is taken out as each row's objects, and a visual
+// that names a column the rows lack falls back to the rows as a table.
+func (s *Server) runQuery(ctx context.Context, sql string, visual core.Visual) (componentOut, error) {
+	if err := clockless(sql); err != nil {
+		return componentOut{}, err
+	}
+	cols, types, rows, more, err := s.runLocked(ctx, sql)
+	if err == nil {
+		err = exact(cols, types)
+	}
+	if err != nil {
+		return componentOut{}, err
+	}
+	out := componentOut{Visual: visual, More: more, Columns: []answerColumn{}, Rows: make([][]string, len(rows))}
+	of := slices.Index(cols, core.RowsOfColumn)
+	for i, c := range cols {
+		if i != of {
+			out.Columns = append(out.Columns, answerColumn{Name: c, Type: types[i]})
+		}
+	}
+	if of >= 0 {
+		out.Of = make([][]string, len(rows))
+	}
+	for i, r := range rows {
+		out.Rows[i] = []string{}
+		for j, v := range r {
+			if j == of {
+				out.Of[i] = []string{}
+				if v != "" {
+					out.Of[i] = strings.Split(v, ",")
+				}
+				continue
+			}
+			out.Rows[i] = append(out.Rows[i], v)
+		}
+	}
+	names := make([]string, len(out.Columns))
+	for i, c := range out.Columns {
+		names[i] = c.Name
+	}
+	if err := visual.Check(names); err != nil {
+		out.Visual = core.Visual{Kind: "table", Title: visual.Title}
+	}
+	return out, nil
+}
+
+// serveReport runs a report's components on the copy as it stands, each in
+// the locked session; one that fails says why, and the others still show.
+func (s *Server) serveReport(ctx context.Context, w http.ResponseWriter, vd *core.ViewDef) {
+	comps, err := s.reportComponents(ctx, vd)
+	if err != nil {
+		writeErr(w, 500, err)
+		return
+	}
+	writeJSON(w, 200, map[string]any{"view": vd, "components": comps})
+}
+
+func (s *Server) reportComponents(ctx context.Context, vd *core.ViewDef) ([]componentOut, error) {
+	var spec core.ReportSpec
+	if err := json.Unmarshal(vd.Spec, &spec); err != nil {
+		return nil, err
+	}
+	if err := spec.Check(); err != nil {
+		return nil, fmt.Errorf("view %s: %w", vd.ID, err)
+	}
+	out := make([]componentOut, 0, len(spec.Components))
+	for _, c := range spec.Components {
+		got, err := s.runQuery(ctx, c.SQL, c.Visual)
+		if err != nil {
+			got = componentOut{Visual: c.Visual, Error: err.Error(), Columns: []answerColumn{}, Rows: [][]string{}}
+		}
+		got.Title, got.Reading = c.Title, c.Reading
+		out = append(out, got)
+	}
+	return out, nil
 }
 
 // The machine's clock is not the books' day: the kernel's clock is (a
@@ -247,4 +299,74 @@ func (s *Server) runLocked(ctx context.Context, sql string) ([]string, []string,
 		return nil, nil, nil, false, err
 	}
 	return project.RunTyped(ctx, s.DuckPath, sql, answerRows)
+}
+
+// handleKeepAnswer keeps an answer as a report (KK: what is kept goes through
+// the gate): the query she ran, its reading and its visual become a report
+// with one component, drafted in a bundle that waits for a person's approval
+// with its preview — no second model call, the kept query is the one that
+// answered.
+func (s *Server) handleKeepAnswer(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	id, err := strconv.ParseInt(r.PathValue("event"), 10, 64)
+	if err != nil {
+		writeErr(w, 400, fmt.Errorf("keep: %q is not an answer's event", r.PathValue("event")))
+		return
+	}
+	ev, err := s.Store.GetEvent(ctx, id)
+	if err != nil || ev.Type != core.EventHostAnswered {
+		writeErr(w, 404, fmt.Errorf("keep: event %d is not an answer", id))
+		return
+	}
+	var p struct {
+		Question string `json:"question"`
+		SQL      string `json:"sql"`
+		Reading  string `json:"reading"`
+		Visual   string `json:"visual"`
+		AskedBy  string `json:"asked_by"`
+	}
+	if err := json.Unmarshal(ev.Payload, &p); err != nil {
+		writeErr(w, 500, err)
+		return
+	}
+	var visual core.Visual
+	if err := json.Unmarshal([]byte(p.Visual), &visual); err != nil {
+		writeErr(w, 500, err)
+		return
+	}
+	title := strings.TrimSpace(visual.Title)
+	if title == "" {
+		title = p.Question
+	}
+	if rs := []rune(title); len(rs) > 80 {
+		title = string(rs[:80])
+	}
+	spec, _ := json.Marshal(core.ReportSpec{Components: []core.ReportComponent{{Title: title, Reading: p.Reading, SQL: p.SQL, Visual: visual}}})
+	viewID := fmt.Sprintf("answer-%d", id)
+	bd := agent.BundleDraft{
+		BundleID:    "keep-" + viewID,
+		Description: fmt.Sprintf("Raport z pytania z %s: %s", ev.OccurredAt, p.Question),
+		ViewDefs:    []core.ViewDef{{ID: viewID, Notion: "report", Title: title, Domain: "reports", Function: "report", Spec: spec}},
+		Warrant:     &core.Warrant{Basis: "client", Citations: []string{"asked by " + p.AskedBy + " on " + ev.OccurredAt + ": " + p.Question}, Scope: "this company"},
+	}
+	types, err := s.Store.ListObjectTypes(ctx)
+	if err != nil {
+		writeErr(w, 500, err)
+		return
+	}
+	if err := bd.Validate(types); err != nil {
+		writeErr(w, 400, err)
+		return
+	}
+	b, err := StoreBundleDraft(ctx, s.Store, s.knowledge(ctx), bd, p.AskedBy, ev.OccurredAt, p.Question, "")
+	if err != nil {
+		writeErr(w, 500, err)
+		return
+	}
+	bv, err := s.bundleView(ctx, b)
+	if err != nil {
+		writeErr(w, 500, err)
+		return
+	}
+	writeJSON(w, 200, bv)
 }

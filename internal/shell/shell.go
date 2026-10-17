@@ -89,6 +89,7 @@ func (s *Server) mux() http.Handler {
 	mux.HandleFunc("GET /api/network/learning", s.handleLearning)
 	mux.HandleFunc("GET /api/collection", s.handleCollection)
 	mux.HandleFunc("POST /api/answer", s.handleAnswer)
+	mux.HandleFunc("POST /api/answers/{event}/keep", s.handleKeepAnswer)
 	mux.HandleFunc("POST /api/network/lessons", s.handleNoteLesson)
 	mux.HandleFunc("GET /api/files", s.handleFiles)
 	mux.HandleFunc("GET /api/files/{writer}", s.handleFile)
@@ -261,6 +262,8 @@ func (s *Server) handleView(w http.ResponseWriter, r *http.Request) {
 		s.serveWords(w, vd)
 	case "statement":
 		s.serveStatement(ctx, w, vd, r.URL.Query().Get("object_id"))
+	case "report":
+		s.serveReport(ctx, w, vd)
 	default:
 		writeErr(w, 400, fmt.Errorf("notion %q not renderable", vd.Notion))
 	}

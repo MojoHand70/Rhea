@@ -187,8 +187,8 @@ func TestDraftFigure(t *testing.T) {
 	if b.Summary() != "1 view(s)" {
 		t.Fatalf("summary = %s", b.Summary())
 	}
-	if !strings.Contains(seen, "FIGURES") || !strings.Contains(seen, "Books the active rules post to: main") {
-		t.Fatalf("the author was not shown the tally or the book")
+	if !strings.Contains(seen, "REPORTS") || !strings.Contains(seen, "Books the active rules post to: main") {
+		t.Fatalf("the author was not shown the reports or the book")
 	}
 	for name, edit := range map[string][2]string{
 		"SQL instead of a tally":    {`"spec": {"tally": {"of": "posting"`, `"spec": {"sql": "SELECT 1", "tally": {"of": "posting"`},
@@ -202,6 +202,47 @@ func TestDraftFigure(t *testing.T) {
 			t.Fatalf("%s: edit did not apply", name)
 		}
 		if _, err := fixtureAgent(answer).DraftBundle(context.Background(), figureAsk()); err == nil {
+			t.Errorf("%s: accepted", name)
+		}
+	}
+}
+
+// A dashboard is a report: components, each a query and a visual; the
+// author sees the collection to write them (DIRECTION 2026-10-17, "Reporting").
+const reportBundle = `{
+  "bundle_id": "sales-dashboard",
+  "description": "Sprzedaż w skrócie.",
+  "warrant": {"basis": "client", "citations": ["the owner asked for a sales page"], "scope": "this company"},
+  "view_defs": [{"view_id": "sales-dashboard", "notion": "report", "title": "Sprzedaż w skrócie", "domain": "reports", "function": "report",
+    "spec": {"components": [
+      {"title": "W tym miesiącu", "reading": "netto faktur sprzedaży z tego miesiąca", "sql": "SELECT sum(net) AS \"Netto\" FROM finance.sales_invoice", "visual": {"kind": "kpi", "value": "Netto"}},
+      {"title": "Według klientów", "reading": "netto według nabywcy", "sql": "SELECT 1 AS \"Klient\", 2 AS \"Netto\"", "visual": {"kind": "bar", "x": "Klient", "y": ["Netto"]}}]}}]
+}`
+
+func TestDraftReport(t *testing.T) {
+	var seen string
+	a := &agent.Agent{Complete: func(ctx context.Context, system, user string) (string, error) { seen = user; return reportBundle, nil }}
+	in := figureAsk()
+	in.Today = "2026-10-18"
+	in.Tables = []agent.CollectionTable{{Schema: "finance", Name: "sales_invoice", Type: "sales_invoice", Columns: []agent.CollectionColumn{{Name: "net", SQL: "DECIMAL(18,2)", Kind: "money"}}}}
+	b, err := a.DraftBundle(context.Background(), in)
+	if err != nil || b.Summary() != "1 view(s)" {
+		t.Fatalf("a report: %v %v", b.Summary(), err)
+	}
+	if !strings.Contains(seen, "finance.sales_invoice") || !strings.Contains(seen, "net DECIMAL(18,2) (money)") || !strings.Contains(seen, "Today: 2026-10-18") {
+		t.Fatalf("the author was not shown the collection:\n%s", seen)
+	}
+	for name, edit := range map[string][2]string{
+		"no components":           {`"spec": {"components": [`, `"spec": {"parts": [`},
+		"a component no query":    {`"sql": "SELECT 1 AS \"Klient\", 2 AS \"Netto\""`, `"sql": ""`},
+		"a reading of nothing":    {`"reading": "netto według nabywcy"`, `"reading": " "`},
+		"a visual it cannot draw": {`"visual": {"kind": "bar"`, `"visual": {"kind": "gauge"`},
+	} {
+		answer := strings.Replace(reportBundle, edit[0], edit[1], 1)
+		if answer == reportBundle {
+			t.Fatalf("%s: edit did not apply", name)
+		}
+		if _, err := fixtureAgent(answer).DraftBundle(context.Background(), in); err == nil {
 			t.Errorf("%s: accepted", name)
 		}
 	}

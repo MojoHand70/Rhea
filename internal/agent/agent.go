@@ -59,6 +59,11 @@ type Ask struct {
 	// active rule, superseded by the next with a reason. The author sees
 	// them so an overruled reading never returns (the host remembers).
 	Corrections []Correction
+	// Tables are the collection a report's queries read, with the market's
+	// names (DIRECTION 2026-10-17, "Reporting"); Today dates them.
+	Tables []CollectionTable
+	Words  *core.WordsSpec
+	Today  string
 }
 
 // Correction is one superseded reading of a rule and why it was replaced.
@@ -479,6 +484,13 @@ func userMessage(ask Ask) string {
 				fmt.Fprintf(&sb, ": %s", c.Reason)
 			}
 			sb.WriteString("\n")
+		}
+	}
+	if len(ask.Tables) > 0 {
+		sb.WriteString("\n")
+		writeCollection(&sb, ask.Tables, ask.Words)
+		if ask.Today != "" {
+			fmt.Fprintf(&sb, "Today: %s\n", ask.Today)
 		}
 	}
 	sb.WriteString("\nExisting master data (samples, per type):\n")

@@ -121,51 +121,7 @@ func (a *Agent) Answer(ctx context.Context, ask AnswerAsk) (Answer, error) {
 
 func answerMessage(ask AnswerAsk) string {
 	var sb strings.Builder
-	label := func(key string) string {
-		if ask.Words == nil {
-			return ""
-		}
-		return ask.Words.Fields[key]
-	}
-	sb.WriteString("The collection:\n")
-	for _, t := range ask.Tables {
-		name := ""
-		if ask.Words != nil {
-			if tw, ok := ask.Words.Types[t.Type]; ok {
-				name = " — " + tw.Label
-			}
-		}
-		fmt.Fprintf(&sb, "%s.%s%s\n", t.Schema, t.Name, name)
-		for _, c := range t.Columns {
-			if strings.HasPrefix(c.Name, "_") {
-				continue // the provenance is the same everywhere, said once above
-			}
-			fmt.Fprintf(&sb, "  %s %s", c.Name, c.SQL)
-			if c.Kind != "" && c.Kind != "string" {
-				fmt.Fprintf(&sb, " (%s)", c.Kind)
-			}
-			if c.Links != "" {
-				fmt.Fprintf(&sb, " → %s.id", c.Links)
-			}
-			l := label(t.Type + "." + c.Name)
-			if l == "" {
-				l = label(c.Name)
-			}
-			if l != "" {
-				fmt.Fprintf(&sb, " — %s", l)
-			}
-			if ask.Words != nil {
-				if vals := ask.Words.Values[t.Type+"."+c.Name]; len(vals) > 0 {
-					var vs []string
-					for k, v := range vals {
-						vs = append(vs, k+"="+v)
-					}
-					fmt.Fprintf(&sb, " [%s]", strings.Join(vs, ", "))
-				}
-			}
-			sb.WriteByte('\n')
-		}
-	}
+	writeCollection(&sb, ask.Tables, ask.Words)
 	if len(ask.Books) > 0 {
 		fmt.Fprintf(&sb, "\nBooks the active rules post to: %s\n", strings.Join(ask.Books, ", "))
 	}
@@ -175,6 +131,56 @@ func answerMessage(ask AnswerAsk) string {
 	}
 	fmt.Fprintf(&sb, "\nQuestion: %s\n", ask.Question)
 	return sb.String()
+}
+
+// writeCollection describes the collection table by table, in the market's
+// own names: what a query of hers may read.
+func writeCollection(sb *strings.Builder, tables []CollectionTable, words *core.WordsSpec) {
+	label := func(key string) string {
+		if words == nil {
+			return ""
+		}
+		return words.Fields[key]
+	}
+	sb.WriteString("The collection:\n")
+	for _, t := range tables {
+		name := ""
+		if words != nil {
+			if tw, ok := words.Types[t.Type]; ok {
+				name = " — " + tw.Label
+			}
+		}
+		fmt.Fprintf(sb, "%s.%s%s\n", t.Schema, t.Name, name)
+		for _, c := range t.Columns {
+			if strings.HasPrefix(c.Name, "_") {
+				continue // the provenance is the same everywhere, said once above
+			}
+			fmt.Fprintf(sb, "  %s %s", c.Name, c.SQL)
+			if c.Kind != "" && c.Kind != "string" {
+				fmt.Fprintf(sb, " (%s)", c.Kind)
+			}
+			if c.Links != "" {
+				fmt.Fprintf(sb, " → %s.id", c.Links)
+			}
+			l := label(t.Type + "." + c.Name)
+			if l == "" {
+				l = label(c.Name)
+			}
+			if l != "" {
+				fmt.Fprintf(sb, " — %s", l)
+			}
+			if words != nil {
+				if vals := words.Values[t.Type+"."+c.Name]; len(vals) > 0 {
+					var vs []string
+					for k, v := range vals {
+						vs = append(vs, k+"="+v)
+					}
+					fmt.Fprintf(sb, " [%s]", strings.Join(vs, ", "))
+				}
+			}
+			sb.WriteByte('\n')
+		}
+	}
 }
 
 // extractAnswer is the object the model meant: the largest in the text that

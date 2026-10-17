@@ -81,38 +81,33 @@ when the question asks for a particular way of seeing:
    "function": "complaints", "spec": {"object_type": "complaint",
    "columns": [{"field": "number", "label": "No."}]}}
 Notions: "list" (spec: object_type, columns[{field,label}]), "detail" (spec: object_type,
-sections[{title, fields[]}]), "analysis" (a figure: spec {"tally": ...}, see FIGURES).
+sections[{title, fields[]}]), "report" (figures and dashboards, see REPORTS).
 
-FIGURES - a figure the question asks for (a result for a month, sales by customer, costs by
-account, VAT by rate) is an "analysis" view with a "tally": you say what is added up and the
-kernel computes it. Never write SQL; a figure needs no rule.
-  {"view_id": "result-by-month", "notion": "analysis", "title": "Result month by month",
-   "domain": "finance", "function": "analysis", "spec": {"tally": {
-     "of": "posting", "value": "debit-credit",
-     "where": [{"field": "book", "op": "eq", "value": "main"}],
-     "by": [{"field": "date", "by": "month", "label": "Month"}],
-     "lines": [{"line": "Revenue", "value": "credit-debit", "where": [{"field": "account.type", "op": "eq", "value": "revenue"}]},
-               {"line": "Costs", "op": "-", "where": [{"field": "account.type", "op": "eq", "value": "expense"}]},
-               {"line": "Result before tax", "op": "="}],
-     "line_label": "Line", "amount_label": "Amount"}}}
-  {"view_id": "sales-by-customer", "notion": "analysis", "title": "Sales by customer and month",
-   "domain": "sales", "function": "analysis", "spec": {"tally": {
-     "of": "sales_invoice", "value": "net",
-     "by": [{"field": "issue_date", "by": "month", "label": "Month"}, {"field": "buyer.name", "label": "Customer"}],
-     "amount_label": "Net"}}}
-Which to add up: a figure about customers, suppliers or documents (sales by customer, purchases
-by supplier, invoices by rate) adds up the documents of that type, grouped through their links
-(an invoice's buyer or supplier); a bookings figure has no customer. A figure about the books
-(a result, costs or revenue by account, a balance) adds up the postings, through their account.
-"of": the type added up — a document type of the catalog, or "posting" (the bookings).
-"value": a money field of it; for postings "debit-credit" (assets, costs) or "credit-debit"
-(revenue, liabilities). "where", and a line's own "where": [{"field", "op", "value"}] with op
-eq | ne | in (a list) | exists | absent, on a field or "link.field" one step through a ref
-field (a posting's "account.type" or "account.code", an invoice's "buyer.name"). On postings,
-keep to the book the active rules post to. "by": at most two, each a field or a date field
-with "by": "month", each with a "label". "lines": optional; "" or "+" adds, "-" subtracts,
-"=" is the lines above it (no where, no value of its own). Name the view, the lines and the
-labels in the language the client speaks.
+REPORTS - a figure, a listing or a dashboard the question asks for (a result for a month, sales
+by customer, a KPI page, costs by account, a pivot of sales by month and customer) is a "report"
+view: a page of components, each one read-only DuckDB SELECT over the collection shown below
+and a visual. The kernel runs each query in a locked session when the report is read; you
+never state a figure, and a report needs no rule.
+  {"view_id": "sales-dashboard", "notion": "report", "title": "Sales at a glance",
+   "domain": "reports", "function": "report", "spec": {"components": [
+     {"title": "Sales this month", "reading": "net of the sales invoices issued this month",
+      "sql": "SELECT sum(net) AS \"Net\", string_agg(id, ',') AS _of FROM finance.sales_invoice WHERE issue_date >= DATE '2026-10-01'",
+      "visual": {"kind": "kpi", "value": "Net"}},
+     {"title": "By customer and month", "reading": "net of sales invoices by buyer and month",
+      "sql": "SELECT strftime(i.issue_date, '%Y-%m') AS \"Month\", c.name AS \"Customer\", sum(i.net) AS \"Net\", string_agg(i.id, ',' ORDER BY i.id) AS _of FROM finance.sales_invoice i JOIN finance.company c ON c.id = i.buyer GROUP BY 1, 2 ORDER BY 1, 3 DESC",
+      "visual": {"kind": "bar", "x": "Month", "y": ["Net"], "series": "Customer"}}]}}
+The queries: one SELECT each over the collection's tables (WITH, joins, window functions and
+PIVOT ... FOR ... IN (...) are fine); name shown columns in the client's language with AS "...";
+add _of (string_agg(t.id, ',') for a total, t.id for a listing) so "why?" opens the objects;
+money stays exact (an average or share ROUND(..., 2)::DECIMAL(18,2)); dates relative to today
+are written as DATE '...' from the today given, never CURRENT_DATE; bookings keep to the books
+the active rules post to. A figure about customers, suppliers or documents reads the documents
+through their links; a figure about the books reads the postings through their account.
+Visuals: "kpi" (value, label, compare), "table" (columns), "statement" (line, amount, op holding
+'', '+', '-' or '=', section), "bar" / "line" (x, y [...], series), "pivot" (a PIVOT query; the
+first column heads the rows); optional "title" and "formats" {"<col>": "money" | "percent" | "int"
+| "date" | "month" | "text"}. Each component's "reading" says plainly what it counts. Name the
+view, the components and the columns in the language the client speaks.
 
 ACTIVITIES - a declared verb a human uses to record something, emitting a raw event:
   {"name": "register_complaint", "domain": "sales", "description": "...",
@@ -295,6 +290,19 @@ func validateView(v core.ViewDef, types []core.ObjectType, matchingRules []strin
 		}
 		return nil
 	}
+	// A report is a page of components, each a read-only query and a visual
+	// (DIRECTION 2026-10-17, "Reporting"); whether each query runs is seen
+	// on the card's preview, in the locked session.
+	if v.Notion == "report" {
+		var rs core.ReportSpec
+		if err := json.Unmarshal(v.Spec, &rs); err != nil {
+			return fmt.Errorf("view %s spec: %w", v.ID, err)
+		}
+		if err := rs.Check(); err != nil {
+			return fmt.Errorf("view %s: %w", v.ID, err)
+		}
+		return nil
+	}
 	// A figure is a tally the kernel computes: the author never writes the
 	// query (invariant 3), and every name must be one the catalog — with
 	// the bundle's own types — holds.
@@ -326,7 +334,7 @@ func validateView(v core.ViewDef, types []core.ObjectType, matchingRules []strin
 			fields = append(fields, s.Fields...)
 		}
 	default:
-		return fmt.Errorf("view %s: notion %q is not one the agent authors (list, detail, analysis)", v.ID, v.Notion)
+		return fmt.Errorf("view %s: notion %q is not one the agent authors (list, detail, analysis, report)", v.ID, v.Notion)
 	}
 	if len(fields) == 0 {
 		return fmt.Errorf("view %s shows no fields", v.ID)

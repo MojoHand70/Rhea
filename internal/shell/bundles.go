@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"rhea/internal/agent"
@@ -238,6 +239,12 @@ func (s *Server) handleDraftBundle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ask.Rejections = conversation
+	// A report's queries read the collection (DIRECTION 2026-10-17, "Reporting").
+	if ask.Tables, err = s.collection(ctx); err != nil {
+		writeErr(w, 500, err)
+		return
+	}
+	ask.Words, ask.Today = s.words(ctx), s.Clock.TodayUTC()
 	bd, err := s.Agent.DraftBundle(ctx, ask)
 	if errors.Is(err, agent.ErrAlreadyAnswered) {
 		writeJSON(w, 200, map[string]any{"already_answered": true, "description": bd.Description})
@@ -305,6 +312,17 @@ func (s *Server) handlePreviewBundle(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, 500, err)
 			return
 		}
+		if v.Notion == "report" {
+			comps, err := s.reportComponents(ctx, &v)
+			if err != nil {
+				out = append(out, figurePreview{ViewID: v.ID, Title: v.Title, Error: err.Error()})
+				continue
+			}
+			for _, c := range comps {
+				out = append(out, componentPreview(v, c))
+			}
+			continue
+		}
 		if v.Notion != "analysis" {
 			continue
 		}
@@ -323,4 +341,31 @@ func (s *Server) handlePreviewBundle(w http.ResponseWriter, r *http.Request) {
 		out = append(out, p)
 	}
 	writeJSON(w, 200, out)
+}
+
+// componentPreview is one component of a waiting report, as the card shows it:
+// money marked as money, the first rows, the count.
+func componentPreview(v core.ViewDef, c componentOut) figurePreview {
+	p := figurePreview{ViewID: v.ID, Title: v.Title, Total: len(c.Rows), Error: c.Error}
+	if c.Title != "" && c.Title != v.Title {
+		p.Title = v.Title + " · " + c.Title
+	}
+	for _, col := range c.Columns {
+		typ := ""
+		if strings.HasPrefix(col.Type, "DECIMAL(") && strings.HasSuffix(col.Type, ",2)") {
+			typ = "money"
+		}
+		p.Columns = append(p.Columns, columnOut{Field: col.Name, Label: col.Name, Type: typ})
+	}
+	for i, r := range c.Rows {
+		if i == 8 {
+			break
+		}
+		cells := make([]cellOut, len(r))
+		for j, v := range r {
+			cells[j] = cellOut{V: v}
+		}
+		p.Rows = append(p.Rows, cells)
+	}
+	return p
 }

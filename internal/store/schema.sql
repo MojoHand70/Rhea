@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS activity (
 CREATE TABLE IF NOT EXISTS view_def (
     view_id    TEXT NOT NULL,
     version    INT NOT NULL,
-    notion     TEXT NOT NULL CHECK (notion IN ('list','detail','action','analysis','scheduling','matching','narrative','queue','words','statement')),
+    notion     TEXT NOT NULL CHECK (notion IN ('list','detail','action','analysis','scheduling','matching','narrative','queue','words','statement','report')),
     title      TEXT NOT NULL,
     domain     TEXT NOT NULL,
     function   TEXT NOT NULL,
@@ -87,12 +87,12 @@ CREATE TABLE IF NOT EXISTS view_def (
     PRIMARY KEY (view_id, version)
 );
 
--- Idempotent migration: databases created before the scheduling notion, the words and statement notions (2026-10-17)
+-- Idempotent migration: databases created before the scheduling notion, the words and statement notions, the report (2026-10-17)
 -- (SPEC M5) or the matching grid (DIRECTION 2026-10-11) re-learn the CHECK
 -- with the full notion library.
 ALTER TABLE view_def DROP CONSTRAINT IF EXISTS view_def_notion_check;
 ALTER TABLE view_def ADD CONSTRAINT view_def_notion_check
-    CHECK (notion IN ('list','detail','action','analysis','scheduling','matching','narrative','queue','words','statement'));
+    CHECK (notion IN ('list','detail','action','analysis','scheduling','matching','narrative','queue','words','statement','report'));
 
 -- Definitions under the gate (DECISIONS 2026-10-08, the bundle): object
 -- types and views gain the lifecycle rules and activities have. Their version

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http/httptest"
 	"path/filepath"
 	"strings"
@@ -145,6 +146,7 @@ func TestAnswerFromTheBooks(t *testing.T) {
 		ans.Visual.Kind != "bar" || len(ans.Columns) != 2 {
 		t.Fatalf("the answer: %+v", ans)
 	}
+	firstID := ans.EventID
 	evs, err := s.EventsOfTypes(ctx, []string{core.EventHostAnswered})
 	if err != nil || len(evs) != 1 || !strings.Contains(string(evs[0].Payload), "Nabywca S.A.") || !strings.Contains(string(evs[0].Payload), "suma netto według nabywcy") {
 		t.Fatalf("what she told was not recorded: %v %v", evs, err)
@@ -179,6 +181,74 @@ func TestAnswerFromTheBooks(t *testing.T) {
 	call("POST", "/api/answer", map[string]any{"question": "ile mam w magazynie?", "asked_by": "krzysztof"}, &ans)
 	if ans.Cannot == "" {
 		t.Fatalf("cannot: %+v", ans)
+	}
+
+	// Kept (KK: what is kept goes through the gate): the answer becomes a
+	// report waiting for approval, its rows on the card; approved, it shows
+	// them to everyone, "why?" and all.
+	var kept struct {
+		ID       string `json:"bundle_id"`
+		Status   string `json:"status"`
+		Question string `json:"question"`
+	}
+	if code := call("POST", fmt.Sprintf("/api/answers/%d/keep", firstID), nil, &kept); code != 200 || kept.Status != "draft" || kept.Question != "Sprzedaż netto według klientów" {
+		t.Fatalf("keep: %d %+v", code, kept)
+	}
+	type preview []struct {
+		Title string
+		Rows  [][]struct {
+			V string `json:"v"`
+		}
+		Total int
+		Error string
+	}
+	var pv preview
+	call("GET", "/api/bundles/"+kept.ID+"/preview", nil, &pv)
+	if len(pv) != 1 || pv[0].Error != "" || pv[0].Total != 1 || pv[0].Rows[0][0].V != "Nabywca S.A." {
+		t.Fatalf("the kept report on the card: %+v", pv)
+	}
+	if _, _, _, err := x.ApproveBundle(ctx, kept.ID, "krzysztof", "2026-10-18"); err != nil {
+		t.Fatal(err)
+	}
+	type report struct {
+		Components []struct {
+			Title, Reading, Error string
+			Visual                core.Visual
+			Rows                  [][]string
+			Of                    [][]string `json:"row_objects"`
+		}
+	}
+	var rep report
+	call("GET", fmt.Sprintf("/api/views/answer-%d", firstID), nil, &rep)
+	if len(rep.Components) != 1 || rep.Components[0].Rows[0][1] != "3500.00" || rep.Components[0].Visual.Kind != "bar" || len(rep.Components[0].Of[0]) != 3 {
+		t.Fatalf("the kept report: %+v", rep)
+	}
+
+	// A dashboard drafted in words: the author sees the collection; on the
+	// page, a component whose query fails says so and the others still show.
+	asked = nil
+	replies = []string{mustJSON(map[string]any{"bundle_id": "sales-page", "description": "Sprzedaż w skrócie.",
+		"warrant": map[string]any{"basis": "client", "citations": []string{"the owner asked"}, "scope": "this company"},
+		"view_defs": []any{map[string]any{"view_id": "sales-page", "notion": "report", "title": "Sprzedaż w skrócie", "domain": "reports", "function": "report",
+			"spec": map[string]any{"components": []any{
+				map[string]any{"title": "Netto razem", "reading": "netto wszystkich faktur sprzedaży", "sql": `SELECT sum(net) AS "Netto" FROM ` + table, "visual": map[string]any{"kind": "kpi", "value": "Netto"}},
+				map[string]any{"title": "Zepsute", "reading": "x", "sql": "SELECT nope FROM " + table, "visual": map[string]any{"kind": "table"}}}}}}})}
+	var drafted struct {
+		ID string `json:"bundle_id"`
+	}
+	if code := call("POST", "/api/bundles/draft", map[string]any{"intent": "Zrób mi pulpit sprzedaży"}, &drafted); code != 200 || drafted.ID != "sales-page" {
+		t.Fatalf("the dashboard draft: %d %+v", code, drafted)
+	}
+	if len(asked) != 1 || !strings.Contains(asked[0], table) || !strings.Contains(asked[0], "Today: 2026-10-18") {
+		t.Fatalf("the author did not see the collection:\n%s", asked[0])
+	}
+	if _, _, _, err := x.ApproveBundle(ctx, drafted.ID, "krzysztof", "2026-10-18"); err != nil {
+		t.Fatal(err)
+	}
+	rep = report{}
+	call("GET", "/api/views/sales-page", nil, &rep)
+	if len(rep.Components) != 2 || rep.Components[0].Rows[0][0] != "3500.00" || !strings.Contains(rep.Components[1].Error, "nope") {
+		t.Fatalf("the dashboard: %+v", rep)
 	}
 }
 

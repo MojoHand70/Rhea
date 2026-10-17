@@ -87,3 +87,43 @@ func (v Visual) Check(columns []string) error {
 	}
 	return nil
 }
+
+// ReportSpec: spec of a `report` notion (DIRECTION 2026-10-17, "Reporting") —
+// a page of components, each a query over the collection and a visual: KPI
+// tiles beside a statement beside a chart. The kernel runs each component's
+// query in the locked session when the report is read; the face lays the
+// rows out. A report is kept through the gate like any definition.
+type ReportSpec struct {
+	Components []ReportComponent `json:"components"`
+}
+
+// ReportComponent is one part of a report.
+type ReportComponent struct {
+	Title   string `json:"title"`
+	Reading string `json:"reading"` // what the query counts, in plain words
+	SQL     string `json:"sql"`
+	Visual  Visual `json:"visual"`
+}
+
+// MaxComponents bounds a report: a page, not a warehouse.
+const MaxComponents = 12
+
+// Check refuses a report the kernel could not show: no components, too many,
+// one without a query, a reading or a visual kind it knows. Whether each
+// query runs, and whether its visual names its columns, is seen when it runs.
+func (r ReportSpec) Check() error {
+	if len(r.Components) == 0 || len(r.Components) > MaxComponents {
+		return fmt.Errorf("report: 1 to %d components, not %d", MaxComponents, len(r.Components))
+	}
+	for i, c := range r.Components {
+		switch {
+		case strings.TrimSpace(c.SQL) == "":
+			return fmt.Errorf("report: component %d has no query", i+1)
+		case strings.TrimSpace(c.Reading) == "":
+			return fmt.Errorf("report: component %d says nothing of what it counts", i+1)
+		case !slices.Contains(VisualKinds, c.Visual.Kind):
+			return fmt.Errorf("report: component %d: visual kind %q is not one of %v", i+1, c.Visual.Kind, VisualKinds)
+		}
+	}
+	return nil
+}

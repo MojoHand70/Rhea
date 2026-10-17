@@ -3605,3 +3605,21 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   invariant 6) — a float column is refused, ROUND(…, 2)::DECIMAL(18,2) asked for; and a query read
   CURRENT_DATE, the machine's day, not the books' — the clock functions are refused and the day is
   given as DATE 'YYYY-MM-DD'.
+
+## 2026-10-17 — reporting, step 3: reports, kept and drafted
+
+- **A `report` notion** (schema CHECK learns it through its idempotent migration): a page of 1–12
+  components, each a title, a reading, a read-only query and a visual (`core.ReportSpec`). Served
+  by running every component through the same guards as an answer (`runQuery`: the books' day,
+  the locked session, no float shown, `_of` taken out as each row's objects, a misnamed visual
+  shown as rows); a component whose query fails carries its error and the others still show.
+- **Keeping an answer** (`POST /api/answers/{event}/keep`, KK: what is kept goes through the
+  gate): the recorded query, reading and visual become a one-component report in a draft bundle
+  — no second model call; the kept query is the one that answered. Warrant: the client, the day
+  and the question.
+- **The card** previews every component of a waiting report, money marked as money.
+- **The author drafts reports** from words: the grammar's REPORTS section (a dashboard example:
+  a KPI and a bar by customer and month) replaces the tally's FIGURES; a drafted report is checked
+  for components, queries, readings and visual kinds; whether each query runs is seen on the
+  preview. The bundle ask now carries the collection (with the market's names) and today. Tally
+  views already approved keep working; the author no longer drafts them.
