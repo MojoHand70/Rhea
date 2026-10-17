@@ -75,6 +75,7 @@ THE QUERY
 - When rows add up or list objects, add a column _of naming them: string_agg(t.id, ',' ORDER BY
   t.id) AS _of for a total, t.id AS _of for a listing - the person opens "why?" from it. _of is
   never shown.
+- A total over nothing is zero, not empty: COALESCE(sum(...), 0).
 - Order rows the way a reader expects (by month, by amount descending for a ranking). Keep a
   listing to what was asked; a ranking without a number given shows the top ten.
 

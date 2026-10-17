@@ -2764,6 +2764,16 @@ author's query, the kernel's run, the record. (3) Reports with components,
 drafted, previewed, approved. (4) The face's visuals and its "ask now" and
 "keep it". (5) The author's grammar moves from the tally to queries.
 
+**All five done, 2026-10-17/18** (Rhea 590a09b, 4848d75, 4b1bf01, c9a8b7e;
+rheaface step 4). Live on Helios: „Kto jest moim największym klientem w tym
+roku?” was answered with a query in seconds — two customers, their net and
+share, as bars — kept as a report through the card and shown as a page; a
+sales dashboard asked for in one sentence came back as three components that
+all ran. Found and closed on the way: averages came back as floats and a
+query read the machine's date — both are now refusals the author fixes.
+Open: the Poland pack keeps nearly every type in one domain, so its
+collection is one schema; the domains are a pack change.
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,

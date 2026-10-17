@@ -99,7 +99,8 @@ never state a figure, and a report needs no rule.
 The queries: one SELECT each over the collection's tables (WITH, joins, window functions and
 PIVOT ... FOR ... IN (...) are fine); name shown columns in the client's language with AS "...";
 add _of (string_agg(t.id, ',') for a total, t.id for a listing) so "why?" opens the objects;
-money stays exact (an average or share ROUND(..., 2)::DECIMAL(18,2)); dates relative to today
+money stays exact (an average or share ROUND(..., 2)::DECIMAL(18,2)), a total over nothing is
+COALESCE(sum(...), 0); dates relative to today
 are written as DATE '...' from the today given, never CURRENT_DATE; bookings keep to the books
 the active rules post to. A figure about customers, suppliers or documents reads the documents
 through their links; a figure about the books reads the postings through their account.
