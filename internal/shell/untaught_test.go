@@ -142,9 +142,45 @@ func TestWhatSheWasNeverTaught(t *testing.T) {
 		t.Fatalf("the house's record can be deleted")
 	}
 
+	// The Learning Centre reads the house: the lesson counted across both
+	// installations, open until the team says where it stands; the team's
+	// latest note is the lesson's, and every note stays on the record.
+	type centre struct {
+		Network bool `json:"network"`
+		Lessons []struct {
+			Missing, Lesson, Status, Note string
+			NotedBy                       string   `json:"noted_by"`
+			Installations                 int      `json:"installations"`
+			Names                         []string `json:"names"`
+		} `json:"lessons"`
+	}
+	var lc centre
+	one("/api/network/learning", nil, &lc)
+	if !lc.Network || len(lc.Lessons) != 1 || lc.Lessons[0].Installations != 2 || len(lc.Lessons[0].Names) != 2 || lc.Lessons[0].Status != "open" {
+		t.Fatalf("the Learning Centre reads %+v", lc)
+	}
+	lesson := lc.Lessons[0].Lesson
+	var filed map[string]any
+	one("/api/network/lessons", map[string]any{"lesson": lesson, "status": "planned", "note": "Poland pack v27: sprzedaż według klientów", "by": "krzysztof"}, &filed)
+	one("/api/network/lessons", map[string]any{"lesson": lesson, "status": "done", "note": "shipped in v27", "by": "krzysztof"}, &filed)
+	one("/api/network/learning", nil, &lc)
+	if l := lc.Lessons[0]; l.Status != "done" || l.Note != "shipped in v27" || l.NotedBy != "krzysztof" {
+		t.Fatalf("the latest note is not the lesson's: %+v", l)
+	}
+	if _, err := nw.NoteLesson(ctx, lesson, "maybe", "", "krzysztof"); err == nil {
+		t.Fatalf("a status the team does not use was filed")
+	}
+	if _, err := nw.Pool.Exec(ctx, `DELETE FROM lesson_note`); err == nil {
+		t.Fatalf("the team's notes can be deleted")
+	}
+
 	// Without a network it is still a fact, kept home and saying why.
 	alone := installation(false)
 	if n := note(alone, "x", "wynik za jeden miesiąc"); n.Shared || n.KeptHome != "no network is connected" {
 		t.Fatalf("alone: %+v", n)
+	}
+	alone("/api/network/learning", nil, &lc)
+	if lc.Network {
+		t.Fatalf("a kernel without a network reads one")
 	}
 }

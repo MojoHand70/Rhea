@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -95,8 +96,11 @@ func (n *Network) NoteUntaught(ctx context.Context, installation, missing string
 // Untaught is one thing installations were never taught, as the team reads it.
 type Untaught struct {
 	Missing       string    `json:"missing"`
+	Lesson        string    `json:"lesson"` // the key the team's notes are filed under
 	Installations int       `json:"installations"`
+	Names         []string  `json:"names"` // which installations: the house knows its own
 	Times         int       `json:"times"`
+	First         time.Time `json:"first"`
 	Last          time.Time `json:"last"`
 }
 
@@ -111,10 +115,56 @@ func (n *Network) Untaught(ctx context.Context, includeSynthetic bool) ([]Untaug
 	var out []Untaught
 	for rows.Next() {
 		var u Untaught
-		if err := rows.Scan(&u.Missing, &u.Installations, &u.Times, &u.Last); err != nil {
+		if err := rows.Scan(&u.Missing, &u.Lesson, &u.Installations, &u.Names, &u.Times, &u.First, &u.Last); err != nil {
 			return nil, err
 		}
 		out = append(out, u)
+	}
+	return out, rows.Err()
+}
+
+//go:embed lesson_note.sql
+var lessonNoteSQL string
+
+//go:embed lesson_latest.sql
+var lessonLatestSQL string
+
+// Lesson statuses: where the team stands on something she was never taught.
+var LessonStatuses = []string{"open", "planned", "done", "not_for_us"}
+
+// LessonNote is the team's latest word on one lesson (the Learning Centre).
+type LessonNote struct {
+	Lesson string    `json:"lesson"`
+	Status string    `json:"status"`
+	Note   string    `json:"note,omitempty"`
+	By     string    `json:"by"`
+	At     time.Time `json:"at"`
+}
+
+// NoteLesson files the team's note on a lesson; the latest is where it stands.
+func (n *Network) NoteLesson(ctx context.Context, lesson, status, note, by string) (time.Time, error) {
+	if !slices.Contains(LessonStatuses, status) {
+		return time.Time{}, fmt.Errorf("lesson: status %q is not one of %v", status, LessonStatuses)
+	}
+	var at time.Time
+	err := n.Pool.QueryRow(ctx, lessonNoteSQL, lesson, status, note, by).Scan(&at)
+	return at, err
+}
+
+// Lessons is every lesson's latest note, by lesson key.
+func (n *Network) Lessons(ctx context.Context) (map[string]LessonNote, error) {
+	rows, err := n.Pool.Query(ctx, lessonLatestSQL)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]LessonNote{}
+	for rows.Next() {
+		var l LessonNote
+		if err := rows.Scan(&l.Lesson, &l.Status, &l.Note, &l.By, &l.At); err != nil {
+			return nil, err
+		}
+		out[l.Lesson] = l
 	}
 	return out, rows.Err()
 }

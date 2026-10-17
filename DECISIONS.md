@@ -3503,3 +3503,19 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   holds day to day would drop out. The voices now say: the result in numbers every morning,
   only the wording changes. "October closed at −200" for a running month: the row now says
   "miesiąc trwa".
+
+## 2026-10-17 — the Learning Centre, the kernel's part
+
+- **KK's name**: the Learning Centre — where the Rhea team reads what installations were never
+  taught and helps her learn it (not "team page").
+- **The house only.** `GET /api/network/learning` reads the network, never an installation's
+  books: each lesson (her description, counted by installations and times, first and last seen,
+  which installations — the house knows its own), the team's latest note on it, and what Rhea has
+  learned by question with support. `?synthetic=1` counts simulated customers too. Without a
+  network it says so.
+- **The team's notes** (`POST /api/network/lessons`): a lesson is `open`, `planned`, `done` or
+  `not_for_us`, with a note and who said it; an append-only `lesson_note` table in the network,
+  filed under the lesson's key (its description, case and outer spaces aside); the latest note
+  is where it stands.
+- **The page itself** is the face's (the hosted network is the proprietary side of open core);
+  the kernel serves only JSON.

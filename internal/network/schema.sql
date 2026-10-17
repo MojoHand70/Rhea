@@ -54,3 +54,30 @@ BEGIN
     END IF;
 END;
 $$;
+
+-- The Rhea team's notes on a lesson she was never taught (the Learning Centre): where it stands —
+-- open, planned for a pack, done, not for us — and a note. Filed under the lesson's key (its
+-- description, letter case and outer spaces aside); append-only, the latest note is the lesson's.
+CREATE TABLE IF NOT EXISTS lesson_note (
+    lesson_note_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    lesson         TEXT NOT NULL,
+    status         TEXT NOT NULL CHECK (status IN ('open', 'planned', 'done', 'not_for_us')),
+    note           TEXT NOT NULL DEFAULT '',
+    noted_by       TEXT NOT NULL,
+    noted_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE OR REPLACE FUNCTION forbid_lesson_note_mutation() RETURNS trigger AS $$
+BEGIN
+    RAISE EXCEPTION 'lesson_note is append-only (Rhea invariant 1)';
+END;
+$$ LANGUAGE plpgsql;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'lesson_note_append_only') THEN
+        CREATE TRIGGER lesson_note_append_only BEFORE UPDATE OR DELETE ON lesson_note
+            FOR EACH ROW EXECUTE FUNCTION forbid_lesson_note_mutation();
+    END IF;
+END;
+$$;
