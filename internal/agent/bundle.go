@@ -81,7 +81,29 @@ when the question asks for a particular way of seeing:
    "function": "complaints", "spec": {"object_type": "complaint",
    "columns": [{"field": "number", "label": "No."}]}}
 Notions: "list" (spec: object_type, columns[{field,label}]), "detail" (spec: object_type,
-sections[{title, fields[]}]).
+sections[{title, fields[]}]), "analysis" (a figure: spec {"tally": ...}, see FIGURES).
+
+FIGURES - a figure the question asks for (a result for a month, sales by customer, costs by
+account, VAT by rate) is an "analysis" view with a "tally": you say what is added up and the
+kernel computes it. Never write SQL; a figure needs no rule.
+  {"view_id": "result-by-month", "notion": "analysis", "title": "Result month by month",
+   "domain": "finance", "function": "analysis", "spec": {"tally": {
+     "of": "posting", "value": "debit-credit",
+     "where": [{"field": "book", "op": "eq", "value": "main"}],
+     "by": [{"field": "date", "by": "month", "label": "Month"}],
+     "lines": [{"line": "Revenue", "value": "credit-debit", "where": [{"field": "account.type", "op": "eq", "value": "revenue"}]},
+               {"line": "Costs", "op": "-", "where": [{"field": "account.type", "op": "eq", "value": "expense"}]},
+               {"line": "Result before tax", "op": "="}],
+     "line_label": "Line", "amount_label": "Amount"}}}
+"of": the type added up — a document type of the catalog, or "posting" (the bookings).
+"value": a money field of it; for postings "debit-credit" (assets, costs) or "credit-debit"
+(revenue, liabilities). "where", and a line's own "where": [{"field", "op", "value"}] with op
+eq | ne | in (a list) | exists | absent, on a field or "link.field" one step through a ref
+field (a posting's "account.type" or "account.code", an invoice's "buyer.name"). On postings,
+keep to the book the active rules post to. "by": at most two, each a field or a date field
+with "by": "month", each with a "label". "lines": optional; "" or "+" adds, "-" subtracts,
+"=" is the lines above it (no where, no value of its own). Name the view, the lines and the
+labels in the language the client speaks.
 
 ACTIVITIES - a declared verb a human uses to record something, emitting a raw event:
   {"name": "register_complaint", "domain": "sales", "description": "...",
@@ -264,6 +286,22 @@ func validateView(v core.ViewDef, types []core.ObjectType, matchingRules []strin
 		}
 		return nil
 	}
+	// A figure is a tally the kernel computes: the author never writes the
+	// query (invariant 3), and every name must be one the catalog — with
+	// the bundle's own types — holds.
+	if v.Notion == "analysis" {
+		var as core.AnalysisSpec
+		if err := json.Unmarshal(v.Spec, &as); err != nil {
+			return fmt.Errorf("view %s spec: %w", v.ID, err)
+		}
+		if as.SQL != "" || as.Tally == nil {
+			return fmt.Errorf("view %s: a figure is a tally the kernel computes, never SQL", v.ID)
+		}
+		if err := as.Tally.Check(CatalogOf(types)); err != nil {
+			return fmt.Errorf("view %s: %w", v.ID, err)
+		}
+		return nil
+	}
 	i := slices.IndexFunc(types, func(t core.ObjectType) bool { return t.Name == spec.ObjectType })
 	if i < 0 {
 		return fmt.Errorf("view %s shows %q, which is not a declared object type", v.ID, spec.ObjectType)
@@ -279,7 +317,7 @@ func validateView(v core.ViewDef, types []core.ObjectType, matchingRules []strin
 			fields = append(fields, s.Fields...)
 		}
 	default:
-		return fmt.Errorf("view %s: notion %q is not one the agent authors (list, detail)", v.ID, v.Notion)
+		return fmt.Errorf("view %s: notion %q is not one the agent authors (list, detail, analysis)", v.ID, v.Notion)
 	}
 	if len(fields) == 0 {
 		return fmt.Errorf("view %s shows no fields", v.ID)

@@ -3425,3 +3425,19 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   any language. A plain sum of one money field declares `sum_of`, so "why?" checks it.
 - **Proof.** The monthly result written as a tally gives the pack's own SQL rows and bookings;
   the pack keeps its SQL (no second approval of the same skill on white01).
+
+## 2026-10-17 — the author drafts figures (step 2)
+
+- **The grammar** gains FIGURES: an `analysis` view with a `tally`, one worked example (the
+  result by month, English, the book named `main`), the ops, the link step, the months, the
+  lines, and "never SQL; a figure needs no rule".
+- **Validation**: an analysis view the author drafts must carry a tally and no SQL, and the tally
+  must check against the catalog with the bundle's own types.
+- **The books in the ask**: the author saw the active rules only by what they match, so it could
+  not know a figure over bookings must keep to `pl-stat`; the ask now names the books the active
+  rules post to (literal books only).
+- **Live**, on Helios with the kernel's author model: „Pokaż sprzedaż netto według klientów,
+  miesiąc po miesiącu” drafted a valid tally in 8 s (sales invoices, `net_pln`, by month and
+  `buyer.name`, Polish labels); approved, 18 rows, "why?" adds up. A fallback amount
+  (`net_pln` else `net`, as the VAT registers coalesce) is not built: the Poland pack fills
+  `net_pln` on every invoice.

@@ -456,9 +456,17 @@ func userMessage(ask Ask) string {
 	if len(ask.Rules) == 0 {
 		sb.WriteString("(none)\n")
 	}
+	var books []string
 	for _, r := range ask.Rules {
 		match, _ := json.Marshal(r.Spec.Match)
 		fmt.Fprintf(&sb, "- %s p%d %s: %s\n", r.ID, r.Priority, match, r.Description)
+		if p := r.Spec.Effect.Postings; p != nil && p.Book != "" && !strings.HasPrefix(p.Book, "=") && !slices.Contains(books, p.Book) {
+			books = append(books, p.Book)
+		}
+	}
+	if len(books) > 0 {
+		// a figure over the bookings keeps to one book (FIGURES)
+		fmt.Fprintf(&sb, "Books the active rules post to: %s\n", strings.Join(books, ", "))
 	}
 	if len(ask.Corrections) > 0 {
 		sb.WriteString("\nReadings the owner corrected before - superseded, never to be proposed again:\n")

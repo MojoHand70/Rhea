@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"rhea/internal/agent"
+	"rhea/internal/core"
 )
 
 // A bundle may bring its own types: the complaint and its case, with the
@@ -142,5 +143,66 @@ func TestAskCarriesTheConversation(t *testing.T) {
 	}
 	if strings.Index(got, "The conversation so far") > strings.Index(got, "User intent:") {
 		t.Fatal("the conversation must come before the intent")
+	}
+}
+
+// A figure is a tally: the author says what is added up and the kernel
+// writes the query (DIRECTION 2026-10-17, "Teaching her a figure").
+const figureBundle = `{
+  "bundle_id": "result-by-month",
+  "description": "The result for each month of the books.",
+  "warrant": {"basis": "client", "citations": ["the owner asked for the result of one month"], "scope": "this company"},
+  "view_defs": [
+    {"view_id": "result-by-month", "notion": "analysis", "title": "Result month by month", "domain": "finance", "function": "analysis",
+     "spec": {"tally": {"of": "posting", "value": "debit-credit",
+       "where": [{"field": "book", "op": "eq", "value": "main"}],
+       "by": [{"field": "date", "by": "month", "label": "Month"}],
+       "lines": [{"line": "Revenue", "value": "credit-debit", "where": [{"field": "account.type", "op": "eq", "value": "revenue"}]},
+                 {"line": "Costs", "op": "-", "where": [{"field": "account.type", "op": "eq", "value": "expense"}]},
+                 {"line": "Result before tax", "op": "="}]}}}
+  ]
+}`
+
+func figureAsk() agent.Ask {
+	in := ask("show me the result for one month")
+	in.Types = append(in.Types,
+		core.ObjectType{Name: "account", Fields: []core.FieldDef{{Name: "code", Type: "string"}, {Name: "type", Type: "enum", Values: []string{"revenue", "expense"}}}},
+		core.ObjectType{Name: "posting", Fields: []core.FieldDef{{Name: "account", Type: "ref<account>"}, {Name: "side", Type: "enum", Values: []string{"debit", "credit"}},
+			{Name: "amount", Type: "money"}, {Name: "date", Type: "date"}, {Name: "book", Type: "string"}}})
+	in.Rules = []core.Rule{{ID: "book-sale", Spec: core.RuleSpec{Match: core.Match{EventType: "sales.invoice.issued"},
+		Effect: core.Effect{Postings: &core.PostingsTemplate{Book: "main"}}}}}
+	return in
+}
+
+func TestDraftFigure(t *testing.T) {
+	var seen string
+	a := &agent.Agent{Complete: func(ctx context.Context, system, user string) (string, error) {
+		seen = system + user
+		return figureBundle, nil
+	}}
+	b, err := a.DraftBundle(context.Background(), figureAsk())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b.Summary() != "1 view(s)" {
+		t.Fatalf("summary = %s", b.Summary())
+	}
+	if !strings.Contains(seen, "FIGURES") || !strings.Contains(seen, "Books the active rules post to: main") {
+		t.Fatalf("the author was not shown the tally or the book")
+	}
+	for name, edit := range map[string][2]string{
+		"SQL instead of a tally":    {`"spec": {"tally": {"of": "posting"`, `"spec": {"sql": "SELECT 1", "tally": {"of": "posting"`},
+		"no tally at all":           {`"spec": {"tally": {"of": "posting"`, `"spec": {"talley": {"of": "posting"`},
+		"a field the type lacks":    {`"field": "book"`, `"field": "ledger"`},
+		"through something no link": {`"field": "account.type", "op": "eq", "value": "revenue"`, `"field": "book.type", "op": "eq", "value": "revenue"`},
+		"the month of a string":     {`{"field": "date", "by": "month"`, `{"field": "book", "by": "month"`},
+	} {
+		answer := strings.Replace(figureBundle, edit[0], edit[1], 1)
+		if answer == figureBundle {
+			t.Fatalf("%s: edit did not apply", name)
+		}
+		if _, err := fixtureAgent(answer).DraftBundle(context.Background(), figureAsk()); err == nil {
+			t.Errorf("%s: accepted", name)
+		}
 	}
 }
