@@ -27,8 +27,10 @@ do not invent another one.
    `object_type`, `view_def`: changes are new version rows.
 2. Rules follow `draft → approved → active → superseded`; only `active` rules execute;
    activation requires an explicit human approval activity, itself recorded as an event.
-3. The agent never writes state. It returns strict JSON; the kernel validates against
-   schema and stores drafts. Model output is data, never executed.
+3. The agent never writes state. Its output is data: definitions stored as drafts and
+   activated only by a human approval, and read-only queries the kernel runs on the
+   analysis copy in a locked session that cannot write, reach files or reach the network.
+   Model output never runs with authority. (KK, 2026-10-17)
 4. Determinism: wiping projections and replaying the event log through the same rule
    versions reproduces identical object state. A test does exactly that.
 5. Every object and field is explained: provenance `(event_id, rule_id, rule_version)`

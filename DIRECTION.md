@@ -1093,6 +1093,12 @@ trust to a mechanism we already have, and says what would break it.
    must be *total* — no loops, no I/O, bounded cost per evaluation —
    and run by the kernel's own VM, never an eval. The same holds for
    every later sub-language: algorithmics are kernel code, never data.
+   **Reporting is the one place a model's query runs (KK, 2026-10-17):**
+   read-only SQL on the DuckDB analysis copy, in a session locked before
+   the query arrives — read-only, no files, no network, no extensions,
+   configuration frozen, one SELECT, bounded time, memory and rows. It
+   reads a derived copy and can change nothing; a kept report still waits
+   at the gate.
 2. **The partition key is the isolation key.** The company key of scale
    rule 1 is what row-level security keys on and what every store call
    carries as the principal's scope. Permissions, when they come, belong
@@ -2709,6 +2715,54 @@ team's page: at `/learning` beside the face, what installations were never
 taught, counted, each with where the team says it stands (open, planned for
 a pack, done, not for us) and a note, and what Rhea has learned across
 installations — read from the network, never from an installation's books.
+
+## Reporting: she queries the books and lays them out (KK, 2026-10-17)
+
+KK, the morning after the tally: Rhea's reporting should match a complex SQL
+query over a collection of DuckDB databases, with financial visualisation —
+KPI dashboards, financial statements, listings, pivot tables — and a report
+may have several visual components. Teaching her `count` as one keyword of
+many is the wrong road: use the model's ability to write the query, and
+visualise what comes back.
+
+**KK's decisions.** (1) Invariant 3 reworded (CLAUDE.md): her output is
+data — drafts activated by a person, and read-only queries the kernel runs
+locked on the analysis copy; model output never runs with authority. (2) A
+question is answered at once, without approval, when it only reads; what is
+kept as a report goes through the gate. (3) The collection is the
+business's own databases of objects — stock, workforce, sales quantities, a
+real-estate firm's buildings — whatever object types it has.
+
+**The collection.** One DuckDB schema per domain, one typed table per object
+type (`sales.sales_invoice`, `finance.posting`, `warehouse.stock_item`,
+`real_estate.building`): a column per field with its type, money as
+DECIMAL(18,2) (invariant 6), dates as DATE, links as the linked object's id,
+the provenance beside every row; the JSON `objects` table stays for the
+packs' hand-written SQL. A type the business teaches her is a table the next
+time the copy is built. The copy is rebuilt only when the log has moved.
+
+**The locked session.** DuckDB opened read-only; external access, extension
+install and autoload off; configuration locked; the query parsed and refused
+unless it is one SELECT; a time limit, a memory limit, a row cap. What a
+query can reach is the copy.
+
+**Two speeds.** Asked now: the author writes the query and a plain reading
+of what it counts, the kernel runs it locked and records the answer (what
+was asked, the query, the reading) so what she told someone can be read
+back; the face shows it marked as computed on request, with "why?" when the
+rows name their objects. Kept: „zachowaj jako raport” drafts a report — a
+page of components, each a query and a visual — previewed on the card,
+approved or corrected, then in the books for everyone and for dashboards.
+
+**Visuals.** KPI tiles, a financial statement (sections, subtotals, signs,
+negatives in parentheses), a listing, a pivot (DuckDB's own PIVOT), a bar or
+line chart. The query computes; the face lays out. The tally stays for the
+views already approved in it; the author stops drafting it.
+
+**Steps.** (1) The collection and the locked session. (2) Asked now: the
+author's query, the kernel's run, the record. (3) Reports with components,
+drafted, previewed, approved. (4) The face's visuals and its "ask now" and
+"keep it". (5) The author's grammar moves from the tally to queries.
 
 ## Language decisions with a recorded destination
 
