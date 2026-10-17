@@ -3519,3 +3519,24 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   is where it stands.
 - **The page itself** is the face's (the hosted network is the proprietary side of open core);
   the kernel serves only JSON.
+
+## 2026-10-17 — reporting, step 1: the collection and the locked session
+
+- **The collection.** The read side gains one DuckDB schema per domain (`SchemaOf`: the domain
+  as a plain name, "general" otherwise) and one typed table per object type: `id`, a column per
+  declared field (money DECIMAL(18,2), int BIGINT, decimal DECIMAL(38,10), date DATE, string /
+  enum / ref VARCHAR — a link is the linked id), and the provenance `_type_version _event _rule
+  _rule_version _occurred_at _root_event _state` (the whole state as JSON, so an undeclared value
+  is still there). The JSON `objects` table stays for the packs' SQL. Names are only the
+  catalog's plain names, quoted; a value that cannot be read as its type is NULL in its column.
+- **Rebuilt only when it moved.** `_rhea_meta` records what the copy was built from: the layout,
+  the log's last event, the company scope, a hash of the catalog; equal means the copy is read as
+  it is. `rhea replay` wipes the copy first.
+- **The locked session**, for every query — the packs' and hers: DuckDB opened read-only with
+  `enable_external_access=false`, extension install and autoload off, `lock_configuration=true`,
+  1 GB, two threads; `json_serialize_sql` must find exactly one SELECT (so `SELECT 1; SELECT 2`
+  and PRAGMA are refused even though the session could do no harm); 30 s; more than 10 000 rows
+  is refused rather than cut short. Probed: files, COPY, ATTACH, INSTALL, SET, CREATE, INSERT all
+  refused; CTEs, window functions and `PIVOT … FOR … IN` pass.
+- **Exact text for decimals**: the driver's own rendering drops trailing zeros (0.10 → 0.1), so the
+  kernel writes a decimal from its digits and scale.

@@ -438,6 +438,9 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		if err := project.Wipe(project.Path()); err != nil {
+			log.Fatal(err)
+		}
 		n, err := project.Rebuild(ctx, s, project.Path())
 		if err != nil {
 			log.Fatal(err)
