@@ -2694,6 +2694,19 @@ taught. (4) The face: her reply says what is missing, the offer to learn,
 the draft through the kernel's draft door, the card, and taught reports in
 what she can show.
 
+**Steps 1–4 done, 2026-10-17** (Rhea 4123502, 0f637e0, 4bbca7b, b46e4c8;
+rheaface d8d7460). Found on the way and answered: the author once drafted
+"sales by customer" over bookings grouped by account code — valid, wrong —
+so the grammar learned which to add up, and the card shows the figure's rows
+computed now (`/api/bundles/{id}/preview`) with „Nie tak” and a reason, which
+refuses the draft and has her redraft answering it. Live on Helios the whole
+loop ran: untaught → recorded and shared → drafted → previewed → corrected →
+approved → shown. **Still open:** the third way the loop closes — the network
+learning the shapes people taught and offering them as priors, as it does
+rule shapes; a page for the team to read what installations were never
+taught (today `rhea network` on the machine); consent to report, before the
+first stranger.
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
