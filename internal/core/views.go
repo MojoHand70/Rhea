@@ -105,6 +105,12 @@ const EventHostSaid = "host.said"
 // person's words, her general description, and whether it reached the house.
 const EventHostUntaught = "host.untaught"
 
+// EventHostAnswered is the raw event the host_answered door appends: a
+// question answered from the books now (DIRECTION 2026-10-17, "Reporting") —
+// what was asked, the query she wrote, what it counts, how it was shown, and
+// the first rows as they were told, so what she told someone can be read back.
+const EventHostAnswered = "host.answered"
+
 // QueueSpec: spec of a `queue` notion (DIRECTION 2026-10-10, "The host is a
 // concierge": what to do today). The objects of one type that match the
 // conditions — the open ones — ranked by a formula over each object's

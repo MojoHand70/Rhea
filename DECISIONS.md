@@ -3573,3 +3573,27 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   declaration, not on the status object (a money field cannot be empty).
 - **The morning** names the advance before VAT; told the month is running, she no longer says
   October "closed".
+
+## 2026-10-17 — reporting, step 2: a question answered from the books now
+
+- **`POST /api/answer`** (KK: answered at once when it only reads): the author writes one SELECT
+  over the collection, a plain reading of what it counts and a visual; the kernel runs it in the
+  locked session on the copy as it stands. DuckDB's refusal goes back to the author once (the
+  retry sees the query and DuckDB's words); a second refusal is a 422, never a guess. `cannot`
+  passes through as the author's reason.
+- **What the author sees**: the collection table by table, each column with its DuckDB type, the
+  field's kind, where a link points (`→ finance.company.id`) and the market's own name for the
+  type, the field and an enum's values (from the active words view); the books the rules post to;
+  today. The provenance columns are described once, not per table.
+- **The record**: a built-in door, `host_answered` (`host.answered`): the question, the query,
+  the reading, the visual, the first 50 rows as told, the row count, who asked. Nothing in the
+  books changes; what she told someone can be read back.
+- **"Why?"** keeps working: a query's `_of` column (the ids behind a row) is split out as
+  `row_objects`, never shown. Each column comes with its DuckDB type, so a face tells money
+  (DECIMAL(…,2)) from a count.
+- **A visual** (`core.Visual`: kpi, table, statement, bar, line, pivot, with the columns playing
+  each part and formats) is checked against the rows' columns; one that names a missing column
+  falls back to the rows as a table rather than failing the answer.
+- **Found**: the Poland pack puts nearly every type in the `finance` domain (invoices, companies,
+  tasks, vehicles), so its collection is one schema; giving sales, purchases, bank, tax and fleet
+  their own domains is a pack change, left while the pack is being edited for CIT.

@@ -87,6 +87,8 @@ func (s *Server) mux() http.Handler {
 	mux.HandleFunc("GET /api/untaught", s.handleUntaught)
 	mux.HandleFunc("POST /api/untaught", s.handleNoteUntaught)
 	mux.HandleFunc("GET /api/network/learning", s.handleLearning)
+	mux.HandleFunc("GET /api/collection", s.handleCollection)
+	mux.HandleFunc("POST /api/answer", s.handleAnswer)
 	mux.HandleFunc("POST /api/network/lessons", s.handleNoteLesson)
 	mux.HandleFunc("GET /api/files", s.handleFiles)
 	mux.HandleFunc("GET /api/files/{writer}", s.handleFile)

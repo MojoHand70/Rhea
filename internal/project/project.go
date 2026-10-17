@@ -258,29 +258,44 @@ func Query(ctx context.Context, duckPath, query string) ([]string, [][]string, e
 // Run is Query with a row limit of the caller's: it reads at most limit
 // rows and says whether there were more.
 func Run(ctx context.Context, duckPath, query string, limit int) ([]string, [][]string, bool, error) {
+	cols, _, rows, more, err := RunTyped(ctx, duckPath, query, limit)
+	return cols, rows, more, err
+}
+
+// RunTyped is Run with each column's DuckDB type beside its name
+// (DECIMAL(18,2), DATE, VARCHAR…), so a face knows money from a count.
+func RunTyped(ctx context.Context, duckPath, query string, limit int) ([]string, []string, [][]string, bool, error) {
 	ctx, cancel := context.WithTimeout(ctx, QueryTimeout)
 	defer cancel()
 	db, err := sql.Open("duckdb", duckPath+locked)
 	if err != nil {
-		return nil, nil, false, err
+		return nil, nil, nil, false, err
 	}
 	defer db.Close()
 	if err := oneSelect(ctx, db, query); err != nil {
-		return nil, nil, false, err
+		return nil, nil, nil, false, err
 	}
 	rows, err := db.QueryContext(ctx, query)
 	if err != nil {
-		return nil, nil, false, err
+		return nil, nil, nil, false, err
 	}
 	defer rows.Close()
 	cols, err := rows.Columns()
 	if err != nil {
-		return nil, nil, false, err
+		return nil, nil, nil, false, err
+	}
+	cts, err := rows.ColumnTypes()
+	if err != nil {
+		return nil, nil, nil, false, err
+	}
+	types := make([]string, len(cts))
+	for i, ct := range cts {
+		types[i] = ct.DatabaseTypeName()
 	}
 	var out [][]string
 	for rows.Next() {
 		if len(out) == limit {
-			return cols, out, true, nil
+			return cols, types, out, true, nil
 		}
 		vals := make([]any, len(cols))
 		ptrs := make([]any, len(cols))
@@ -288,7 +303,7 @@ func Run(ctx context.Context, duckPath, query string, limit int) ([]string, [][]
 			ptrs[i] = &vals[i]
 		}
 		if err := rows.Scan(ptrs...); err != nil {
-			return nil, nil, false, err
+			return nil, nil, nil, false, err
 		}
 		row := make([]string, len(cols))
 		for i, v := range vals {
@@ -296,7 +311,7 @@ func Run(ctx context.Context, duckPath, query string, limit int) ([]string, [][]
 		}
 		out = append(out, row)
 	}
-	return cols, out, false, rows.Err()
+	return cols, types, out, false, rows.Err()
 }
 
 // oneSelect asks DuckDB how it reads the query: exactly one statement, and

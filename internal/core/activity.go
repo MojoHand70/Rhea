@@ -723,6 +723,24 @@ func BuiltinActivities() []Activity {
 			},
 		},
 		{
+			Name: "host_answered", Domain: "system",
+			Description: "A question answered from the books now: what was asked, the read-only query the author wrote, what it counts in plain words, how it was shown and the first rows as they were told. Nothing in the books changed; this is the record of what she said.",
+			Spec: ActivitySpec{
+				Inputs: []FieldDef{
+					{Name: "question", Type: "string", Required: true},
+					{Name: "sql", Type: "string", Required: true},
+					{Name: "reading", Type: "string", Required: true},
+					{Name: "visual", Type: "string", Required: true},
+					{Name: "result", Type: "string", Required: true},
+					{Name: "rows", Type: "int", Required: true},
+					{Name: "asked_by", Type: "string", Required: true},
+					{Name: "occurred_at", Type: "date", Required: true},
+				},
+				Emits: EventHostAnswered,
+				Who:   []string{"human"},
+			},
+		},
+		{
 			Name: "note_untaught", Domain: "system",
 			Description: "What the host was asked and had not been taught: the person's own words, which stay in this installation, and her general description of the missing skill, which reaches the Rhea team when it carries no number and no name the installation holds — whether it did, and why not, is part of the fact. Rhea learns from every client what she was never taught, with people in the loop.",
 			Spec: ActivitySpec{
