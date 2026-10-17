@@ -2645,6 +2645,55 @@ pack declaring its screens is the next refinement. Found on the way: the
 host sometimes writes amounts the Polish way (44 900,00) and the face read
 only the last group — fixed in the face.
 
+## Teaching her a figure; what she was never taught reaches the house (KK, 2026-10-17)
+
+The case. KK asked the face on his phone „Możesz pokazać wynik za sierpień
+tylko?” and she answered that she shows the result only since January —
+true, because the Poland pack had no monthly result. Pack v25 taught it
+(approved by KK on his phone, the first approval there). KK's three points:
+
+- **She names the missing lesson.** When she cannot, she says she was never
+  taught it and that it is not in the pack she works with — not a nearby
+  answer passed off as the asked one. Shipped in the face the same day.
+- **A person teaches her.** Today a figure is SQL a pack's author writes by
+  hand; the AI author may not draft it, because model-written SQL run
+  against the books is model output executed (invariant 3). So a figure
+  gets a fill-in shape — a **tally**: what is added up (the bookings, or one
+  document type, and which amount), which of them (conditions on fields,
+  one step through a link: the booking's account is revenue), grouped how
+  (a field, or the month of a date; two at most), in which lines (+, −, and
+  = for the lines above). The kernel writes the query from checked parts,
+  so a drafted tally is data. Then: she says she was never taught it, offers
+  „Mam się tego nauczyć?”, the author drafts the tally, the card waits on
+  Today, the person approves, and she shows it from then on.
+- **Rhea learns from every client what she was never taught — with people
+  in the loop.** Residue across the network is demand (above); so is every
+  „nie nauczono mnie”, and it comes with words. An untaught moment is a fact
+  in the installation's log (the person's words, which stay home), and her
+  general description of the missing skill reaches the network, where the
+  Rhea team reads them across installations, counted. The loop closes three
+  ways: the owner teaches her there and then; the team ships the lesson in
+  the pack (v25 was exactly that, by hand); the network learns the shapes
+  people taught (as it learns rule shapes) and offers them as priors.
+
+**The standard proposed for what leaves** (Rhea suggests standards): her
+general description only, never the person's words; refused at the door if
+it carries a digit or a name the installation holds (a company, a person) —
+then it stays home, marked unshared; the owner sees everything she reported.
+Before the first stranger (the public free service), an installation's
+consent to report joins the security floor.
+
+**Steps.** (1) The tally in the kernel: compiled on every read of an
+analysis view (the view, "why?" on a cell, the host's facts); proved by
+writing the monthly result as a tally and getting the pack's own rows,
+booking for booking. (2) The author drafts tallies: the grammar shows the
+shape, validation checks it against the catalog with the bundle's new
+types. (3) The untaught moment: a door that records it, the network that
+hears the description, `rhea network` listing what installations were never
+taught. (4) The face: her reply says what is missing, the offer to learn,
+the draft through the kernel's draft door, the card, and taught reports in
+what she can show.
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,

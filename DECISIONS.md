@@ -3406,3 +3406,22 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   where the closed months left it; the document keeps its own date in the log. The months add up
   to `wynik` — the test checks both.
 - **Poland pack v25.** One view, nothing else; an installed v24 upgrades through the gate.
+
+## 2026-10-17 — a figure she can be taught: the tally (step 1)
+
+- **Why.** An analysis view was SQL a pack's author writes; the AI author may not write SQL that
+  runs against the books (invariant 3), so nobody could teach her a figure in words (DIRECTION,
+  "Teaching her a figure").
+- **`analysis` with a `tally` instead of `sql`.** No new notion: the same view, the same readers.
+  `TallySpec` names the type added up, the amount (a money field, or `debit-credit` /
+  `credit-debit` on a type with a side and an amount — the kernel's postings), conditions
+  (`eq ne in exists absent`, on a field or one step through a link), at most two groupings (a
+  field or the month of a date), and lines (+, −, = for the lines above). The kernel writes the
+  query: every name must be one the catalog holds, every value becomes a quoted literal.
+- **Compiled at read time** against the catalog as it stands, in one place (`analysisSpec`) for
+  the view, "why?" and the host's facts; a view carrying both SQL and a tally is refused.
+- **Columns are the kernel's** (the groupings, then op, line, amount, and the row lineage),
+  labelled by the tally (`label`, `line_label`, `amount_label`) — the kernel names nothing in
+  any language. A plain sum of one money field declares `sum_of`, so "why?" checks it.
+- **Proof.** The monthly result written as a tally gives the pack's own SQL rows and bookings;
+  the pack keeps its SQL (no second approval of the same skill on white01).

@@ -182,8 +182,8 @@ func (s *Server) explainCell(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 404, fmt.Errorf("explain: no analysis view %q", q.Get("view")))
 		return
 	}
-	var spec core.AnalysisSpec
-	if err := json.Unmarshal(vd.Spec, &spec); err != nil {
+	spec, err := s.analysisSpec(ctx, vd.Spec)
+	if err != nil {
 		writeErr(w, 500, err)
 		return
 	}

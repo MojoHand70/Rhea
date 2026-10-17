@@ -61,8 +61,8 @@ func (s *Server) serveNarrative(ctx context.Context, w http.ResponseWriter, vd *
 		fact := narrativeFact{As: as, View: fv.ID, Title: fv.Title, Kind: fv.Notion}
 		switch fv.Notion {
 		case "analysis":
-			var as core.AnalysisSpec
-			if err := json.Unmarshal(fv.Spec, &as); err != nil {
+			as, err := s.analysisSpec(ctx, fv.Spec)
+			if err != nil {
 				writeErr(w, 500, err)
 				return
 			}
@@ -286,6 +286,28 @@ func amountColumn(t string) bool { return t == "money" || t == "int" }
 // RowsOfColumn), when the view's SQL has one, is taken out of the columns
 // and returned beside the rows: what each row is made of, never a figure —
 // so the host's facts, which carry the rows, never carry object ids.
+// analysisSpec decodes an analysis view's spec; a tally becomes its query and
+// columns here, against the catalog as it stands, so every reader — the
+// view, "why?" on a cell, the host's facts — runs the same thing.
+func (s *Server) analysisSpec(ctx context.Context, raw json.RawMessage) (core.AnalysisSpec, error) {
+	var spec core.AnalysisSpec
+	if err := json.Unmarshal(raw, &spec); err != nil {
+		return spec, err
+	}
+	if spec.Tally == nil {
+		return spec, nil
+	}
+	if spec.SQL != "" {
+		return spec, fmt.Errorf("an analysis is its own SQL or a tally, not both")
+	}
+	types, err := s.Store.ListObjectTypes(ctx)
+	if err != nil {
+		return spec, err
+	}
+	spec.SQL, spec.Columns, err = spec.Tally.Compile(agent.CatalogOf(types))
+	return spec, err
+}
+
 func (s *Server) analysisData(ctx context.Context, spec core.AnalysisSpec) ([]columnOut, [][]cellOut, [][]string, error) {
 	s.duck.Lock() // the rebuild and the read are one step: no other rebuild between them
 	defer s.duck.Unlock()

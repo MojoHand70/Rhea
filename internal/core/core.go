@@ -649,9 +649,12 @@ type SectionSpec struct {
 }
 
 // AnalysisSpec: spec of an `analysis` notion; SQL runs on the DuckDB read side.
+// With a Tally instead of SQL, the kernel writes the query and its columns
+// itself (TallySpec): the shape a person teaches and the author drafts.
 type AnalysisSpec struct {
 	SQL     string       `json:"sql"`
 	Columns []ColumnSpec `json:"columns"`
+	Tally   *TallySpec   `json:"tally,omitempty"`
 }
 
 // RowsOfColumn is the analysis column through which a view says what each

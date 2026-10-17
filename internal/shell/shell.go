@@ -457,8 +457,8 @@ func (s *Server) serveDetail(ctx context.Context, w http.ResponseWriter, vd *cor
 }
 
 func (s *Server) serveAnalysis(ctx context.Context, w http.ResponseWriter, vd *core.ViewDef) {
-	var spec core.AnalysisSpec
-	if err := json.Unmarshal(vd.Spec, &spec); err != nil {
+	spec, err := s.analysisSpec(ctx, vd.Spec)
+	if err != nil {
 		writeErr(w, 500, err)
 		return
 	}

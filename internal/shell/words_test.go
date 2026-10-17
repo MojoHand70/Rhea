@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http/httptest"
 	"path/filepath"
 	"strings"
@@ -267,5 +268,47 @@ func TestThePackSpeaks(t *testing.T) {
 	}
 	if wv[0][2] != "3500.00" || wv[1][2] != "400.00" || wv[2][2] != core.FormatMoney(sum) || wv[2][2] != "3100.00" {
 		t.Fatalf("since January %v, the months add up to %s", wv, core.FormatMoney(sum))
+	}
+
+	// The same report as a tally — the shape a person teaches and the
+	// author drafts (DIRECTION 2026-10-17, "Teaching her a figure"): the
+	// kernel writes the query, and it finds what the pack's own SQL finds,
+	// row for row and booking for booking.
+	install := func(id string, spec map[string]any) {
+		t.Helper()
+		b, _ := json.Marshal(map[string]any{"tally": spec})
+		if err := s.InsertViewDef(ctx, core.ViewDef{ID: id, Version: 1, Notion: "analysis", Title: id, Domain: "finance", Function: "analysis", Spec: b}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	accType := func(v string) []map[string]any {
+		return []map[string]any{{"field": "account.type", "op": "eq", "value": v}}
+	}
+	install("taught-result", map[string]any{"of": "posting", "value": "debit-credit",
+		"where": []map[string]any{{"field": "book", "op": "eq", "value": "pl-stat"}, {"field": "account.type", "op": "in", "value": []string{"revenue", "expense"}}},
+		"by":    []map[string]any{{"field": "date", "by": "month", "label": "Miesiąc"}},
+		"lines": []map[string]any{{"line": "Przychody", "value": "credit-debit", "where": accType("revenue")},
+			{"line": "Koszty", "op": "-", "where": accType("expense")}, {"line": "Wynik przed opodatkowaniem", "op": "="}},
+		"line_label": "Pozycja", "amount_label": "Kwota"})
+	var taught rows
+	get("/api/views/taught-result", &taught)
+	if a, b := cellVals(taught.Rows), mv; fmt.Sprint(a) != fmt.Sprint(b) || fmt.Sprint(taught.Of) != fmt.Sprint(months.Of) {
+		t.Fatalf("the tally finds\n%v %v\nthe pack's SQL\n%v %v", a, taught.Of, b, months.Of)
+	}
+	if f := taught.Columns; len(f) != 4 || f[0].Field != "month" || f[3].Field != "amount" {
+		t.Fatalf("columns: %+v", f)
+	}
+	// A document tally: sales by buyer and month, its cells checking themselves.
+	install("taught-sales", map[string]any{"of": "sales_invoice", "value": "net",
+		"by": []map[string]any{{"field": "buyer.name", "label": "Klient"}, {"field": "issue_date", "by": "month", "label": "Miesiąc"}}, "amount_label": "Netto"})
+	var sales rows
+	get("/api/views/taught-sales", &sales)
+	if sv := cellVals(sales.Rows); fmt.Sprint(sv) != "[[Nabywca S.A. 2026-08 2000.00] [Nabywca S.A. 2026-09 1500.00]]" || len(sales.Of[1]) != 2 {
+		t.Fatalf("sales by buyer and month: %v %v", sv, sales.Of)
+	}
+	why.Sums = nil
+	get("/api/explain?view=taught-sales&row=1&col=amount", &why)
+	if why.Sums == nil || !*why.Sums {
+		t.Fatalf("September's sales do not add up on why?")
 	}
 }
