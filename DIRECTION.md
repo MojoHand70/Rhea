@@ -2680,8 +2680,8 @@ true, because the Poland pack had no monthly result. Pack v25 taught it
 general description only, never the person's words; refused at the door if
 it carries a digit or a name the installation holds (a company, a person) —
 then it stays home, marked unshared; the owner sees everything she reported.
-Before the first stranger (the public free service), an installation's
-consent to report joins the security floor.
+A client's consent to report is part of onboarding (KK, 2026-10-17): asked
+once when the client joins, not built before then.
 
 **Steps.** (1) The tally in the kernel: compiled on every read of an
 analysis view (the view, "why?" on a cell, the host's facts); proved by
@@ -2703,7 +2703,7 @@ refuses the draft and has her redraft answering it. Live on Helios the whole
 loop ran: untaught → recorded and shared → drafted → previewed → corrected →
 approved → shown. **Still open:** the third way the loop closes — the network
 learning the shapes people taught and offering them as priors, as it does
-rule shapes; consent to report, before the first stranger. **The Learning
+rule shapes. (Consent to report is onboarding's, KK.) **The Learning
 Centre** (KK's name, 2026-10-17; Rhea 1347c0e, rheaface f36ee00) is the
 team's page: at `/learning` beside the face, what installations were never
 taught, counted, each with where the team says it stands (open, planned for

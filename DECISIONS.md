@@ -3458,7 +3458,7 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   when, synthetic), read counted — one row per description regardless of case and outer spaces,
   installations and times — by `rhea network` under "never taught yet". Simulated customers are
   marked and left out, as with rule shapes.
-- **Owed before the first stranger**: an installation's consent to report, with the security floor.
+- **Consent to report** is part of onboarding (KK, 2026-10-17): asked when a client joins; nothing to build before then.
 
 ## 2026-10-17 — approving what you can read: the waiting figure previewed (step 4, the kernel's part)
 
