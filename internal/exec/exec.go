@@ -897,6 +897,9 @@ func (x *Executor) env(ctx context.Context, payload any, lookup core.Lookup, get
 		},
 		Typed:         typed,
 		MaxCollection: x.MaxCollection,
+		Balance: func(book, account, from, to string) (int64, error) {
+			return x.Store.AccountBalance(ctx, book, account, from, to)
+		},
 	}
 }
 

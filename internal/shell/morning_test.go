@@ -160,11 +160,12 @@ func TestTheMorningByRole(t *testing.T) {
 	if r := m["payables"]; r == nil || r[2] != "492.00" || r[3] != "1" {
 		t.Fatalf("payables: %v", r)
 	}
-	// The deadlines: the CIT advance for September on the 20th, without an
-	// amount and saying why; VAT for September on the 25th — a Sunday this
-	// year, so Monday the 26th — with the closed month's amount.
+	// The deadlines: the CIT advance for September on the 20th, computed at
+	// the close (no status declared for the year: 19% of 1500.00); VAT for
+	// September on the 25th — a Sunday this year, so Monday the 26th — with
+	// the closed month's amount.
 	cal := func() string { return table("kalendarz-podatkowy") }
-	if got, want := cal(), "[[2026-10-20 Zaliczka na CIT 2026-09  księgi jeszcze jej nie liczą] [2026-10-26 VAT i JPK_V7M 2026-09 346.00 ]]"; got != want {
+	if got, want := cal(), "[[2026-10-20 Zaliczka na CIT 2026-09 285.00 ] [2026-10-26 VAT i JPK_V7M 2026-09 346.00 ]]"; got != want {
 		t.Fatalf("the deadlines on %s:\n got %s\nwant %s", day, got, want)
 	}
 	// What is open: the payment nothing explains; no month waits to close.
@@ -179,10 +180,10 @@ func TestTheMorningByRole(t *testing.T) {
 	}
 
 	// December: the 20th is a Sunday, and the 25th, 26th and 27th are
-	// Christmas, a Saturday and a Sunday; November is not closed, so VAT has
-	// no amount yet, and October waits to be closed.
+	// Christmas, a Saturday and a Sunday; November is not closed, so neither
+	// has an amount yet, and October waits to be closed.
 	day = "2026-12-10"
-	if got, want := cal(), "[[2026-12-21 Zaliczka na CIT 2026-11  księgi jeszcze jej nie liczą] [2026-12-28 VAT i JPK_V7M 2026-11  miesiąc jeszcze niezamknięty]]"; got != want {
+	if got, want := cal(), "[[2026-12-21 Zaliczka na CIT 2026-11  miesiąc jeszcze niezamknięty] [2026-12-28 VAT i JPK_V7M 2026-11  miesiąc jeszcze niezamknięty]]"; got != want {
 		t.Fatalf("the deadlines on %s:\n got %s\nwant %s", day, got, want)
 	}
 	if got := table("poranek-otwarte"); !strings.HasPrefix(got, "[[unclosed Miesiące do zamknięcia 1  2026-10]") {

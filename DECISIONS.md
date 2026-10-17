@@ -3540,3 +3540,36 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   refused; CTEs, window functions and `PIVOT … FOR … IN` pass.
 - **Exact text for decimals**: the driver's own rendering drops trailing zeros (0.10 → 0.1), so the
   kernel writes a decimal from its digits and scale.
+
+## 2026-10-17 — the CIT advance, KUP and NKUP (Poland pack v27)
+
+- **KK.** "CIT, KUP and NKUP are very important." The review's defaults (CIT-02, CIT-03, CIT-06)
+  are built: the advance is a fact computed when a month closes, like the VAT settlement.
+- **The kernel reads the ledger.** A year of postings is above any collection cap, so the
+  formula language gains `balance(book, code, from, to)` — debits less credits of one account in
+  a book over a range of dates, one aggregate the store computes, not a fold — and
+  `start_of_year(d)`. A rule folds over the chart (a few dozen accounts), never over postings.
+  The read is an input in the Calc; replay never recomputes, so it reproduces what was read.
+- **Accounts say what they are for income tax** (`account` v2, `tax_treatment`: deductible,
+  non_deductible, taxable, not_taxable; amendable through `set_tax_treatment`). Unmarked, a cost
+  is a tax cost and a revenue is taxable — the CIT act's own shape (art. 15 ust. 1: costs are
+  tax costs except art. 16). A cost cannot be declared a revenue: the declaration waits. New NKUP
+  accounts: 409-1 entertainment (art. 16 ust. 1 pkt 28), 751-1 interest on tax arrears and
+  761-1 fines (pkt 18), 761-2 donations (pkt 14); 870 income tax, a type of its own
+  (`income_tax`), so "result before tax" never sees the charge.
+- **9% or 19%** from facts: `declare_cit_status` per tax year (when the business started, how
+  the company was formed, last year's gross sales). 9% in the year business started unless
+  formed by transformation or contribution (then not in that year or the next), else for a
+  small taxpayer; and only while the year's revenue stays within the in-year limit. No status
+  declared: 19%. The newest declaration for a year stands. Limits per year are data
+  (`cit_limit.defined`; 2026: 8 517 000 and 8 431 000 zł from podatki.gov.pl).
+- **The advance**: income from January (revenue less not-taxable, less costs plus NKUP), the
+  base in whole złoty, the year's tax, less the advances for earlier months of the year, never
+  below zero (no refund); booked Wn 870 / Ma 225 so a payment from the tax micro-account
+  clears it. The charge books on the close's date, in the first open month.
+- **Not yet**: quarterly and simplified advances, losses carried forward, deductible-when-paid
+  (wages, ZUS) and the 90-day unpaid-invoice adjustment (art. 15b/18f), car limits, the CIT-8,
+  income outside the main source (capital gains at 19%). Prior-year sales stay on the
+  declaration, not on the status object (a money field cannot be empty).
+- **The morning** names the advance before VAT; told the month is running, she no longer says
+  October "closed".

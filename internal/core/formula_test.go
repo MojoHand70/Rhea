@@ -463,3 +463,40 @@ func TestFormulaFX(t *testing.T) {
 		t.Fatal("fx with two arguments")
 	}
 }
+
+// balance(): the ledger's own read — an account named by its code, in a
+// book, over a range of dates — and start_of_year(), the range's start.
+func TestFormulaBalance(t *testing.T) {
+	accounts := map[string]map[string]any{"account-1": {"code": "700"}, "account-2": {"code": "403"}}
+	var asked []string
+	env := &Env{
+		Lookup: func(typ, field string, value any) ([]string, error) {
+			var ids []string
+			for id, st := range accounts {
+				if typ == "account" && st[field] == value {
+					ids = append(ids, id)
+				}
+			}
+			return ids, nil
+		},
+		Get: func(id string) (map[string]any, bool, error) { st, ok := accounts[id]; return st, ok, nil },
+		Balance: func(book, account, from, to string) (int64, error) {
+			asked = append(asked, book+" "+account+" "+from+" "+to)
+			return map[string]int64{"account-1": -150000, "account-2": 40000}[account], nil
+		},
+	}
+	p := `{"period": "2026-09-30"}`
+	v, calc := evalFormula(t, `=-balance("pl-stat", "700", start_of_year($.period), $.period) - balance("pl-stat", "403", start_of_year($.period), $.period)`, p, "money", env)
+	if v != int64(110000) || fmt.Sprint(asked) != "[pl-stat account-1 2026-01-01 2026-09-30 pl-stat account-2 2026-01-01 2026-09-30]" ||
+		calc.Inputs["balance(pl-stat, 700, 2026-01-01, 2026-09-30)"] != "-1500.00" {
+		t.Fatalf("revenue less costs since January = %v (asked %v, inputs %v)", v, asked, calc.Inputs)
+	}
+	if v, _ := evalFormula(t, `=start_of_year("2026-09-30")`, p, "date", nil); v != "2026-01-01" {
+		t.Fatalf("start_of_year = %v", v)
+	}
+	wantErr(t, `=balance("pl-stat", "999", "2026-01-01", $.period)`, p, "money", env, "no account with code = 999")
+	wantErr(t, `=balance("pl-stat", "700", "2026-01-01", $.period)`, p, "money", &Env{Lookup: env.Lookup}, "balance() needs the books")
+	if _, err := ParseFormula(`balance("pl-stat", "700", "2026-01-01")`); err == nil {
+		t.Fatal("balance with three arguments")
+	}
+}

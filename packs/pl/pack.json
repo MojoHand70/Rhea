@@ -1,7 +1,7 @@
 {
   "pack": "pl",
-  "version": 26,
-  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami; poranek: gospodarz mówi, co zaksięgowano i co czeka, z faktów, które policzyło jądro; dziś: otwarte zadania i należności w kolejności pilności, z zatwierdzeniami, które czekają; KSeF na zewnątrz: faktury sprzedaży idą do KSeF jako FA(3) jedną sesją interaktywną, dowód (numer KSeF, UPO) i odmowa (kod, słowa Ministerstwa) są zdarzeniami, odmowa staje się zadaniem na dziś; koniec miesiąca: faktury niosą okres VAT, zamknięcie miesiąca (period.closed) daje rozliczenie VAT jako obiekt policzony regułą — każda liczba deklaracji ma pochodzenie; plik JPK_V7M z rozliczenia i faktur miesiąca (writer rynku), firma zna swój urząd skarbowy, e-mail i formę prawną, faktura zakupu z KSeF niesie numer KSeF; firma mówi, kim jest dla urzędu (identify_company): e-mail, urząd skarbowy, forma prawna, właściciel; v19 (przegląd pakietu, 2026-10-16): daty, które decydują o okresie VAT — faktura sprzedaży niesie datę sprzedaży (P_6, a gdy jej nie podano, datę wystawienia) i okres VAT według obowiązku podatkowego; faktura zakupu niesie datę sprzedaży u dostawcy i datę otrzymania (dla KSeF: dzień nadania numeru), a odliczenie przypada na późniejszy z tych miesięcy; firma mówi, czym jest (declare_company_form): status VAT (czynny albo zwolniony, z przepisem zwolnienia), forma ksiąg i forma opodatkowania od wskazanej daty; firma zwolniona nie rozlicza VAT i nie składa JPK_V7, a VAT od jej zakupów jest kosztem; faktury bez VAT (zw, 0%) księgują się bez linii VAT; każda zmieniona reguła nazywa swoje źródło; v20 (przegląd, 2026-10-16): zakup trafia w koszty — usługa albo wydatek bez dokumentu dostawy na konto kosztowe dostawcy (set_cost_account), a gdy go nie podano, na 403 usługi obce; zakup z dokumentem dostawy (WZ) czeka na 300 na rozliczenie z przyjęciem (PZ); różnice groszowe rozliczeń: niedopłata 761, nadpłata 760 (pozostałe operacyjne), cofnięcie wraca tym kontem, którym weszło; konta 750, 751, 761 w planie kont; v21 (przegląd, 2026-10-16): pozycja wyciągu najpierw mówi, czym jest — opłata i odsetki po kodzie banku, przelew między własnymi rachunkami, wpłata na mikrorachunek podatkowy, na rachunek składkowy ZUS, pieniądze właściciela — a dopiero reszta jest zapłatą kontrahenta, którą się rozlicza z fakturami; każda księguje się na swoje konto (149, 225, 229, 249, 403, 750/751); osoba może przeklasyfikować pozycję, której nic nie rozliczyło (classify_bank_operation); deklaracja formy firmy sprawdza formę prawną (spółka: CIT i pełne księgi); v22 (przegląd, 2026-10-16): waluty — faktura w walucie obcej niesie netto i VAT w złotych po kursie średnim NBP z ostatniego dnia roboczego przed dniem sprzedaży (kanał pl-nbp), księgi przeliczają po tym samym kursie, a zapłatę po kursie z jej dnia; różnica kursowa zrealizowana przy rozliczeniu trafia na 750 albo 751 i cofa się tym samym kontem; rozliczenie VAT, JPK i faktura w KSeF (P_14_xW) liczą VAT w złotych; v23 (twarz, 2026-10-16): rejestry VAT mówią, z jakich faktur jest każdy wiersz (kolumna _of), a każda kolumna kwot — co sumuje; „dlaczego?” na komórce rejestru odpowiada fakturami i sprawdza, że składają się na kwotę; v24 (twarz, krok 3, 2026-10-17): pakiet mówi słowami twarzy — słownik (nazwy typów, pól, wartości, zdarzeń, drzwi, zespołów planu kont i kształt każdego typu), deklaracja VAT jako zestawienie pozycji rozliczenia, a liczby, które twarz liczyła sama, liczy jądro: rano w liczbach (rachunek, należności, zobowiązania, VAT, co zrobiono), wynik od początku roku, należności według wieku na dzień jądra; v25 (twarz, 2026-10-17): wynik miesiąc po miesiącu — przychody, koszty i wynik każdego miesiąca ksiąg, każdy wiersz z zapisów, z których jest; zapis spóźnionego dokumentu liczy się w miesiącu, w którym go zaksięgowano; suma miesięcy to wynik od początku roku; v26 (poranek, 2026-10-17): poranek według roli — właściciel słyszy najpierw wynik (ten miesiąc do dziś, poprzedni, od stycznia, przed opodatkowaniem), potem pieniądze (rachunek, należności z najstarszą fakturą, zobowiązania), terminy podatkowe jednym zdaniem i to, co czeka; księgowość (rola accountant) słyszy najpierw, co jest otwarte (miesiące do zamknięcia, pozycje wyciągu bez rozliczenia, zadania po terminie), potem terminy z kwotami albo powodem ich braku, wynik na końcu; VAT jest terminem z kwotą, nie nagłówkiem; terminy podatkowe: VAT i JPK_V7M do 25., zaliczka na podatek dochodowy do 20. dnia następnego miesiąca, przesunięte na najbliższy dzień roboczy, gdy wypadają w sobotę albo dzień ustawowo wolny (Wielkanoc i Boże Ciało liczone); kwoty zaliczki księgi jeszcze nie liczą i mówią to wprost; rano w liczbach zaczyna się od wyniku tego miesiąca i od początku roku",
+  "version": 27,
+  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami; poranek: gospodarz mówi, co zaksięgowano i co czeka, z faktów, które policzyło jądro; dziś: otwarte zadania i należności w kolejności pilności, z zatwierdzeniami, które czekają; KSeF na zewnątrz: faktury sprzedaży idą do KSeF jako FA(3) jedną sesją interaktywną, dowód (numer KSeF, UPO) i odmowa (kod, słowa Ministerstwa) są zdarzeniami, odmowa staje się zadaniem na dziś; koniec miesiąca: faktury niosą okres VAT, zamknięcie miesiąca (period.closed) daje rozliczenie VAT jako obiekt policzony regułą — każda liczba deklaracji ma pochodzenie; plik JPK_V7M z rozliczenia i faktur miesiąca (writer rynku), firma zna swój urząd skarbowy, e-mail i formę prawną, faktura zakupu z KSeF niesie numer KSeF; firma mówi, kim jest dla urzędu (identify_company): e-mail, urząd skarbowy, forma prawna, właściciel; v19 (przegląd pakietu, 2026-10-16): daty, które decydują o okresie VAT — faktura sprzedaży niesie datę sprzedaży (P_6, a gdy jej nie podano, datę wystawienia) i okres VAT według obowiązku podatkowego; faktura zakupu niesie datę sprzedaży u dostawcy i datę otrzymania (dla KSeF: dzień nadania numeru), a odliczenie przypada na późniejszy z tych miesięcy; firma mówi, czym jest (declare_company_form): status VAT (czynny albo zwolniony, z przepisem zwolnienia), forma ksiąg i forma opodatkowania od wskazanej daty; firma zwolniona nie rozlicza VAT i nie składa JPK_V7, a VAT od jej zakupów jest kosztem; faktury bez VAT (zw, 0%) księgują się bez linii VAT; każda zmieniona reguła nazywa swoje źródło; v20 (przegląd, 2026-10-16): zakup trafia w koszty — usługa albo wydatek bez dokumentu dostawy na konto kosztowe dostawcy (set_cost_account), a gdy go nie podano, na 403 usługi obce; zakup z dokumentem dostawy (WZ) czeka na 300 na rozliczenie z przyjęciem (PZ); różnice groszowe rozliczeń: niedopłata 761, nadpłata 760 (pozostałe operacyjne), cofnięcie wraca tym kontem, którym weszło; konta 750, 751, 761 w planie kont; v21 (przegląd, 2026-10-16): pozycja wyciągu najpierw mówi, czym jest — opłata i odsetki po kodzie banku, przelew między własnymi rachunkami, wpłata na mikrorachunek podatkowy, na rachunek składkowy ZUS, pieniądze właściciela — a dopiero reszta jest zapłatą kontrahenta, którą się rozlicza z fakturami; każda księguje się na swoje konto (149, 225, 229, 249, 403, 750/751); osoba może przeklasyfikować pozycję, której nic nie rozliczyło (classify_bank_operation); deklaracja formy firmy sprawdza formę prawną (spółka: CIT i pełne księgi); v22 (przegląd, 2026-10-16): waluty — faktura w walucie obcej niesie netto i VAT w złotych po kursie średnim NBP z ostatniego dnia roboczego przed dniem sprzedaży (kanał pl-nbp), księgi przeliczają po tym samym kursie, a zapłatę po kursie z jej dnia; różnica kursowa zrealizowana przy rozliczeniu trafia na 750 albo 751 i cofa się tym samym kontem; rozliczenie VAT, JPK i faktura w KSeF (P_14_xW) liczą VAT w złotych; v23 (twarz, 2026-10-16): rejestry VAT mówią, z jakich faktur jest każdy wiersz (kolumna _of), a każda kolumna kwot — co sumuje; „dlaczego?” na komórce rejestru odpowiada fakturami i sprawdza, że składają się na kwotę; v24 (twarz, krok 3, 2026-10-17): pakiet mówi słowami twarzy — słownik (nazwy typów, pól, wartości, zdarzeń, drzwi, zespołów planu kont i kształt każdego typu), deklaracja VAT jako zestawienie pozycji rozliczenia, a liczby, które twarz liczyła sama, liczy jądro: rano w liczbach (rachunek, należności, zobowiązania, VAT, co zrobiono), wynik od początku roku, należności według wieku na dzień jądra; v25 (twarz, 2026-10-17): wynik miesiąc po miesiącu — przychody, koszty i wynik każdego miesiąca ksiąg, każdy wiersz z zapisów, z których jest; zapis spóźnionego dokumentu liczy się w miesiącu, w którym go zaksięgowano; suma miesięcy to wynik od początku roku; v26 (poranek, 2026-10-17): poranek według roli — właściciel słyszy najpierw wynik (ten miesiąc do dziś, poprzedni, od stycznia, przed opodatkowaniem), potem pieniądze (rachunek, należności z najstarszą fakturą, zobowiązania), terminy podatkowe jednym zdaniem i to, co czeka; księgowość (rola accountant) słyszy najpierw, co jest otwarte (miesiące do zamknięcia, pozycje wyciągu bez rozliczenia, zadania po terminie), potem terminy z kwotami albo powodem ich braku, wynik na końcu; VAT jest terminem z kwotą, nie nagłówkiem; terminy podatkowe: VAT i JPK_V7M do 25., zaliczka na podatek dochodowy do 20. dnia następnego miesiąca, przesunięte na najbliższy dzień roboczy, gdy wypadają w sobotę albo dzień ustawowo wolny (Wielkanoc i Boże Ciało liczone); kwoty zaliczki księgi jeszcze nie liczą i mówią to wprost; rano w liczbach zaczyna się od wyniku tego miesiąca i od początku roku; v27 (CIT, 2026-10-17): zaliczka na CIT liczona przy zamknięciu miesiąca, narastająco od początku roku — przychody podatkowe minus koszty podatkowe, konta mówią, czym są dla podatku dochodowego (KUP albo NKUP, przychód albo nie; bez oznaczenia koszt i przychód są podatkowe), nowe konta NKUP: 409-1 reprezentacja, 751-1 odsetki budżetowe, 761-1 kary i grzywny, 761-2 darowizny, oraz 870 podatek dochodowy; podstawa w pełnych złotych, stawka 9% gdy status na rok na to pozwala (rok rozpoczęcia działalności, chyba że z przekształcenia albo aportu; mały podatnik) i przychody od początku roku mieszczą się w limicie, inaczej 19%; zaliczka to podatek od początku roku minus zaliczki wcześniejsze, księgowana Wn 870 / Ma 225; limity na 2026 r. jako dane; terminy i poranek podają kwotę zaliczki, rano w liczbach pokazuje ostatnią",
   "requires": [
     "company",
     "account",
@@ -1294,6 +1294,213 @@
           "required": true
         }
       ]
+    },
+    {
+      "name": "account",
+      "version": 2,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "name",
+      "fields": [
+        {
+          "name": "code",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "type",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "asset",
+            "liability",
+            "equity",
+            "revenue",
+            "expense",
+            "debtor",
+            "creditor",
+            "tax",
+            "bank",
+            "clearing",
+            "income_tax"
+          ]
+        },
+        {
+          "name": "tax_treatment",
+          "type": "enum",
+          "required": false,
+          "values": [
+            "deductible",
+            "non_deductible",
+            "taxable",
+            "not_taxable"
+          ]
+        }
+      ],
+      "amendable": [
+        "tax_treatment"
+      ]
+    },
+    {
+      "name": "cit_limit",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "year_start",
+      "fields": [
+        {
+          "name": "year_start",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "small_taxpayer_limit",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "in_year_limit",
+          "type": "money",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "cit_status",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "year_start",
+      "fields": [
+        {
+          "name": "company",
+          "type": "ref<company>",
+          "required": true
+        },
+        {
+          "name": "year_start",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "started_on",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "formed_by",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "new",
+            "transformation",
+            "contribution"
+          ]
+        },
+        {
+          "name": "reduced",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "yes",
+            "no"
+          ]
+        },
+        {
+          "name": "basis",
+          "type": "string",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "cit_advance",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "period",
+      "fields": [
+        {
+          "name": "period",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "year_start",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "revenue",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "not_taxable",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "costs",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "non_deductible",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "income",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "base",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "rate",
+          "type": "int",
+          "required": true
+        },
+        {
+          "name": "rate_basis",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "tax",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "advances_before",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "advance",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "closed_on",
+          "type": "date",
+          "required": true
+        }
+      ]
     }
   ],
   "view_defs": [
@@ -1554,7 +1761,7 @@
     },
     {
       "view_id": "poranek",
-      "version": 2,
+      "version": 3,
       "notion": "narrative",
       "title": "Poranek",
       "domain": "finance",
@@ -1578,12 +1785,12 @@
             "as": "co czeka"
           }
         ],
-        "voice": "Po polsku, krótko, do właściciela firmy, jak najlepszy concierge. Najpierw wynik: ten miesiąc do dziś obok poprzedniego i wynik od stycznia — to wynik przed opodatkowaniem. Wynik podawaj każdego ranka w liczbach, wszystkie trzy, także gdy się nie zmienił: nie powtarzaj sformułowań z poprzednich dni, ale liczb nie pomijaj. Podatku dochodowego księgi jeszcze nie liczą: możesz powiedzieć, kiedy jest termin zaliczki, ale nigdy nie szacuj jej kwoty. Potem pieniądze: ile jest na rachunku, ile nam winni (suma i najstarsza niezapłacona faktura, nie lista faktur), ile my winni dostawcom. Podatki jednym zdaniem: termin i kwota, gdy jest policzona. Na końcu tylko to, co czeka na decyzję właściciela. Bez powitań z szablonu, bez wyliczania pozycji po kolei."
+        "voice": "Po polsku, krótko, do właściciela firmy, jak najlepszy concierge. Najpierw wynik: ten miesiąc do dziś obok poprzedniego i wynik od stycznia — to wynik przed opodatkowaniem. Bieżący miesiąc jeszcze trwa: mów „do dziś”, nigdy, że się zamknął. Wynik podawaj każdego ranka w liczbach, wszystkie trzy, także gdy się nie zmienił: nie powtarzaj sformułowań z poprzednich dni, ale liczb nie pomijaj. Zaliczka na CIT ma kwotę, gdy miesiąc jest zamknięty; gdy kwoty nie ma, powiedz dlaczego i nigdy jej nie szacuj. Potem pieniądze: ile jest na rachunku, ile nam winni (suma i najstarsza niezapłacona faktura, nie lista faktur), ile my winni dostawcom. Podatki jednym zdaniem, najpierw zaliczka na CIT, potem VAT: termin i kwota, gdy jest policzona. Na końcu tylko to, co czeka na decyzję właściciela. Bez powitań z szablonu, bez wyliczania pozycji po kolei."
       }
     },
     {
       "view_id": "poranek-ksiegowosc",
-      "version": 1,
+      "version": 2,
       "notion": "narrative",
       "title": "Poranek księgowości",
       "domain": "finance",
@@ -1606,7 +1813,7 @@
             "as": "wynik przed opodatkowaniem: ten miesiąc do dziś, poprzedni miesiąc, od stycznia"
           }
         ],
-        "voice": "Po polsku, rzeczowo, do głównej księgowej albo biura rachunkowego. Najpierw to, co jest otwarte: miesiące do zamknięcia, wpłaty i wypłaty bez rozliczenia (liczba i suma, nie lista), zadania po terminie. Potem najbliższe terminy podatkowe z datą i kwotą, a gdy kwoty nie ma, powiedz dlaczego: miesiąc niezamknięty albo księgi jej jeszcze nie liczą — nigdy jej nie szacuj. Wynik jednym zdaniem, w liczbach, także gdy się nie zmienił: ten miesiąc i od stycznia, przed opodatkowaniem. Bez powitań z szablonu."
+        "voice": "Po polsku, rzeczowo, do głównej księgowej albo biura rachunkowego. Najpierw to, co jest otwarte: miesiące do zamknięcia, wpłaty i wypłaty bez rozliczenia (liczba i suma, nie lista), zadania po terminie. Potem najbliższe terminy podatkowe z datą i kwotą, najpierw zaliczka na CIT, potem VAT, a gdy kwoty nie ma, powiedz dlaczego: miesiąc niezamknięty albo księgi jej jeszcze nie liczą — nigdy jej nie szacuj. Wynik jednym zdaniem, w liczbach, także gdy się nie zmienił: ten miesiąc i od stycznia, przed opodatkowaniem. Bez powitań z szablonu."
       }
     },
     {
@@ -1706,7 +1913,7 @@
     },
     {
       "view_id": "slownik",
-      "version": 1,
+      "version": 2,
       "notion": "words",
       "title": "Słownik",
       "domain": "finance",
@@ -1852,6 +2059,21 @@
           "vehicle": {
             "label": "Pojazd",
             "plural": "Pojazdy",
+            "shape": "card"
+          },
+          "cit_advance": {
+            "label": "Zaliczka na CIT",
+            "plural": "Zaliczki na CIT",
+            "shape": "statement"
+          },
+          "cit_status": {
+            "label": "Status CIT na rok",
+            "plural": "Statusy CIT",
+            "shape": "card"
+          },
+          "cit_limit": {
+            "label": "Limity CIT na rok",
+            "plural": "Limity CIT",
             "shape": "card"
           }
         },
@@ -2026,7 +2248,32 @@
           "purchase_invoice.owner": "Nabywca",
           "matching_difference.account": "Konto",
           "vat_settlement.vat_due": "Do zapłaty",
-          "vat_rate.code": "Stawka"
+          "vat_rate.code": "Stawka",
+          "account.tax_treatment": "Dla podatku dochodowego",
+          "cit_limit.year_start": "Rok podatkowy od",
+          "cit_limit.small_taxpayer_limit": "Limit małego podatnika (sprzedaż brutto roku poprzedniego)",
+          "cit_limit.in_year_limit": "Limit przychodów w roku dla stawki 9%",
+          "cit_status.company": "Firma",
+          "cit_status.year_start": "Rok podatkowy od",
+          "cit_status.started_on": "Rozpoczęcie działalności",
+          "cit_status.formed_by": "Jak powstała",
+          "cit_status.reduced": "Zaliczki stawką 9%",
+          "cit_status.basis": "Podstawa",
+          "cit_advance.period": "Okres",
+          "cit_advance.year_start": "Rok podatkowy od",
+          "cit_advance.book": "Księga",
+          "cit_advance.revenue": "Przychody od początku roku",
+          "cit_advance.not_taxable": "W tym nie są przychodem podatkowym",
+          "cit_advance.costs": "Koszty od początku roku",
+          "cit_advance.non_deductible": "W tym nie są kosztem podatkowym (NKUP)",
+          "cit_advance.income": "Dochód od początku roku",
+          "cit_advance.base": "Podstawa opodatkowania",
+          "cit_advance.rate": "Stawka %",
+          "cit_advance.rate_basis": "Dlaczego ta stawka",
+          "cit_advance.tax": "Podatek od początku roku",
+          "cit_advance.advances_before": "Zaliczki za wcześniejsze miesiące",
+          "cit_advance.advance": "Zaliczka do zapłaty",
+          "cit_advance.closed_on": "Miesiąc zamknięty dnia"
         },
         "values": {
           "account.type": {
@@ -2039,7 +2286,8 @@
             "expense": "koszty",
             "liability": "pasywa",
             "revenue": "przychody",
-            "tax": "podatki"
+            "tax": "podatki",
+            "income_tax": "podatek dochodowy"
           },
           "bank_operation.direction": {
             "credit": "wpływ",
@@ -2239,6 +2487,21 @@
             "interpretation": "interpretacja",
             "ruling": "orzecznictwo",
             "regulation": "rozporządzenie"
+          },
+          "account.tax_treatment": {
+            "deductible": "koszt podatkowy (KUP)",
+            "non_deductible": "nie jest kosztem podatkowym (NKUP)",
+            "taxable": "przychód podatkowy",
+            "not_taxable": "nie jest przychodem podatkowym"
+          },
+          "cit_status.formed_by": {
+            "new": "nowa działalność",
+            "transformation": "z przekształcenia",
+            "contribution": "z aportu przedsiębiorstwa"
+          },
+          "cit_status.reduced": {
+            "yes": "tak",
+            "no": "nie"
           }
         },
         "events": {
@@ -2272,7 +2535,10 @@
           "host.said": "Rhea powiedziała",
           "rule.approved": "Reguła zatwierdzona",
           "bundle.approved": "Pakiet zatwierdzony",
-          "activity.approved": "Drzwi zatwierdzone"
+          "activity.approved": "Drzwi zatwierdzone",
+          "account.tax_treatment.set": "Konto: znaczenie dla podatku dochodowego",
+          "cit_limit.defined": "Limity CIT na rok",
+          "company.cit_status.declared": "Status CIT na rok"
         },
         "doors": {
           "appoint_deputy": "wyznaczenie zastępcy",
@@ -2300,7 +2566,9 @@
           "set_cost_account": "konto kosztów dostawcy",
           "set_person_status": "status osoby",
           "submit_event": "otwarte drzwi",
-          "unpair_items": "cofnięcie dopasowania"
+          "unpair_items": "cofnięcie dopasowania",
+          "set_tax_treatment": "znaczenie konta dla podatku dochodowego",
+          "declare_cit_status": "status CIT na rok"
         },
         "account_groups": {
           "0": "Aktywa trwałe",
@@ -2381,14 +2649,124 @@
       }
     },
     {
+      "view_id": "zaliczki-cit",
+      "version": 1,
+      "notion": "list",
+      "title": "Zaliczki na CIT",
+      "domain": "finance",
+      "function": "cit",
+      "spec": {
+        "object_type": "cit_advance",
+        "columns": [
+          {
+            "field": "period",
+            "label": "Okres"
+          },
+          {
+            "field": "revenue",
+            "label": "Przychody od początku roku"
+          },
+          {
+            "field": "costs",
+            "label": "Koszty od początku roku"
+          },
+          {
+            "field": "non_deductible",
+            "label": "W tym NKUP"
+          },
+          {
+            "field": "income",
+            "label": "Dochód"
+          },
+          {
+            "field": "rate",
+            "label": "Stawka %"
+          },
+          {
+            "field": "tax",
+            "label": "Podatek od początku roku"
+          },
+          {
+            "field": "advances_before",
+            "label": "Zaliczki wcześniej"
+          },
+          {
+            "field": "advance",
+            "label": "Zaliczka do zapłaty"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "zaliczka-cit",
+      "version": 1,
+      "notion": "statement",
+      "title": "Wyliczenie zaliczki na CIT",
+      "domain": "finance",
+      "function": "cit",
+      "spec": {
+        "object_type": "cit_advance",
+        "sections": [
+          {
+            "title": "Dochód od początku roku",
+            "rows": [
+              {
+                "field": "revenue"
+              },
+              {
+                "op": "-",
+                "field": "not_taxable",
+                "nonzero": true
+              },
+              {
+                "op": "-",
+                "field": "costs"
+              },
+              {
+                "op": "+",
+                "field": "non_deductible",
+                "note": "koszty, które nie są kosztem podatkowym (NKUP)"
+              },
+              {
+                "op": "=",
+                "field": "income"
+              }
+            ]
+          },
+          {
+            "title": "Zaliczka",
+            "rows": [
+              {
+                "field": "base",
+                "note": "w pełnych złotych (Ordynacja podatkowa art. 63 § 1)"
+              },
+              {
+                "field": "tax",
+                "note": "według stawki w polu rate_basis"
+              },
+              {
+                "op": "-",
+                "field": "advances_before"
+              },
+              {
+                "op": "=",
+                "field": "advance",
+                "note": "do 20. dnia następnego miesiąca"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "view_id": "rano",
-      "version": 2,
+      "version": 3,
       "notion": "analysis",
       "title": "Rano w liczbach",
       "domain": "finance",
       "function": "briefing",
       "spec": {
-        "sql": "WITH res AS (SELECT p.object_id AS id, CAST(json_extract_string(p.state,'$.date') AS DATE) AS day, CASE WHEN json_extract_string(p.state,'$.side') = 'debit' THEN CAST(json_extract(p.state,'$.amount') AS BIGINT) ELSE -CAST(json_extract(p.state,'$.amount') AS BIGINT) END AS b FROM objects p JOIN objects a ON json_extract_string(p.state,'$.account') = a.object_id WHERE p.object_type = 'posting' AND a.object_type = 'account' AND COALESCE(json_extract_string(p.state,'$.book'), 'main') = 'pl-stat' AND json_extract_string(a.state,'$.type') IN ('revenue', 'expense')), acc AS (SELECT object_id, json_extract_string(state,'$.code') AS code FROM objects WHERE object_type = 'account'), post AS (SELECT json_extract_string(p.state,'$.account') AS account, CASE WHEN json_extract_string(p.state,'$.side') = 'debit' THEN CAST(json_extract(p.state,'$.amount') AS BIGINT) ELSE -CAST(json_extract(p.state,'$.amount') AS BIGINT) END AS signed FROM objects p WHERE p.object_type = 'posting' AND COALESCE(json_extract_string(p.state,'$.book'), 'main') = 'pl-stat'), bank AS (SELECT a.object_id AS id, COALESCE(SUM(p.signed), 0) AS bal, COUNT(p.signed) AS n FROM acc a LEFT JOIN post p ON p.account = a.object_id WHERE a.code = '130' GROUP BY a.object_id), openinv AS (SELECT object_id, object_type, CAST(json_extract(state,'$.open') AS BIGINT) AS open FROM objects WHERE object_type IN ('sales_invoice', 'purchase_invoice') AND CAST(COALESCE(json_extract(state,'$.open'), '0') AS BIGINT) > 0), vat AS (SELECT object_id, json_extract_string(state,'$.period') AS period, CAST(json_extract(state,'$.vat_due') AS BIGINT) AS due FROM objects WHERE object_type = 'vat_settlement' ORDER BY period DESC LIMIT 1), counted AS (SELECT object_id, object_type, json_extract_string(state,'$.status') AS status, json_extract_string(state,'$.settlement_status') AS sstatus FROM objects WHERE object_type IN ('ksef_submission', 'bank_operation', 'matching_difference', 'period_lock')) SELECT key, label, amount, count, note, o AS _of FROM (SELECT -1 AS k, 'result_month' AS key, 'Wynik w tym miesiącu' AS label, -COALESCE(SUM(b) FILTER (WHERE day >= CAST(date_trunc('month', {{today}}) AS DATE) AND day <= {{today}}), 0) AS amount, NULL AS count, strftime({{today}}, '%Y-%m') || ', przed opodatkowaniem' AS note, string_agg(id, ',' ORDER BY id) FILTER (WHERE day >= CAST(date_trunc('month', {{today}}) AS DATE) AND day <= {{today}}) AS o FROM res UNION ALL SELECT 0, 'result_year', 'Wynik od początku roku', -COALESCE(SUM(b) FILTER (WHERE year(day) = year({{today}}) AND day <= {{today}}), 0), NULL, strftime({{today}}, '%Y') || ', przed opodatkowaniem', string_agg(id, ',' ORDER BY id) FILTER (WHERE year(day) = year({{today}}) AND day <= {{today}}) FROM res UNION ALL SELECT 1, 'bank', 'Na rachunku bieżącym', bal, n, 'zapisów od początku roku', id FROM bank UNION ALL SELECT 2, 'receivables', 'Należności', COALESCE(SUM(open), 0), COUNT(*), 'otwartych faktur sprzedaży', string_agg(object_id, ',' ORDER BY object_id) FROM openinv WHERE object_type = 'sales_invoice' UNION ALL SELECT 3, 'payables', 'Dla dostawców', COALESCE(SUM(open), 0), COUNT(*), 'faktur zakupu do zapłaty', string_agg(object_id, ',' ORDER BY object_id) FROM openinv WHERE object_type = 'purchase_invoice' UNION ALL SELECT 4, 'vat_due', 'VAT do zapłaty', due, NULL, period, object_id FROM vat UNION ALL SELECT 5, 'ksef', 'Faktury przyjęte w KSeF', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'ksef_submission' AND status = 'accepted' UNION ALL SELECT 6, 'bank_lines', 'Pozycje wyciągu przeczytane', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'bank_operation' UNION ALL SELECT 7, 'settled', 'Pozycje wyciągu rozliczone', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'bank_operation' AND sstatus = 'settled' UNION ALL SELECT 8, 'differences', 'Różnice groszowe zamknięte w tolerancji', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'matching_difference' UNION ALL SELECT 9, 'closed', 'Zamknięte miesiące', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'period_lock') ORDER BY k",
+        "sql": "WITH res AS (SELECT p.object_id AS id, CAST(json_extract_string(p.state,'$.date') AS DATE) AS day, CASE WHEN json_extract_string(p.state,'$.side') = 'debit' THEN CAST(json_extract(p.state,'$.amount') AS BIGINT) ELSE -CAST(json_extract(p.state,'$.amount') AS BIGINT) END AS b FROM objects p JOIN objects a ON json_extract_string(p.state,'$.account') = a.object_id WHERE p.object_type = 'posting' AND a.object_type = 'account' AND COALESCE(json_extract_string(p.state,'$.book'), 'main') = 'pl-stat' AND json_extract_string(a.state,'$.type') IN ('revenue', 'expense')), acc AS (SELECT object_id, json_extract_string(state,'$.code') AS code FROM objects WHERE object_type = 'account'), post AS (SELECT json_extract_string(p.state,'$.account') AS account, CASE WHEN json_extract_string(p.state,'$.side') = 'debit' THEN CAST(json_extract(p.state,'$.amount') AS BIGINT) ELSE -CAST(json_extract(p.state,'$.amount') AS BIGINT) END AS signed FROM objects p WHERE p.object_type = 'posting' AND COALESCE(json_extract_string(p.state,'$.book'), 'main') = 'pl-stat'), bank AS (SELECT a.object_id AS id, COALESCE(SUM(p.signed), 0) AS bal, COUNT(p.signed) AS n FROM acc a LEFT JOIN post p ON p.account = a.object_id WHERE a.code = '130' GROUP BY a.object_id), openinv AS (SELECT object_id, object_type, CAST(json_extract(state,'$.open') AS BIGINT) AS open FROM objects WHERE object_type IN ('sales_invoice', 'purchase_invoice') AND CAST(COALESCE(json_extract(state,'$.open'), '0') AS BIGINT) > 0), vat AS (SELECT object_id, json_extract_string(state,'$.period') AS period, CAST(json_extract(state,'$.vat_due') AS BIGINT) AS due FROM objects WHERE object_type = 'vat_settlement' ORDER BY period DESC LIMIT 1), cit AS (SELECT object_id, json_extract_string(state,'$.period') AS period, CAST(json_extract(state,'$.advance') AS BIGINT) AS due FROM objects WHERE object_type = 'cit_advance' ORDER BY period DESC LIMIT 1), counted AS (SELECT object_id, object_type, json_extract_string(state,'$.status') AS status, json_extract_string(state,'$.settlement_status') AS sstatus FROM objects WHERE object_type IN ('ksef_submission', 'bank_operation', 'matching_difference', 'period_lock')) SELECT key, label, amount, count, note, o AS _of FROM (SELECT -1 AS k, 'result_month' AS key, 'Wynik w tym miesiącu' AS label, -COALESCE(SUM(b) FILTER (WHERE day >= CAST(date_trunc('month', {{today}}) AS DATE) AND day <= {{today}}), 0) AS amount, NULL AS count, strftime({{today}}, '%Y-%m') || ', przed opodatkowaniem' AS note, string_agg(id, ',' ORDER BY id) FILTER (WHERE day >= CAST(date_trunc('month', {{today}}) AS DATE) AND day <= {{today}}) AS o FROM res UNION ALL SELECT 0, 'result_year', 'Wynik od początku roku', -COALESCE(SUM(b) FILTER (WHERE year(day) = year({{today}}) AND day <= {{today}}), 0), NULL, strftime({{today}}, '%Y') || ', przed opodatkowaniem', string_agg(id, ',' ORDER BY id) FILTER (WHERE year(day) = year({{today}}) AND day <= {{today}}) FROM res UNION ALL SELECT 1, 'bank', 'Na rachunku bieżącym', bal, n, 'zapisów od początku roku', id FROM bank UNION ALL SELECT 2, 'receivables', 'Należności', COALESCE(SUM(open), 0), COUNT(*), 'otwartych faktur sprzedaży', string_agg(object_id, ',' ORDER BY object_id) FROM openinv WHERE object_type = 'sales_invoice' UNION ALL SELECT 3, 'payables', 'Dla dostawców', COALESCE(SUM(open), 0), COUNT(*), 'faktur zakupu do zapłaty', string_agg(object_id, ',' ORDER BY object_id) FROM openinv WHERE object_type = 'purchase_invoice' UNION ALL SELECT 3.5, 'cit_due', 'Zaliczka na CIT', due, NULL, period, object_id FROM cit UNION ALL SELECT 4, 'vat_due', 'VAT do zapłaty', due, NULL, period, object_id FROM vat UNION ALL SELECT 5, 'ksef', 'Faktury przyjęte w KSeF', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'ksef_submission' AND status = 'accepted' UNION ALL SELECT 6, 'bank_lines', 'Pozycje wyciągu przeczytane', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'bank_operation' UNION ALL SELECT 7, 'settled', 'Pozycje wyciągu rozliczone', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'bank_operation' AND sstatus = 'settled' UNION ALL SELECT 8, 'differences', 'Różnice groszowe zamknięte w tolerancji', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'matching_difference' UNION ALL SELECT 9, 'closed', 'Zamknięte miesiące', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'period_lock') ORDER BY k",
         "columns": [
           {
             "field": "key",
@@ -2496,13 +2874,13 @@
     },
     {
       "view_id": "kalendarz-podatkowy",
-      "version": 1,
+      "version": 2,
       "notion": "analysis",
       "title": "Terminy podatkowe",
       "domain": "finance",
       "function": "briefing",
       "spec": {
-        "sql": "WITH t AS (SELECT {{today}} AS d), yrs AS (SELECT DISTINCT y FROM (SELECT year(d) AS y FROM t UNION ALL SELECT year(d) + 1 FROM t)), e1 AS (SELECT y, y % 19 AS a, y // 100 AS b, y % 100 AS c FROM yrs), e2 AS (SELECT y, a, (19 * a + b - b // 4 - (b - (b + 8) // 25 + 1) // 3 + 15) % 30 AS h, b % 4 AS e, c // 4 AS i, c % 4 AS k FROM e1), e3 AS (SELECT y, a, h, (32 + 2 * e + 2 * i - h - k) % 7 AS l FROM e2), easter AS (SELECT make_date(y, (h + l - 7 * ((a + 11 * h + 22 * l) // 451) + 114) // 31, (h + l - 7 * ((a + 11 * h + 22 * l) // 451) + 114) % 31 + 1) AS es FROM e3), off AS (SELECT make_date(y, m, dd) AS day FROM yrs, (VALUES (1, 1), (1, 6), (5, 1), (5, 3), (8, 15), (11, 1), (11, 11), (12, 24), (12, 25), (12, 26)) v(m, dd) UNION ALL SELECT CAST(es + 1 AS DATE) FROM easter UNION ALL SELECT CAST(es + 60 AS DATE) FROM easter), self AS (SELECT json_extract_string(state,'$.vat_status') AS vat_status, json_extract_string(state,'$.income_tax') AS income_tax FROM objects WHERE object_type = 'company' AND json_extract_string(state,'$.kind') = 'self' LIMIT 1), per AS (SELECT CAST(date_trunc('month', d) - INTERVAL 1 MONTH AS DATE) AS p FROM t UNION ALL SELECT CAST(date_trunc('month', d) AS DATE) FROM t), kinds(kind, dd) AS (VALUES ('vat', 25), ('income', 20)), stat AS (SELECT kind, strftime(p, '%Y-%m') AS period, make_date(year(p + INTERVAL 1 MONTH), month(p + INTERVAL 1 MONTH), dd) AS statutory FROM per, kinds), due AS (SELECT kind, period, (SELECT MIN(c) FROM (SELECT CAST(statutory + CAST(g AS INTEGER) AS DATE) AS c FROM range(0, 10) r(g)) WHERE dayofweek(c) NOT IN (0, 6) AND c NOT IN (SELECT day FROM off)) AS due FROM stat), next AS (SELECT kind, period, due FROM due, t WHERE due >= t.d QUALIFY row_number() OVER (PARTITION BY kind ORDER BY due) = 1), vs AS (SELECT object_id, json_extract_string(state,'$.period') AS period, CAST(json_extract(state,'$.vat_due') AS BIGINT) AS vat_due FROM objects WHERE object_type = 'vat_settlement' AND COALESCE(json_extract_string(state,'$.book'), 'pl-stat') = 'pl-stat') SELECT strftime(n.due, '%Y-%m-%d') AS due, CASE WHEN n.kind = 'vat' THEN 'VAT i JPK_V7M' WHEN s.income_tax = 'cit' THEN 'Zaliczka na CIT' WHEN s.income_tax IN ('skala', 'liniowy') THEN 'Zaliczka na PIT' WHEN s.income_tax = 'ryczalt' THEN 'Ryczałt od przychodów' ELSE 'Zaliczka na podatek dochodowy' END AS what, n.period, CASE WHEN n.kind = 'vat' THEN vs.vat_due END AS amount, CASE WHEN n.kind = 'income' THEN 'księgi jeszcze jej nie liczą' WHEN vs.object_id IS NULL THEN 'miesiąc jeszcze niezamknięty' END AS note, vs.object_id AS _of FROM next n LEFT JOIN self s ON true LEFT JOIN vs ON n.kind = 'vat' AND vs.period = n.period WHERE NOT (n.kind = 'vat' AND COALESCE(s.vat_status, 'active') = 'exempt') ORDER BY n.due, n.kind",
+        "sql": "WITH t AS (SELECT {{today}} AS d), yrs AS (SELECT DISTINCT y FROM (SELECT year(d) AS y FROM t UNION ALL SELECT year(d) + 1 FROM t)), e1 AS (SELECT y, y % 19 AS a, y // 100 AS b, y % 100 AS c FROM yrs), e2 AS (SELECT y, a, (19 * a + b - b // 4 - (b - (b + 8) // 25 + 1) // 3 + 15) % 30 AS h, b % 4 AS e, c // 4 AS i, c % 4 AS k FROM e1), e3 AS (SELECT y, a, h, (32 + 2 * e + 2 * i - h - k) % 7 AS l FROM e2), easter AS (SELECT make_date(y, (h + l - 7 * ((a + 11 * h + 22 * l) // 451) + 114) // 31, (h + l - 7 * ((a + 11 * h + 22 * l) // 451) + 114) % 31 + 1) AS es FROM e3), off AS (SELECT make_date(y, m, dd) AS day FROM yrs, (VALUES (1, 1), (1, 6), (5, 1), (5, 3), (8, 15), (11, 1), (11, 11), (12, 24), (12, 25), (12, 26)) v(m, dd) UNION ALL SELECT CAST(es + 1 AS DATE) FROM easter UNION ALL SELECT CAST(es + 60 AS DATE) FROM easter), self AS (SELECT json_extract_string(state,'$.vat_status') AS vat_status, json_extract_string(state,'$.income_tax') AS income_tax FROM objects WHERE object_type = 'company' AND json_extract_string(state,'$.kind') = 'self' LIMIT 1), per AS (SELECT CAST(date_trunc('month', d) - INTERVAL 1 MONTH AS DATE) AS p FROM t UNION ALL SELECT CAST(date_trunc('month', d) AS DATE) FROM t), kinds(kind, dd) AS (VALUES ('vat', 25), ('income', 20)), stat AS (SELECT kind, strftime(p, '%Y-%m') AS period, make_date(year(p + INTERVAL 1 MONTH), month(p + INTERVAL 1 MONTH), dd) AS statutory FROM per, kinds), due AS (SELECT kind, period, (SELECT MIN(c) FROM (SELECT CAST(statutory + CAST(g AS INTEGER) AS DATE) AS c FROM range(0, 10) r(g)) WHERE dayofweek(c) NOT IN (0, 6) AND c NOT IN (SELECT day FROM off)) AS due FROM stat), next AS (SELECT kind, period, due FROM due, t WHERE due >= t.d QUALIFY row_number() OVER (PARTITION BY kind ORDER BY due) = 1), vs AS (SELECT object_id, json_extract_string(state,'$.period') AS period, CAST(json_extract(state,'$.vat_due') AS BIGINT) AS vat_due FROM objects WHERE object_type = 'vat_settlement' AND COALESCE(json_extract_string(state,'$.book'), 'pl-stat') = 'pl-stat'), ca AS (SELECT object_id, json_extract_string(state,'$.period') AS period, CAST(json_extract(state,'$.advance') AS BIGINT) AS advance FROM objects WHERE object_type = 'cit_advance' AND COALESCE(json_extract_string(state,'$.book'), 'pl-stat') = 'pl-stat') SELECT strftime(n.due, '%Y-%m-%d') AS due, CASE WHEN n.kind = 'vat' THEN 'VAT i JPK_V7M' WHEN s.income_tax = 'cit' THEN 'Zaliczka na CIT' WHEN s.income_tax IN ('skala', 'liniowy') THEN 'Zaliczka na PIT' WHEN s.income_tax = 'ryczalt' THEN 'Ryczałt od przychodów' ELSE 'Zaliczka na podatek dochodowy' END AS what, n.period, CASE WHEN n.kind = 'vat' THEN vs.vat_due ELSE ca.advance END AS amount, CASE WHEN n.kind = 'income' AND COALESCE(s.income_tax, '') <> 'cit' THEN 'księgi jeszcze jej nie liczą' WHEN n.kind = 'income' AND ca.object_id IS NULL THEN 'miesiąc jeszcze niezamknięty' WHEN n.kind = 'vat' AND vs.object_id IS NULL THEN 'miesiąc jeszcze niezamknięty' END AS note, COALESCE(vs.object_id, ca.object_id) AS _of FROM next n LEFT JOIN self s ON true LEFT JOIN vs ON n.kind = 'vat' AND vs.period = n.period LEFT JOIN ca ON n.kind = 'income' AND COALESCE(s.income_tax, '') = 'cit' AND ca.period = n.period WHERE NOT (n.kind = 'vat' AND COALESCE(s.vat_status, 'active') = 'exempt') ORDER BY n.due, n.kind",
         "columns": [
           {
             "field": "due",
@@ -4390,6 +4768,212 @@
         ],
         "scope": "pl"
       }
+    },
+    {
+      "rule_id": "pl-set-tax-treatment",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Konto mówi, czym jest dla podatku dochodowego: koszt podatkowy albo nie (KUP, NKUP), przychód podatkowy albo nie; koszt może być tylko kosztem, przychód przychodem — inna deklaracja nie pasuje i czeka",
+      "spec": {
+        "match": {
+          "event_type": "account.tax_treatment.set",
+          "where": [
+            {
+              "formula": "=(ref(account, code, $.account).type = \"expense\" and ($.tax_treatment = \"deductible\" or $.tax_treatment = \"non_deductible\")) or (ref(account, code, $.account).type = \"revenue\" and ($.tax_treatment = \"taxable\" or $.tax_treatment = \"not_taxable\")) or (ref(account, code, $.account).type = \"income_tax\" and $.tax_treatment = \"non_deductible\")"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "account",
+            "target": "=ref(account, code, $.account)",
+            "set": {
+              "tax_treatment": "=$.tax_treatment"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o CIT (t.j. Dz.U. 2026 poz. 554) art. 15 ust. 1: kosztami uzyskania przychodów są koszty poniesione w celu osiągnięcia przychodów, z wyjątkiem kosztów wymienionych w art. 16 ust. 1",
+          "przegląd CIT-06: każde konto kosztów niesie traktowanie podatkowe; podstawa CIT to wynik księgowy plus minus oznaczone różnice"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-register-cit-limit",
+      "priority": 10,
+      "effective_from": "2026-01-01",
+      "description": "Limity CIT na rok stają się obiektem cit_limit: limit małego podatnika i limit przychodów w roku dla stawki 9%",
+      "spec": {
+        "match": {
+          "event_type": "cit_limit.defined",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "cit_limit",
+            "fields": {
+              "year_start": "=$.year_start",
+              "small_taxpayer_limit": "=$.small_taxpayer_limit",
+              "in_year_limit": "=$.in_year_limit"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o CIT (t.j. Dz.U. 2026 poz. 554) art. 4a pkt 10: mały podatnik — sprzedaż brutto roku poprzedniego do 2 000 000 euro, po kursie NBP z pierwszego dnia roboczego października, w zaokrągleniu do 1000 zł",
+          "ustawa o CIT (t.j. Dz.U. 2026 poz. 554) art. 19 ust. 1 pkt 2 lit. a: limit 2 000 000 euro po kursie NBP z pierwszego dnia roboczego roku podatkowego, w zaokrągleniu do 1000 zł",
+          "podatki.gov.pl, CIT — stawki i limity: na 2026 r. 8 517 000 zł (kurs 4,2586 z 1 października 2025) i 8 431 000 zł (kurs 4,2156 z 2 stycznia 2026)"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-declare-cit-status",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Firma płacąca CIT mówi, kiedy zaczęła działalność, jak powstała i ile sprzedała brutto w roku poprzednim; z tego wynika, czy w tym roku zaliczki liczy się stawką 9%: w roku rozpoczęcia działalności tak, chyba że spółka powstała z przekształcenia albo aportu przedsiębiorstwa (wtedy nie w tym i w następnym roku); w kolejnych latach — gdy jest małym podatnikiem; nowsza deklaracja na ten sam rok zastępuje starszą",
+      "spec": {
+        "match": {
+          "event_type": "company.cit_status.declared",
+          "where": [
+            {
+              "formula": "=$.company.income_tax = \"cit\""
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "cit_status",
+            "fields": {
+              "company": "=$.company",
+              "year_start": "=$.year_start",
+              "started_on": "=$.started_on",
+              "formed_by": "=$.formed_by",
+              "reduced": "=if(not ($.formed_by <> \"new\" and (($.started_on >= $.year_start and $.started_on < add_months($.year_start, 12)) or ($.started_on >= add_months($.year_start, -12) and $.started_on < $.year_start))) and (($.started_on >= $.year_start and $.started_on < add_months($.year_start, 12)) or any(l in objects(cit_limit, year_start, $.year_start) : coalesce($.prior_year_gross_sales, l.small_taxpayer_limit + 1) <= l.small_taxpayer_limit)), \"yes\", \"no\")",
+              "basis": "=if(($.formed_by <> \"new\" and (($.started_on >= $.year_start and $.started_on < add_months($.year_start, 12)) or ($.started_on >= add_months($.year_start, -12) and $.started_on < $.year_start))), \"spółka z przekształcenia albo aportu przedsiębiorstwa: bez 9% w roku rozpoczęcia i w następnym (art. 19 ust. 1a)\", if(($.started_on >= $.year_start and $.started_on < add_months($.year_start, 12)), \"rok rozpoczęcia działalności: 9% bez warunku małego podatnika (art. 19 ust. 1e)\", if(any(l in objects(cit_limit, year_start, $.year_start) : coalesce($.prior_year_gross_sales, l.small_taxpayer_limit + 1) <= l.small_taxpayer_limit), \"mały podatnik: sprzedaż brutto roku poprzedniego w limicie (art. 4a pkt 10, art. 19 ust. 1d)\", \"stawka podstawowa: ani rok rozpoczęcia, ani mały podatnik (art. 19 ust. 1 pkt 1)\")))"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o CIT (t.j. Dz.U. 2026 poz. 554) art. 19 ust. 1 pkt 1 i 2: 19%, a 9% dla podatników, których przychody w roku nie przekroczyły 2 000 000 euro; ust. 1d: 9% wymaga statusu małego podatnika; ust. 1e: warunek nie dotyczy roku rozpoczęcia działalności; ust. 1a: bez 9% w roku rozpoczęcia i następnym dla spółek z przekształcenia albo z wniesienia przedsiębiorstwa o wartości ponad 10 000 euro",
+          "przegląd CIT-02: status liczony z faktów; w pierwszym roku 9%, chyba że spółka powstała z przekształcenia albo aportu"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-cit-advance",
+      "priority": 110,
+      "effective_from": "2026-01-01",
+      "description": "Zamknięcie miesiąca w księdze pl-stat liczy zaliczkę na CIT narastająco od początku roku: przychody podatkowe (przychody bez kont oznaczonych jako nieprzychód) minus koszty podatkowe (koszty bez kont NKUP), podstawa w pełnych złotych, stawka 9% gdy status na ten rok na to pozwala i przychody od początku roku mieszczą się w limicie, inaczej 19%; zaliczka to podatek od początku roku minus zaliczki za wcześniejsze miesiące tego roku, nie mniej niż zero; liczy tylko firma płacąca CIT",
+      "spec": {
+        "match": {
+          "event_type": "period.closed",
+          "where": [
+            {
+              "path": "$.book",
+              "op": "eq",
+              "value": "pl-stat"
+            },
+            {
+              "formula": "=any(c in objects(company, kind, \"self\") : coalesce(c.income_tax, \"\") = \"cit\")"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "cit_advance",
+            "fields": {
+              "period": "=month($.period)",
+              "year_start": "=start_of_year($.period)",
+              "book": "=$.book",
+              "revenue": "=sum(a in objects(account, type, \"revenue\") : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))",
+              "not_taxable": "=sum(a in objects(account, type, \"revenue\") where coalesce(a.tax_treatment, \"taxable\") = \"not_taxable\" : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))",
+              "costs": "=sum(a in objects(account, type, \"expense\") : balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))",
+              "non_deductible": "=sum(a in objects(account, type, \"expense\") where coalesce(a.tax_treatment, \"deductible\") = \"non_deductible\" : balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))",
+              "income": "=((sum(a in objects(account, type, \"revenue\") : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) - (sum(a in objects(account, type, \"revenue\") where coalesce(a.tax_treatment, \"taxable\") = \"not_taxable\" : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period))))) - ((sum(a in objects(account, type, \"expense\") : balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) - (sum(a in objects(account, type, \"expense\") where coalesce(a.tax_treatment, \"deductible\") = \"non_deductible\" : balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))))",
+              "base": "=round(max(((sum(a in objects(account, type, \"revenue\") : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) - (sum(a in objects(account, type, \"revenue\") where coalesce(a.tax_treatment, \"taxable\") = \"not_taxable\" : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period))))) - ((sum(a in objects(account, type, \"expense\") : balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) - (sum(a in objects(account, type, \"expense\") where coalesce(a.tax_treatment, \"deductible\") = \"non_deductible\" : balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period))))), 0), 0, half_up)",
+              "rate": "=if((fold(s in objects(cit_status, year_start, start_of_year($.period)), r = \"no\" : s.reduced) = \"yes\") and (any(l in objects(cit_limit, year_start, start_of_year($.period)) : (sum(a in objects(account, type, \"revenue\") : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) - (sum(a in objects(account, type, \"revenue\") where coalesce(a.tax_treatment, \"taxable\") = \"not_taxable\" : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) <= l.in_year_limit)), 9, 19)",
+              "rate_basis": "=if(fold(s in objects(cit_status, year_start, start_of_year($.period)), r = \"no\" : s.reduced) = \"yes\", if(any(l in objects(cit_limit, year_start, start_of_year($.period)) : (sum(a in objects(account, type, \"revenue\") : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) - (sum(a in objects(account, type, \"revenue\") where coalesce(a.tax_treatment, \"taxable\") = \"not_taxable\" : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) <= l.in_year_limit), \"9%: status CIT na ten rok, przychody od początku roku w limicie (art. 19 ust. 1 pkt 2, art. 25 ust. 1g)\", \"19%: przychody od początku roku ponad limit (art. 19 ust. 1 pkt 2, art. 25 ust. 1g)\"), \"19%: brak statusu CIT na ten rok, który pozwala na 9% (art. 19 ust. 1 pkt 1, art. 25 ust. 1f)\")",
+              "tax": "=round((round(max(((sum(a in objects(account, type, \"revenue\") : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) - (sum(a in objects(account, type, \"revenue\") where coalesce(a.tax_treatment, \"taxable\") = \"not_taxable\" : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period))))) - ((sum(a in objects(account, type, \"expense\") : balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) - (sum(a in objects(account, type, \"expense\") where coalesce(a.tax_treatment, \"deductible\") = \"non_deductible\" : balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period))))), 0), 0, half_up)) * (if((fold(s in objects(cit_status, year_start, start_of_year($.period)), r = \"no\" : s.reduced) = \"yes\") and (any(l in objects(cit_limit, year_start, start_of_year($.period)) : (sum(a in objects(account, type, \"revenue\") : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) - (sum(a in objects(account, type, \"revenue\") where coalesce(a.tax_treatment, \"taxable\") = \"not_taxable\" : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) <= l.in_year_limit)), 9, 19)) / 100, 0, half_up)",
+              "advances_before": "=sum(c in objects(cit_advance, year_start, start_of_year($.period)) where c.period < month($.period) : c.advance)",
+              "advance": "=max((round((round(max(((sum(a in objects(account, type, \"revenue\") : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) - (sum(a in objects(account, type, \"revenue\") where coalesce(a.tax_treatment, \"taxable\") = \"not_taxable\" : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period))))) - ((sum(a in objects(account, type, \"expense\") : balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) - (sum(a in objects(account, type, \"expense\") where coalesce(a.tax_treatment, \"deductible\") = \"non_deductible\" : balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period))))), 0), 0, half_up)) * (if((fold(s in objects(cit_status, year_start, start_of_year($.period)), r = \"no\" : s.reduced) = \"yes\") and (any(l in objects(cit_limit, year_start, start_of_year($.period)) : (sum(a in objects(account, type, \"revenue\") : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) - (sum(a in objects(account, type, \"revenue\") where coalesce(a.tax_treatment, \"taxable\") = \"not_taxable\" : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) <= l.in_year_limit)), 9, 19)) / 100, 0, half_up)) - (sum(c in objects(cit_advance, year_start, start_of_year($.period)) where c.period < month($.period) : c.advance)), 0)",
+              "closed_on": "=$.period"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o CIT (t.j. Dz.U. 2026 poz. 554) art. 25 ust. 1: zaliczki miesięczne jako różnica między podatkiem należnym od dochodu osiągniętego od początku roku a sumą zaliczek należnych za poprzednie miesiące; ust. 1a: do 20. dnia następnego miesiąca",
+          "ustawa o CIT (t.j. Dz.U. 2026 poz. 554) art. 25 ust. 1f i 1g: zaliczki stawką 19%, a 9% w roku rozpoczęcia działalności i u małych podatników za miesiące, w których przychody od początku roku nie przekroczyły limitu",
+          "ustawa o CIT (t.j. Dz.U. 2026 poz. 554) art. 12 ust. 1 i art. 15 ust. 1: przychody i koszty uzyskania przychodów; art. 16 ust. 1: wydatki niebędące kosztami",
+          "Ordynacja podatkowa art. 63 § 1: podstawy opodatkowania i kwoty podatków zaokrągla się do pełnych złotych",
+          "przegląd CIT-03: zaliczki miesięczne liczone regułą przy zamknięciu miesiąca, jak rozliczenie VAT; kwartalne tylko z wyboru zarządu"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-cit-advance",
+      "priority": 330,
+      "effective_from": "2026-01-01",
+      "description": "Zaliczka na CIT księguje się: Wn 870 podatek dochodowy / Ma 225 rozrachunki publicznoprawne — zapłata z mikrorachunku podatkowego zamyka ją na 225",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "cit_advance"
+            },
+            {
+              "formula": "=$.state.advance > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "lines": [
+              {
+                "account": "870",
+                "debit": "=$.state.advance"
+              },
+              {
+                "account": "225",
+                "credit": "=$.state.advance"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 37 ust. 8: obciążenie wyniku finansowego obejmuje podatek dochodowy bieżący i odroczony",
+          "wzorcowy plan kont: 870 podatek dochodowy od osób prawnych, 225 pozostałe rozrachunki publicznoprawne; przegląd CIT-03: Wn 870 / Ma 22x"
+        ]
+      }
     }
   ],
   "activities": [
@@ -4623,6 +5207,88 @@
           }
         ],
         "emits": "bank_operation.classified",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "set_tax_treatment",
+      "domain": "finance",
+      "description": "Firma mówi, czym konto jest dla podatku dochodowego: koszt podatkowy (KUP) albo nie (NKUP, np. reprezentacja, kary, darowizny), przychód podatkowy albo nie; konto bez oznaczenia liczy się jako koszt albo przychód podatkowy",
+      "spec": {
+        "inputs": [
+          {
+            "name": "account",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "tax_treatment",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "deductible",
+              "non_deductible",
+              "taxable",
+              "not_taxable"
+            ]
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "account.tax_treatment.set",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "declare_cit_status",
+      "domain": "finance",
+      "description": "Firma płacąca CIT mówi na dany rok podatkowy, kiedy rozpoczęła działalność, czy powstała jako nowa, z przekształcenia, czy z aportu przedsiębiorstwa, i ile sprzedała brutto w roku poprzednim (gdy go miała) — z tego Rhea wie, czy zaliczki liczy stawką 9%, czy 19%",
+      "spec": {
+        "inputs": [
+          {
+            "name": "company",
+            "type": "ref<company>",
+            "required": true
+          },
+          {
+            "name": "year_start",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "started_on",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "formed_by",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "new",
+              "transformation",
+              "contribution"
+            ]
+          },
+          {
+            "name": "prior_year_gross_sales",
+            "type": "money",
+            "required": false
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "company.cit_status.declared",
         "who": [
           "human"
         ]
@@ -5034,6 +5700,122 @@
         "code": "249",
         "name": "Pozostałe rozrachunki",
         "type": "debtor",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.created",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/account/409-1",
+      "payload": {
+        "code": "409-1",
+        "name": "Koszty reprezentacji (NKUP)",
+        "type": "expense",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.created",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/account/751-1",
+      "payload": {
+        "code": "751-1",
+        "name": "Odsetki za zwłokę od zaległości budżetowych (NKUP)",
+        "type": "expense",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.created",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/account/761-1",
+      "payload": {
+        "code": "761-1",
+        "name": "Kary i grzywny (NKUP)",
+        "type": "expense",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.created",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/account/761-2",
+      "payload": {
+        "code": "761-2",
+        "name": "Darowizny (NKUP)",
+        "type": "expense",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.created",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/account/870",
+      "payload": {
+        "code": "870",
+        "name": "Podatek dochodowy",
+        "type": "income_tax",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.tax_treatment.set",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/tax-treatment/409-1",
+      "payload": {
+        "account": "409-1",
+        "tax_treatment": "non_deductible",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.tax_treatment.set",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/tax-treatment/751-1",
+      "payload": {
+        "account": "751-1",
+        "tax_treatment": "non_deductible",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.tax_treatment.set",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/tax-treatment/761-1",
+      "payload": {
+        "account": "761-1",
+        "tax_treatment": "non_deductible",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.tax_treatment.set",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/tax-treatment/761-2",
+      "payload": {
+        "account": "761-2",
+        "tax_treatment": "non_deductible",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.tax_treatment.set",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/tax-treatment/870",
+      "payload": {
+        "account": "870",
+        "tax_treatment": "non_deductible",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "cit_limit.defined",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/cit-limit/2026",
+      "payload": {
+        "year_start": "2026-01-01",
+        "small_taxpayer_limit": "8517000.00",
+        "in_year_limit": "8431000.00",
         "market": "pl"
       }
     }

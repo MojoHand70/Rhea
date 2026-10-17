@@ -223,7 +223,10 @@ TEMPLATES - every field value in an effect is a template string:
     value is text, never a link: "$.vat_rate.percent" fails - resolve first,
     "ref(vat_rate, code, $.vat_rate).percent".
   * dates: "=$.state.registered_on + 14" (days), date - date (days),
-    end_of_month(d), add_months(d, n), month(d) — "YYYY-MM", the key a period is named by
+    end_of_month(d), start_of_year(d), add_months(d, n), month(d) — "YYYY-MM", the key a period is named by
+  * the ledger: balance(book, code, from, to) is the debits less the credits of the account
+    with that code in that book, dated from..to — "=-balance(\"pl-stat\", \"700\", start_of_year($.period),
+    $.period)" is the year's sales so far; fold over the chart, never over postings
   * folds over the event's own lines: "=sum(l in $.lines: l.qty * l.price)",
     count(l in $.lines where l.qty > 0), min/max/any/all(l in $.lines: ...),
     "=sum($.lines[*].amount)" sums a fanned-out path

@@ -971,6 +971,20 @@ func (s *Store) FindObjectIDsByField(ctx context.Context, typ, field, value stri
 	return ids, rows.Err()
 }
 
+// AccountBalance is the debits less the credits of one account's postings in
+// a book dated from..to inclusive, in minor units — the formula language's
+// balance(): one keyed aggregate, never a fold. A posting with no book is in
+// the main book.
+func (s *Store) AccountBalance(ctx context.Context, book, account, from, to string) (int64, error) {
+	var minor int64
+	err := s.Pool.QueryRow(ctx,
+		`SELECT COALESCE(SUM(CASE WHEN state->>'side' = 'debit' THEN (state->>'amount')::bigint ELSE -(state->>'amount')::bigint END), 0)::bigint
+		 FROM object WHERE object_type = 'posting' AND state->>'account' = $1 AND COALESCE(state->>'book', 'main') = $2
+		   AND state->>'date' >= $3 AND state->>'date' <= $4 AND ($5 = '' OR company = $5)`,
+		account, book, from, to, CompanyOf(ctx)).Scan(&minor)
+	return minor, err
+}
+
 func (s *Store) GetObject(ctx context.Context, id string) (core.Object, error) {
 	rows, err := s.Pool.Query(ctx,
 		`SELECT `+objectCols+` FROM object WHERE object_id = $1`, id)

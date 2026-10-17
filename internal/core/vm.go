@@ -38,14 +38,22 @@ type Value struct {
 // Env is what a formula may reach beyond its payload: lookups and state
 // reads (nil where there is no state), the catalog that types object fields,
 // which payload prefixes hold typed object state ("$.state": "pz_line"),
-// and the collection cap.
+// the collection cap, and the ledger's balance read (nil where there are no
+// books to read).
 type Env struct {
 	Lookup        Lookup
 	Get           Getter
 	Types         Catalog
 	Typed         map[string]string
 	MaxCollection int
+	Balance       Balance
 }
+
+// Balance is the ledger's own read: the debits less the credits of one
+// account's postings in a book dated from..to inclusive, in minor units. It
+// is not a fold — a year of postings is above any collection cap — but one
+// keyed aggregate the store computes (account, book, a range of dates).
+type Balance func(book, accountID, from, to string) (int64, error)
 
 // DefaultMaxCollection caps a linked collection read (objects()): the
 // cascade depth cap's sibling. Above it the firing is refused into the
@@ -182,6 +190,14 @@ func (m *vm) exec(p *program) (Value, error) {
 			}
 			if p.names[in.a] == "fx" {
 				v, err := m.fx(args[0], args[1], args[2])
+				if err != nil {
+					return Value{}, err
+				}
+				m.push(v)
+				continue
+			}
+			if p.names[in.a] == "balance" {
+				v, err := m.balance(args[0], args[1], args[2], args[3])
 				if err != nil {
 					return Value{}, err
 				}
@@ -413,6 +429,38 @@ func (m *vm) fx(from, to, d Value) (Value, error) {
 		r = new(big.Rat).Inv(inv)
 	}
 	return Value{Kind: KDecimal, Num: r, Origin: "fx_rate " + code}, nil
+}
+
+// balance reads an account's balance in a book over a range of dates: the
+// account named by its code in the chart, the sum the store computes. The
+// balance read is an input, under the call as written.
+func (m *vm) balance(book, code, from, to Value) (Value, error) {
+	if m.env.Lookup == nil || m.env.Balance == nil {
+		return Value{}, fmt.Errorf("balance() needs the books, none available here")
+	}
+	if book.Kind != KString || code.Kind != KString {
+		return Value{}, fmt.Errorf("balance wants a book and an account code as text, got %s and %s", book.Kind, code.Kind)
+	}
+	f, err := toDate(from)
+	if err != nil {
+		return Value{}, fmt.Errorf("balance: from: %w", err)
+	}
+	t, err := toDate(to)
+	if err != nil {
+		return Value{}, fmt.Errorf("balance: to: %w", err)
+	}
+	origin := fmt.Sprintf("balance(%s, %s, %s, %s)", book.Str, code.Str, f.Format("2006-01-02"), t.Format("2006-01-02"))
+	id, err := ResolveRef(m.env.Lookup, "account", "code", code.Str)
+	if err != nil {
+		return Value{}, fmt.Errorf("%s: %w", origin, err)
+	}
+	minor, err := m.env.Balance(book.Str, id, f.Format("2006-01-02"), t.Format("2006-01-02"))
+	if err != nil {
+		return Value{}, fmt.Errorf("%s: %w", origin, err)
+	}
+	v := Value{Kind: KMoney, Num: new(big.Rat).SetFrac64(minor, 100), Origin: origin}
+	m.inputs[origin] = FormatMoney(minor)
+	return v, nil
 }
 
 // objects reads a keyed collection of state: every typ whose field equals
@@ -901,6 +949,12 @@ func call(name string, args []Value) (Value, error) {
 		}
 		first := time.Date(d.Year(), d.Month(), 1, 0, 0, 0, 0, time.UTC)
 		return Value{Kind: KDate, Str: first.AddDate(0, 1, -1).Format("2006-01-02")}, nil
+	case "start_of_year":
+		d, err := toDate(args[0])
+		if err != nil {
+			return Value{}, err
+		}
+		return Value{Kind: KDate, Str: fmt.Sprintf("%04d-01-01", d.Year())}, nil
 	case "month":
 		// the period a date falls in, as the key periods are named by:
 		// "2026-09" — what period_lock, the registers and a settlement share
