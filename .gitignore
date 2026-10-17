@@ -2,3 +2,4 @@ data/
 /rhea
 *.duckdb
 .env
+/images/
