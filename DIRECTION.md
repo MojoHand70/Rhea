@@ -2617,8 +2617,17 @@ needs no model to run; the model is Anthropic's (`FACE_MODEL`, default
 Claude Opus 5.5 at low effort), its answer is data the page checks
 against the closed set, and her words still carry no digit. Found on the
 way and fixed in the kernel: two analysis reads at once collided on the
-DuckDB rebuild (DECISIONS). Next: white01 — the address, a name for the
-app (HTTPS needs one), and the kernel's database there.
+DuckDB rebuild (DECISIONS). **Live on white01, 2026-10-17: https://app.rhea.plus.** White01 is
+shared with Novi's running services, so Rhea took nothing of theirs: its
+own system user, its database in its own container, kernel and face
+listening on the machine only, and one site added to the Caddy that
+already serves Novi (validated before reload; Novi answered throughout).
+The name is an A record in Cloudflare, DNS only, so Caddy holds the
+Let's Encrypt certificate and the live stream is not buffered. The books
+there are the Helios simulation, moved with the kernel's own backup and
+restore (626 objects rebuilt). The kernel cannot be reached from outside;
+the face asks for a password until sign-in arrives with the security
+step, and signs every decision as krzysztof.
 
 ## Language decisions with a recorded destination
 
