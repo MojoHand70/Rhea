@@ -160,6 +160,21 @@ func TestAnswerFromTheBooks(t *testing.T) {
 	if len(ans.Rows) != 1 || ans.Rows[0][0] != "3" || ans.Visual.Kind != "table" {
 		t.Fatalf("after a refused delete, the books: %+v (a misnamed visual shows the rows)", ans)
 	}
+	// A float and the machine's clock go back to the author with the reason.
+	asked = nil
+	replies = []string{`{"sql": "SELECT avg(net) AS a FROM ` + table + `", "reading": "średnia", "visual": {"kind": "kpi", "value": "a"}}`,
+		`{"sql": "SELECT ROUND(avg(net), 2)::DECIMAL(18,2) AS a FROM ` + table + `", "reading": "średnia", "visual": {"kind": "kpi", "value": "a"}}`}
+	call("POST", "/api/answer", map[string]any{"question": "średnia faktura?", "asked_by": "krzysztof"}, &ans)
+	if len(asked) != 2 || !strings.Contains(asked[1], "a float") || ans.Rows[0][0] != "1166.67" {
+		t.Fatalf("a float was shown: %+v", ans.Rows)
+	}
+	asked = nil
+	replies = []string{`{"sql": "SELECT count(*) AS n FROM ` + table + ` WHERE issue_date > CURRENT_DATE - 30", "reading": "x", "visual": {"kind": "kpi", "value": "n"}}`,
+		`{"sql": "SELECT count(*) AS n FROM ` + table + ` WHERE issue_date > DATE '2026-10-18' - 30", "reading": "x", "visual": {"kind": "kpi", "value": "n"}}`}
+	call("POST", "/api/answer", map[string]any{"question": "ile faktur w ostatnich 30 dniach?", "asked_by": "krzysztof"}, &ans)
+	if len(asked) != 2 || !strings.Contains(asked[1], "machine's clock") || ans.Rows[0][0] != "2" {
+		t.Fatalf("the machine's clock was read: %+v", ans.Rows)
+	}
 	replies = []string{`{"cannot": "w księgach nie ma magazynu"}`}
 	call("POST", "/api/answer", map[string]any{"question": "ile mam w magazynie?", "asked_by": "krzysztof"}, &ans)
 	if ans.Cannot == "" {

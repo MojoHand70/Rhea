@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -142,7 +143,12 @@ func (s *Server) handleAnswer(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, 200, map[string]any{"question": req.Question, "cannot": ans.Cannot})
 			return
 		}
-		cols, types, rows, more, err = s.runLocked(ctx, ans.SQL)
+		if err = clockless(ans.SQL); err == nil {
+			cols, types, rows, more, err = s.runLocked(ctx, ans.SQL)
+		}
+		if err == nil {
+			err = exact(cols, types)
+		}
 		if err == nil {
 			break
 		}
@@ -204,6 +210,32 @@ func (s *Server) handleAnswer(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, 200, map[string]any{"event_id": t.EventID, "question": req.Question, "sql": ans.SQL, "reading": ans.Reading,
 		"visual": visual, "columns": shown, "rows": out, "row_objects": rowsOf, "more": more})
+}
+
+// The machine's clock is not the books' day: the kernel's clock is (a
+// simulation's day differs from the wall's), so a query names the day.
+var machineClock = regexp.MustCompile(`(?i)\b(current_date|current_timestamp|current_time|localtimestamp|now|today|get_current_timestamp|get_current_time)\b`)
+
+func clockless(sql string) error {
+	if m := machineClock.FindString(sql); m != "" {
+		return fmt.Errorf("the query reads the machine's clock (%s); the books' day is given — write it as DATE 'YYYY-MM-DD'", m)
+	}
+	return nil
+}
+
+// exact refuses a float among the columns shown (invariant 6): money, its
+// averages and its shares stay decimal.
+func exact(cols, types []string) error {
+	for i, t := range types {
+		if cols[i] == core.RowsOfColumn {
+			continue
+		}
+		switch strings.ToUpper(t) {
+		case "DOUBLE", "FLOAT", "REAL":
+			return fmt.Errorf("column %q comes back as %s, a float: money and its ratios stay exact — ROUND(..., 2)::DECIMAL(18,2), a percent ROUND(... * 100, 1)::DECIMAL(9,1)", cols[i], t)
+		}
+	}
+	return nil
 }
 
 // runLocked runs a query of hers on the copy as it stands: rebuilt when the

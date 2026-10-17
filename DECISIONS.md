@@ -3597,3 +3597,11 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
 - **Found**: the Poland pack puts nearly every type in the `finance` domain (invoices, companies,
   tasks, vehicles), so its collection is one schema; giving sales, purchases, bank, tax and fleet
   their own domains is a pack change, left while the pack is being edited for CIT.
+- **Live on Helios** (the kernel's author, 5–15 s each): August's invoices and their net, the
+  largest customer this year, the result month by month (grosz for grosz the pack's own report),
+  unpaid sales invoices older than thirty days, the average invoice by quarter, each customer's
+  share; "how many employees" came back as "cannot" — the books hold no workforce. Two defects,
+  both now refusals the author fixes in the retry: an average came back as DOUBLE (a float, against
+  invariant 6) — a float column is refused, ROUND(…, 2)::DECIMAL(18,2) asked for; and a query read
+  CURRENT_DATE, the machine's day, not the books' — the clock functions are refused and the day is
+  given as DATE 'YYYY-MM-DD'.

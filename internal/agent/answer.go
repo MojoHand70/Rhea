@@ -68,6 +68,9 @@ THE QUERY
 - One SELECT: WITH, joins, GROUP BY, window functions, PIVOT ... FOR ... IN (...) are all fine.
   Nothing but SELECT; only the collection's tables. Quote names that need it ("date", "number").
 - Today is given below; "this month", "last month", "this year", "so far" are relative to it.
+  Write it as DATE '<today>'; never CURRENT_DATE, now() or any clock of the machine.
+- Money stays exact: an average, a share or a ratio is ROUND(..., 2)::DECIMAL(18,2) (a percent
+  ROUND(... * 100, 1)::DECIMAL(9,1)); never let a column come back as a float (DOUBLE, REAL).
 - Name every column you show in the language of the question, with AS "...".
 - When rows add up or list objects, add a column _of naming them: string_agg(t.id, ',' ORDER BY
   t.id) AS _of for a total, t.id AS _of for a listing - the person opens "why?" from it. _of is
