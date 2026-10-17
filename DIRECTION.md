@@ -2703,9 +2703,12 @@ refuses the draft and has her redraft answering it. Live on Helios the whole
 loop ran: untaught → recorded and shared → drafted → previewed → corrected →
 approved → shown. **Still open:** the third way the loop closes — the network
 learning the shapes people taught and offering them as priors, as it does
-rule shapes; a page for the team to read what installations were never
-taught (today `rhea network` on the machine); consent to report, before the
-first stranger.
+rule shapes; consent to report, before the first stranger. **The Learning
+Centre** (KK's name, 2026-10-17; Rhea 1347c0e, rheaface f36ee00) is the
+team's page: at `/learning` beside the face, what installations were never
+taught, counted, each with where the team says it stands (open, planned for
+a pack, done, not for us) and a note, and what Rhea has learned across
+installations — read from the network, never from an installation's books.
 
 ## Language decisions with a recorded destination
 
