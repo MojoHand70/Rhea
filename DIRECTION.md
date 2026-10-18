@@ -2858,6 +2858,208 @@ who the editor is after Rhea's team; what reviewers get — recognition, early
 access, pay; whether a firm's pack is listed for every company or kept for
 the firm's own clients.
 
+## Smart documents: a process as one definition (KK, 2026-10-19)
+
+KK's call, after the US register showed what an invoice line costs today
+and the talk turned to Rhea's language as object modelling (classes,
+objects, attributes, methods): a document should carry its own
+calculation — *"a small compute programme with variables, formulas, query
+capability (check other objects) and control commands. This is the anima
+of an object"* — and that is the smart document KK has described before.
+*"This is THE most powerful mechanism of Rhea to manage company business
+processes and workflows. This is what makes Rhea a capable ERP. This way
+we can manage any process, calculate any values"*: a smart document takes
+values from the ledger, recalculates an accrual and posts it on approval;
+smart documents make whole WMSs, OMSs and document flows, *"any Rhea
+subsystem. These subsystems become Rhea apps."* The bar is big ERP, not the
+sole trader: Rhea's definitions are a meta-description of an instance, and
+a simple company simply needs fewer of them. **A dedicated session.** This
+section is the handover that session starts from: constraints, an
+inventory, proofs and an order of work, not a design.
+
+**KK's definition.** A smart document has:
+
+- a current state, a diagram of the states it may move between, and a
+  terminal state;
+- per state, the user or group who may change values, who may see them,
+  and who may change the state;
+- variables, scalars or collections, each set by input, by a formula, by a
+  query, or by a combination; the document may loop through a collection;
+- a snapshot of its variables at every state entry and exit;
+- a definition and instances, an instance being a workflow started;
+- the power to start another workflow, and to move another instance between
+  states when the current user is entitled to;
+- a declarative view;
+- the ability to work on data tables and to use APIs.
+
+All of it is declarative.
+
+**What it is in Rhea's terms.** SPEC's Document grown up: a business paper
+with an identity and a lifecycle, now also carrying its variables, its
+calculation, its actions and who may take them. Read in the language Rhea
+already has, one smart-document definition is one approved package of the
+four vocabularies — a type with a lifecycle, the activities that act on
+it, the rules that explain those acts, the views that show it — written as
+a single unit and turned by the kernel into those pieces. Every guarantee
+then holds by construction: the log, approval, provenance on every value,
+replay. A Rhea app is a package of smart documents.
+
+**Rhea already has most of the parts, scattered.** The Poland pack's
+prepaid costs (v30) is a smart document built by hand: two types
+(`prepaid_cost`, lifecycle active → done; `prepaid_release`), one action
+(`spread_cost`), five rules and a view, spread through `packs/pl/pack.json`.
+Nobody can see it as one thing, draw its states or have the interview
+build one. The CIT advance (v27–v29) is another.
+
+| KK's smart document | Rhea today |
+|---|---|
+| States, paths, a terminal state | `LifecycleDef` on a type (`internal/core/core.go`): the field and its allowed moves, refused otherwise. A terminal state is only implied (no way out). |
+| Definition and instances; starting a workflow | A type and its objects; an action records an event and a rule creates the instance. |
+| Variables by input, formula, query | Action inputs; the formula language (exact, declared rounding, reads through links, `balance(book, code, from, to)` on the ledger); `Amendable` fields a rule may set later. No variable belongs to the document: a value is whatever field a rule writes. |
+| Collections and loops | Bounded folds and `each`, including over a keyed collection (`=objects(T, field, value)`), under `MaxCollection`. Fields are scalar or a link, so a collection is separate objects. |
+| Snapshots at state entry and exit | The log keeps every change and as-of is replay with a cutoff; each computed value carries its `Calc` (formula and inputs). No recorded snapshot of all variables at a move. |
+| Start another workflow; move another's state | A rule may create another object (cascade, depth cap 16) and amend another's lifecycle, the kernel validating the move. No entitlement check. |
+| Who may edit, see, move | `Activity.Who` is declared and displayed, never enforced (`internal/core/activity.go`). `person` has a `role` string and a deputy. No groups, no per-state permissions, no login (CLAUDE.md: no auth; the recorded destination "Authz belongs in the language"). |
+| Declarative view | View notions as data: list, detail, worklist, statement, narrative, queue, words, reports. |
+| Data tables | The analysis collection: one DuckDB table per type, read in the locked session ("Reporting" above). |
+| APIs | Channels: code behind the adapter contract, emitting events (KSeF in and out, the NBP rates). |
+
+**What is new.**
+
+1. *The definition itself* — states, variables and how each is set, the
+   actions allowed in each state and who may take them, what each action
+   causes, the view — and its translation into the four vocabularies,
+   approved as one package.
+2. *Document variables.* Named, each declaring its source (input, formula,
+   query, or a formula over inputs and queries) and when it is computed:
+   when the document is created, when an input it reads changes (a
+   payment matched), on the clock (month end), or when someone looks, as
+   of a date, without storing. A variable is assigned once per
+   computation, like a line of a tax form; collections are the document's
+   own parts (lines, line taxes, the delivery address).
+3. *Permissions per state*: who edits which variables, who sees them, who
+   may take which move — checked against the acting person, a refusal
+   recorded.
+4. *Snapshots*: at each state entry and exit, the variables as they stood,
+   baked into the event with their `Calc`, so "why?" on any number opens
+   the worksheet line by line.
+
+**The language pieces it folds in** (agreed in talk with KK, 2026-10-17 to
+2026-10-19). The boundary they serve: *anything a client asks for in an
+implementation is data the interview builds; code is only for engines and
+file formats* — the toolbox (exact calculation, double entry, matching,
+totals over time, the clock, readers and writers, queues and tasks, her
+words). A request that needs a new tool is a gap in the toolbox, never in
+the client.
+
+- *Descriptors* (business dimensions): an attribute defined once with its
+  set of values, often a tree (region → country → district; a product
+  category tree), attached from a library to master data, transaction data
+  and accounts alike. Today every field lives inside one type. Prior art
+  for the shape: SAP's data dictionary (a value range defined once, reused
+  in many tables), Dynamics' extended data types and financial dimensions.
+- *Bookings that carry descriptors.* The posting line is the one class the
+  kernel fixes: `PostingLine` is account, debit, credit
+  (`internal/core/core.go`), with book and currency on the entry. It must
+  become an ordinary class with the kernel's laws kept (balance, the month
+  lock), so a client's chart with segments is a natural account plus
+  descriptors on the line, and a 60/40 split is a rule writing two lines.
+- *Parts*: "an invoice has lines; a line has taxes", declared on the class,
+  so views, totals and file writers walk from the document to its parts;
+  descriptors flow down unless a part says otherwise.
+- *Specialisation*: an export invoice is a sales invoice; sales and
+  purchase invoices are documents with lines; a client's document extends
+  the pack's without editing it. Today types are flat and versioned by name
+  across packs, which is why a US `company` version would supersede
+  Poland's (`packs/us/REVIEW.md`, cause 4).
+- *Account roles*: rules book to a role ("receivables from customers",
+  "sales revenue"), the instance maps roles to its own chart. The Poland
+  pack books to literal numbers (201, 700, 222); `company.cost_account`
+  and its siblings are the start of the mapping.
+
+**What the invariants demand of it.**
+
+1. *The document never writes the books itself.* It reads, computes and
+   decides; an action records an event; a rule books it. In KK's accrual,
+   the document reads the ledger and computes; "approve" is an event; the
+   posting names the approval, the rule and the version.
+2. *Calculations always finish.* Bounded iteration over a named, capped
+   collection; no `while`, no recursion (the arithmetic brief, agreed
+   2026-10-08). Named algorithms (FIFO, allocation with the remainder,
+   MRP) stay kernel methods a document calls.
+3. *An API call is two facts*: the request out, the answer in, both in the
+   log through a channel. A calculation never calls out mid-way, or replay
+   would get another answer. A data-table read is the locked analysis copy
+   or a keyed read as of the event's place in the log.
+4. *Definitions pass the gate; instances do not.* A new or changed
+   definition is drafted (by the interview or a person) and approved as one
+   package; starting a workflow, filling it in and moving it are business,
+   recorded as events. Model output never runs with authority (invariant 3).
+5. *Running instances keep their version.* Today the executor runs only the
+   newest active version of a rule, and `effective_from` is only a lower
+   bound (`internal/exec/exec.go`, `matchRule`), so a new version stops the
+   old one even for earlier-dated events (`packs/us/REVIEW.md`, cause 3). A
+   workflow started under definition v1 must be able to finish under v1;
+   moving it to v2 is a deliberate, approved act. This is the session's
+   first design question, and the US register's cause 3 is the same fix.
+
+**Proofs, in order.**
+
+1. *Prepaid costs as one smart document.* Rebuild v30's two types, one
+   action, five rules and view as one definition; on Helios the books are
+   identical to the grosz and replay is identical. Proves the unit loses
+   nothing.
+2. *KK's accrual*: values read from the ledger, the accrual recalculated,
+   posted on approval. A candidate is the Polish pair of v30, accrued costs
+   (RMK bierne): the year-end audit fee or unused holidays. KK to name the
+   one his clients live by.
+3. *A document flow with permissions*: a purchase request; above an amount,
+   approved by someone other than the requester; then the order and the
+   receipt. Segregation of duties is the test: the requester's own approval
+   is refused and the refusal is in the log.
+4. *The interview drafts a smart document as a unit* from a plain-language
+   description, the gate showing its state diagram and worksheet.
+
+**Order of work** (each a commit or two): the definition and its
+translation, with no new behaviour (proof 1); variables, parts and
+snapshots; permissions per state with roles as data; acting on other
+instances under entitlement; proofs 2 and 3; the author's grammar (proof
+4); the view of a smart document on the face — its states, its worksheet,
+"why?" on every variable. Descriptors, bookings with descriptors,
+specialisation and account roles each earn their own step after proof 3,
+in the order a big client needs them; APIs as two facts last.
+
+**Prior art to read first.** In the repo: SPEC's Document; `LifecycleDef`
+and `Amendable` (`internal/core/core.go`); `Activity` and `Who`
+(`internal/core/activity.go`); the formula VM and `Calc`
+(`internal/core/vm.go`); `each` over keyed collections and `balance()`
+(commits 4c85b9b, 24b6763); the cascade cap and `MaxCollection`
+(`internal/exec/exec.go`); bundles (`internal/core/bundle.go`); view
+notions (`internal/core/views.go`); the people pack (`person.role`,
+deputies); prepaid costs and the CIT advance in `packs/pl/pack.json`; the
+arithmetic and matching briefs above (folds, never loops; a kernel method
+parameterized by data); `packs/us/REVIEW.md` causes 1, 3, 4 and 6. Outside,
+for vocabulary and warrants, not architecture: BPMN 2.0 (OMG) for states,
+flows and tasks; how the big systems name approval by amount (SAP release
+strategies, Dynamics workflows); KK's Swan, which carries formulas as
+element data.
+
+**Open for KK**, each with the standard Rhea would propose:
+
+- *Roles and groups.* Proposed: a role is data (accountant, approver,
+  warehouse clerk); a person holds roles with dates; a group is a named set
+  of persons or roles; the definition grants per state. `person.role` today
+  is a single string.
+- *Permissions before the login.* Proposed: declare and check them against
+  the acting person from the first step, refusals recorded and tested,
+  saying honestly that identity is attributed until the login lands
+  ("Packs built together": the login with audit comes first there too).
+- *"Data tables".* Proposed: a collection variable is the document's own
+  table; reading the company's data goes through the locked analysis copy
+  or a keyed read. KK to say if he meant more (a document that maintains a
+  table others read, as a price list does).
+- *The accrual for proof 2* (above).
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
@@ -2906,7 +3108,9 @@ the firm's own clients.
 - **Authz belongs in the language, eventually.** Users, groups and access
   policies should be objects and rules like everything else — a good
   falsifiability test of its own, post-M2. Until then: actor attribution
-  only, no auth (experiment non-goal).
+  only, no auth (experiment non-goal). Brought forward by smart documents
+  (KK, 2026-10-19): who may edit, see and move a document is part of its
+  definition, per state.
 - **Scheduling ships with its hand on the switch** (KK, 2026-10-05:
   thirty years of implementations say scheduling is where automation
   outruns organic, unorganized reality — leave a space to switch it off).
@@ -2960,3 +3164,14 @@ the firm's own clients.
   same day: open source with a quality floor, security as defensibility
   before an audit, April 2027 the latest; measurement first, then KSeF
   outbound.
+- **A process is one definition: the smart document** (KK, 2026-10-19,
+  "Smart documents" above). States with their paths and a terminal state;
+  per state who edits, sees and moves; variables set by input, formula or
+  query, scalars or collections, snapshotted at every move; instances as
+  workflows that may start and move others under entitlement; a
+  declarative view — one definition the kernel turns into the four
+  vocabularies, approved as one package, so the guarantees hold by
+  construction. It never writes the books itself, its calculations always
+  finish, an API call is two facts, running instances keep their version.
+  Rhea's apps (WMS, OMS, document flows) are packages of smart documents.
+  A dedicated session; the first proof rebuilds prepaid costs as one.
