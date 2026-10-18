@@ -500,3 +500,20 @@ func TestFormulaBalance(t *testing.T) {
 		t.Fatal("balance with three arguments")
 	}
 }
+
+// months_between: whole months from one date's month to another's.
+func TestFormulaMonthsBetween(t *testing.T) {
+	p := `{"from": "2026-10-01", "to": "2027-09-30"}`
+	for f, want := range map[string]any{
+		`=months_between($.from, $.to)`:               int64(11),
+		`=months_between($.to, $.from)`:               int64(-11),
+		`=months_between("2026-10-31", "2026-10-01")`: int64(0),
+	} {
+		if v, _ := evalFormula(t, f, p, "int", nil); v != want {
+			t.Fatalf("%s = %v, want %v", f, v, want)
+		}
+	}
+	if _, err := ParseFormula(`months_between("2026-10-01")`); err == nil {
+		t.Fatal("months_between with one argument")
+	}
+}

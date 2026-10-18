@@ -3661,3 +3661,26 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   stays, the advances before it are read again — and books the difference on the day (Wn 225 /
   Ma 870 when it shrinks, the reverse when it grows); recomputed again, nothing moves. The live
   sequence: ruled backfill for January–August, then recompute September.
+
+## 2026-10-18 — prepaid costs (RMK czynne), month-end work at the month's opening (Poland pack v30)
+
+- **KK**: some of his clients live by RMK. A purchase invoice that covers several months is
+  spread through `spread_cost` (invoice, start, months; the account and amount when not the
+  supplier's account and the invoice's net): its cost moves to 640 on the day, and comes back to
+  the cost account in equal parts. A person decides what to spread — the materiality threshold
+  is the company's policy (KSR 16 pt 12.10, FB-18); Rhea does not spread on its own yet (an
+  invoice carrying its period, FA(3) OkresFa, could later).
+- **When**: a part is released when the next month opens (`time.month_opened`), dated on the last
+  day of the month that ended — month-end work before the close, so the close and its CIT
+  advance already see it. Cumulative, like the advance: a schedule spread after its months began
+  gives them back at once; the last part completes the amount; a schedule fully released is done.
+  CIT follows the book cost month by month (CIT art. 15 ust. 4d spreads costs crossing the year).
+- **The kernel**: an `each` may walk a keyed collection, `=objects(T, field, value)`, its elements
+  arriving as a cascade carries an object ({object_type, object_id, state}, the state typed);
+  `months_between(a, b)`; an entry may carry its own business date (`postings.date`), and a
+  month's lock binds what comes after the fact that locked it — so a close's own entries go into
+  the month it closes, while a late document or a backfill finds the month closed and goes
+  forward. The CIT charge now lands in the month it closes (KK's option B).
+- **white01 never ran the clock**: the 06:30 timer now opens the day before she speaks, so months
+  open (and RMK parts release) on their own. Deferred revenue (RMP, the SaaS case — its CIT
+  revenue date is contested) and accrued costs (RMK bierne) come later.

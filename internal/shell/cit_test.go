@@ -374,8 +374,12 @@ func TestCITAdvanceBackfilled(t *testing.T) {
 	for _, a := range accounts {
 		code[a.ID] = a.State["code"].(string)
 	}
+	// October's close books its charge in October, the month it closes;
+	// September's, found after September closed, goes to the backfill's day,
+	// and so does the recompute's difference.
 	var on870 int64
 	lines := map[string]int{}
+	dated := map[string]bool{}
 	for _, p := range postings {
 		if code[fmt.Sprint(p.State["account"])] != "870" {
 			continue
@@ -386,11 +390,10 @@ func TestCITAdvanceBackfilled(t *testing.T) {
 		}
 		on870 += amt
 		lines[p.RuleID]++
-		if d, _ := p.State["date"].(string); d < "2026-11-01" {
-			t.Fatalf("a charge for a closed month dated %v", d)
-		}
+		dated[p.RuleID+" "+p.State["date"].(string)] = true
 	}
-	if on870 != 27900 || lines["pl-post-cit-advance"] != 2 || lines["pl-post-cit-advance-correction"] != 1 {
-		t.Fatalf("870: %d %v", on870, lines)
+	if on870 != 27900 || lines["pl-post-cit-advance"] != 2 || lines["pl-post-cit-advance-correction"] != 1 ||
+		!dated["pl-post-cit-advance 2026-10-31"] || !dated["pl-post-cit-advance 2026-11-10"] || !dated["pl-post-cit-advance-correction 2026-11-10"] {
+		t.Fatalf("870: %d %v %v", on870, lines, dated)
 	}
 }

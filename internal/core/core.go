@@ -303,7 +303,9 @@ type Effect struct {
 // and a Set touching the lifecycle field must move along a declared
 // transition. An amendment whose target does not exist is a rule error and
 // the event waits in the worklist; nothing half-applies. With Each set — a
-// "=$.path" fan-out into an array — the rule amends one object per element
+// "=$.path" fan-out into an array, or a keyed collection "=objects(T, f, v)"
+// whose elements arrive as {object_type, object_id, state} — the rule
+// amends one object per element
 // (the items a match allocated), Target and Set evaluating against
 // {"doc": <the event payload>, "line": <the element>, "n": <1-based>} as an
 // object fan-out does: one event that moves N objects.
@@ -328,6 +330,11 @@ type PostingsTemplate struct {
 	Currency string           `json:"currency"` // template, e.g. "PLN" or "=$.currency"
 	Convert  *ConvertTemplate `json:"convert,omitempty"`
 	Lines    []PostingLine    `json:"lines"`
+	// Date is the entry's own business date when it is not the fact's: a
+	// month's close books its releases and charges on the month's last day
+	// (KK 2026-10-18). A template; empty means the fact's date. An entry
+	// whose own month an earlier fact locked takes the fact's date instead.
+	Date string `json:"date,omitempty"`
 }
 
 // ConvertTemplate books the entry in a functional currency (DECISIONS
@@ -359,7 +366,9 @@ type PostingLine struct {
 
 // ObjectTemplate maps object fields to values. A value starting with "=" is an
 // expression (see expr.go); anything else is a literal string. With Each set —
-// a "=$.path" fan-out into an array — the rule materializes one object per
+// a "=$.path" fan-out into an array, or a keyed collection "=objects(T, f, v)"
+// whose elements arrive as {object_type, object_id, state} (a month's close
+// releasing every open schedule) — the rule materializes one object per
 // element (a multi-line document's lines, the posting pattern generalized),
 // and field templates evaluate against {"doc": <the event payload>, "line":
 // <the element>, "n": <1-based line number>} instead of the payload alone.
@@ -436,8 +445,8 @@ func (s RuleSpec) Validate(target *ObjectType) error {
 		if err != nil {
 			return fmt.Errorf("effect.object.each: %w", err)
 		}
-		if pt.kind != "path" {
-			return fmt.Errorf("effect.object.each wants a =$.path fan-out, got %q", s.Effect.Object.Each)
+		if pt.kind != "path" && !pt.IsCollection() {
+			return fmt.Errorf("effect.object.each wants a =$.path fan-out or a collection, =objects(T, field, value), got %q", s.Effect.Object.Each)
 		}
 	}
 	for name, tmpl := range s.Effect.Object.Fields {
@@ -506,8 +515,8 @@ func (a *AmendTemplate) validate(target *ObjectType) error {
 		if err != nil {
 			return fmt.Errorf("amend.each: %w", err)
 		}
-		if et.kind != "path" {
-			return fmt.Errorf("amend.each wants a =$.path fan-out, got %q", a.Each)
+		if et.kind != "path" && !et.IsCollection() {
+			return fmt.Errorf("amend.each wants a =$.path fan-out or a collection, =objects(T, field, value), got %q", a.Each)
 		}
 	}
 	pt, err := ParseTemplate(a.Target)
@@ -561,6 +570,11 @@ func (p *PostingsTemplate) validate() error {
 	}
 	if p.Currency == "" {
 		return fmt.Errorf("postings.currency is required")
+	}
+	if p.Date != "" {
+		if _, err := ParseTemplate(p.Date); err != nil {
+			return fmt.Errorf("postings.date: %w", err)
+		}
 	}
 	if _, err := ParseTemplate(p.Currency); err != nil {
 		return fmt.Errorf("postings.currency: %w", err)

@@ -949,6 +949,17 @@ func call(name string, args []Value) (Value, error) {
 		}
 		first := time.Date(d.Year(), d.Month(), 1, 0, 0, 0, 0, time.UTC)
 		return Value{Kind: KDate, Str: first.AddDate(0, 1, -1).Format("2006-01-02")}, nil
+	case "months_between":
+		a, err := toDate(args[0])
+		if err != nil {
+			return Value{}, err
+		}
+		b, err := toDate(args[1])
+		if err != nil {
+			return Value{}, err
+		}
+		n := (b.Year()-a.Year())*12 + int(b.Month()) - int(a.Month())
+		return Value{Kind: KInt, Num: big.NewRat(int64(n), 1)}, nil
 	case "start_of_year":
 		d, err := toDate(args[0])
 		if err != nil {

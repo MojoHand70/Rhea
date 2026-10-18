@@ -273,7 +273,12 @@ func (x *Executor) evaluate(ctx context.Context, ev core.Event, rules []core.Rul
 // plus the chain's earlier generations — the receipt's movement is visible to
 // the valuation rule — never their own siblings. Shared verbatim by the live
 // path and the simulator, so a dry run cannot drift from reality.
+// lockWorldKey carries, through one chain's expansion, the world before the
+// chain: the locks its entries answer to (ExpandPostings).
+type lockWorldKey struct{}
+
 func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []core.Rule, payload any, base core.Lookup, baseGet core.Getter, prior Prior, seed *chainNode) ([]chainNode, error) {
+	ctx = context.WithValue(ctx, lockWorldKey{}, base)
 	var nodes []chainNode
 	// A seed is a first node the root already carries — a person's
 	// pairing, run by the kernel before the rules — from which the
@@ -611,7 +616,8 @@ func (x *Executor) expandEffect(ctx context.Context, root core.Event, idBase str
 		if err != nil {
 			return nil, fmt.Errorf("rule %s v%d: %w", r.ID, r.Version, err)
 		}
-		mats, err := ExpandPostings(r.Spec.Effect.Postings, postingType, root, idBase, r.ID, payload, x.env(ctx, payload, lookup, get))
+		locks, _ := ctx.Value(lockWorldKey{}).(core.Lookup)
+		mats, err := ExpandPostings(r.Spec.Effect.Postings, postingType, root, idBase, r.ID, payload, x.env(ctx, payload, lookup, get), locks)
 		if err != nil {
 			return nil, fmt.Errorf("rule %s v%d postings: %w", r.ID, r.Version, err)
 		}
@@ -649,13 +655,27 @@ func (x *Executor) expandEffect(ctx context.Context, root core.Event, idBase str
 	if err != nil {
 		return nil, fmt.Errorf("rule %s v%d each: %w", r.ID, r.Version, err)
 	}
-	v, err := t.Eval(payload, core.FieldDef{}, nil)
-	if err != nil {
-		return nil, fmt.Errorf("rule %s v%d each: %w", r.ID, r.Version, err)
-	}
-	arr, ok := v.([]any)
-	if !ok {
-		return nil, fmt.Errorf("rule %s v%d each: %s is not an array", r.ID, r.Version, tmpl.Each)
+	var arr []any
+	if t.IsCollection() {
+		// Each over a keyed collection (KK 2026-10-18: a close releases every
+		// open schedule): the element is the object as a cascade carries it,
+		// {object_type, object_id, state}, its state typed at $.line.state.
+		items, err := t.Collection(payload, x.env(ctx, payload, lookup, get))
+		if err != nil {
+			return nil, fmt.Errorf("rule %s v%d each: %w", r.ID, r.Version, err)
+		}
+		for _, it := range items {
+			arr = append(arr, map[string]any{"object_type": it.Type, "object_id": it.ID, "state": it.State})
+		}
+	} else {
+		v, err := t.Eval(payload, core.FieldDef{}, nil)
+		if err != nil {
+			return nil, fmt.Errorf("rule %s v%d each: %w", r.ID, r.Version, err)
+		}
+		var ok bool
+		if arr, ok = v.([]any); !ok {
+			return nil, fmt.Errorf("rule %s v%d each: %s is not an array", r.ID, r.Version, tmpl.Each)
+		}
 	}
 	if len(arr) == 0 {
 		return nil, fmt.Errorf("rule %s v%d each: %s matched no elements", r.ID, r.Version, tmpl.Each)
@@ -717,13 +737,27 @@ func (x *Executor) expandAmend(ctx context.Context, r core.Rule, payload any, lo
 	if err != nil {
 		return nil, fmt.Errorf("rule %s v%d each: %w", r.ID, r.Version, err)
 	}
-	v, err := t.Eval(payload, core.FieldDef{}, nil)
-	if err != nil {
-		return nil, fmt.Errorf("rule %s v%d each: %w", r.ID, r.Version, err)
-	}
-	arr, ok := v.([]any)
-	if !ok {
-		return nil, fmt.Errorf("rule %s v%d each: %s is not an array", r.ID, r.Version, tmpl.Each)
+	var arr []any
+	if t.IsCollection() {
+		// Each over a keyed collection (KK 2026-10-18: a close releases every
+		// open schedule): the element is the object as a cascade carries it,
+		// {object_type, object_id, state}, its state typed at $.line.state.
+		items, err := t.Collection(payload, x.env(ctx, payload, lookup, get))
+		if err != nil {
+			return nil, fmt.Errorf("rule %s v%d each: %w", r.ID, r.Version, err)
+		}
+		for _, it := range items {
+			arr = append(arr, map[string]any{"object_type": it.Type, "object_id": it.ID, "state": it.State})
+		}
+	} else {
+		v, err := t.Eval(payload, core.FieldDef{}, nil)
+		if err != nil {
+			return nil, fmt.Errorf("rule %s v%d each: %w", r.ID, r.Version, err)
+		}
+		var ok bool
+		if arr, ok = v.([]any); !ok {
+			return nil, fmt.Errorf("rule %s v%d each: %s is not an array", r.ID, r.Version, tmpl.Each)
+		}
 	}
 	if len(arr) == 0 {
 		return nil, fmt.Errorf("rule %s v%d each: %s matched no elements", r.ID, r.Version, tmpl.Each)
@@ -962,14 +996,20 @@ func typedPrefixes(payload any) map[string]string {
 			return map[string]string{"$.state": t}
 		}
 	}
-	if doc, ok := m["doc"].(map[string]any); ok {
-		if t, ok := doc["object_type"].(string); ok {
-			if _, ok := doc["state"]; ok {
-				return map[string]string{"$.doc.state": t}
+	typed := map[string]string{}
+	for _, k := range []string{"doc", "line"} {
+		if el, ok := m[k].(map[string]any); ok {
+			if t, ok := el["object_type"].(string); ok {
+				if _, ok := el["state"]; ok {
+					typed["$."+k+".state"] = t
+				}
 			}
 		}
 	}
-	return nil
+	if len(typed) == 0 {
+		return nil
+	}
+	return typed
 }
 
 // vouchRef checks an object id a ref field carries by path (KK, 2026-10-08:

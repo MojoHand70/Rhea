@@ -38,6 +38,7 @@ import (
 // Functions: round(x, places, method) with method ∈ half_up half_even down up;
 // if(c, a, b); coalesce(a, b) — a, unless it is missing, then b; abs(x);
 // min(a, b); max(a, b); end_of_month(d); start_of_year(d); add_months(d, n);
+// months_between(a, b) — whole months from a's month to b's (Jan to Mar is 2);
 // month(d) — the period a date falls in, "YYYY-MM", the key periods share;
 // balance(book, code, from, to) — the debits less the credits of the account
 // with that code in the chart, in that book, dated from..to inclusive: the
@@ -931,6 +932,20 @@ func (e *checkEnv) checkCall(n *node, rounded bool) (ty, error) {
 			return anyT, fmt.Errorf("at %d: end_of_month wants a date, got %s", n.pos, d.kind)
 		}
 		return ty{kind: KDate}, nil
+	case "months_between":
+		if err := argc(2); err != nil {
+			return anyT, err
+		}
+		for i := 0; i < 2; i++ {
+			d, err := e.check(n.args[i], rounded)
+			if err != nil {
+				return anyT, err
+			}
+			if d.kind != KDate && d.kind != KString && d.kind != KAny {
+				return anyT, fmt.Errorf("at %d: months_between wants dates, got %s", n.pos, d.kind)
+			}
+		}
+		return ty{kind: KInt}, nil
 	case "start_of_year":
 		if err := argc(1); err != nil {
 			return anyT, err

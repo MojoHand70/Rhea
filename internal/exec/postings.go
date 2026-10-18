@@ -46,11 +46,19 @@ const FXRateObjectType = "fx_rate"
 // ledger rules may book the same event (a VAT entry beside a revenue entry)
 // and one ledger rule may book each of an event's lines (a valuation entry
 // per movement) without colliding.
-func ExpandPostings(p *core.PostingsTemplate, postingType core.ObjectType, ev core.Event, idBase, ruleID string, payload any, env *core.Env) ([]core.MaterializedObject, error) {
+//
+// locks is the world before this chain (nil: the env's own lookup): a
+// month's lock binds what comes after the fact that locked it, so a close's
+// own entries still go into the month it closes, while a later fact — a
+// late document, a backfill — finds the month closed and goes forward.
+func ExpandPostings(p *core.PostingsTemplate, postingType core.ObjectType, ev core.Event, idBase, ruleID string, payload any, env *core.Env, locks core.Lookup) ([]core.MaterializedObject, error) {
 	if env == nil || env.Lookup == nil {
 		return nil, fmt.Errorf("postings need object state, none available here")
 	}
 	lookup, get := env.Lookup, env.Get
+	if locks == nil {
+		locks = lookup
+	}
 
 	if len(ev.OccurredAt) < 7 {
 		return nil, fmt.Errorf("event has no business date")
@@ -67,8 +75,23 @@ func ExpandPostings(p *core.PostingsTemplate, postingType core.ObjectType, ev co
 	// (business date decides). A lock names its (book, month); a lock object
 	// from before books existed matches no book and locks nothing from here
 	// on (DECISIONS 2026-10-04, E1).
-	month := ev.OccurredAt[:7]
-	if locked, err := monthLocked(lookup, book, month); err != nil {
+	date := ev.OccurredAt
+	if p.Date != "" {
+		d, err := evalString(p.Date, payload, env)
+		if err != nil {
+			return nil, fmt.Errorf("date: %w", err)
+		}
+		if _, err := time.Parse("2006-01-02", d); err != nil {
+			return nil, fmt.Errorf("date: %q is not a date", d)
+		}
+		if locked, err := monthLocked(locks, book, d[:7]); err != nil {
+			return nil, err
+		} else if !locked {
+			date = d
+		}
+	}
+	month := date[:7]
+	if locked, err := monthLocked(locks, book, month); err != nil {
 		return nil, err
 	} else if locked {
 		return nil, &PeriodLockedError{Month: month, Book: book}
@@ -177,7 +200,7 @@ func ExpandPostings(p *core.PostingsTemplate, postingType core.ObjectType, ev co
 			"side":     side,
 			"amount":   amount,
 			"currency": bookCurrency,
-			"date":     ev.OccurredAt,
+			"date":     date,
 		}
 		if p.Convert != nil && tx != nil {
 			state["tx_amount"] = tx.amount

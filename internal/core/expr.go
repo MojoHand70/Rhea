@@ -161,6 +161,43 @@ func (t Template) Eval(payload any, fd FieldDef, lookup Lookup) (any, error) {
 	return v, err
 }
 
+// CollectionItem is one object a keyed collection read returned.
+type CollectionItem struct {
+	ID    string
+	Type  string
+	State map[string]any
+}
+
+// IsCollection reports whether the template is a keyed collection read,
+// =objects(T, field, value) — what an each may walk besides a payload path.
+func (t Template) IsCollection() bool {
+	return t.kind == "formula" && strings.HasPrefix(strings.TrimSpace(strings.TrimPrefix(t.raw, "=")), "objects(")
+}
+
+// Collection runs a collection read and returns its objects, ids and state,
+// in log order, under the collection cap.
+func (t Template) Collection(payload any, env *Env) ([]CollectionItem, error) {
+	if !t.IsCollection() {
+		return nil, fmt.Errorf("%s is not a collection read, =objects(T, field, value)", t.raw)
+	}
+	v, _, err := t.f.run(payload, env)
+	if err != nil {
+		return nil, err
+	}
+	if v.Kind != KList {
+		return nil, fmt.Errorf("%s is a %s, not a collection", t.raw, v.Kind)
+	}
+	out := make([]CollectionItem, 0, len(v.List))
+	for _, el := range v.List {
+		state, ok := el.Raw.(map[string]any)
+		if el.Kind != KObject || !ok {
+			return nil, fmt.Errorf("%s holds a %s, not an object", t.raw, el.Kind)
+		}
+		out = append(out, CollectionItem{ID: el.Origin, Type: el.Type, State: state})
+	}
+	return out, nil
+}
+
 // Evaluate evaluates the template against a decoded payload. The field def
 // guides coercion and checking: "money" yields int64 minor units, "int" a
 // whole number, "decimal" a canonical decimal string, "enum" admits only the

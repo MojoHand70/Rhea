@@ -1,7 +1,7 @@
 {
   "pack": "pl",
-  "version": 29,
-  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami; poranek: gospodarz mówi, co zaksięgowano i co czeka, z faktów, które policzyło jądro; dziś: otwarte zadania i należności w kolejności pilności, z zatwierdzeniami, które czekają; KSeF na zewnątrz: faktury sprzedaży idą do KSeF jako FA(3) jedną sesją interaktywną, dowód (numer KSeF, UPO) i odmowa (kod, słowa Ministerstwa) są zdarzeniami, odmowa staje się zadaniem na dziś; koniec miesiąca: faktury niosą okres VAT, zamknięcie miesiąca (period.closed) daje rozliczenie VAT jako obiekt policzony regułą — każda liczba deklaracji ma pochodzenie; plik JPK_V7M z rozliczenia i faktur miesiąca (writer rynku), firma zna swój urząd skarbowy, e-mail i formę prawną, faktura zakupu z KSeF niesie numer KSeF; firma mówi, kim jest dla urzędu (identify_company): e-mail, urząd skarbowy, forma prawna, właściciel; v19 (przegląd pakietu, 2026-10-16): daty, które decydują o okresie VAT — faktura sprzedaży niesie datę sprzedaży (P_6, a gdy jej nie podano, datę wystawienia) i okres VAT według obowiązku podatkowego; faktura zakupu niesie datę sprzedaży u dostawcy i datę otrzymania (dla KSeF: dzień nadania numeru), a odliczenie przypada na późniejszy z tych miesięcy; firma mówi, czym jest (declare_company_form): status VAT (czynny albo zwolniony, z przepisem zwolnienia), forma ksiąg i forma opodatkowania od wskazanej daty; firma zwolniona nie rozlicza VAT i nie składa JPK_V7, a VAT od jej zakupów jest kosztem; faktury bez VAT (zw, 0%) księgują się bez linii VAT; każda zmieniona reguła nazywa swoje źródło; v20 (przegląd, 2026-10-16): zakup trafia w koszty — usługa albo wydatek bez dokumentu dostawy na konto kosztowe dostawcy (set_cost_account), a gdy go nie podano, na 403 usługi obce; zakup z dokumentem dostawy (WZ) czeka na 300 na rozliczenie z przyjęciem (PZ); różnice groszowe rozliczeń: niedopłata 761, nadpłata 760 (pozostałe operacyjne), cofnięcie wraca tym kontem, którym weszło; konta 750, 751, 761 w planie kont; v21 (przegląd, 2026-10-16): pozycja wyciągu najpierw mówi, czym jest — opłata i odsetki po kodzie banku, przelew między własnymi rachunkami, wpłata na mikrorachunek podatkowy, na rachunek składkowy ZUS, pieniądze właściciela — a dopiero reszta jest zapłatą kontrahenta, którą się rozlicza z fakturami; każda księguje się na swoje konto (149, 225, 229, 249, 403, 750/751); osoba może przeklasyfikować pozycję, której nic nie rozliczyło (classify_bank_operation); deklaracja formy firmy sprawdza formę prawną (spółka: CIT i pełne księgi); v22 (przegląd, 2026-10-16): waluty — faktura w walucie obcej niesie netto i VAT w złotych po kursie średnim NBP z ostatniego dnia roboczego przed dniem sprzedaży (kanał pl-nbp), księgi przeliczają po tym samym kursie, a zapłatę po kursie z jej dnia; różnica kursowa zrealizowana przy rozliczeniu trafia na 750 albo 751 i cofa się tym samym kontem; rozliczenie VAT, JPK i faktura w KSeF (P_14_xW) liczą VAT w złotych; v23 (twarz, 2026-10-16): rejestry VAT mówią, z jakich faktur jest każdy wiersz (kolumna _of), a każda kolumna kwot — co sumuje; „dlaczego?” na komórce rejestru odpowiada fakturami i sprawdza, że składają się na kwotę; v24 (twarz, krok 3, 2026-10-17): pakiet mówi słowami twarzy — słownik (nazwy typów, pól, wartości, zdarzeń, drzwi, zespołów planu kont i kształt każdego typu), deklaracja VAT jako zestawienie pozycji rozliczenia, a liczby, które twarz liczyła sama, liczy jądro: rano w liczbach (rachunek, należności, zobowiązania, VAT, co zrobiono), wynik od początku roku, należności według wieku na dzień jądra; v25 (twarz, 2026-10-17): wynik miesiąc po miesiącu — przychody, koszty i wynik każdego miesiąca ksiąg, każdy wiersz z zapisów, z których jest; zapis spóźnionego dokumentu liczy się w miesiącu, w którym go zaksięgowano; suma miesięcy to wynik od początku roku; v26 (poranek, 2026-10-17): poranek według roli — właściciel słyszy najpierw wynik (ten miesiąc do dziś, poprzedni, od stycznia, przed opodatkowaniem), potem pieniądze (rachunek, należności z najstarszą fakturą, zobowiązania), terminy podatkowe jednym zdaniem i to, co czeka; księgowość (rola accountant) słyszy najpierw, co jest otwarte (miesiące do zamknięcia, pozycje wyciągu bez rozliczenia, zadania po terminie), potem terminy z kwotami albo powodem ich braku, wynik na końcu; VAT jest terminem z kwotą, nie nagłówkiem; terminy podatkowe: VAT i JPK_V7M do 25., zaliczka na podatek dochodowy do 20. dnia następnego miesiąca, przesunięte na najbliższy dzień roboczy, gdy wypadają w sobotę albo dzień ustawowo wolny (Wielkanoc i Boże Ciało liczone); kwoty zaliczki księgi jeszcze nie liczą i mówią to wprost; rano w liczbach zaczyna się od wyniku tego miesiąca i od początku roku; v27 (CIT, 2026-10-17): zaliczka na CIT liczona przy zamknięciu miesiąca, narastająco od początku roku — przychody podatkowe minus koszty podatkowe, konta mówią, czym są dla podatku dochodowego (KUP albo NKUP, przychód albo nie; bez oznaczenia koszt i przychód są podatkowe), nowe konta NKUP: 409-1 reprezentacja, 751-1 odsetki budżetowe, 761-1 kary i grzywny, 761-2 darowizny, oraz 870 podatek dochodowy; podstawa w pełnych złotych, stawka 9% gdy status na rok na to pozwala (rok rozpoczęcia działalności, chyba że z przekształcenia albo aportu; mały podatnik) i przychody od początku roku mieszczą się w limicie, inaczej 19%; zaliczka to podatek od początku roku minus zaliczki wcześniejsze, księgowana Wn 870 / Ma 225; limity na 2026 r. jako dane; terminy i poranek podają kwotę zaliczki, rano w liczbach pokazuje ostatnią; v28 (poranek, 2026-10-18): wiersz poprzedniego miesiąca mówi, czy miesiąc jest zamknięty, a gospodarz nie nazywa zamkniętym miesiąca, który nim nie jest; v29 (CIT, 2026-10-18): przeliczenie zaliczki za zamknięty miesiąc względem zaliczek wcześniejszych miesięcy, które księgi poznały później — różnica Wn 225 / Ma 870 albo odwrotnie, w dniu przeliczenia",
+  "version": 30,
+  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami; poranek: gospodarz mówi, co zaksięgowano i co czeka, z faktów, które policzyło jądro; dziś: otwarte zadania i należności w kolejności pilności, z zatwierdzeniami, które czekają; KSeF na zewnątrz: faktury sprzedaży idą do KSeF jako FA(3) jedną sesją interaktywną, dowód (numer KSeF, UPO) i odmowa (kod, słowa Ministerstwa) są zdarzeniami, odmowa staje się zadaniem na dziś; koniec miesiąca: faktury niosą okres VAT, zamknięcie miesiąca (period.closed) daje rozliczenie VAT jako obiekt policzony regułą — każda liczba deklaracji ma pochodzenie; plik JPK_V7M z rozliczenia i faktur miesiąca (writer rynku), firma zna swój urząd skarbowy, e-mail i formę prawną, faktura zakupu z KSeF niesie numer KSeF; firma mówi, kim jest dla urzędu (identify_company): e-mail, urząd skarbowy, forma prawna, właściciel; v19 (przegląd pakietu, 2026-10-16): daty, które decydują o okresie VAT — faktura sprzedaży niesie datę sprzedaży (P_6, a gdy jej nie podano, datę wystawienia) i okres VAT według obowiązku podatkowego; faktura zakupu niesie datę sprzedaży u dostawcy i datę otrzymania (dla KSeF: dzień nadania numeru), a odliczenie przypada na późniejszy z tych miesięcy; firma mówi, czym jest (declare_company_form): status VAT (czynny albo zwolniony, z przepisem zwolnienia), forma ksiąg i forma opodatkowania od wskazanej daty; firma zwolniona nie rozlicza VAT i nie składa JPK_V7, a VAT od jej zakupów jest kosztem; faktury bez VAT (zw, 0%) księgują się bez linii VAT; każda zmieniona reguła nazywa swoje źródło; v20 (przegląd, 2026-10-16): zakup trafia w koszty — usługa albo wydatek bez dokumentu dostawy na konto kosztowe dostawcy (set_cost_account), a gdy go nie podano, na 403 usługi obce; zakup z dokumentem dostawy (WZ) czeka na 300 na rozliczenie z przyjęciem (PZ); różnice groszowe rozliczeń: niedopłata 761, nadpłata 760 (pozostałe operacyjne), cofnięcie wraca tym kontem, którym weszło; konta 750, 751, 761 w planie kont; v21 (przegląd, 2026-10-16): pozycja wyciągu najpierw mówi, czym jest — opłata i odsetki po kodzie banku, przelew między własnymi rachunkami, wpłata na mikrorachunek podatkowy, na rachunek składkowy ZUS, pieniądze właściciela — a dopiero reszta jest zapłatą kontrahenta, którą się rozlicza z fakturami; każda księguje się na swoje konto (149, 225, 229, 249, 403, 750/751); osoba może przeklasyfikować pozycję, której nic nie rozliczyło (classify_bank_operation); deklaracja formy firmy sprawdza formę prawną (spółka: CIT i pełne księgi); v22 (przegląd, 2026-10-16): waluty — faktura w walucie obcej niesie netto i VAT w złotych po kursie średnim NBP z ostatniego dnia roboczego przed dniem sprzedaży (kanał pl-nbp), księgi przeliczają po tym samym kursie, a zapłatę po kursie z jej dnia; różnica kursowa zrealizowana przy rozliczeniu trafia na 750 albo 751 i cofa się tym samym kontem; rozliczenie VAT, JPK i faktura w KSeF (P_14_xW) liczą VAT w złotych; v23 (twarz, 2026-10-16): rejestry VAT mówią, z jakich faktur jest każdy wiersz (kolumna _of), a każda kolumna kwot — co sumuje; „dlaczego?” na komórce rejestru odpowiada fakturami i sprawdza, że składają się na kwotę; v24 (twarz, krok 3, 2026-10-17): pakiet mówi słowami twarzy — słownik (nazwy typów, pól, wartości, zdarzeń, drzwi, zespołów planu kont i kształt każdego typu), deklaracja VAT jako zestawienie pozycji rozliczenia, a liczby, które twarz liczyła sama, liczy jądro: rano w liczbach (rachunek, należności, zobowiązania, VAT, co zrobiono), wynik od początku roku, należności według wieku na dzień jądra; v25 (twarz, 2026-10-17): wynik miesiąc po miesiącu — przychody, koszty i wynik każdego miesiąca ksiąg, każdy wiersz z zapisów, z których jest; zapis spóźnionego dokumentu liczy się w miesiącu, w którym go zaksięgowano; suma miesięcy to wynik od początku roku; v26 (poranek, 2026-10-17): poranek według roli — właściciel słyszy najpierw wynik (ten miesiąc do dziś, poprzedni, od stycznia, przed opodatkowaniem), potem pieniądze (rachunek, należności z najstarszą fakturą, zobowiązania), terminy podatkowe jednym zdaniem i to, co czeka; księgowość (rola accountant) słyszy najpierw, co jest otwarte (miesiące do zamknięcia, pozycje wyciągu bez rozliczenia, zadania po terminie), potem terminy z kwotami albo powodem ich braku, wynik na końcu; VAT jest terminem z kwotą, nie nagłówkiem; terminy podatkowe: VAT i JPK_V7M do 25., zaliczka na podatek dochodowy do 20. dnia następnego miesiąca, przesunięte na najbliższy dzień roboczy, gdy wypadają w sobotę albo dzień ustawowo wolny (Wielkanoc i Boże Ciało liczone); kwoty zaliczki księgi jeszcze nie liczą i mówią to wprost; rano w liczbach zaczyna się od wyniku tego miesiąca i od początku roku; v27 (CIT, 2026-10-17): zaliczka na CIT liczona przy zamknięciu miesiąca, narastająco od początku roku — przychody podatkowe minus koszty podatkowe, konta mówią, czym są dla podatku dochodowego (KUP albo NKUP, przychód albo nie; bez oznaczenia koszt i przychód są podatkowe), nowe konta NKUP: 409-1 reprezentacja, 751-1 odsetki budżetowe, 761-1 kary i grzywny, 761-2 darowizny, oraz 870 podatek dochodowy; podstawa w pełnych złotych, stawka 9% gdy status na rok na to pozwala (rok rozpoczęcia działalności, chyba że z przekształcenia albo aportu; mały podatnik) i przychody od początku roku mieszczą się w limicie, inaczej 19%; zaliczka to podatek od początku roku minus zaliczki wcześniejsze, księgowana Wn 870 / Ma 225; limity na 2026 r. jako dane; terminy i poranek podają kwotę zaliczki, rano w liczbach pokazuje ostatnią; v28 (poranek, 2026-10-18): wiersz poprzedniego miesiąca mówi, czy miesiąc jest zamknięty, a gospodarz nie nazywa zamkniętym miesiąca, który nim nie jest; v29 (CIT, 2026-10-18): przeliczenie zaliczki za zamknięty miesiąc względem zaliczek wcześniejszych miesięcy, które księgi poznały później — różnica Wn 225 / Ma 870 albo odwrotnie, w dniu przeliczenia; v30 (RMK, 2026-10-18): koszt rozłożony w czasie — faktura dotycząca kilku miesięcy schodzi na 640 i wraca w koszty po równo co miesiąc, gdy zaczyna się następny miesiąc, na ostatni dzień miesiąca, który minął (narastająco, więc koszt rozłożony później oddaje od razu miesiące, które minęły); CIT idzie za kosztem księgowym; rano pokazuje, ile zostało na 640; zaliczka na CIT obciąża zamykany miesiąc",
   "requires": [
     "company",
     "account",
@@ -1505,6 +1505,114 @@
         "advances_before",
         "advance"
       ]
+    },
+    {
+      "name": "prepaid_cost",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "start",
+      "fields": [
+        {
+          "name": "invoice",
+          "type": "ref<purchase_invoice>",
+          "required": true
+        },
+        {
+          "name": "account",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "start",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "months",
+          "type": "int",
+          "required": true
+        },
+        {
+          "name": "end",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "active",
+            "done"
+          ]
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ],
+      "lifecycle": {
+        "field": "status",
+        "transitions": {
+          "active": [
+            "done"
+          ]
+        }
+      },
+      "amendable": [
+        "status"
+      ]
+    },
+    {
+      "name": "prepaid_release",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "period",
+      "fields": [
+        {
+          "name": "prepaid",
+          "type": "ref<prepaid_cost>",
+          "required": true
+        },
+        {
+          "name": "invoice",
+          "type": "ref<purchase_invoice>",
+          "required": true
+        },
+        {
+          "name": "account",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "period",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "released",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "closed_on",
+          "type": "date",
+          "required": true
+        }
+      ]
     }
   ],
   "view_defs": [
@@ -1917,7 +2025,7 @@
     },
     {
       "view_id": "slownik",
-      "version": 3,
+      "version": 4,
       "notion": "words",
       "title": "Słownik",
       "domain": "finance",
@@ -2078,6 +2186,16 @@
           "cit_limit": {
             "label": "Limity CIT na rok",
             "plural": "Limity CIT",
+            "shape": "card"
+          },
+          "prepaid_cost": {
+            "label": "Koszt rozliczany w czasie (RMK)",
+            "plural": "Koszty rozliczane w czasie (RMK)",
+            "shape": "card"
+          },
+          "prepaid_release": {
+            "label": "Część RMK za miesiąc",
+            "plural": "Części RMK za miesiące",
             "shape": "card"
           }
         },
@@ -2277,7 +2395,22 @@
           "cit_advance.tax": "Podatek od początku roku",
           "cit_advance.advances_before": "Zaliczki za wcześniejsze miesiące",
           "cit_advance.advance": "Zaliczka do zapłaty",
-          "cit_advance.closed_on": "Miesiąc zamknięty dnia"
+          "cit_advance.closed_on": "Miesiąc zamknięty dnia",
+          "prepaid_cost.invoice": "Faktura",
+          "prepaid_cost.account": "Konto kosztu",
+          "prepaid_cost.amount": "Kwota",
+          "prepaid_cost.start": "Od",
+          "prepaid_cost.months": "Miesięcy",
+          "prepaid_cost.end": "Do",
+          "prepaid_cost.status": "Stan",
+          "prepaid_cost.book": "Księga",
+          "prepaid_release.prepaid": "Koszt rozliczany w czasie",
+          "prepaid_release.invoice": "Faktura",
+          "prepaid_release.account": "Konto kosztu",
+          "prepaid_release.period": "Miesiąc",
+          "prepaid_release.amount": "Wraca w koszty",
+          "prepaid_release.released": "W kosztach razem",
+          "prepaid_release.closed_on": "Na dzień"
         },
         "values": {
           "account.type": {
@@ -2506,6 +2639,10 @@
           "cit_status.reduced": {
             "yes": "tak",
             "no": "nie"
+          },
+          "prepaid_cost.status": {
+            "active": "rozliczany",
+            "done": "rozliczony"
           }
         },
         "events": {
@@ -2543,7 +2680,8 @@
           "account.tax_treatment.set": "Konto: znaczenie dla podatku dochodowego",
           "cit_limit.defined": "Limity CIT na rok",
           "company.cit_status.declared": "Status CIT na rok",
-          "cit_advance.recomputed": "Zaliczka na CIT przeliczona"
+          "cit_advance.recomputed": "Zaliczka na CIT przeliczona",
+          "cost.spread": "Koszt rozłożony w czasie"
         },
         "doors": {
           "appoint_deputy": "wyznaczenie zastępcy",
@@ -2574,7 +2712,8 @@
           "unpair_items": "cofnięcie dopasowania",
           "set_tax_treatment": "znaczenie konta dla podatku dochodowego",
           "declare_cit_status": "status CIT na rok",
-          "recompute_cit_advance": "przeliczenie zaliczki na CIT"
+          "recompute_cit_advance": "przeliczenie zaliczki na CIT",
+          "spread_cost": "rozłożenie kosztu w czasie (RMK)"
         },
         "account_groups": {
           "0": "Aktywa trwałe",
@@ -2765,14 +2904,67 @@
       }
     },
     {
+      "view_id": "rmk",
+      "version": 1,
+      "notion": "analysis",
+      "title": "Koszty rozliczane w czasie (RMK)",
+      "domain": "finance",
+      "function": "rmk",
+      "spec": {
+        "sql": "WITH rel AS (SELECT json_extract_string(state,'$.prepaid') AS p, SUM(CAST(json_extract(state,'$.amount') AS BIGINT)) AS released FROM objects WHERE object_type = 'prepaid_release' GROUP BY 1) SELECT COALESCE(json_extract_string(i.state,'$.number'), '') AS invoice, COALESCE(json_extract_string(c.state,'$.name'), '') AS supplier, json_extract_string(pc.state,'$.account') AS account, json_extract_string(pc.state,'$.start') AS start, json_extract_string(pc.state,'$.end') AS until, CAST(json_extract(pc.state,'$.amount') AS BIGINT) AS amount, COALESCE(rel.released, 0) AS released, CAST(json_extract(pc.state,'$.amount') AS BIGINT) - COALESCE(rel.released, 0) AS remaining, pc.object_id AS _of FROM objects pc LEFT JOIN rel ON rel.p = pc.object_id LEFT JOIN objects i ON i.object_id = json_extract_string(pc.state,'$.invoice') LEFT JOIN objects c ON c.object_id = json_extract_string(i.state,'$.supplier') WHERE pc.object_type = 'prepaid_cost' ORDER BY json_extract_string(pc.state,'$.status'), json_extract_string(pc.state,'$.start'), pc.object_id",
+        "columns": [
+          {
+            "field": "invoice",
+            "label": "Faktura",
+            "type": "string"
+          },
+          {
+            "field": "supplier",
+            "label": "Dostawca",
+            "type": "string"
+          },
+          {
+            "field": "account",
+            "label": "Konto",
+            "type": "string"
+          },
+          {
+            "field": "start",
+            "label": "Od",
+            "type": "date"
+          },
+          {
+            "field": "until",
+            "label": "Do",
+            "type": "date"
+          },
+          {
+            "field": "amount",
+            "label": "Kwota",
+            "type": "money"
+          },
+          {
+            "field": "released",
+            "label": "W kosztach",
+            "type": "money"
+          },
+          {
+            "field": "remaining",
+            "label": "Zostało",
+            "type": "money"
+          }
+        ]
+      }
+    },
+    {
       "view_id": "rano",
-      "version": 3,
+      "version": 4,
       "notion": "analysis",
       "title": "Rano w liczbach",
       "domain": "finance",
       "function": "briefing",
       "spec": {
-        "sql": "WITH res AS (SELECT p.object_id AS id, CAST(json_extract_string(p.state,'$.date') AS DATE) AS day, CASE WHEN json_extract_string(p.state,'$.side') = 'debit' THEN CAST(json_extract(p.state,'$.amount') AS BIGINT) ELSE -CAST(json_extract(p.state,'$.amount') AS BIGINT) END AS b FROM objects p JOIN objects a ON json_extract_string(p.state,'$.account') = a.object_id WHERE p.object_type = 'posting' AND a.object_type = 'account' AND COALESCE(json_extract_string(p.state,'$.book'), 'main') = 'pl-stat' AND json_extract_string(a.state,'$.type') IN ('revenue', 'expense')), acc AS (SELECT object_id, json_extract_string(state,'$.code') AS code FROM objects WHERE object_type = 'account'), post AS (SELECT json_extract_string(p.state,'$.account') AS account, CASE WHEN json_extract_string(p.state,'$.side') = 'debit' THEN CAST(json_extract(p.state,'$.amount') AS BIGINT) ELSE -CAST(json_extract(p.state,'$.amount') AS BIGINT) END AS signed FROM objects p WHERE p.object_type = 'posting' AND COALESCE(json_extract_string(p.state,'$.book'), 'main') = 'pl-stat'), bank AS (SELECT a.object_id AS id, COALESCE(SUM(p.signed), 0) AS bal, COUNT(p.signed) AS n FROM acc a LEFT JOIN post p ON p.account = a.object_id WHERE a.code = '130' GROUP BY a.object_id), openinv AS (SELECT object_id, object_type, CAST(json_extract(state,'$.open') AS BIGINT) AS open FROM objects WHERE object_type IN ('sales_invoice', 'purchase_invoice') AND CAST(COALESCE(json_extract(state,'$.open'), '0') AS BIGINT) > 0), vat AS (SELECT object_id, json_extract_string(state,'$.period') AS period, CAST(json_extract(state,'$.vat_due') AS BIGINT) AS due FROM objects WHERE object_type = 'vat_settlement' ORDER BY period DESC LIMIT 1), cit AS (SELECT object_id, json_extract_string(state,'$.period') AS period, CAST(json_extract(state,'$.advance') AS BIGINT) AS due FROM objects WHERE object_type = 'cit_advance' ORDER BY period DESC LIMIT 1), counted AS (SELECT object_id, object_type, json_extract_string(state,'$.status') AS status, json_extract_string(state,'$.settlement_status') AS sstatus FROM objects WHERE object_type IN ('ksef_submission', 'bank_operation', 'matching_difference', 'period_lock')) SELECT key, label, amount, count, note, o AS _of FROM (SELECT -1 AS k, 'result_month' AS key, 'Wynik w tym miesiącu' AS label, -COALESCE(SUM(b) FILTER (WHERE day >= CAST(date_trunc('month', {{today}}) AS DATE) AND day <= {{today}}), 0) AS amount, NULL AS count, strftime({{today}}, '%Y-%m') || ', przed opodatkowaniem' AS note, string_agg(id, ',' ORDER BY id) FILTER (WHERE day >= CAST(date_trunc('month', {{today}}) AS DATE) AND day <= {{today}}) AS o FROM res UNION ALL SELECT 0, 'result_year', 'Wynik od początku roku', -COALESCE(SUM(b) FILTER (WHERE year(day) = year({{today}}) AND day <= {{today}}), 0), NULL, strftime({{today}}, '%Y') || ', przed opodatkowaniem', string_agg(id, ',' ORDER BY id) FILTER (WHERE year(day) = year({{today}}) AND day <= {{today}}) FROM res UNION ALL SELECT 1, 'bank', 'Na rachunku bieżącym', bal, n, 'zapisów od początku roku', id FROM bank UNION ALL SELECT 2, 'receivables', 'Należności', COALESCE(SUM(open), 0), COUNT(*), 'otwartych faktur sprzedaży', string_agg(object_id, ',' ORDER BY object_id) FROM openinv WHERE object_type = 'sales_invoice' UNION ALL SELECT 3, 'payables', 'Dla dostawców', COALESCE(SUM(open), 0), COUNT(*), 'faktur zakupu do zapłaty', string_agg(object_id, ',' ORDER BY object_id) FROM openinv WHERE object_type = 'purchase_invoice' UNION ALL SELECT 3.5, 'cit_due', 'Zaliczka na CIT', due, NULL, period, object_id FROM cit UNION ALL SELECT 4, 'vat_due', 'VAT do zapłaty', due, NULL, period, object_id FROM vat UNION ALL SELECT 5, 'ksef', 'Faktury przyjęte w KSeF', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'ksef_submission' AND status = 'accepted' UNION ALL SELECT 6, 'bank_lines', 'Pozycje wyciągu przeczytane', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'bank_operation' UNION ALL SELECT 7, 'settled', 'Pozycje wyciągu rozliczone', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'bank_operation' AND sstatus = 'settled' UNION ALL SELECT 8, 'differences', 'Różnice groszowe zamknięte w tolerancji', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'matching_difference' UNION ALL SELECT 9, 'closed', 'Zamknięte miesiące', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'period_lock') ORDER BY k",
+        "sql": "WITH res AS (SELECT p.object_id AS id, CAST(json_extract_string(p.state,'$.date') AS DATE) AS day, CASE WHEN json_extract_string(p.state,'$.side') = 'debit' THEN CAST(json_extract(p.state,'$.amount') AS BIGINT) ELSE -CAST(json_extract(p.state,'$.amount') AS BIGINT) END AS b FROM objects p JOIN objects a ON json_extract_string(p.state,'$.account') = a.object_id WHERE p.object_type = 'posting' AND a.object_type = 'account' AND COALESCE(json_extract_string(p.state,'$.book'), 'main') = 'pl-stat' AND json_extract_string(a.state,'$.type') IN ('revenue', 'expense')), acc AS (SELECT object_id, json_extract_string(state,'$.code') AS code FROM objects WHERE object_type = 'account'), post AS (SELECT json_extract_string(p.state,'$.account') AS account, CASE WHEN json_extract_string(p.state,'$.side') = 'debit' THEN CAST(json_extract(p.state,'$.amount') AS BIGINT) ELSE -CAST(json_extract(p.state,'$.amount') AS BIGINT) END AS signed FROM objects p WHERE p.object_type = 'posting' AND COALESCE(json_extract_string(p.state,'$.book'), 'main') = 'pl-stat'), bank AS (SELECT a.object_id AS id, COALESCE(SUM(p.signed), 0) AS bal, COUNT(p.signed) AS n FROM acc a LEFT JOIN post p ON p.account = a.object_id WHERE a.code = '130' GROUP BY a.object_id), openinv AS (SELECT object_id, object_type, CAST(json_extract(state,'$.open') AS BIGINT) AS open FROM objects WHERE object_type IN ('sales_invoice', 'purchase_invoice') AND CAST(COALESCE(json_extract(state,'$.open'), '0') AS BIGINT) > 0), vat AS (SELECT object_id, json_extract_string(state,'$.period') AS period, CAST(json_extract(state,'$.vat_due') AS BIGINT) AS due FROM objects WHERE object_type = 'vat_settlement' ORDER BY period DESC LIMIT 1), cit AS (SELECT object_id, json_extract_string(state,'$.period') AS period, CAST(json_extract(state,'$.advance') AS BIGINT) AS due FROM objects WHERE object_type = 'cit_advance' ORDER BY period DESC LIMIT 1), counted AS (SELECT object_id, object_type, json_extract_string(state,'$.status') AS status, json_extract_string(state,'$.settlement_status') AS sstatus FROM objects WHERE object_type IN ('ksef_submission', 'bank_operation', 'matching_difference', 'period_lock')), rmk AS (SELECT COALESCE(SUM(CASE WHEN json_extract_string(p.state,'$.side') = 'debit' THEN CAST(json_extract(p.state,'$.amount') AS BIGINT) ELSE -CAST(json_extract(p.state,'$.amount') AS BIGINT) END), 0) AS bal, (SELECT COUNT(*) FROM objects WHERE object_type = 'prepaid_cost' AND json_extract_string(state,'$.status') = 'active') AS n, (SELECT string_agg(object_id, ',' ORDER BY object_id) FROM objects WHERE object_type = 'prepaid_cost' AND json_extract_string(state,'$.status') = 'active') AS o FROM acc a JOIN objects p ON p.object_type = 'posting' AND json_extract_string(p.state,'$.account') = a.object_id AND COALESCE(json_extract_string(p.state,'$.book'), 'main') = 'pl-stat' WHERE a.code = '640') SELECT key, label, amount, count, note, o AS _of FROM (SELECT -1 AS k, 'result_month' AS key, 'Wynik w tym miesiącu' AS label, -COALESCE(SUM(b) FILTER (WHERE day >= CAST(date_trunc('month', {{today}}) AS DATE) AND day <= {{today}}), 0) AS amount, NULL AS count, strftime({{today}}, '%Y-%m') || ', przed opodatkowaniem' AS note, string_agg(id, ',' ORDER BY id) FILTER (WHERE day >= CAST(date_trunc('month', {{today}}) AS DATE) AND day <= {{today}}) AS o FROM res UNION ALL SELECT 0, 'result_year', 'Wynik od początku roku', -COALESCE(SUM(b) FILTER (WHERE year(day) = year({{today}}) AND day <= {{today}}), 0), NULL, strftime({{today}}, '%Y') || ', przed opodatkowaniem', string_agg(id, ',' ORDER BY id) FILTER (WHERE year(day) = year({{today}}) AND day <= {{today}}) FROM res UNION ALL SELECT 1, 'bank', 'Na rachunku bieżącym', bal, n, 'zapisów od początku roku', id FROM bank UNION ALL SELECT 2, 'receivables', 'Należności', COALESCE(SUM(open), 0), COUNT(*), 'otwartych faktur sprzedaży', string_agg(object_id, ',' ORDER BY object_id) FROM openinv WHERE object_type = 'sales_invoice' UNION ALL SELECT 3, 'payables', 'Dla dostawców', COALESCE(SUM(open), 0), COUNT(*), 'faktur zakupu do zapłaty', string_agg(object_id, ',' ORDER BY object_id) FROM openinv WHERE object_type = 'purchase_invoice' UNION ALL SELECT 3.2, 'prepaid', 'Koszty rozliczane w czasie (RMK)', bal, n, 'zostało do rozliczenia', o FROM rmk WHERE n > 0 OR bal <> 0 UNION ALL SELECT 3.5, 'cit_due', 'Zaliczka na CIT', due, NULL, period, object_id FROM cit UNION ALL SELECT 4, 'vat_due', 'VAT do zapłaty', due, NULL, period, object_id FROM vat UNION ALL SELECT 5, 'ksef', 'Faktury przyjęte w KSeF', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'ksef_submission' AND status = 'accepted' UNION ALL SELECT 6, 'bank_lines', 'Pozycje wyciągu przeczytane', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'bank_operation' UNION ALL SELECT 7, 'settled', 'Pozycje wyciągu rozliczone', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'bank_operation' AND sstatus = 'settled' UNION ALL SELECT 8, 'differences', 'Różnice groszowe zamknięte w tolerancji', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'matching_difference' UNION ALL SELECT 9, 'closed', 'Zamknięte miesiące', NULL, COUNT(*), NULL, string_agg(object_id, ',' ORDER BY object_id) FROM counted WHERE object_type = 'period_lock') ORDER BY k",
         "columns": [
           {
             "field": "key",
@@ -4940,7 +5132,7 @@
       "rule_id": "pl-post-cit-advance",
       "priority": 330,
       "effective_from": "2026-01-01",
-      "description": "Zaliczka na CIT księguje się: Wn 870 podatek dochodowy / Ma 225 rozrachunki publicznoprawne — zapłata z mikrorachunku podatkowego zamyka ją na 225",
+      "description": "Zaliczka na CIT księguje się: Wn 870 podatek dochodowy / Ma 225 rozrachunki publicznoprawne — zapłata z mikrorachunku podatkowego zamyka ją na 225; na ostatni dzień zamykanego miesiąca — obciążenie wyniku tego miesiąca",
       "spec": {
         "match": {
           "event_type": "object.materialized",
@@ -4968,7 +5160,8 @@
                 "account": "225",
                 "credit": "=$.state.advance"
               }
-            ]
+            ],
+            "date": "=$.state.closed_on"
           }
         }
       },
@@ -4979,7 +5172,8 @@
           "ustawa o rachunkowości art. 37 ust. 8: obciążenie wyniku finansowego obejmuje podatek dochodowy bieżący i odroczony",
           "wzorcowy plan kont: 870 podatek dochodowy od osób prawnych, 225 pozostałe rozrachunki publicznoprawne; przegląd CIT-03: Wn 870 / Ma 22x"
         ]
-      }
+      },
+      "version": 2
     },
     {
       "rule_id": "pl-recompute-cit-advance",
@@ -5054,6 +5248,201 @@
         "citations": [
           "ustawa o rachunkowości art. 37 ust. 8: obciążenie wyniku podatkiem dochodowym bieżącym; korekta w okresie, w którym jej dokonano (miesiąc zaliczki jest zamknięty)"
         ]
+      }
+    },
+    {
+      "rule_id": "pl-spread-cost",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Koszt rozłożony w czasie (RMK czynne): faktura zakupu, która dotyczy kilku miesięcy (roczne ubezpieczenie, licencja, abonament z góry), schodzi z kosztów na 640 i wraca w koszty po równo w każdym miesiącu okresu — konto kosztu jak dostawcy, inaczej 403; kwota jak netto faktury w złotych, chyba że podano inną; co najmniej dwa miesiące; jedna faktura rozkłada się raz",
+      "spec": {
+        "match": {
+          "event_type": "cost.spread",
+          "where": [
+            {
+              "formula": "=$.months >= 2 and count(p in objects(prepaid_cost, invoice, $.invoice)) = 0"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "prepaid_cost",
+            "fields": {
+              "invoice": "=$.invoice",
+              "account": "=coalesce($.account, coalesce($.invoice.supplier.cost_account, \"403\"))",
+              "amount": "=coalesce($.amount, coalesce($.invoice.net_pln, $.invoice.net))",
+              "start": "=$.start",
+              "months": "=$.months",
+              "end": "=add_months($.start, $.months) - 1",
+              "status": "active",
+              "book": "pl-stat"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz.U. 2026 poz. 522) art. 39 ust. 1: jednostki dokonują czynnych rozliczeń międzyokresowych kosztów, jeżeli dotyczą one przyszłych okresów sprawozdawczych; art. 6 ust. 2: współmierność przychodów i kosztów",
+          "KSR 16 pkt 12.10: poniżej progu istotności kosztu można nie rozliczać w czasie — próg ustala polityka jednostki; tu decyduje osoba, która rozkłada fakturę",
+          "przegląd FB-18: koszt opłacony z góry ponad próg idzie na 640 i reguła rozlicza go co miesiąc przez okres, którego dotyczy"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-prepaid-cost",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Koszt rozłożony w czasie przechodzi z kosztów na rozliczenia międzyokresowe: Wn 640 / Ma konto kosztu, w dniu rozłożenia",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "prepaid_cost"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "lines": [
+              {
+                "account": "640",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "=$.state.account",
+                "credit": "=$.state.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "wzorcowy plan kont: 640 czynne rozliczenia międzyokresowe kosztów"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-release-prepaid-costs",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Gdy zaczyna się miesiąc, każdy koszt rozkładany w czasie oddaje swoją część za miesiąc, który się skończył: narastająco — kwota razy miesiące okresu, które już minęły, przez wszystkie jego miesiące, minus to, co już wróciło w koszty; ostatni miesiąc dopełnia do kwoty; koszt rozłożony później oddaje od razu miesiące, które minęły",
+      "spec": {
+        "match": {
+          "event_type": "time.month_opened",
+          "where": [
+            {
+              "formula": "=count(p in objects(prepaid_cost, status, \"active\")) > 0"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "prepaid_release",
+            "each": "=objects(prepaid_cost, status, \"active\")",
+            "fields": {
+              "prepaid": "=$.line.object_id",
+              "invoice": "=$.line.state.invoice",
+              "account": "=$.line.state.account",
+              "period": "=month($.doc.date - 1)",
+              "amount": "=max((if(min(max(months_between($.line.state.start, $.doc.date - 1) + 1, 0), $.line.state.months) >= $.line.state.months, $.line.state.amount, round($.line.state.amount * min(max(months_between($.line.state.start, $.doc.date - 1) + 1, 0), $.line.state.months) / $.line.state.months, 2, half_up))) - (sum(r in objects(prepaid_release, prepaid, $.line.object_id) : r.amount)), 0)",
+              "released": "=if(min(max(months_between($.line.state.start, $.doc.date - 1) + 1, 0), $.line.state.months) >= $.line.state.months, $.line.state.amount, round($.line.state.amount * min(max(months_between($.line.state.start, $.doc.date - 1) + 1, 0), $.line.state.months) / $.line.state.months, 2, half_up))",
+              "closed_on": "=$.doc.date - 1"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz.U. 2026 poz. 522) art. 39 ust. 1 i 3: odpisy czynnych rozliczeń międzyokresowych kosztów następują stosownie do upływu czasu",
+          "ustawa o CIT art. 15 ust. 4d: koszty pośrednie dotyczące okresu przekraczającego rok podatkowy są kosztem proporcjonalnie do długości okresu — tu koszt podatkowy idzie za księgowym, miesiąc po miesiącu"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-prepaid-release",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Część kosztu rozłożonego w czasie wraca w koszty na ostatni dzień swojego miesiąca: Wn konto kosztu / Ma 640",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "prepaid_release"
+            },
+            {
+              "formula": "=$.state.amount > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.closed_on",
+            "lines": [
+              {
+                "account": "=$.state.account",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "640",
+                "credit": "=$.state.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz.U. 2026 poz. 522) art. 39 ust. 1: rozliczenie stosownie do upływu czasu — koszt miesiąca w jego miesiącu"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-finish-prepaid-cost",
+      "priority": 300,
+      "effective_from": "2026-01-01",
+      "description": "Koszt rozłożony w czasie, który wrócił w koszty cały, jest rozliczony i nie bierze udziału w następnych miesiącach",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "prepaid_release"
+            },
+            {
+              "formula": "=$.state.released >= $.state.prepaid.amount"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "prepaid_cost",
+            "target": "=$.state.prepaid",
+            "set": {
+              "status": "done"
+            }
+          }
+        }
       }
     }
   ],
@@ -5393,6 +5782,49 @@
           }
         ],
         "emits": "cit_advance.recomputed",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "spread_cost",
+      "domain": "finance",
+      "description": "Firma mówi, że faktura zakupu dotyczy kilku miesięcy (np. roczne ubezpieczenie od 1 października: start 2026-10-01, 12 miesięcy) — koszt schodzi na 640 i wraca w koszty po równo co miesiąc; konto i kwota, gdy inne niż konto dostawcy i netto faktury",
+      "spec": {
+        "inputs": [
+          {
+            "name": "invoice",
+            "type": "ref<purchase_invoice>",
+            "required": true
+          },
+          {
+            "name": "start",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "months",
+            "type": "int",
+            "required": true
+          },
+          {
+            "name": "account",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "amount",
+            "type": "money",
+            "required": false
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "cost.spread",
         "who": [
           "human"
         ]
@@ -5920,6 +6352,17 @@
         "year_start": "2026-01-01",
         "small_taxpayer_limit": "8517000.00",
         "in_year_limit": "8431000.00",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.created",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/account/640",
+      "payload": {
+        "code": "640",
+        "name": "Czynne rozliczenia międzyokresowe kosztów",
+        "type": "asset",
         "market": "pl"
       }
     }
