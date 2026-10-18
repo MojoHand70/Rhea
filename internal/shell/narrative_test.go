@@ -28,11 +28,17 @@ func TestBriefing(t *testing.T) {
 	x := &exec.Executor{Store: s}
 	var heard string
 	words := "Two notes were taken today, worth 1234.56 PLN together."
+	var answers []string // when set, the host's next answers in turn
 	srv := &shell.Server{Store: s, Exec: x, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb"),
 		Agent: &agent.Agent{Complete: func(ctx context.Context, system, user string) (string, error) {
 			heard = user
 			if !strings.Contains(system, "never compute") {
 				return "", fmt.Errorf("the host is told its law")
+			}
+			if len(answers) > 0 {
+				a := answers[0]
+				answers = answers[1:]
+				return a, nil
 			}
 			return words, nil
 		}}}
@@ -159,6 +165,28 @@ func TestBriefing(t *testing.T) {
 	get("/api/views/briefing", &d)
 	if d.Said != words || d.Silent != "" {
 		t.Fatalf("one amount of the fact, spoken, is the fact spoken: %+v", d)
+	}
+
+	// 3c. One correction (KK's Helios, 2026-10-18): her earlier words named
+	// an invoice today's facts do not carry, she named it again and was
+	// refused, so nothing new showed. The sentence is no longer shown to
+	// her, and refused words are asked for once more, with the reason.
+	if _, err := x.TriggerActivity(ctx, "host_said", map[string]any{"view": "briefing", "text": "Invoice FV7 still waits. 2 notes."}, "agent:test", ""); err != nil {
+		t.Fatal(err)
+	}
+	answers = []string{"Invoice FV7 still waits. 2 notes.", "2 notes stand; nothing else waits."}
+	fresh()
+	get("/api/views/briefing", &d)
+	if d.Said != "2 notes stand; nothing else waits." || !strings.Contains(heard, "refused: they name what the facts do not (FV7)") ||
+		strings.Contains(heard, "- Invoice FV7") || !strings.Contains(heard, "- 2 notes.") {
+		t.Fatalf("one correction: %+v\n%s", d, heard)
+	}
+	// Refused twice, the refusal stands.
+	answers = []string{"About 1300.00 PLN.", "About 1300.00 PLN, I said."}
+	fresh()
+	get("/api/views/briefing", &d)
+	if d.Said != "" || !strings.Contains(d.Silent, "1300.00") || len(answers) != 0 {
+		t.Fatalf("refused twice: %+v", d)
 	}
 
 	// 4. Without a host, the facts speak for themselves.

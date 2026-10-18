@@ -3646,3 +3646,18 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   wording to avoid, never a source — her instructions now say so.
 - **v28**: the previous month's row says whether it is closed, and neither voice calls a month
   closed unless its row does.
+
+## 2026-10-18 — one correction for her words; recomputing a closed month's advance (Poland pack v29)
+
+- **Found live, after KK closed September and pressed "Odśwież"**: refused — she named
+  "HOS/2/2026" again, copying it from her own earlier words. The third law held, but a refusal
+  left nothing new. Now the sentences of her earlier words that name what today's facts do not
+  carry are not shown to her, and refused words are asked for once more with the reason; a
+  second refusal stands.
+- **September's advance was the year's tax** (28 674 zł): January to August were closed before
+  the CIT rules existed, so no advance stood before it. The CIT act defines an advance against
+  the advances *due* for earlier months (art. 25 ust. 1); when the books learn of those later,
+  the month is recomputed. `recompute_cit_advance` (period) amends the advance — the year's tax
+  stays, the advances before it are read again — and books the difference on the day (Wn 225 /
+  Ma 870 when it shrinks, the reverse when it grows); recomputed again, nothing moves. The live
+  sequence: ruled backfill for January–August, then recompute September.

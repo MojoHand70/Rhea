@@ -322,12 +322,13 @@ func TestCITAdvance(t *testing.T) {
 	}
 }
 
-// TestCITAdvanceBackfilled (KK's Helios, 2026-10-18): months closed before
-// the company said it pays CIT get their advances after the fact — ruled
-// backfill, planned in log order so each month reads the advances planned
-// before it: September 99, then October 180, not the year's 279 again.
-// A charge bound for a closed month is offered forward to the backfill's
-// day; one whose own date is open books there.
+// TestCITAdvanceBackfilled (KK's Helios, 2026-10-18): September was closed
+// before the company said it pays CIT, October after — October's advance
+// took the whole year's tax, there being no advance before it. Ruled
+// backfill gives September its advance after the fact (planned in log
+// order, each chain reading what the chains before it leave), and
+// recomputing October against the advances now in the books leaves it its
+// own part, the difference booked back on the day: Wn 225 / Ma 870.
 func TestCITAdvanceBackfilled(t *testing.T) {
 	w := newCITWorld(t)
 	ctx, x, door := w.ctx, w.x, w.door
@@ -335,41 +336,61 @@ func TestCITAdvanceBackfilled(t *testing.T) {
 	w.sale("fv-2", "FV 2/09/2026", "2026-09-24", "500.00", "115.00", "615.00")
 	w.buy("fz-1", "FZ/9/2026", "2026-09-25", "5260001246", "400.00", "92.00", "492.00")
 	w.closeMonth("2026-09-30", "2026-10-05")
-	w.sale("fv-3", "FV 1/10/2026", "2026-10-08", "2000.00", "460.00", "2460.00")
-	w.closeMonth("2026-10-31", "2026-11-04")
 	if all, _ := w.s.ObjectsByType(ctx, "cit_advance"); len(all) != 0 {
 		t.Fatalf("advances before the company pays CIT: %d", len(all))
 	}
-
 	door("declare_company_form", map[string]any{"company": w.self, "vat_status": "active", "books": "full", "income_tax": "cit",
-		"from": "2026-01-01", "occurred_at": "2026-11-10"})
+		"from": "2026-01-01", "occurred_at": "2026-10-06"})
 	door("declare_cit_status", map[string]any{"company": w.self, "year_start": "2026-01-01", "started_on": "2026-03-01",
-		"formed_by": "new", "occurred_at": "2026-11-10"})
+		"formed_by": "new", "occurred_at": "2026-10-06"})
+	w.sale("fv-3", "FV 1/10/2026", "2026-10-08", "2000.00", "460.00", "2460.00")
+	w.closeMonth("2026-10-31", "2026-11-04")
+	w.want("2026-10", map[string]string{"income": "3100.00", "tax": "279.00", "advances_before": "0.00", "advance": "279.00"})
+
 	plan, err := x.PlanBackfill(ctx, "2026-11-10")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(plan.Chains) != 2 || len(plan.Errors) != 0 || plan.Chains[0].EventType != "period.closed" || plan.Chains[1].EventType != "period.closed" ||
-		fmt.Sprint(plan.Chains[1].Rules) != "[pl-cit-advance pl-post-cit-advance]" ||
-		plan.Chains[0].Forwarded == "" || plan.Chains[0].BookedAt != "2026-11-10" || plan.Chains[1].Forwarded != "" || plan.Chains[1].BookedAt != "2026-11-04" {
+	if len(plan.Chains) != 1 || len(plan.Errors) != 0 || plan.Chains[0].EventType != "period.closed" ||
+		fmt.Sprint(plan.Chains[0].Rules) != "[pl-cit-advance pl-post-cit-advance]" || plan.Chains[0].Forwarded == "" || plan.Chains[0].BookedAt != "2026-11-10" {
 		t.Fatalf("the plan: %+v", plan)
 	}
-	if n, errs, err := x.ApproveBackfill(ctx, "krzysztof", "2026-11-10"); err != nil || len(errs) != 0 || n != 2 {
+	if n, errs, err := x.ApproveBackfill(ctx, "krzysztof", "2026-11-10"); err != nil || len(errs) != 0 || n != 1 {
 		t.Fatalf("backfill: %d %v %v", n, errs, err)
 	}
 	w.want("2026-09", map[string]string{"income": "1100.00", "rate": "9", "tax": "99.00", "advances_before": "0.00", "advance": "99.00"})
-	w.want("2026-10", map[string]string{"income": "3100.00", "rate": "9", "tax": "279.00", "advances_before": "99.00", "advance": "180.00"})
+
+	door("recompute_cit_advance", map[string]any{"period": "2026-10", "occurred_at": "2026-11-10"})
+	w.want("2026-10", map[string]string{"tax": "279.00", "advances_before": "99.00", "advance": "180.00"})
+	// Recomputed again, nothing moves: no difference, nothing booked.
+	door("recompute_cit_advance", map[string]any{"period": "2026-10", "occurred_at": "2026-11-11"})
+	w.want("2026-10", map[string]string{"advances_before": "99.00", "advance": "180.00"})
+
+	// On 870: 279 at October's close, 99 for September after the fact, 99
+	// back on the recompute — the year's 279, as the advances now say.
 	postings, _ := w.s.ObjectsByType(ctx, "posting")
-	n := 0
+	accounts, _ := w.s.ObjectsByType(ctx, "account")
+	code := map[string]string{}
+	for _, a := range accounts {
+		code[a.ID] = a.State["code"].(string)
+	}
+	var on870 int64
+	lines := map[string]int{}
 	for _, p := range postings {
-		if p.RuleID == "pl-post-cit-advance" {
-			n++
-			if d, _ := p.State["date"].(string); d < "2026-11-01" {
-				t.Fatalf("a charge for a closed month dated %v", p.State["date"])
-			}
+		if code[fmt.Sprint(p.State["account"])] != "870" {
+			continue
+		}
+		amt := int64(p.State["amount"].(float64))
+		if p.State["side"] == "credit" {
+			amt = -amt
+		}
+		on870 += amt
+		lines[p.RuleID]++
+		if d, _ := p.State["date"].(string); d < "2026-11-01" {
+			t.Fatalf("a charge for a closed month dated %v", d)
 		}
 	}
-	if n != 4 {
-		t.Fatalf("charge lines: %d", n)
+	if on870 != 27900 || lines["pl-post-cit-advance"] != 2 || lines["pl-post-cit-advance-correction"] != 1 {
+		t.Fatalf("870: %d %v", on870, lines)
 	}
 }

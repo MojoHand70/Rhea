@@ -97,32 +97,29 @@ func (s *Server) narrate(ctx context.Context, vd *core.ViewDef) (map[string]any,
 	if err != nil {
 		return nil, 500, err
 	}
+	// What she said before is wording to avoid, never a source: a sentence
+	// naming what today's facts do not carry is not shown to her again.
+	before = withoutForeignNames(before, factsJSON)
 	if s.Agent == nil {
 		out["silent"] = "no host to speak: the facts speak for themselves"
 		return out, 200, nil
 	}
-	words, err := s.Agent.Narrate(ctx, s.Clock.TodayUTC(), spec.Voice, factsJSON, before)
-	if err != nil {
-		out["silent"] = "the host could not speak: " + err.Error()
-		return out, 200, nil
+	// One correction: words refused by her laws are asked for again, with
+	// the reason; a second refusal stands, and the facts speak alone.
+	refused, words := "", ""
+	for try := 0; try < 2; try++ {
+		words, err = s.Agent.Narrate(ctx, s.Clock.TodayUTC(), spec.Voice, factsJSON, before, refused)
+		if err != nil {
+			out["silent"] = "the host could not speak: " + err.Error()
+			return out, 200, nil
+		}
+		words = strings.TrimSpace(words)
+		if refused = hostLaws(words, factsJSON); refused == "" {
+			break
+		}
 	}
-	words = strings.TrimSpace(words)
-	if foreign := foreignNumbers(words, factsJSON); len(foreign) > 0 {
-		// The host never computes a number: words carrying one the facts
-		// do not are refused, and the refusal is shown, not the words.
-		out["silent"] = fmt.Sprintf("the host's words were refused: they carry numbers the facts do not (%s)", strings.Join(foreign, ", "))
-		return out, 200, nil
-	}
-	if foreign := foreignNames(words, factsJSON); len(foreign) > 0 {
-		// Nor does she name a document today's facts do not carry — not
-		// even one she named before: what she said is never a source.
-		out["silent"] = fmt.Sprintf("the host's words were refused: they name what the facts do not (%s)", strings.Join(foreign, ", "))
-		return out, 200, nil
-	}
-	if unspoken := unspokenFacts(words, factsJSON); len(unspoken) > 0 {
-		// The host never denies a fact: words that pass over a fact with an
-		// amount in it are refused, and the fact passed over is named.
-		out["silent"] = fmt.Sprintf("the host's words were refused: they pass over %s", strings.Join(unspoken, "; "))
+	if refused != "" {
+		out["silent"] = "the host's words were refused: " + refused
 		return out, 200, nil
 	}
 	// The words are a fact: logged through the door, by the agent.
@@ -268,6 +265,41 @@ func foreignNumbers(words string, facts []byte) []string {
 		}
 		seen[n.Value] = true
 		out = append(out, n.Text)
+	}
+	return out
+}
+
+// hostLaws is why words are refused, or "": a number the facts do not
+// carry (she never computes), a name they do not carry (she never names
+// what is not there — not even what she named before), a fact with an
+// amount passed over (she never denies one).
+func hostLaws(words string, facts []byte) string {
+	if foreign := foreignNumbers(words, facts); len(foreign) > 0 {
+		return fmt.Sprintf("they carry numbers the facts do not (%s)", strings.Join(foreign, ", "))
+	}
+	if foreign := foreignNames(words, facts); len(foreign) > 0 {
+		return fmt.Sprintf("they name what the facts do not (%s)", strings.Join(foreign, ", "))
+	}
+	if unspoken := unspokenFacts(words, facts); len(unspoken) > 0 {
+		return fmt.Sprintf("they pass over %s", strings.Join(unspoken, "; "))
+	}
+	return ""
+}
+
+// withoutForeignNames drops from what she said before every sentence that
+// names what today's facts do not carry.
+func withoutForeignNames(before []string, facts []byte) []string {
+	out := make([]string, 0, len(before))
+	for _, text := range before {
+		var kept []string
+		for _, sentence := range strings.SplitAfter(text, ". ") {
+			if len(foreignNames(sentence, facts)) == 0 {
+				kept = append(kept, sentence)
+			}
+		}
+		if t := strings.TrimSpace(strings.Join(kept, "")); t != "" {
+			out = append(out, t)
+		}
 	}
 	return out
 }

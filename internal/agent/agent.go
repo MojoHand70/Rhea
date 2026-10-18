@@ -604,9 +604,10 @@ no document, party or date they do not; you do not greet with a template. Speak 
 voice the owner asked for. Answer with the words only - no JSON, no markdown, no headings.`
 
 // Narrate asks the host to phrase facts: the facts as JSON, the owner's
-// voice, what was said before, and the date. The words come back as data
-// for the caller to check and log.
-func (a *Agent) Narrate(ctx context.Context, today, voice string, facts json.RawMessage, before []string) (string, error) {
+// voice, what was said before, and the date. refused, when set, is why the
+// kernel refused her last words on these facts: she speaks again, told.
+// The words come back as data for the caller to check and log.
+func (a *Agent) Narrate(ctx context.Context, today, voice string, facts json.RawMessage, before []string, refused string) (string, error) {
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "Today is %s.\n", today)
 	if voice != "" {
@@ -618,7 +619,12 @@ func (a *Agent) Narrate(ctx context.Context, today, voice string, facts json.Raw
 			fmt.Fprintf(&sb, "- %s\n", b)
 		}
 	}
-	fmt.Fprintf(&sb, "\nThe facts:\n%s\n\nSpeak.", facts)
+	fmt.Fprintf(&sb, "\nThe facts:\n%s\n\n", facts)
+	if refused != "" {
+		fmt.Fprintf(&sb, "Your last words on these facts were refused: %s. Speak again, keeping to the facts.", refused)
+	} else {
+		sb.WriteString("Speak.")
+	}
 	speak := a.Speak
 	if speak == nil {
 		speak = a.Complete

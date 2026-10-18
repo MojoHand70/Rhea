@@ -49,7 +49,7 @@ func TestHostWordsLive(t *testing.T) {
 	accepted := 0
 	for i := 1; i <= runs; i++ {
 		start := time.Now()
-		words, err := a.Narrate(ctx, morning.Today, morning.Voice, morning.Facts, before)
+		words, err := a.Narrate(ctx, morning.Today, morning.Voice, morning.Facts, before, "")
 		took := time.Since(start).Round(time.Second)
 		if err != nil {
 			t.Logf("run %d (%s): the host could not speak: %v", i, took, err)

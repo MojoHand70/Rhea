@@ -110,17 +110,18 @@ func TestM3PolandPack(t *testing.T) {
 	// words, the VAT declaration as a statement, the morning figures and the
 	// four the mornings speak from — the result, money, the tax deadlines,
 	// what is open — profit since January and month by month, receivables
-	// by age, the CIT advances as a list and a statement), 45 draft rules,
-	// eight doors (the KSeF channel, identify_company, declare_company_form,
+	// by age, the CIT advances as a list and a statement), 47 draft rules,
+	// nine doors (the KSeF channel, identify_company, declare_company_form,
 	// set_cost_account, declare_company_accounts, classify_bank_operation,
-	// set_tax_treatment, declare_cit_status), 48 master-data events.
+	// set_tax_treatment, declare_cit_status, recompute_cit_advance), 48
+	// master-data events.
 	packPath := filepath.Join("..", "..", "packs", "pl", "pack.json")
 	sum, err := pack.Load(ctx, s, packPath, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 23 || sum.Views != 25 || sum.Rules != 45 || sum.Activities != 8 || sum.Events != 48 || sum.Skipped != 0 ||
-		sum.Bundle != "pack-pl-v28" {
+	if sum.Types != 23 || sum.Views != 25 || sum.Rules != 47 || sum.Activities != 9 || sum.Events != 48 || sum.Skipped != 0 ||
+		sum.Bundle != "pack-pl-v29" {
 		t.Fatalf("first load: %+v", sum)
 	}
 	// Idempotent: a reload changes nothing.
@@ -128,7 +129,7 @@ func TestM3PolandPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Skipped != 149 || sum.Bundle != "" {
+	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Skipped != 152 || sum.Bundle != "" {
 		t.Fatalf("reload: %+v", sum)
 	}
 
@@ -148,7 +149,7 @@ func TestM3PolandPack(t *testing.T) {
 	// Approving the pack's bundle IS the installation: its types, views and
 	// rules activate together, and the chart of accounts and the VAT rates
 	// materialize from the waiting events.
-	post("/api/bundles/pack-pl-v28/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-pl-v29/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {
 		t.Fatalf("worklist not cleared after approvals: %d", len(wl))
 	}

@@ -1,7 +1,7 @@
 {
   "pack": "pl",
-  "version": 28,
-  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami; poranek: gospodarz mówi, co zaksięgowano i co czeka, z faktów, które policzyło jądro; dziś: otwarte zadania i należności w kolejności pilności, z zatwierdzeniami, które czekają; KSeF na zewnątrz: faktury sprzedaży idą do KSeF jako FA(3) jedną sesją interaktywną, dowód (numer KSeF, UPO) i odmowa (kod, słowa Ministerstwa) są zdarzeniami, odmowa staje się zadaniem na dziś; koniec miesiąca: faktury niosą okres VAT, zamknięcie miesiąca (period.closed) daje rozliczenie VAT jako obiekt policzony regułą — każda liczba deklaracji ma pochodzenie; plik JPK_V7M z rozliczenia i faktur miesiąca (writer rynku), firma zna swój urząd skarbowy, e-mail i formę prawną, faktura zakupu z KSeF niesie numer KSeF; firma mówi, kim jest dla urzędu (identify_company): e-mail, urząd skarbowy, forma prawna, właściciel; v19 (przegląd pakietu, 2026-10-16): daty, które decydują o okresie VAT — faktura sprzedaży niesie datę sprzedaży (P_6, a gdy jej nie podano, datę wystawienia) i okres VAT według obowiązku podatkowego; faktura zakupu niesie datę sprzedaży u dostawcy i datę otrzymania (dla KSeF: dzień nadania numeru), a odliczenie przypada na późniejszy z tych miesięcy; firma mówi, czym jest (declare_company_form): status VAT (czynny albo zwolniony, z przepisem zwolnienia), forma ksiąg i forma opodatkowania od wskazanej daty; firma zwolniona nie rozlicza VAT i nie składa JPK_V7, a VAT od jej zakupów jest kosztem; faktury bez VAT (zw, 0%) księgują się bez linii VAT; każda zmieniona reguła nazywa swoje źródło; v20 (przegląd, 2026-10-16): zakup trafia w koszty — usługa albo wydatek bez dokumentu dostawy na konto kosztowe dostawcy (set_cost_account), a gdy go nie podano, na 403 usługi obce; zakup z dokumentem dostawy (WZ) czeka na 300 na rozliczenie z przyjęciem (PZ); różnice groszowe rozliczeń: niedopłata 761, nadpłata 760 (pozostałe operacyjne), cofnięcie wraca tym kontem, którym weszło; konta 750, 751, 761 w planie kont; v21 (przegląd, 2026-10-16): pozycja wyciągu najpierw mówi, czym jest — opłata i odsetki po kodzie banku, przelew między własnymi rachunkami, wpłata na mikrorachunek podatkowy, na rachunek składkowy ZUS, pieniądze właściciela — a dopiero reszta jest zapłatą kontrahenta, którą się rozlicza z fakturami; każda księguje się na swoje konto (149, 225, 229, 249, 403, 750/751); osoba może przeklasyfikować pozycję, której nic nie rozliczyło (classify_bank_operation); deklaracja formy firmy sprawdza formę prawną (spółka: CIT i pełne księgi); v22 (przegląd, 2026-10-16): waluty — faktura w walucie obcej niesie netto i VAT w złotych po kursie średnim NBP z ostatniego dnia roboczego przed dniem sprzedaży (kanał pl-nbp), księgi przeliczają po tym samym kursie, a zapłatę po kursie z jej dnia; różnica kursowa zrealizowana przy rozliczeniu trafia na 750 albo 751 i cofa się tym samym kontem; rozliczenie VAT, JPK i faktura w KSeF (P_14_xW) liczą VAT w złotych; v23 (twarz, 2026-10-16): rejestry VAT mówią, z jakich faktur jest każdy wiersz (kolumna _of), a każda kolumna kwot — co sumuje; „dlaczego?” na komórce rejestru odpowiada fakturami i sprawdza, że składają się na kwotę; v24 (twarz, krok 3, 2026-10-17): pakiet mówi słowami twarzy — słownik (nazwy typów, pól, wartości, zdarzeń, drzwi, zespołów planu kont i kształt każdego typu), deklaracja VAT jako zestawienie pozycji rozliczenia, a liczby, które twarz liczyła sama, liczy jądro: rano w liczbach (rachunek, należności, zobowiązania, VAT, co zrobiono), wynik od początku roku, należności według wieku na dzień jądra; v25 (twarz, 2026-10-17): wynik miesiąc po miesiącu — przychody, koszty i wynik każdego miesiąca ksiąg, każdy wiersz z zapisów, z których jest; zapis spóźnionego dokumentu liczy się w miesiącu, w którym go zaksięgowano; suma miesięcy to wynik od początku roku; v26 (poranek, 2026-10-17): poranek według roli — właściciel słyszy najpierw wynik (ten miesiąc do dziś, poprzedni, od stycznia, przed opodatkowaniem), potem pieniądze (rachunek, należności z najstarszą fakturą, zobowiązania), terminy podatkowe jednym zdaniem i to, co czeka; księgowość (rola accountant) słyszy najpierw, co jest otwarte (miesiące do zamknięcia, pozycje wyciągu bez rozliczenia, zadania po terminie), potem terminy z kwotami albo powodem ich braku, wynik na końcu; VAT jest terminem z kwotą, nie nagłówkiem; terminy podatkowe: VAT i JPK_V7M do 25., zaliczka na podatek dochodowy do 20. dnia następnego miesiąca, przesunięte na najbliższy dzień roboczy, gdy wypadają w sobotę albo dzień ustawowo wolny (Wielkanoc i Boże Ciało liczone); kwoty zaliczki księgi jeszcze nie liczą i mówią to wprost; rano w liczbach zaczyna się od wyniku tego miesiąca i od początku roku; v27 (CIT, 2026-10-17): zaliczka na CIT liczona przy zamknięciu miesiąca, narastająco od początku roku — przychody podatkowe minus koszty podatkowe, konta mówią, czym są dla podatku dochodowego (KUP albo NKUP, przychód albo nie; bez oznaczenia koszt i przychód są podatkowe), nowe konta NKUP: 409-1 reprezentacja, 751-1 odsetki budżetowe, 761-1 kary i grzywny, 761-2 darowizny, oraz 870 podatek dochodowy; podstawa w pełnych złotych, stawka 9% gdy status na rok na to pozwala (rok rozpoczęcia działalności, chyba że z przekształcenia albo aportu; mały podatnik) i przychody od początku roku mieszczą się w limicie, inaczej 19%; zaliczka to podatek od początku roku minus zaliczki wcześniejsze, księgowana Wn 870 / Ma 225; limity na 2026 r. jako dane; terminy i poranek podają kwotę zaliczki, rano w liczbach pokazuje ostatnią; v28 (poranek, 2026-10-18): wiersz poprzedniego miesiąca mówi, czy miesiąc jest zamknięty, a gospodarz nie nazywa zamkniętym miesiąca, który nim nie jest",
+  "version": 29,
+  "description": "Polska: wzorcowy plan kont, stawki VAT, faktura KSeF, słownik rynku z CORPUS.md — rynek jako dane; rozrachunki: linie wyciągu bankowego rozliczane z fakturami według polityki firmy (po numerze, do 2 gr, po kwocie, kilka faktur, częściowo, najstarsze), z rozliczeniem i różnicą jako zapisami; poranek: gospodarz mówi, co zaksięgowano i co czeka, z faktów, które policzyło jądro; dziś: otwarte zadania i należności w kolejności pilności, z zatwierdzeniami, które czekają; KSeF na zewnątrz: faktury sprzedaży idą do KSeF jako FA(3) jedną sesją interaktywną, dowód (numer KSeF, UPO) i odmowa (kod, słowa Ministerstwa) są zdarzeniami, odmowa staje się zadaniem na dziś; koniec miesiąca: faktury niosą okres VAT, zamknięcie miesiąca (period.closed) daje rozliczenie VAT jako obiekt policzony regułą — każda liczba deklaracji ma pochodzenie; plik JPK_V7M z rozliczenia i faktur miesiąca (writer rynku), firma zna swój urząd skarbowy, e-mail i formę prawną, faktura zakupu z KSeF niesie numer KSeF; firma mówi, kim jest dla urzędu (identify_company): e-mail, urząd skarbowy, forma prawna, właściciel; v19 (przegląd pakietu, 2026-10-16): daty, które decydują o okresie VAT — faktura sprzedaży niesie datę sprzedaży (P_6, a gdy jej nie podano, datę wystawienia) i okres VAT według obowiązku podatkowego; faktura zakupu niesie datę sprzedaży u dostawcy i datę otrzymania (dla KSeF: dzień nadania numeru), a odliczenie przypada na późniejszy z tych miesięcy; firma mówi, czym jest (declare_company_form): status VAT (czynny albo zwolniony, z przepisem zwolnienia), forma ksiąg i forma opodatkowania od wskazanej daty; firma zwolniona nie rozlicza VAT i nie składa JPK_V7, a VAT od jej zakupów jest kosztem; faktury bez VAT (zw, 0%) księgują się bez linii VAT; każda zmieniona reguła nazywa swoje źródło; v20 (przegląd, 2026-10-16): zakup trafia w koszty — usługa albo wydatek bez dokumentu dostawy na konto kosztowe dostawcy (set_cost_account), a gdy go nie podano, na 403 usługi obce; zakup z dokumentem dostawy (WZ) czeka na 300 na rozliczenie z przyjęciem (PZ); różnice groszowe rozliczeń: niedopłata 761, nadpłata 760 (pozostałe operacyjne), cofnięcie wraca tym kontem, którym weszło; konta 750, 751, 761 w planie kont; v21 (przegląd, 2026-10-16): pozycja wyciągu najpierw mówi, czym jest — opłata i odsetki po kodzie banku, przelew między własnymi rachunkami, wpłata na mikrorachunek podatkowy, na rachunek składkowy ZUS, pieniądze właściciela — a dopiero reszta jest zapłatą kontrahenta, którą się rozlicza z fakturami; każda księguje się na swoje konto (149, 225, 229, 249, 403, 750/751); osoba może przeklasyfikować pozycję, której nic nie rozliczyło (classify_bank_operation); deklaracja formy firmy sprawdza formę prawną (spółka: CIT i pełne księgi); v22 (przegląd, 2026-10-16): waluty — faktura w walucie obcej niesie netto i VAT w złotych po kursie średnim NBP z ostatniego dnia roboczego przed dniem sprzedaży (kanał pl-nbp), księgi przeliczają po tym samym kursie, a zapłatę po kursie z jej dnia; różnica kursowa zrealizowana przy rozliczeniu trafia na 750 albo 751 i cofa się tym samym kontem; rozliczenie VAT, JPK i faktura w KSeF (P_14_xW) liczą VAT w złotych; v23 (twarz, 2026-10-16): rejestry VAT mówią, z jakich faktur jest każdy wiersz (kolumna _of), a każda kolumna kwot — co sumuje; „dlaczego?” na komórce rejestru odpowiada fakturami i sprawdza, że składają się na kwotę; v24 (twarz, krok 3, 2026-10-17): pakiet mówi słowami twarzy — słownik (nazwy typów, pól, wartości, zdarzeń, drzwi, zespołów planu kont i kształt każdego typu), deklaracja VAT jako zestawienie pozycji rozliczenia, a liczby, które twarz liczyła sama, liczy jądro: rano w liczbach (rachunek, należności, zobowiązania, VAT, co zrobiono), wynik od początku roku, należności według wieku na dzień jądra; v25 (twarz, 2026-10-17): wynik miesiąc po miesiącu — przychody, koszty i wynik każdego miesiąca ksiąg, każdy wiersz z zapisów, z których jest; zapis spóźnionego dokumentu liczy się w miesiącu, w którym go zaksięgowano; suma miesięcy to wynik od początku roku; v26 (poranek, 2026-10-17): poranek według roli — właściciel słyszy najpierw wynik (ten miesiąc do dziś, poprzedni, od stycznia, przed opodatkowaniem), potem pieniądze (rachunek, należności z najstarszą fakturą, zobowiązania), terminy podatkowe jednym zdaniem i to, co czeka; księgowość (rola accountant) słyszy najpierw, co jest otwarte (miesiące do zamknięcia, pozycje wyciągu bez rozliczenia, zadania po terminie), potem terminy z kwotami albo powodem ich braku, wynik na końcu; VAT jest terminem z kwotą, nie nagłówkiem; terminy podatkowe: VAT i JPK_V7M do 25., zaliczka na podatek dochodowy do 20. dnia następnego miesiąca, przesunięte na najbliższy dzień roboczy, gdy wypadają w sobotę albo dzień ustawowo wolny (Wielkanoc i Boże Ciało liczone); kwoty zaliczki księgi jeszcze nie liczą i mówią to wprost; rano w liczbach zaczyna się od wyniku tego miesiąca i od początku roku; v27 (CIT, 2026-10-17): zaliczka na CIT liczona przy zamknięciu miesiąca, narastająco od początku roku — przychody podatkowe minus koszty podatkowe, konta mówią, czym są dla podatku dochodowego (KUP albo NKUP, przychód albo nie; bez oznaczenia koszt i przychód są podatkowe), nowe konta NKUP: 409-1 reprezentacja, 751-1 odsetki budżetowe, 761-1 kary i grzywny, 761-2 darowizny, oraz 870 podatek dochodowy; podstawa w pełnych złotych, stawka 9% gdy status na rok na to pozwala (rok rozpoczęcia działalności, chyba że z przekształcenia albo aportu; mały podatnik) i przychody od początku roku mieszczą się w limicie, inaczej 19%; zaliczka to podatek od początku roku minus zaliczki wcześniejsze, księgowana Wn 870 / Ma 225; limity na 2026 r. jako dane; terminy i poranek podają kwotę zaliczki, rano w liczbach pokazuje ostatnią; v28 (poranek, 2026-10-18): wiersz poprzedniego miesiąca mówi, czy miesiąc jest zamknięty, a gospodarz nie nazywa zamkniętym miesiąca, który nim nie jest; v29 (CIT, 2026-10-18): przeliczenie zaliczki za zamknięty miesiąc względem zaliczek wcześniejszych miesięcy, które księgi poznały później — różnica Wn 225 / Ma 870 albo odwrotnie, w dniu przeliczenia",
   "requires": [
     "company",
     "account",
@@ -1420,7 +1420,7 @@
     },
     {
       "name": "cit_advance",
-      "version": 1,
+      "version": 2,
       "domain": "finance",
       "is_document": false,
       "label_field": "period",
@@ -1500,6 +1500,10 @@
           "type": "date",
           "required": true
         }
+      ],
+      "amendable": [
+        "advances_before",
+        "advance"
       ]
     }
   ],
@@ -1913,7 +1917,7 @@
     },
     {
       "view_id": "slownik",
-      "version": 2,
+      "version": 3,
       "notion": "words",
       "title": "Słownik",
       "domain": "finance",
@@ -2538,7 +2542,8 @@
           "activity.approved": "Drzwi zatwierdzone",
           "account.tax_treatment.set": "Konto: znaczenie dla podatku dochodowego",
           "cit_limit.defined": "Limity CIT na rok",
-          "company.cit_status.declared": "Status CIT na rok"
+          "company.cit_status.declared": "Status CIT na rok",
+          "cit_advance.recomputed": "Zaliczka na CIT przeliczona"
         },
         "doors": {
           "appoint_deputy": "wyznaczenie zastępcy",
@@ -2568,7 +2573,8 @@
           "submit_event": "otwarte drzwi",
           "unpair_items": "cofnięcie dopasowania",
           "set_tax_treatment": "znaczenie konta dla podatku dochodowego",
-          "declare_cit_status": "status CIT na rok"
+          "declare_cit_status": "status CIT na rok",
+          "recompute_cit_advance": "przeliczenie zaliczki na CIT"
         },
         "account_groups": {
           "0": "Aktywa trwałe",
@@ -4974,6 +4980,81 @@
           "wzorcowy plan kont: 870 podatek dochodowy od osób prawnych, 225 pozostałe rozrachunki publicznoprawne; przegląd CIT-03: Wn 870 / Ma 22x"
         ]
       }
+    },
+    {
+      "rule_id": "pl-recompute-cit-advance",
+      "priority": 120,
+      "effective_from": "2026-01-01",
+      "description": "Przeliczenie zaliczki na CIT za zamknięty miesiąc: podatek od początku roku zostaje, jaki był, a zaliczki za wcześniejsze miesiące liczą się na nowo z tych, które są teraz w księgach — gdy wcześniejsze miesiące dostały zaliczki później (firma powiedziała o CIT po ich zamknięciu), zaliczka miesiąca obejmuje już tylko jego część",
+      "spec": {
+        "match": {
+          "event_type": "cit_advance.recomputed",
+          "where": [
+            {
+              "formula": "=count(c in objects(cit_advance, period, $.period)) = 1"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "cit_advance",
+            "target": "=ref(cit_advance, period, $.period)",
+            "set": {
+              "advances_before": "=sum(c in objects(cit_advance, year_start, ref(cit_advance, period, $.period).year_start) where c.period < $.period : c.advance)",
+              "advance": "=max(ref(cit_advance, period, $.period).tax - (sum(c in objects(cit_advance, year_start, ref(cit_advance, period, $.period).year_start) where c.period < $.period : c.advance)), 0)"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o CIT (t.j. Dz.U. 2026 poz. 554) art. 25 ust. 1: zaliczka to różnica między podatkiem należnym od dochodu od początku roku a sumą zaliczek należnych za poprzednie miesiące — gdy księgi poznały zaliczki wcześniejszych miesięcy później, różnicę liczy się na nowo"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-cit-advance-correction",
+      "priority": 120,
+      "effective_from": "2026-01-01",
+      "description": "Różnica z przeliczenia zaliczki na CIT księguje się w dniu przeliczenia: zaliczka mniejsza — Wn 225 / Ma 870, większa — Wn 870 / Ma 225",
+      "spec": {
+        "match": {
+          "event_type": "cit_advance.recomputed",
+          "where": [
+            {
+              "formula": "=count(c in objects(cit_advance, period, $.period)) = 1"
+            },
+            {
+              "formula": "=(ref(cit_advance, period, $.period).advance - (max(ref(cit_advance, period, $.period).tax - (sum(c in objects(cit_advance, year_start, ref(cit_advance, period, $.period).year_start) where c.period < $.period : c.advance)), 0))) <> 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "lines": [
+              {
+                "account": "=if((ref(cit_advance, period, $.period).advance - (max(ref(cit_advance, period, $.period).tax - (sum(c in objects(cit_advance, year_start, ref(cit_advance, period, $.period).year_start) where c.period < $.period : c.advance)), 0))) > 0, \"225\", \"870\")",
+                "debit": "=abs((ref(cit_advance, period, $.period).advance - (max(ref(cit_advance, period, $.period).tax - (sum(c in objects(cit_advance, year_start, ref(cit_advance, period, $.period).year_start) where c.period < $.period : c.advance)), 0))))"
+              },
+              {
+                "account": "=if((ref(cit_advance, period, $.period).advance - (max(ref(cit_advance, period, $.period).tax - (sum(c in objects(cit_advance, year_start, ref(cit_advance, period, $.period).year_start) where c.period < $.period : c.advance)), 0))) > 0, \"870\", \"225\")",
+                "credit": "=abs((ref(cit_advance, period, $.period).advance - (max(ref(cit_advance, period, $.period).tax - (sum(c in objects(cit_advance, year_start, ref(cit_advance, period, $.period).year_start) where c.period < $.period : c.advance)), 0))))"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 37 ust. 8: obciążenie wyniku podatkiem dochodowym bieżącym; korekta w okresie, w którym jej dokonano (miesiąc zaliczki jest zamknięty)"
+        ]
+      }
     }
   ],
   "activities": [
@@ -5289,6 +5370,29 @@
           }
         ],
         "emits": "company.cit_status.declared",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "recompute_cit_advance",
+      "domain": "finance",
+      "description": "Przelicz zaliczkę na CIT za zamknięty miesiąc (RRRR-MM) względem zaliczek za wcześniejsze miesiące, które są teraz w księgach — np. gdy firma powiedziała, że płaci CIT, dopiero po zamknięciu tych miesięcy; różnica księguje się dziś",
+      "spec": {
+        "inputs": [
+          {
+            "name": "period",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "cit_advance.recomputed",
         "who": [
           "human"
         ]
