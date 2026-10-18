@@ -48,6 +48,9 @@ type Answer struct {
 	Reading string      `json:"reading,omitempty"`
 	Visual  core.Visual `json:"visual"`
 	Cannot  string      `json:"cannot,omitempty"`
+	// Lesson is the kind of question in general words — no names, digits or
+	// dates — what reaches the Rhea team if she cannot answer it.
+	Lesson string `json:"lesson,omitempty"`
 }
 
 const answerPrompt = `You are the reporting author of Rhea, an accounting system. A person asks a question about
@@ -62,11 +65,18 @@ object as JSON). Money is DECIMAL(18,2): exact - add it, never cast it to a floa
 holds the linked object's id: join it to that table's "id". Bookings are the postings table:
 each line has an account (join the account table for its code, name and type), a side (debit or
 credit) and an unsigned amount - signed, a debit is plus for assets and costs, a credit is plus
-for revenue and liabilities. Keep bookings to the books named below.
+for revenue and liabilities. Keep bookings to the books named below. What was paid is money that
+left the bank: the bank operations going out, or the debit side of the account the payment
+settled (a liability, such as social security or tax, is paid on its debit side, owed on its
+credit side) - never the credit side of a liability. What was received is the reverse.
 
 THE QUERY
 - One SELECT: WITH, joins, GROUP BY, window functions, PIVOT ... FOR ... IN (...) are all fine.
   Nothing but SELECT; only the collection's tables. Quote names that need it ("date", "number").
+- It is DuckDB, not Postgres: no to_char (a month is strftime(d, '%Y-%m'), a quarter is
+  'Q' || quarter(d)), no ::money; ORDER BY after a UNION names only the output columns — to put
+  a total row last, UNION ALL inside a subquery with a sort column and order the outer select
+  by it, or use GROUP BY ROLLUP.
 - Today is given below; "this month", "last month", "this year", "so far" are relative to it.
   Write it as DATE '<today>'; never CURRENT_DATE, now() or any clock of the machine.
 - Money stays exact: an average, a share or a ratio is ROUND(..., 2)::DECIMAL(18,2) (a percent
@@ -93,10 +103,15 @@ THE VISUAL - "visual": how the rows are shown.
   Add "title" (short, in the question's language) and, where a column's type does not say it,
   "formats": {"<col>": "money" | "percent" | "int" | "date" | "month" | "text"}.
 
-When the collection holds nothing that could answer the question, say so instead:
-{"cannot": "<why, in the question's language, without figures>"}.
+THE LESSON - "lesson": the kind of question in general words, in the question's language, with no
+names of companies or people and no digits, dates or amounts (e.g. "wpłaty do ZUS w kwartale,
+miesiąc po miesiącu, z sumą"). If the question cannot be answered, it is what reaches the Rhea
+team so they can teach it.
 
-Reply with only the JSON object: {"sql": "...", "reading": "...", "visual": {...}} or {"cannot": "..."}.`
+When the collection holds nothing that could answer the question, say so instead:
+{"cannot": "<why, in the question's language, without figures>", "lesson": "..."}.
+
+Reply with only the JSON object: {"sql": "...", "reading": "...", "visual": {...}, "lesson": "..."} or {"cannot": "...", "lesson": "..."}.`
 
 // Answer asks the author for a query that answers the question.
 func (a *Agent) Answer(ctx context.Context, ask AnswerAsk) (Answer, error) {

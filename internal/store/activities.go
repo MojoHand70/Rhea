@@ -183,24 +183,41 @@ func (s *Store) ActivityEventCounts(ctx context.Context) (map[string]int, error)
 // fixed point recorded honestly. Idempotent: existing names are left alone,
 // and the events' dedup keys make a crashed seed resumable.
 func (s *Store) seedBuiltinActivities(ctx context.Context) error {
-	for _, a := range core.BuiltinActivities() {
+	return s.SeedActivities(ctx, core.BuiltinActivities())
+}
+
+// SeedActivities seeds the kernel's own doors: a door not yet in the log is
+// born at version 1; a door the kernel created whose definition the kernel
+// has since changed gets its next version, approved by the kernel — the
+// kernel's vocabulary moves with the kernel (DECISIONS 2026-10-18). A door a
+// person evolved is left as they made it.
+func (s *Store) SeedActivities(ctx context.Context, builtins []core.Activity) error {
+	for _, a := range builtins {
 		var exists bool
 		if err := s.Pool.QueryRow(ctx,
 			`SELECT EXISTS (SELECT 1 FROM activity WHERE name = $1)`, a.Name).Scan(&exists); err != nil {
 			return err
 		}
+		version := 1
 		if exists {
-			continue
+			cur, err := s.GetActivity(ctx, a.Name)
+			if err != nil {
+				return err
+			}
+			if cur.CreatedBy != "kernel" || sameDoor(cur, a) {
+				continue
+			}
+			version = cur.Version + 1
 		}
 		approval, err := json.Marshal(map[string]any{
-			"activity": a.Name, "approved_version": 1, "approved_by": "init",
+			"activity": a.Name, "approved_version": version, "approved_by": "init",
 		})
 		if err != nil {
 			return err
 		}
 		if _, err := s.AppendEvent(ctx, core.Event{
 			Kind: core.KindRaw, Type: "activity.approved", OccurredAt: todayUTC(),
-			Payload: approval, DedupKey: fmt.Sprintf("activity-approve/%s/1", a.Name),
+			Payload: approval, DedupKey: fmt.Sprintf("activity-approve/%s/%d", a.Name, version),
 			Actor: "kernel", ActivityName: "approve_activity", ActivityVersion: 1,
 		}); err != nil && !IsDuplicate(err) {
 			return fmt.Errorf("seed %s: %w", a.Name, err)
@@ -212,4 +229,17 @@ func (s *Store) seedBuiltinActivities(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+// sameDoor compares a stored door with the kernel's definition of it, both
+// through JSON, so an empty list and an absent one read alike.
+func sameDoor(stored, code core.Activity) bool {
+	norm := func(sp core.ActivitySpec) string {
+		b, _ := json.Marshal(sp)
+		var back core.ActivitySpec
+		_ = json.Unmarshal(b, &back)
+		b, _ = json.Marshal(back)
+		return string(b)
+	}
+	return stored.Description == code.Description && stored.Domain == code.Domain && norm(stored.Spec) == norm(code.Spec)
 }

@@ -152,10 +152,27 @@ func TestAnswerFromTheBooks(t *testing.T) {
 		t.Fatalf("what she told was not recorded: %v %v", evs, err)
 	}
 
-	// A query that would write is refused, twice, and the books stay.
-	replies = []string{`{"sql": "DELETE FROM ` + table + `", "reading": "x", "visual": {"kind": "table"}}`, `{"sql": "DROP TABLE ` + table + `", "reading": "x", "visual": {"kind": "table"}}`}
-	if code := call("POST", "/api/answer", map[string]any{"question": "usuń faktury", "asked_by": "krzysztof"}, nil); code != 422 {
-		t.Fatalf("a writing query: %d", code)
+	// A query that would write is refused, three times, and the books stay;
+	// the failure is a moment of its own, recorded with only its class.
+	replies = []string{`{"sql": "DELETE FROM ` + table + `", "reading": "x", "visual": {"kind": "table"}, "lesson": "usuwanie faktur"}`,
+		`{"sql": "DROP TABLE ` + table + `", "reading": "x", "visual": {"kind": "table"}, "lesson": "usuwanie faktur"}`,
+		`{"sql": "TRUNCATE ` + table + `", "reading": "x", "visual": {"kind": "table"}, "lesson": "usuwanie faktur"}`}
+	var failed struct {
+		Failed bool   `json:"failed"`
+		Error  string `json:"error"`
+		Noted  *struct {
+			Kind     string `json:"kind"`
+			Shared   bool   `json:"shared"`
+			KeptHome string `json:"kept_home_because"`
+		} `json:"noted"`
+	}
+	if code := call("POST", "/api/answer", map[string]any{"question": "usuń faktury Nabywcy", "asked_by": "krzysztof"}, &failed); code != 200 || !failed.Failed || failed.Noted == nil || failed.Noted.Kind != "failed" {
+		t.Fatalf("a writing query: %d %+v", code, failed)
+	}
+	moments, _ := s.EventsOfTypes(ctx, []string{core.EventHostUntaught})
+	if len(moments) != 1 || !strings.Contains(string(moments[0].Payload), `"detail": "not one SELECT"`) && !strings.Contains(string(moments[0].Payload), `"detail":"not one SELECT"`) ||
+		!strings.Contains(string(moments[0].Payload), `usuwanie faktur`) {
+		t.Fatalf("the failure was not recorded as such: %v", moments)
 	}
 	replies = []string{`{"sql": "SELECT count(*) AS n FROM ` + table + `", "reading": "liczba faktur", "visual": {"kind": "kpi", "value": "missing"}}`}
 	call("POST", "/api/answer", map[string]any{"question": "ile faktur?", "asked_by": "krzysztof"}, &ans)
@@ -177,10 +194,23 @@ func TestAnswerFromTheBooks(t *testing.T) {
 	if len(asked) != 2 || !strings.Contains(asked[1], "machine's clock") || ans.Rows[0][0] != "2" {
 		t.Fatalf("the machine's clock was read: %+v", ans.Rows)
 	}
-	replies = []string{`{"cannot": "w księgach nie ma magazynu"}`}
+	replies = []string{`{"cannot": "w księgach nie ma magazynu", "lesson": "stany magazynowe"}`}
 	call("POST", "/api/answer", map[string]any{"question": "ile mam w magazynie?", "asked_by": "krzysztof"}, &ans)
 	if ans.Cannot == "" {
 		t.Fatalf("cannot: %+v", ans)
+	}
+	// The nearest thing shown for what she was never taught: the answer, and the moment.
+	replies = []string{`{"sql": "SELECT sum(net) AS n FROM ` + table + `", "reading": "sprzedaż do dziś", "visual": {"kind": "kpi", "value": "n"}, "lesson": "prognoza"}`}
+	call("POST", "/api/answer", map[string]any{"question": "jaki będę miał dochód w przyszłych miesiącach?", "asked_by": "krzysztof", "missing": "prognoza dochodu na kolejne miesiące"}, &ans)
+	moments, _ = s.EventsOfTypes(ctx, []string{core.EventHostUntaught})
+	kinds := map[string]bool{}
+	for _, m := range moments {
+		var p struct{ Kind, Missing string }
+		json.Unmarshal(m.Payload, &p)
+		kinds[p.Kind+":"+p.Missing] = true
+	}
+	if len(ans.Rows) != 1 || !kinds["cannot:stany magazynowe"] || !kinds["untaught:prognoza dochodu na kolejne miesiące"] || !kinds["failed:usuwanie faktur"] {
+		t.Fatalf("the moments: %v (rows %v)", kinds, ans.Rows)
 	}
 
 	// Kept (KK: what is kept goes through the gate): the answer becomes a

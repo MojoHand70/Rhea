@@ -40,6 +40,12 @@ CREATE TABLE IF NOT EXISTS untaught (
     synthetic    BOOLEAN NOT NULL DEFAULT false
 );
 
+-- What kind of moment it was (2026-10-18): never taught, the books do not hold it, or her query
+-- failed — and, for a failure, only the class of DuckDB's refusal (never the query, which may carry
+-- the client's names).
+ALTER TABLE untaught ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'untaught';
+ALTER TABLE untaught ADD COLUMN IF NOT EXISTS detail TEXT NOT NULL DEFAULT '';
+
 CREATE OR REPLACE FUNCTION forbid_untaught_mutation() RETURNS trigger AS $$
 BEGIN
     RAISE EXCEPTION 'untaught is append-only (Rhea invariant 1)';

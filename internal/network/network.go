@@ -88,8 +88,11 @@ var untaughtListSQL string
 // NoteUntaught is one installation telling the house what it was asked and
 // had not been taught (DIRECTION 2026-10-17): her general description only.
 // The caller has kept the person's words, names and numbers at home.
-func (n *Network) NoteUntaught(ctx context.Context, installation, missing string) error {
-	_, err := n.Pool.Exec(ctx, untaughtNoteSQL, installation, missing, Synthetic(installation))
+func (n *Network) NoteUntaught(ctx context.Context, installation, missing, kind, detail string) error {
+	if kind == "" {
+		kind = "untaught"
+	}
+	_, err := n.Pool.Exec(ctx, untaughtNoteSQL, installation, missing, Synthetic(installation), kind, detail)
 	return err
 }
 
@@ -102,6 +105,8 @@ type Untaught struct {
 	Times         int       `json:"times"`
 	First         time.Time `json:"first"`
 	Last          time.Time `json:"last"`
+	Kinds         []string  `json:"kinds"`   // untaught, cannot, failed
+	Details       []string  `json:"details"` // a failure's class of refusal
 }
 
 // Untaught lists what installations were never taught, most asked first;
@@ -115,7 +120,7 @@ func (n *Network) Untaught(ctx context.Context, includeSynthetic bool) ([]Untaug
 	var out []Untaught
 	for rows.Next() {
 		var u Untaught
-		if err := rows.Scan(&u.Missing, &u.Lesson, &u.Installations, &u.Names, &u.Times, &u.First, &u.Last); err != nil {
+		if err := rows.Scan(&u.Missing, &u.Lesson, &u.Installations, &u.Names, &u.Times, &u.First, &u.Last, &u.Kinds, &u.Details); err != nil {
 			return nil, err
 		}
 		out = append(out, u)

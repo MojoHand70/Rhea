@@ -1,8 +1,10 @@
 package shell
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -112,6 +114,9 @@ func (s *Server) handleAnswer(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Question string `json:"question"`
 		AskedBy  string `json:"asked_by"`
+		// Missing is what the face's understanding said she was never taught,
+		// when she answers only the nearest thing: the moment is recorded too.
+		Missing string `json:"missing"`
 	}
 	if err := json.NewDecoder(io.LimitReader(r.Body, 16<<10)).Decode(&req); err != nil {
 		writeErr(w, 400, err)
@@ -132,13 +137,29 @@ func (s *Server) handleAnswer(w http.ResponseWriter, r *http.Request) {
 		ans agent.Answer
 		got componentOut
 	)
-	for try := 0; try < 2; try++ {
+	// Every moment she could not fully answer is recorded and, when it may
+	// be, reaches the house (KK 2026-10-18: a failure belongs in the
+	// Learning Centre too). The general words are the face's, or the
+	// author's lesson, never the person's question.
+	note := func(kind, detail string) *noted {
+		missing := cmp.Or(strings.TrimSpace(req.Missing), strings.TrimSpace(ans.Lesson), strings.TrimSpace(ans.Cannot))
+		if missing == "" {
+			return nil
+		}
+		n, err := s.noteUntaught(ctx, req.Question, missing, req.AskedBy, kind, detail)
+		if err != nil {
+			log.Printf("answer: noting %s: %v", kind, err)
+			return nil
+		}
+		return &n
+	}
+	for try := 0; try < answerTries; try++ {
 		if ans, err = s.Agent.Answer(ctx, ask); err != nil {
 			writeErr(w, 502, err)
 			return
 		}
 		if ans.Cannot != "" {
-			writeJSON(w, 200, map[string]any{"question": req.Question, "cannot": ans.Cannot})
+			writeJSON(w, 200, map[string]any{"question": req.Question, "cannot": ans.Cannot, "noted": note("cannot", "")})
 			return
 		}
 		if got, err = s.runQuery(ctx, ans.SQL, ans.Visual); err == nil {
@@ -148,7 +169,7 @@ func (s *Server) handleAnswer(w http.ResponseWriter, r *http.Request) {
 		ask.Tried = &agent.AnswerTry{SQL: ans.SQL, Error: err.Error()}
 	}
 	if err != nil {
-		writeErr(w, 422, fmt.Errorf("answer: the query could not be run: %w", err))
+		writeJSON(w, 200, map[string]any{"question": req.Question, "failed": true, "error": err.Error(), "noted": note("failed", refusalClass(err))})
 		return
 	}
 	got.Title, got.Reading = ans.Visual.Title, ans.Reading
@@ -169,9 +190,43 @@ func (s *Server) handleAnswer(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 500, err)
 		return
 	}
+	var nearest *noted
+	if strings.TrimSpace(req.Missing) != "" {
+		nearest = note("untaught", "")
+	}
 	writeJSON(w, 200, map[string]any{"event_id": t.EventID, "question": req.Question, "sql": ans.SQL, "reading": ans.Reading,
-		"visual": got.Visual, "columns": got.Columns, "rows": got.Rows, "row_objects": got.Of, "more": got.More})
+		"visual": got.Visual, "columns": got.Columns, "rows": got.Rows, "row_objects": got.Of, "more": got.More, "noted": nearest})
 }
+
+// answerTries: the author's query and two fixes after DuckDB's refusal.
+const answerTries = 3
+
+// refusalClass is what the house may learn of a failed query: the class of
+// the refusal and, for an unknown function, its name — never the query or
+// the words around it, which may carry the client's names.
+func refusalClass(err error) string {
+	msg := err.Error()
+	switch {
+	case strings.Contains(msg, "a float"):
+		return "a float column"
+	case strings.Contains(msg, "machine's clock"):
+		return "the machine's clock"
+	case errors.Is(err, project.ErrNotOneSelect):
+		return "not one SELECT"
+	}
+	if m := unknownFunction.FindStringSubmatch(msg); m != nil {
+		return "Catalog Error: no function " + m[1]
+	}
+	if m := errorClass.FindString(msg); m != "" {
+		return strings.TrimSuffix(m, ":")
+	}
+	return "the query could not be run"
+}
+
+var (
+	unknownFunction = regexp.MustCompile(`Function with name ([A-Za-z_][A-Za-z0-9_]*) does not exist`)
+	errorClass      = regexp.MustCompile(`^[A-Z][A-Za-z]* Error:`)
+)
 
 // componentOut is one query of hers, run: its rows as a face lays them out.
 type componentOut struct {

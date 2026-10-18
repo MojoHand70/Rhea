@@ -3684,3 +3684,26 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
 - **white01 never ran the clock**: the 06:30 timer now opens the day before she speaks, so months
   open (and RMK parts release) on their own. Deferred revenue (RMP, the SaaS case — its CIT
   revenue date is contested) and accrued costs (RMK bierne) come later.
+
+## 2026-10-18 — the first users: every unanswered moment reaches the Learning Centre
+
+- **Found by KK's first users.** (1) „ile zapłaciłem ZUS w pierwszym kwartale 2026?” — the
+  author wrote Postgres (`to_char`), fixed it once, then hit DuckDB's rule that ORDER BY after a
+  UNION names only output columns; the face showed DuckDB's English. (2) A forecast she was never
+  taught — she said so, answered the nearest thing with a query, and nothing reached the Learning
+  Centre: the face dropped her "missing" when it queried.
+- **The author learns the dialect**: no `to_char` (strftime, quarter), no `::money`, a total row
+  by a sort column in a subquery or ROLLUP; and which side a payment is (money out of the bank, the
+  debit side of the liability it settled — never the credit side). Two fixes after a refusal, not one.
+- **Every moment she could not fully answer is recorded by the kernel**, of a kind: `untaught`
+  (never taught; she showed the nearest thing or nothing — the face now passes her "missing" with
+  the question), `cannot` (the books do not hold it), `failed` (her query would not run after
+  three tries). The general words are the face's "missing" or the author's new `lesson` (the kind
+  of question, no names, digits or dates), never the person's question; a failure carries only the
+  class of the refusal (`Binder Error`, `Catalog Error: no function to_char`, `a float column`…).
+  A failure answers 200 with `failed` and the error, so the face can say it plainly.
+- **The kernel's doors move with the kernel**: `rhea init` gave a built-in door only its first
+  version, so a changed door never reached a running database. Now a kernel-created door whose
+  definition changed gets its next version, approved by the kernel (`activity-approve/<name>/<v>`);
+  an unchanged door is never written again (compared through JSON) — the test inits twice.
+  `note_untaught` v2 adds `kind` and `detail`; the network's `untaught` table learns both columns.
