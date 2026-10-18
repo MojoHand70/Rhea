@@ -141,7 +141,7 @@ func TestTheMorningByRole(t *testing.T) {
 	}
 	// The result first: October so far against September, and since
 	// January — before tax, because the books do not compute CIT yet.
-	if got, want := table("poranek-wynik"), "[[2026-10 do dziś, miesiąc trwa 200.00 400.00 -200.00] [2026-09 1500.00 0.00 1500.00] [2026 od stycznia 1700.00 400.00 1300.00]]"; got != want {
+	if got, want := table("poranek-wynik"), "[[2026-10 do dziś, miesiąc trwa 200.00 400.00 -200.00] [2026-09, zamknięty 1500.00 0.00 1500.00] [2026 od stycznia 1700.00 400.00 1300.00]]"; got != want {
 		t.Fatalf("the result:\n got %s\nwant %s", got, want)
 	}
 	// Money: what is owed to us as a total and its oldest invoice, not a list.
@@ -242,11 +242,39 @@ func TestTheMorningByRole(t *testing.T) {
 	if v := heard("ola"); v != "poranek" {
 		t.Fatalf("a role with no morning of its own heard %s", v)
 	}
-	if code, _ := fetch("/api/said?person=nikt"); code != 404 {
-		t.Fatalf("no such person: %d", code)
+	if v := heard("nikt"); v != "poranek" {
+		t.Fatalf("a handle no person carries heard %s", v)
 	}
 	if code, _ := fetch("/api/said?person=jan&view=poranek"); code != 400 {
 		t.Fatalf("a view and a person: %d", code)
+	}
+
+	// Speaking now (KK 2026-10-18: a morning alarm, and a person refreshing
+	// what she says): for one person, their morning; for the alarm, all.
+	speak := func(query string) []struct{ View, Said, Silent string } {
+		t.Helper()
+		res, err := ts.Client().Post(ts.URL+"/api/speak"+query, "application/json", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+		var out []struct{ View, Said, Silent string }
+		if res.StatusCode != 200 || json.NewDecoder(res.Body).Decode(&out) != nil {
+			t.Fatalf("speak%s: %d", query, res.StatusCode)
+		}
+		return out
+	}
+	if out := speak("?person=anna"); len(out) != 1 || out[0].View != "poranek-ksiegowosc" || out[0].Said == "" {
+		t.Fatalf("anna's morning, now: %+v", out)
+	}
+	if out := speak(""); len(out) != 2 || out[0].Said == "" || out[1].Said == "" {
+		t.Fatalf("every morning, now: %+v", out)
+	}
+	if v := heard("jan"); v != "poranek" {
+		t.Fatalf("after the alarm the owner heard %s", v)
+	}
+	if out := speak("?person=nikt"); len(out) != 1 || out[0].View != "poranek" {
+		t.Fatalf("speak for a handle no person carries: %+v", out)
 	}
 
 	// Live (RHEA_LIVE_HOST=1): the model named by RHEA_MODEL speaks both

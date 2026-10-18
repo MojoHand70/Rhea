@@ -3623,3 +3623,26 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   for components, queries, readings and visual kinds; whether each query runs is seen on the
   preview. The bundle ask now carries the collection (with the market's names) and today. Tally
   views already approved keep working; the author no longer drafts them.
+
+## 2026-10-18 — her morning on demand, backfill in order, a third law (Poland pack v28)
+
+- **Why the morning did not change** (KK, after deploying v27): nothing asked her to speak — the
+  phone showed her words of 16 October; Helios had never declared its tax form; advances come
+  with a month's close. Helios is now declared (sp. z o.o., CIT, full books, active VAT from
+  1 January 2026; status: started 1 January 2026, new — 9%), signed by KK, at his word.
+- **`POST /api/speak`** asks the host to speak now: `person=<handle>` that person's morning (the
+  face's "Odśwież"), without it every narrative (the 06:30 `rhea-morning.timer` the face's deploy
+  installs). KK: "both". A handle no person carries hears the general morning — the face signs
+  as a person not yet registered — instead of an error.
+- **Backfill plans in order.** It planned every past event against the books as they stood, so
+  a chain could not see the chains planned before it: February's advance would not see
+  January's and charge the year again (the same held for a late VAT carry). Each chain is now
+  planned against what the earlier ones leave — their objects and amendments read before the
+  store's, their postings added to `balance()` — and books exactly as planned.
+- **The third law: she names only what today's facts carry.** Live on Helios she named an
+  invoice ("HOS/2/2026 z 14 stycznia") from her own earlier words; every number in it passed. A
+  token with a letter and a digit that reads as a name (a slash or underscore, or a capital
+  beside a digit) must stand in the facts as written; refused otherwise. What she said before is
+  wording to avoid, never a source — her instructions now say so.
+- **v28**: the previous month's row says whether it is closed, and neither voice calls a month
+  closed unless its row does.

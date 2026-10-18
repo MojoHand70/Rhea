@@ -78,7 +78,7 @@ func (s *Server) handleSaid(w http.ResponseWriter, r *http.Request) {
 		}
 		v, err := s.narrativeFor(r.Context(), h)
 		if err != nil {
-			writeErr(w, 404, err)
+			writeErr(w, 500, err)
 			return
 		}
 		if v == "" {

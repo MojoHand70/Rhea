@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"rhea/internal/core"
 )
@@ -64,15 +65,28 @@ func (x *Executor) PlanBackfill(ctx context.Context, date string) (BackfillPlan,
 	if err != nil {
 		return plan, err
 	}
-	lookup := func(typ, field string, value any) ([]string, error) {
-		return x.Store.FindObjectIDsByField(ctx, typ, field, fmt.Sprintf("%v", value))
-	}
+	// The chains are planned in log order, each against the world the
+	// chains before it leave: a month's advance reads the advances of the
+	// months planned before it, as the live path would have (KK's Helios,
+	// 2026-10-18: closed before the rule existed, January to August).
+	planned := newPlannedWorld()
+	ctx = context.WithValue(ctx, plannedKey{}, planned)
 	get := func(id string) (map[string]any, bool, error) {
+		if st, ok := planned.state[id]; ok {
+			return st, true, nil
+		}
 		o, err := x.Store.GetObject(ctx, id)
 		if err != nil {
 			return nil, false, nil
 		}
 		return o.State, true, nil
+	}
+	lookup := func(typ, field string, value any) ([]string, error) {
+		ids, err := x.Store.FindObjectIDsByField(ctx, typ, field, fmt.Sprintf("%v", value))
+		if err != nil {
+			return nil, err
+		}
+		return planned.lookup(ids, typ, field, value), nil
 	}
 	for _, ev := range raws {
 		if waiting[ev.ID] || core.ReservedEventType(ev.Type) || core.TimeEventType(ev.Type) {
@@ -124,6 +138,7 @@ func (x *Executor) PlanBackfill(ctx context.Context, date string) (BackfillPlan,
 		if len(c.nodes) == 0 {
 			continue
 		}
+		planned.add(c.nodes, get)
 		c.nodes = nodes // booking needs the replayed nodes too, as causes
 		plan.Chains = append(plan.Chains, c)
 	}
@@ -236,4 +251,116 @@ func (x *Executor) ApproveBackfill(ctx context.Context, approvedBy, date string)
 		return 0, nil, err
 	}
 	return t.Backfilled, t.Errors, nil
+}
+
+// plannedWorld is what the chains planned so far would leave: the objects
+// they materialize and the states they amend, read before the store's, and
+// their postings, which the ledger's balance read adds to the booked ones.
+type plannedWorld struct {
+	state map[string]map[string]any
+	typ   map[string]string
+	order []string
+}
+
+type plannedKey struct{}
+
+func newPlannedWorld() *plannedWorld {
+	return &plannedWorld{state: map[string]map[string]any{}, typ: map[string]string{}}
+}
+
+// add takes in a planned chain's new consequences.
+func (w *plannedWorld) add(nodes []chainNode, get core.Getter) {
+	for _, n := range nodes {
+		if n.booked != 0 {
+			continue
+		}
+		switch {
+		case n.mat.ObjectID != "":
+			w.put(n.mat.ObjectID, n.mat.ObjectType, n.mat.State)
+		case n.amend != nil:
+			base, ok, _ := get(n.amend.ObjectID)
+			st := map[string]any{}
+			if ok {
+				for k, v := range base {
+					st[k] = v
+				}
+			}
+			for k, v := range n.amend.Set {
+				st[k] = v
+			}
+			w.put(n.amend.ObjectID, n.amend.ObjectType, st)
+		}
+	}
+}
+
+func (w *plannedWorld) put(id, typ string, st map[string]any) {
+	if _, seen := w.state[id]; !seen {
+		w.order = append(w.order, id)
+	}
+	w.state[id], w.typ[id] = st, typ
+}
+
+// lookup is the store's answer as the planned chains change it: an object
+// whose planned state no longer matches drops out, a planned one that
+// matches joins, after the booked ones — where it will stand once booked.
+func (w *plannedWorld) lookup(stored []string, typ, field string, value any) []string {
+	want := fmt.Sprintf("%v", value)
+	out := make([]string, 0, len(stored))
+	in := map[string]bool{}
+	for _, id := range stored {
+		in[id] = true
+		if st, ok := w.state[id]; ok && stateText(st[field]) != want {
+			continue
+		}
+		out = append(out, id)
+	}
+	for _, id := range w.order {
+		if !in[id] && w.typ[id] == typ && stateText(w.state[id][field]) == want {
+			out = append(out, id)
+		}
+	}
+	return out
+}
+
+// balance is the planned postings' part of an account's balance.
+func (w *plannedWorld) balance(book, account, from, to string) int64 {
+	var n int64
+	for _, id := range w.order {
+		st := w.state[id]
+		if w.typ[id] != PostingObjectType || stateText(st["account"]) != account {
+			continue
+		}
+		b := stateText(st["book"])
+		if b == "" {
+			b = "main"
+		}
+		d := stateText(st["date"])
+		if b != book || d < from || d > to {
+			continue
+		}
+		amt, err := strconv.ParseInt(stateText(st["amount"]), 10, 64)
+		if err != nil {
+			continue
+		}
+		if st["side"] == "debit" {
+			n += amt
+		} else {
+			n -= amt
+		}
+	}
+	return n
+}
+
+// stateText is a state value as the store compares it: its text, a whole
+// number without an exponent.
+func stateText(v any) string {
+	switch t := v.(type) {
+	case nil:
+		return ""
+	case float64:
+		if t == float64(int64(t)) {
+			return strconv.FormatInt(int64(t), 10)
+		}
+	}
+	return fmt.Sprintf("%v", v)
 }

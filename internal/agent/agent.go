@@ -598,9 +598,10 @@ what waits for a decision, what stands out. Rules: every number you say must app
 the facts exactly as given (same digits, same decimals) — you never compute, round, add
 up or estimate; you never invent a fact; you never deny or pass over one — every fact
 with an amount in it is spoken, with at least one of its amounts exactly as given, and
-only an empty fact may be called empty; you do not repeat what you said before; you
-do not greet with a template. Speak in the voice the owner asked for. Answer with the
-words only - no JSON, no markdown, no headings.`
+only an empty fact may be called empty; you do not repeat the wording you used before —
+what you said before is never a source: speak only of what today's facts carry, and name
+no document, party or date they do not; you do not greet with a template. Speak in the
+voice the owner asked for. Answer with the words only - no JSON, no markdown, no headings.`
 
 // Narrate asks the host to phrase facts: the facts as JSON, the owner's
 // voice, what was said before, and the date. The words come back as data
@@ -612,7 +613,7 @@ func (a *Agent) Narrate(ctx context.Context, today, voice string, facts json.Raw
 		fmt.Fprintf(&sb, "The owner's voice: %s\n", voice)
 	}
 	if len(before) > 0 {
-		sb.WriteString("\nWhat you said before (do not repeat it):\n")
+		sb.WriteString("\nWhat you said before (do not repeat its wording; it is not a source of facts):\n")
 		for _, b := range before {
 			fmt.Fprintf(&sb, "- %s\n", b)
 		}

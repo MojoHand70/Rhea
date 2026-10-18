@@ -98,3 +98,22 @@ func TestHostLaw(t *testing.T) {
 		t.Fatalf("the untyped number spoken: %s", v)
 	}
 }
+
+// The third law (KK's Helios morning, 2026-10-18): she named "HOS/2/2026 z
+// 14 stycznia", an invoice in her earlier words but not in today's facts —
+// every number in it passed. A document's name must stand in the facts as
+// written; amounts with units, dates and article numbers are not names.
+func TestHostNamesOnlyWhatTheFactsCarry(t *testing.T) {
+	facts := []byte(`[{"as":"terminy","kind":"analysis","data":{"rows":[[{"v":"2026-10-26"},{"v":"VAT i JPK_V7M"},{"v":"2026-09"},{"v":"9220.00"}]]}},
+		{"as":"faktury","kind":"analysis","data":{"rows":[[{"v":"FV 7/09/2026"},{"v":"Tech Park Gdańsk S.A."}]]}}]`)
+	for words, want := range map[string]string{
+		"Najstarsza faktura zakupu HOS/2/2026 z 14 stycznia czeka.":                   "HOS/2/2026",
+		"Faktura FV1 nadal otwarta.":                                                  "FV1",
+		"VAT i JPK_V7M: 9220.00 zł do 26 października; faktura 7/09/2026 Tech Parku.": "",
+		"jpk_v7m złożony; 100.00zł bez rozliczenia, art. 19 ust. 1e, 20/10/2026.":     "",
+	} {
+		if got := strings.Join(foreignNames(words, facts), ","); got != want {
+			t.Fatalf("%q: foreign names %q, want %q", words, got, want)
+		}
+	}
+}

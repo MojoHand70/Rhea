@@ -898,7 +898,11 @@ func (x *Executor) env(ctx context.Context, payload any, lookup core.Lookup, get
 		Typed:         typed,
 		MaxCollection: x.MaxCollection,
 		Balance: func(book, account, from, to string) (int64, error) {
-			return x.Store.AccountBalance(ctx, book, account, from, to)
+			n, err := x.Store.AccountBalance(ctx, book, account, from, to)
+			if w, ok := ctx.Value(plannedKey{}).(*plannedWorld); ok && err == nil {
+				n += w.balance(book, account, from, to) // a backfill's chains planned so far
+			}
+			return n, err
 		},
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"unicode"
 
 	"rhea/internal/agent"
 	"rhea/internal/core"
@@ -33,15 +34,25 @@ type narrativeFact struct {
 }
 
 func (s *Server) serveNarrative(ctx context.Context, w http.ResponseWriter, vd *core.ViewDef) {
+	out, status, err := s.narrate(ctx, vd)
+	if err != nil {
+		writeErr(w, status, err)
+		return
+	}
+	writeJSON(w, 200, out)
+}
+
+// narrate computes a narrative's facts and asks the host to speak them,
+// under her laws; the words, when they pass, are logged through her door.
+// A failure carries the HTTP status it answers with.
+func (s *Server) narrate(ctx context.Context, vd *core.ViewDef) (map[string]any, int, error) {
 	var spec core.NarrativeSpec
 	if err := json.Unmarshal(vd.Spec, &spec); err != nil {
-		writeErr(w, 500, err)
-		return
+		return nil, 500, err
 	}
 	vds, err := s.effectiveViewDefs(ctx)
 	if err != nil {
-		writeErr(w, 500, err)
-		return
+		return nil, 500, err
 	}
 	byID := map[string]core.ViewDef{}
 	for _, v := range vds {
@@ -51,8 +62,7 @@ func (s *Server) serveNarrative(ctx context.Context, w http.ResponseWriter, vd *
 	for _, f := range spec.Facts {
 		fv, ok := byID[f.View]
 		if !ok {
-			writeErr(w, 400, fmt.Errorf("narrative %s: no view %q to draw on", vd.ID, f.View))
-			return
+			return nil, 400, fmt.Errorf("narrative %s: no view %q to draw on", vd.ID, f.View)
 		}
 		as := f.As
 		if as == "" {
@@ -63,25 +73,21 @@ func (s *Server) serveNarrative(ctx context.Context, w http.ResponseWriter, vd *
 		case "analysis":
 			as, err := s.analysisSpec(ctx, fv.Spec)
 			if err != nil {
-				writeErr(w, 500, err)
-				return
+				return nil, 500, err
 			}
 			cols, rows, _, err := s.analysisData(ctx, as)
 			if err != nil {
-				writeErr(w, 500, err)
-				return
+				return nil, 500, err
 			}
 			fact.Data = map[string]any{"columns": cols, "rows": rows}
 		case "matching":
 			data, err := s.matchingData(ctx, &fv)
 			if err != nil {
-				writeErr(w, 500, err)
-				return
+				return nil, 500, err
 			}
 			fact.Data = data
 		default:
-			writeErr(w, 400, fmt.Errorf("narrative %s: a host speaks from analysis views and matching grids, not a %s", vd.ID, fv.Notion))
-			return
+			return nil, 400, fmt.Errorf("narrative %s: a host speaks from analysis views and matching grids, not a %s", vd.ID, fv.Notion)
 		}
 		facts = append(facts, fact)
 	}
@@ -89,62 +95,106 @@ func (s *Server) serveNarrative(ctx context.Context, w http.ResponseWriter, vd *
 	factsJSON, _ := json.Marshal(facts)
 	before, err := s.saidBefore(ctx, vd.ID, 3)
 	if err != nil {
-		writeErr(w, 500, err)
-		return
+		return nil, 500, err
 	}
 	if s.Agent == nil {
 		out["silent"] = "no host to speak: the facts speak for themselves"
-		writeJSON(w, 200, out)
-		return
+		return out, 200, nil
 	}
 	words, err := s.Agent.Narrate(ctx, s.Clock.TodayUTC(), spec.Voice, factsJSON, before)
 	if err != nil {
 		out["silent"] = "the host could not speak: " + err.Error()
-		writeJSON(w, 200, out)
-		return
+		return out, 200, nil
 	}
 	words = strings.TrimSpace(words)
 	if foreign := foreignNumbers(words, factsJSON); len(foreign) > 0 {
 		// The host never computes a number: words carrying one the facts
 		// do not are refused, and the refusal is shown, not the words.
 		out["silent"] = fmt.Sprintf("the host's words were refused: they carry numbers the facts do not (%s)", strings.Join(foreign, ", "))
-		writeJSON(w, 200, out)
-		return
+		return out, 200, nil
+	}
+	if foreign := foreignNames(words, factsJSON); len(foreign) > 0 {
+		// Nor does she name a document today's facts do not carry — not
+		// even one she named before: what she said is never a source.
+		out["silent"] = fmt.Sprintf("the host's words were refused: they name what the facts do not (%s)", strings.Join(foreign, ", "))
+		return out, 200, nil
 	}
 	if unspoken := unspokenFacts(words, factsJSON); len(unspoken) > 0 {
 		// The host never denies a fact: words that pass over a fact with an
 		// amount in it are refused, and the fact passed over is named.
 		out["silent"] = fmt.Sprintf("the host's words were refused: they pass over %s", strings.Join(unspoken, "; "))
-		writeJSON(w, 200, out)
-		return
+		return out, 200, nil
 	}
 	// The words are a fact: logged through the door, by the agent.
 	t, err := s.Exec.TriggerActivity(ctx, "host_said", map[string]any{"view": vd.ID, "text": words}, "agent:"+s.model(), "")
 	if err != nil {
+		return nil, 500, err
+	}
+	out["said"], out["said_event"] = words, t.EventID
+	return out, 200, nil
+}
+
+// handleSpeak asks the host to speak now (KK 2026-10-18: a morning alarm,
+// and a person refreshing what she says): person=<handle> speaks that
+// person's narrative; without it, every narrative speaks — the alarm's
+// call. Each answer is what the view would answer, words or the reason
+// there are none.
+func (s *Server) handleSpeak(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	vds, err := s.effectiveViewDefs(ctx)
+	if err != nil {
 		writeErr(w, 500, err)
 		return
 	}
-	out["said"], out["said_event"] = words, t.EventID
+	only := ""
+	if h := r.URL.Query().Get("person"); h != "" {
+		if only, err = s.narrativeFor(ctx, h); err != nil {
+			writeErr(w, 500, err)
+			return
+		}
+		if only == "" {
+			writeErr(w, 404, fmt.Errorf("no narrative for %s to hear", h))
+			return
+		}
+	}
+	type spoken struct {
+		View   string `json:"view"`
+		Said   string `json:"said,omitempty"`
+		Silent string `json:"silent,omitempty"`
+	}
+	out := []spoken{}
+	for i := range vds {
+		vd := &vds[i]
+		if vd.Notion != "narrative" || (only != "" && vd.ID != only) {
+			continue
+		}
+		res, status, err := s.narrate(ctx, vd)
+		if err != nil {
+			writeErr(w, status, fmt.Errorf("%s: %w", vd.ID, err))
+			return
+		}
+		said, _ := res["said"].(string)
+		silent, _ := res["silent"].(string)
+		out = append(out, spoken{View: vd.ID, Said: said, Silent: silent})
+	}
 	writeJSON(w, 200, out)
 }
 
 // narrativeFor is the narrative a person hears: the first whose For names
-// their role, else the first that names no role, else none ("").
+// their role, else the first that names no role, else none (""). A handle
+// no person carries has no role: a face signing as someone not yet
+// registered hears the general morning.
 func (s *Server) narrativeFor(ctx context.Context, handle string) (string, error) {
 	people, err := s.Store.ObjectsByType(ctx, "person")
 	if err != nil {
 		return "", err
 	}
-	role, found := "", false
+	role := ""
 	for _, p := range people {
 		if h, _ := p.State["handle"].(string); h == handle {
 			role, _ = p.State["role"].(string)
-			found = true
 			break
 		}
-	}
-	if !found {
-		return "", fmt.Errorf("no person with the handle %q", handle)
 	}
 	vds, err := s.effectiveViewDefs(ctx)
 	if err != nil {
@@ -218,6 +268,40 @@ func foreignNumbers(words string, facts []byte) []string {
 		}
 		seen[n.Value] = true
 		out = append(out, n.Text)
+	}
+	return out
+}
+
+// foreignNames lists the names in the words the facts do not carry: a token
+// with a letter and a digit that reads as a document's or an account's
+// name — a slash or an underscore in it, or a capital beside a digit
+// ("HOS/2/2026", "FV1", "JPK_V7M") — must stand in the facts as written,
+// whatever its case. Amounts with units ("100.00 zł") and dates are not
+// names; the numbers law reads those.
+func foreignNames(words string, facts []byte) []string {
+	have := strings.ToLower(string(facts))
+	var out []string
+	seen := map[string]bool{}
+	for _, tok := range strings.Fields(words) {
+		tok = strings.Trim(tok, ".,;:!?()[]{}\"'„”“«»—–-")
+		letter, digit, name := false, false, strings.ContainsAny(tok, "/_")
+		rs := []rune(tok)
+		for i, c := range rs {
+			switch {
+			case unicode.IsDigit(c):
+				digit = true
+			case unicode.IsLetter(c):
+				letter = true
+				if unicode.IsUpper(c) && ((i > 0 && unicode.IsDigit(rs[i-1])) || (i+1 < len(rs) && unicode.IsDigit(rs[i+1]))) {
+					name = true
+				}
+			}
+		}
+		if !letter || !digit || !name || seen[tok] || strings.Contains(have, strings.ToLower(tok)) {
+			continue
+		}
+		seen[tok] = true
+		out = append(out, tok)
 	}
 	return out
 }
