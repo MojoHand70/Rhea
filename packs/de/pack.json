@@ -1,6 +1,25 @@
 {
   "pack": "de",
   "version": 3,
+  "stage": "initial",
+  "disclaimer": "Dieses Paket wurde von künstlicher Intelligenz (KI) erstellt. Es ist eine erste Fassung: Die Regeln können Fehler enthalten und werden sich ändern, sobald Buchhalter, Steuerberater und Wirtschaftsprüfer sie prüfen.",
+  "history": [
+    {
+      "versions": "3",
+      "date": "2026-10-05",
+      "changes": "Die Umsatzsteuer je Monat als Auswertung mit beschrifteten Spalten."
+    },
+    {
+      "versions": "2",
+      "date": "2026-10-04",
+      "changes": "Rechnungen tragen ihren Markt: das Paket läuft neben dem polnischen in einer Installation."
+    },
+    {
+      "versions": "1",
+      "date": "2026-10-03",
+      "changes": "Erste Fassung: SKR03-Auszug, Umsatzsteuersätze, die Ausgangsrechnung als Beleg und Buchung."
+    }
+  ],
   "description": "Deutschland: SKR03-Kontenrahmen, Umsatzsteuersätze, Buchungsregeln — der zweite Markt als Daten",
   "requires": [
     "company",

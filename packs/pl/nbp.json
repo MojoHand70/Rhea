@@ -1,6 +1,15 @@
 {
   "pack": "pl-nbp",
   "version": 1,
+  "stage": "initial",
+  "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
+  "history": [
+    {
+      "versions": "1",
+      "date": "2026-10-16",
+      "changes": "Pierwsze wydanie: kursy średnie NBP (tabela A) dla dokumentów w walutach obcych."
+    }
+  ],
   "description": "Kursy średnie NBP (tabela A): dokument w walucie obcej przelicza się po kursie średnim z ostatniego dnia roboczego przed jego datą — kanał publikuje na każdy dzień kurs, po którym przelicza się dokument z tego dnia",
   "requires": [
     "fx_rate"

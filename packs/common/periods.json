@@ -1,6 +1,15 @@
 {
   "pack": "common-periods",
   "version": 1,
+  "stage": "initial",
+  "disclaimer": "This pack was prepared by artificial intelligence (AI). It is an initial version: its rules may contain errors and will change as accountants, tax advisers and auditors review them.",
+  "history": [
+    {
+      "versions": "1",
+      "date": "2026-10-15",
+      "changes": "Closing a month is a door: a person names the month and the books, and the close is the fact markets build on."
+    }
+  ],
   "description": "Periods: closing a month is a door — a person names the month and the books, and period.closed is the fact. What a market does with it (locks, settlements, files) is the market's rules (DIRECTION 2026-10-15, \"Month end\").",
   "object_types": [],
   "activities": [

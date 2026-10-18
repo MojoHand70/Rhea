@@ -1,6 +1,15 @@
 {
   "pack": "pl-ksef-inbound",
   "version": 1,
+  "stage": "initial",
+  "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
+  "history": [
+    {
+      "versions": "1",
+      "date": "2026-10-11",
+      "changes": "Pierwsze wydanie: faktury zakupu z KSeF czytane z plików."
+    }
+  ],
   "description": "Kanał KSeF (odbiór): faktury zakupu z Krajowego Systemu e-Faktur, czytane z magazynu dokumentów — każda staje się zdarzeniem purchase.invoice.received wskazującym plik",
   "requires": [
     "received_document"

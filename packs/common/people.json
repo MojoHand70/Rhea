@@ -1,6 +1,20 @@
 {
   "pack": "common-people",
   "version": 2,
+  "stage": "initial",
+  "disclaimer": "This pack was prepared by artificial intelligence (AI). It is an initial version: its rules may contain errors and will change as accountants, tax advisers and auditors review them.",
+  "history": [
+    {
+      "versions": "2",
+      "date": "2026-10-15",
+      "changes": "A person can say their given name, family name and birth date — what a natural person's tax return needs."
+    },
+    {
+      "versions": "1",
+      "date": "2026-10-10",
+      "changes": "The person as master data: who acts, who is assigned work, who stands in when they are away."
+    }
+  ],
   "description": "People: the person as master data — who acts, who is assigned, who stands in. Market-neutral; every pack that assigns work builds on it v2: a person can say their given name, family name and birth date (identify_person) — what a natural person's tax return needs.",
   "warrant": {
     "basis": "practice",

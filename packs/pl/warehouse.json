@@ -1,6 +1,15 @@
 {
   "pack": "pl-warehouse",
   "version": 1,
+  "stage": "initial",
+  "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
+  "history": [
+    {
+      "versions": "1",
+      "date": "2026-10-08",
+      "changes": "Pierwsze wydanie: przyjęcie zewnętrzne (PZ) — dostawa staje się dokumentem z pozycjami."
+    }
+  ],
   "description": "Przyjęcie zewnętrzne (PZ): dostawa staje się dokumentem PZ z pozycjami; każda pozycja przyjmuje towar na magazyn i księguje się Wn 330 / Ma 300 w cenie nabycia. Wariant: dostawa podaje wartości pozycji. Wariant z cennika — wartość pozycji liczona formułą =round($.line.qty * ref(item, sku, $.line.item).std_cost, 2, half_up) (pole std_cost typu decimal na item) — i wycena późniejsza fakturą zakupu (uzupełnienie pola value) to warianty do wyboru przez klienta.",
   "requires": ["company", "account", "posting", "item", "location", "stock_movement"],
   "warrant": {

@@ -39,7 +39,27 @@ type Manifest struct {
 	// Warrant: why the pack proposes what it does. Defaults to the pack's
 	// own authority ("pack" basis, its description as citation).
 	Warrant *core.Warrant `json:"warrant,omitempty"`
+	// Stage, Disclaimer and History say what the pack is to whoever reads it
+	// (KK 2026-10-18): "initial" — prepared by AI, not yet reviewed by the
+	// profession, its version read as 0.<version>; the disclaimer, in the
+	// market's language, says so first; the history, newest first, shows
+	// the pack developing. TestEveryPackSaysWhatItIs holds every pack to it.
+	Stage      string         `json:"stage,omitempty"`
+	Disclaimer string         `json:"disclaimer,omitempty"`
+	History    []HistoryEntry `json:"history,omitempty"`
 }
+
+// HistoryEntry is what changed in one version of a pack, or in a run of
+// early versions ("1–18"), in the market's language.
+type HistoryEntry struct {
+	Versions string `json:"versions"`
+	Date     string `json:"date,omitempty"`
+	Changes  string `json:"changes"`
+}
+
+// Stages a pack may be at: prepared by AI and not yet reviewed, or reviewed
+// by the profession.
+var Stages = []string{"initial", "reviewed"}
 
 // Rule is a pack-shipped rule. It always lands as a draft; status is not a
 // pack's to set.

@@ -1,6 +1,15 @@
 {
   "pack": "pl-bank-mt940",
   "version": 1,
+  "stage": "initial",
+  "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
+  "history": [
+    {
+      "versions": "1",
+      "date": "2026-10-11",
+      "changes": "Pierwsze wydanie: wyciągi MT940 — każda pozycja staje się zdarzeniem bankowym."
+    }
+  ],
   "description": "Kanał bankowy: wyciągi MT940 z magazynu dokumentów — każda pozycja staje się zdarzeniem bank.statement.line wskazującym plik; linia :86: zachowana w oryginale",
   "requires": [
     "received_document"

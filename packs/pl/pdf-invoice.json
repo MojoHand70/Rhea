@@ -1,6 +1,15 @@
 {
   "pack": "pl-pdf-invoice",
   "version": 1,
+  "stage": "initial",
+  "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
+  "history": [
+    {
+      "versions": "1",
+      "date": "2026-10-13",
+      "changes": "Pierwsze wydanie: faktura dostawcy spoza KSeF czytana z PDF."
+    }
+  ],
   "description": "Kanał faktur PDF: faktura dostawcy spoza KSeF (zagraniczny dostawca) czytana z magazynu dokumentów przez model, z pewnością odczytu; odczyt pewny staje się zdarzeniem purchase.invoice.received, niepewny czeka na potwierdzenie osoby",
   "requires": [
     "received_document"

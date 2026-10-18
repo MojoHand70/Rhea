@@ -1,6 +1,19 @@
 {
   "pack": "common-documents",
   "version": 4,
+  "stage": "initial",
+  "disclaimer": "This pack was prepared by artificial intelligence (AI). It is an initial version: its rules may contain errors and will change as accountants, tax advisers and auditors review them.",
+  "history": [
+    {
+      "versions": "4",
+      "date": "2026-10-16",
+      "changes": "A received file keeps the day it arrived — the day an invoice outside KSeF counts as received."
+    },
+    {
+      "versions": "1–3",
+      "changes": "Documents in and out: a received file is the fact, waiting for a reader; a file Rhea renders and hands over is an issued document, sealed by its hash."
+    }
+  ],
   "description": "Documents as received: the file is the fact, and this object is its place in state until a reader explains it Documents out (DIRECTION 2026-10-15, \"Month end\"): a file Rhea rendered and handed over is an issued_document — the writer, its parameters, the hash that seals it. The day a file arrived (2026-10-16): the door stamps its business date, and received_document keeps it as received_on — the day an invoice outside KSeF counts as received, read by the readers that turn the file into a purchase.",
   "warrant": {
     "basis": "practice",
