@@ -150,8 +150,18 @@ func answerMessage(ask AnswerAsk) string {
 }
 
 // writeCollection describes the collection table by table, in the market's
-// own names: what a query of hers may read.
+// own names: what a query of hers may read; then the market's notes on how
+// its books are read.
 func writeCollection(sb *strings.Builder, tables []CollectionTable, words *core.WordsSpec) {
+	defer func() {
+		if words == nil || len(words.Notes) == 0 {
+			return
+		}
+		sb.WriteString("\nHow this market's books are read (the market pack's notes - follow them):\n")
+		for _, n := range words.Notes {
+			fmt.Fprintf(sb, "- %s\n", n)
+		}
+	}()
 	label := func(key string) string {
 		if words == nil {
 			return ""

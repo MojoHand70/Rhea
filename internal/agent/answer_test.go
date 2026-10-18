@@ -19,14 +19,15 @@ func TestAnswer(t *testing.T) {
 		Tables: []agent.CollectionTable{{Schema: "finance", Name: "sales_invoice", Type: "sales_invoice", Columns: []agent.CollectionColumn{
 			{Name: "id", SQL: "VARCHAR"}, {Name: "net", SQL: "DECIMAL(18,2)", Kind: "money"}, {Name: "buyer", SQL: "VARCHAR", Kind: "ref<company>", Links: "finance.company"},
 			{Name: "_state", SQL: "VARCHAR"}}}},
-		Words: &core.WordsSpec{Lang: "pl", Types: map[string]core.TypeWords{"sales_invoice": {Label: "Faktura sprzedaży"}}, Fields: map[string]string{"net": "Netto", "sales_invoice.buyer": "Nabywca"}},
+		Words: &core.WordsSpec{Lang: "pl", Types: map[string]core.TypeWords{"sales_invoice": {Label: "Faktura sprzedaży"}}, Fields: map[string]string{"net": "Netto", "sales_invoice.buyer": "Nabywca"},
+			Notes: []string{"A ZUS payment is a bank operation of kind zus going out."}},
 		Tried: &agent.AnswerTry{SQL: "SELECT nope", Error: "Binder Error: nope"}}
 	ans, err := a.Answer(context.Background(), ask)
 	if err != nil || ans.SQL != `SELECT 1 AS "Liczba"` || ans.Visual.Kind != "kpi" || ans.Reading != "jedna liczba" {
 		t.Fatalf("answer: %+v %v", ans, err)
 	}
 	for _, want := range []string{"finance.sales_invoice — Faktura sprzedaży", "net DECIMAL(18,2) (money) — Netto", "buyer VARCHAR (ref<company>) → finance.company.id — Nabywca",
-		"Books the active rules post to: pl-stat", "Today: 2026-10-18", "DuckDB said: Binder Error: nope", "Question: Sprzedaż według klientów?"} {
+		"Books the active rules post to: pl-stat", "Today: 2026-10-18", "How this market's books are read", "- A ZUS payment is a bank operation of kind zus going out.", "DuckDB said: Binder Error: nope", "Question: Sprzedaż według klientów?"} {
 		if !strings.Contains(seen, want) {
 			t.Errorf("the ask lacks %q:\n%s", want, seen)
 		}

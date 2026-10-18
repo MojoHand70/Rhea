@@ -143,6 +143,11 @@ type WordsSpec struct {
 	Events        map[string]string            `json:"events,omitempty"`         // event type → its name
 	Doors         map[string]string            `json:"doors,omitempty"`          // activity → its name
 	AccountGroups map[string]string            `json:"account_groups,omitempty"` // a code's first digits → the group's name
+	// Notes say how this market's books are read — what a payment to social
+	// security is, which amount is in the home currency, which month an
+	// invoice counts in (2026-10-18): market knowledge for whoever reads the
+	// books, the reporting author first, so the kernel names none of it.
+	Notes []string `json:"notes,omitempty"`
 }
 
 // TypeWords names one type and says which shape it takes.
@@ -175,6 +180,11 @@ func (w WordsSpec) Check() error {
 			if strings.TrimSpace(v) == "" {
 				return fmt.Errorf("words: %s has an empty label", k)
 			}
+		}
+	}
+	for i, n := range w.Notes {
+		if strings.TrimSpace(n) == "" {
+			return fmt.Errorf("words: note %d is empty", i+1)
 		}
 	}
 	for f, vals := range w.Values {
