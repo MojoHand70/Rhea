@@ -2774,6 +2774,90 @@ query read the machine's date — both are now refusals the author fixes.
 Open: the Poland pack keeps nearly every type in one domain, so its
 collection is one schema; the domains are a pack change.
 
+## Packs built together: a workspace for the profession, and packs of firms (KK, 2026-10-18)
+
+KK, the evening the first pack pages went behind the gate: every pack says it
+was prepared by AI and is an initial version; users see packs develop; packs
+are always behind a gate, also when the experiment site gives way to a normal
+one; accountants and auditors will be invited to comment on pack rules and
+vote toward consensus — a regular system for building knowledge together; and
+audit firms might build packs of their own.
+
+**KK's decisions.** (1) Every pack carries a stage, a disclaimer in its
+language and its history; an initial pack reads its version as 0.x (done
+2026-10-18, a9ef1f8: `TestEveryPackSaysWhatItIs` holds every pack to it).
+(2) Country pages are in the country's language and live on rhea.plus behind
+the gate, never elsewhere. (3) A full secure login with an audit trail comes
+before any of the workspace is built — not now, not yet.
+
+**What is discussed.** A rule with its warrant, and a review point with its
+question, its law and its default. Each has a thread. A contribution is a
+question; an objection, which names its legal basis; or a proposal — the
+change in the reviewer's words, which the author drafts as the rule's next
+version and the kernel previews on sample books, so a reviewer judges what
+the change does to the books, never JSON.
+
+**How it is decided.** Not by votes alone: what a statute says is not a
+majority's to decide. Rough consensus with a named editor per pack: a
+proposal passes when it cites its basis, enough verified reviewers agree
+(three to start), and no verified reviewer's objection stands unanswered
+after a window (two weeks). The editor — Rhea's team at first — records the
+decision and its reasons; an objection overruled is answered in writing. A
+disagreement that stays makes the point open (grade 3, both readings and who
+holds each, as the registers already do) and the pack offers both readings
+as the company's choice through a door, defaulting to the cautious one with
+its warrant. Votes, objections and decisions are facts in the log, with the
+person and their qualification.
+
+**Who.** Verified professionals, their name and qualification on everything
+they do: in Poland auditors and tax advisers against their public registers
+(KIBR, KIDP) and accountants through the office they work for; in Germany
+Wirtschaftsprüfer and Steuerberater through their chambers; in the US CPAs
+and enrolled agents. Invited, as the room is today.
+
+**Versions.** The review register is the checklist: a pack reaches 1.0 when
+its reviewers agree the first-year floor is right, point by point, each point
+carrying who reviewed it. Every version's history names the proposals that
+made it and who agreed.
+
+**Packs of firms.** The country base pack stays shared and consensus-built —
+the statutory floor, open in the open-core plan. A firm's pack is a layer on
+a stated base version: its methodology, industry practice and accounting
+policies, every rule signed by the firm. When the base moves, the conflicts
+with the firm's rules are reported as pack upgrades already report rules
+evolved locally. Independence decides who builds what: an audit firm must not
+author the books its own audit clients run on (the self-review threat; for
+public-interest entities the EU Audit Regulation, art. 5, bans bookkeeping
+and designing financial-information systems). So two roles: firm packs come
+from advisory arms and accounting offices, for clients they do not audit; and
+audit firms give assurance — an opinion on a base pack version, which every
+company on that version benefits from and which can be what takes a pack to
+1.0. Replay and provenance make auditing a company on an attested pack
+cheaper: that is the case to the firms. Firm packs may be paid, with a share
+to Rhea; the base stays shared. The terms say who answers for what: the
+pack's author for its content, the company for approving a rule into its
+books.
+
+**Steps.** (0) Done: stage, disclaimer and history in every pack; the country
+pages in their languages on rhea.plus behind the gate. (1) A pilot, if KK
+wants one before the login exists: three to five invited accountants read
+the Polish page, and a comment form on each rule records the comment under
+the reviewer's invite (name and email) and emails it to KK — no votes; it
+shows what reviewers comment on. (2) The login: personal accounts, the
+qualification check, an audit trail of who saw and did what. (3) Threads and
+proposals, the author drafting each proposal as a previewed next version.
+(4) Consensus: votes and objections as facts, the editor's decisions with
+reasons, open points as company choices, versions naming their reviewers,
+1.0. (5) Firm packs as signed layers on a base version, with the conflict
+report and the terms. (6) Assurance: an audit firm's opinion on a pack
+version.
+
+**Open for KK.** The consensus threshold and whether a change needs a
+particular qualification (an auditor or a tax adviser among those who agree);
+who the editor is after Rhea's team; what reviewers get — recognition, early
+access, pay; whether a firm's pack is listed for every company or kept for
+the firm's own clients.
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
