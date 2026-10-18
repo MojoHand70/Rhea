@@ -139,6 +139,10 @@ func TestAnswerFromTheBooks(t *testing.T) {
 	if code := call("POST", "/api/answer", map[string]any{"question": "Sprzedaż netto według klientów", "asked_by": "krzysztof"}, &ans); code != 200 {
 		t.Fatalf("answer: %d", code)
 	}
+	// The market's notes travel with the collection: the author reads how Polish books are read.
+	if !strings.Contains(asked[0], "How this market's books are read") || !strings.Contains(asked[0], "Wpłaty do ZUS") || !strings.Contains(asked[0], "Wn 229") {
+		t.Fatalf("the author was not shown the pack's notes:\n%s", asked[0])
+	}
 	if len(asked) != 2 || !strings.Contains(asked[1], "DuckDB said") || !strings.Contains(asked[1], "SELECT nope") {
 		t.Fatalf("the retry did not carry DuckDB's refusal:\n%s", asked[len(asked)-1])
 	}

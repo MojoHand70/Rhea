@@ -3707,3 +3707,20 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   definition changed gets its next version, approved by the kernel (`activity-approve/<name>/<v>`);
   an unchanged door is never written again (compared through JSON) — the test inits twice.
   `note_untaught` v2 adds `kind` and `detail`; the network's `untaught` table learns both columns.
+
+## 2026-10-18 — the Poland pack says how its books are read (v31)
+
+- **Why.** The ZUS case: market facts (a ZUS payment is a bank operation of kind `zus` going out,
+  booked Wn 229; owed is the credit side) were left for the author to guess, and once it summed
+  what was owed. Market knowledge belongs in the pack (invariant 8), not the kernel's prompt.
+- **`WordsSpec.Notes`**: the market's dictionary may carry notes on how its books are read; the
+  kernel shows them to the reporting author beside the collection, for answers and drafted
+  reports, and names none of them itself.
+- **Poland pack v31**: `slownik` v5 carries thirteen notes, in Polish like the pack — ZUS and tax
+  payments as outgoing bank operations (Wn 229, Wn 225), the bank kinds and their accounts, paid
+  to suppliers and received from customers through settlements, złoty amounts (`net_pln`,
+  `vat_pln`), the VAT month (`vat_period`), open amounts, the result before tax by account type
+  and booking month, RMK on 640, the VAT settlement, the CIT advance, declarations, closed months,
+  company kinds. History entry 31 in Polish (the other session's rule: every version says what it adds).
+- **Live on Helios**: "ile zapłaciłem ZUS w pierwszym kwartale 2026?" now reads `kind = 'zus'` going
+  out, taxes read `kind = 'tax'`, customers' payments read settlements against sales invoices.
