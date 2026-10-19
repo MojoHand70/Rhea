@@ -3819,3 +3819,41 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   certificate and password, the kernel's upload/test/status endpoints, the screen, the
   expiry warning; to verify on TEST: renewal by Rhea with the current certificate.
 - Shipped and kept: certificate login and enrollment (c41f1c7, c960f19), proven on TEST.
+
+## 2026-10-19 — The auditor's exam as the yardstick: `rhea run pibr-exam`
+
+- KK: Rhea signs nothing, but its capability in accounting is to be proven at or above a
+  biegły rewident's, on the exam itself, as the headline and the ERP's credibility — and
+  later in every market with a pack. The claim to make is about the rulebook, never the
+  model: every answer resting on an approved rule and its article, replayable, graded by
+  the Commission's own key.
+- The material: the Commission does not publish the exam items (the bank is reused); it
+  publishes sample papers with model solutions, 75 PDFs over ten subjects and some ten
+  years (pibr.org.pl/pl/egzaminy-pytania), the January 2026 syllabus (KRBR 1695/34/2026,
+  342 numbered points, 225 lettered) and the reading list with the acts and standards per
+  subject (KRBR 841/20/2024). All three are in research_notes/pibr-egzaminy/, kept out of
+  git: the papers are the Commission's and the repo is headed for open source. ArsLege's
+  bank is online only under a personal-use licence that forbids retrieval storage — a drill
+  for a person, never input for Rhea.
+- The harness: `internal/exam` is the generic sitting — a Paper of keyed single-choice
+  questions and situational tasks, a Scoring, answerers, a per-block tally and a report
+  that says where every answer came from. The paper's syntax and the marking are the
+  market's (invariant 8): `markets/pl/pibr.go` parses the Commission's PDF through
+  pdftohtml's XML (the right option is the bold one; headings come letter-spaced and are
+  collapsed) and carries the regulation's marking — +2 right, −1 wrong, 0 blank, a block
+  passes at 60% of its maximum on its own — and the command. Test questions only for now;
+  the tasks are parsed with their model solutions and counted, to be sat through the
+  kernel next (facts → events, the task's chart → account roles, rules post, formulas
+  compute, the view names the balance line).
+- Two sitters, reported side by side: the bare model, which may leave a question blank as
+  a candidate may; and the host with the rulebook open — the pack's rules with their
+  warrants — which must label each answer "rule" (a rule it names and the citation it
+  relied on; a rule not in the rulebook is re-labelled memory, so the share from rules is
+  never inflated), "memory" (the statute it knows itself, with the article, saying the
+  pack was never taught it) or "abstain" (never taught; names the missing lesson).
+- Honest limits: an answer from memory is still the model's; the number that matters is
+  the share from rules and its accuracy, and it is small today because the pack is a
+  bookkeeper's, not an auditor's. The 2025 financial accounting paper has 50 questions in
+  three blocks (one unkeyed: the Commission marked no option on III-7) and 10 tasks. The
+  bare model's score is the baseline every later claim is measured against, published
+  beside Rhea's.
