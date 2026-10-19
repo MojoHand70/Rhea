@@ -1,9 +1,14 @@
 {
   "pack": "pl",
-  "version": 33,
+  "version": 34,
   "stage": "initial",
   "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
   "history": [
+    {
+      "versions": "34",
+      "date": "2026-10-19",
+      "changes": "Rezerwy i odpisy aktualizujące należności (rejestr EXAM.md 6.1.2 d, 6.1.3 d, 6.1.5 a–b, 6.1.8 c): drzwi create_provision tworzą rezerwę na zobowiązania (Wn koszt / Ma 830, art. 35d UoR) albo bierne RMK (Wn koszt / Ma 641, art. 39 ust. 2 — naprawy gwarancyjne); use_provision zmniejsza rezerwę, gdy zobowiązanie powstaje (Wn 830 albo 641 / Ma konto kosztu, na które poszła faktura); release_provision rozwiązuje niewykorzystaną rezerwę (Wn 830 / Ma 760; bierne RMK — Ma konto kosztu); write_down_receivable tworzy odpis aktualizujący należność z faktury sprzedaży (art. 35b UoR): Wn 761 / Ma 280, gdy nieściągalność jest uprawdopodobniona (upadłość, likwidacja, restrukturyzacja — art. 16 ust. 2a CIT), inaczej Wn 761-3 (NKUP) / Ma 280; settle_write_down kończy odpis: spłata — Wn 280 / Ma 760, odpisanie należności nieściągalnej — Wn 280 / Ma 201; nowe konta 830, 641, 280, 761-3; widoki rezerwy i odpisy-naleznosci. Uproszczenia: odpisana należność nie zamyka jeszcze kwoty otwartej faktury w rozliczeniach; odpisy zapasów — z następną lekcją (zapasy i koszt sprzedanych towarów)."
+    },
     {
       "versions": "33",
       "date": "2026-10-19",
@@ -1923,6 +1928,158 @@
           "required": true
         }
       ]
+    },
+    {
+      "name": "provision",
+      "version": 1,
+      "domain": "finance",
+      "label_field": "title",
+      "lifecycle": {
+        "field": "status",
+        "transitions": {
+          "open": [
+            "open",
+            "closed"
+          ]
+        }
+      },
+      "amendable": [
+        "used",
+        "released"
+      ],
+      "fields": [
+        {
+          "name": "title",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "kind",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "liability",
+            "accrual"
+          ],
+          "description": "liability — rezerwa na zobowiązania (830); accrual — bierne rozliczenia międzyokresowe kosztów (641)"
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "created_on",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "cost_account",
+          "type": "string",
+          "required": true,
+          "description": "konto kosztu obciążone przy utworzeniu i odciążone przy wykorzystaniu"
+        },
+        {
+          "name": "used",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "released",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "open",
+            "closed"
+          ]
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "receivable_write_down",
+      "version": 1,
+      "domain": "finance",
+      "label_field": "amount",
+      "lifecycle": {
+        "field": "status",
+        "transitions": {
+          "open": [
+            "reversed",
+            "written_off"
+          ]
+        }
+      },
+      "amendable": [
+        "settled_on"
+      ],
+      "fields": [
+        {
+          "name": "invoice",
+          "type": "ref<sales_invoice>",
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "reason",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "insolvency",
+            "dispute",
+            "overdue",
+            "other"
+          ]
+        },
+        {
+          "name": "deductible",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "yes",
+            "no"
+          ],
+          "description": "koszt podatkowy, gdy nieściągalność uprawdopodobiona (art. 16 ust. 2a CIT)"
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "open",
+            "reversed",
+            "written_off"
+          ]
+        },
+        {
+          "name": "settled_on",
+          "type": "date",
+          "required": false
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ]
     }
   ],
   "view_defs": [
@@ -2335,7 +2492,7 @@
     },
     {
       "view_id": "slownik",
-      "version": 7,
+      "version": 8,
       "notion": "words",
       "title": "Słownik",
       "domain": "finance",
@@ -2531,6 +2688,16 @@
           "year_close_tax": {
             "label": "Zamknięcie roku – podatek dochodowy",
             "plural": "Zamknięcie roku – podatek dochodowy",
+            "shape": "card"
+          },
+          "provision": {
+            "label": "Rezerwa",
+            "plural": "Rezerwy",
+            "shape": "card"
+          },
+          "receivable_write_down": {
+            "label": "Odpis aktualizujący należność",
+            "plural": "Odpisy aktualizujące należności",
             "shape": "card"
           }
         },
@@ -2769,7 +2936,17 @@
           "year_close_tax.year_end": "Dzień bilansowy",
           "year_close_cost.amount": "Saldo (Wn minus Ma)",
           "year_close_revenue.amount": "Saldo (Wn minus Ma)",
-          "year_close_tax.amount": "Saldo (Wn minus Ma)"
+          "year_close_tax.amount": "Saldo (Wn minus Ma)",
+          "provision.title": "Tytuł",
+          "provision.kind": "Rodzaj",
+          "provision.created_on": "Utworzona",
+          "provision.cost_account": "Konto kosztu",
+          "provision.used": "Wykorzystana",
+          "provision.released": "Rozwiązana",
+          "receivable_write_down.invoice": "Faktura",
+          "receivable_write_down.reason": "Powód",
+          "receivable_write_down.deductible": "Koszt podatkowy",
+          "receivable_write_down.settled_on": "Zakończony"
         },
         "values": {
           "account.type": {
@@ -3007,6 +3184,29 @@
             "active": "w używaniu",
             "depreciated": "umorzony",
             "disposed": "zlikwidowany"
+          },
+          "provision.kind": {
+            "liability": "rezerwa na zobowiązania",
+            "accrual": "bierne RMK"
+          },
+          "provision.status": {
+            "open": "otwarta",
+            "closed": "zamknięta"
+          },
+          "receivable_write_down.reason": {
+            "insolvency": "upadłość, likwidacja, restrukturyzacja",
+            "dispute": "spór",
+            "overdue": "przeterminowana",
+            "other": "inny"
+          },
+          "receivable_write_down.deductible": {
+            "yes": "tak",
+            "no": "nie (NKUP)"
+          },
+          "receivable_write_down.status": {
+            "open": "otwarty",
+            "reversed": "spłacona — odpis rozwiązany",
+            "written_off": "należność odpisana"
           }
         },
         "events": {
@@ -3051,7 +3251,12 @@
           "year.closed": "Zamknięcie roku obrotowego",
           "statement.approved": "Zatwierdzenie sprawozdania finansowego",
           "result.distributed": "Uchwała o podziale wyniku",
-          "dividend.paid": "Wypłata dywidendy"
+          "dividend.paid": "Wypłata dywidendy",
+          "provision.created": "Utworzenie rezerwy",
+          "provision.used": "Wykorzystanie rezerwy",
+          "provision.released": "Rozwiązanie rezerwy",
+          "receivable.written_down": "Odpis aktualizujący należność",
+          "receivable.write_down.settled": "Zakończenie odpisu"
         },
         "doors": {
           "appoint_deputy": "wyznaczenie zastępcy",
@@ -3089,7 +3294,12 @@
           "close_year": "zamknięcie roku",
           "approve_statement": "zatwierdzenie sprawozdania",
           "distribute_result": "podział wyniku",
-          "pay_dividend": "wypłata dywidendy"
+          "pay_dividend": "wypłata dywidendy",
+          "create_provision": "utworzenie rezerwy",
+          "use_provision": "wykorzystanie rezerwy",
+          "release_provision": "rozwiązanie rezerwy",
+          "write_down_receivable": "odpis aktualizujący należność",
+          "settle_write_down": "zakończenie odpisu"
         },
         "account_groups": {
           "0": "Aktywa trwałe",
@@ -3784,6 +3994,88 @@
           {
             "field": "loss_cover",
             "label": "Pokrycie straty"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "rezerwy",
+      "version": 1,
+      "notion": "list",
+      "title": "Rezerwy i bierne RMK",
+      "domain": "finance",
+      "function": "provisions",
+      "spec": {
+        "object_type": "provision",
+        "columns": [
+          {
+            "field": "title",
+            "label": "Tytuł"
+          },
+          {
+            "field": "kind",
+            "label": "Rodzaj"
+          },
+          {
+            "field": "created_on",
+            "label": "Utworzona"
+          },
+          {
+            "field": "amount",
+            "label": "Kwota"
+          },
+          {
+            "field": "used",
+            "label": "Wykorzystana"
+          },
+          {
+            "field": "released",
+            "label": "Rozwiązana"
+          },
+          {
+            "field": "status",
+            "label": "Status"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "odpisy-naleznosci",
+      "version": 1,
+      "notion": "list",
+      "title": "Odpisy aktualizujące należności",
+      "domain": "finance",
+      "function": "provisions",
+      "spec": {
+        "object_type": "receivable_write_down",
+        "columns": [
+          {
+            "field": "invoice",
+            "label": "Faktura"
+          },
+          {
+            "field": "date",
+            "label": "Dzień"
+          },
+          {
+            "field": "amount",
+            "label": "Kwota"
+          },
+          {
+            "field": "reason",
+            "label": "Powód"
+          },
+          {
+            "field": "deductible",
+            "label": "Koszt podatkowy"
+          },
+          {
+            "field": "status",
+            "label": "Status"
+          },
+          {
+            "field": "settled_on",
+            "label": "Zakończony"
           }
         ]
       }
@@ -6859,6 +7151,599 @@
           "wzorcowy plan kont: 860 Wynik finansowy, 820 Rozliczenie wyniku finansowego, 801 Kapitał podstawowy, 802 Kapitał zapasowy, 241 rozrachunki z właścicielami z tytułu dywidend"
         ]
       }
+    },
+    {
+      "rule_id": "pl-create-provision",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Rezerwa albo bierne RMK: tytuł, rodzaj, kwota, dzień utworzenia i konto kosztu (dla rezerwy 761 pozostałe koszty operacyjne, dla RMK biernych 403 — chyba że podano inne); zaczyna otwarta, nic nie wykorzystane ani rozwiązane",
+      "spec": {
+        "match": {
+          "event_type": "provision.created"
+        },
+        "effect": {
+          "object": {
+            "type": "provision",
+            "fields": {
+              "title": "=$.title",
+              "kind": "=$.kind",
+              "amount": "=$.amount",
+              "created_on": "=$.date",
+              "cost_account": "=coalesce($.cost_account, if($.kind = \"liability\", \"761\", \"403\"))",
+              "used": "0.00",
+              "released": "0.00",
+              "status": "open",
+              "book": "pl-stat"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 35d ust. 1 pkt 1: „Rezerwy tworzy się na: pewne lub o dużym stopniu prawdopodobieństwa przyszłe zobowiązania, których kwotę można w sposób wiarygodny oszacować, a w szczególności na straty z transakcji gospodarczych w toku, w tym z tytułu udzielonych gwarancji, poręczeń, operacji kredytowych, skutków toczącego się postępowania sądowego”",
+          "ustawa o rachunkowości art. 35d ust. 2: „Rezerwy […] zalicza się odpowiednio do pozostałych kosztów operacyjnych, kosztów finansowych lub strat nadzwyczajnych, zależnie od okoliczności, z którymi przyszłe zobowiązania się wiążą”",
+          "ustawa o rachunkowości art. 39 ust. 2 pkt 2: bierne rozliczenia międzyokresowe kosztów w wysokości prawdopodobnych zobowiązań przypadających na bieżący okres, w tym „z tytułu napraw gwarancyjnych i rękojmi za sprzedane produkty długotrwałego użytku”; KSR 6 „Rezerwy, bierne rozliczenia międzyokresowe kosztów, zobowiązania warunkowe”: bierne RMK rozwiązuje się zmniejszając koszty, których dotyczyły"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-provision-liability",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Utworzona rezerwa na zobowiązania księguje się w dniu utworzenia: Wn konto kosztu / Ma 830",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "provision"
+            },
+            {
+              "path": "$.state.kind",
+              "op": "eq",
+              "value": "liability"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.created_on",
+            "lines": [
+              {
+                "account": "=$.state.cost_account",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "830",
+                "credit": "=$.state.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 35d ust. 2: „Rezerwy […] zalicza się odpowiednio do pozostałych kosztów operacyjnych, kosztów finansowych lub strat nadzwyczajnych, zależnie od okoliczności, z którymi przyszłe zobowiązania się wiążą”",
+          "wzorcowy plan kont: 830 Rezerwy na zobowiązania, 641 Bierne rozliczenia międzyokresowe kosztów, 280 Odpisy aktualizujące należności, 761 / 761-3 Pozostałe koszty operacyjne, 760 Pozostałe przychody operacyjne, 201 Rozrachunki z odbiorcami"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-provision-accrual",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Utworzone bierne RMK księguje się w dniu utworzenia: Wn konto kosztu / Ma 641",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "provision"
+            },
+            {
+              "path": "$.state.kind",
+              "op": "eq",
+              "value": "accrual"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.created_on",
+            "lines": [
+              {
+                "account": "=$.state.cost_account",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "641",
+                "credit": "=$.state.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 39 ust. 2 pkt 2: bierne rozliczenia międzyokresowe kosztów w wysokości prawdopodobnych zobowiązań przypadających na bieżący okres, w tym „z tytułu napraw gwarancyjnych i rękojmi za sprzedane produkty długotrwałego użytku”; KSR 6 „Rezerwy, bierne rozliczenia międzyokresowe kosztów, zobowiązania warunkowe”: bierne RMK rozwiązuje się zmniejszając koszty, których dotyczyły",
+          "wzorcowy plan kont: 830 Rezerwy na zobowiązania, 641 Bierne rozliczenia międzyokresowe kosztów, 280 Odpisy aktualizujące należności, 761 / 761-3 Pozostałe koszty operacyjne, 760 Pozostałe przychody operacyjne, 201 Rozrachunki z odbiorcami"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-use-provision",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Wykorzystanie rezerwy: kwota wykorzystana rośnie; gdy wykorzystane i rozwiązane sięgają kwoty rezerwy, rezerwa jest zamknięta",
+      "spec": {
+        "match": {
+          "event_type": "provision.used"
+        },
+        "effect": {
+          "amend": {
+            "type": "provision",
+            "target": "=$.provision",
+            "set": {
+              "used": "=$.provision.used + $.amount",
+              "status": "=if($.provision.used + $.provision.released + $.amount >= $.provision.amount, \"closed\", \"open\")"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 35d ust. 3: „Powstanie zobowiązania, na które uprzednio utworzono rezerwę, zmniejsza rezerwę”"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-provision-use-liability",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Powstałe zobowiązanie objęte rezerwą: Wn 830 / Ma konto kosztu — koszt faktury schodzi, bo był już w rezerwie",
+      "spec": {
+        "match": {
+          "event_type": "provision.used",
+          "where": [
+            {
+              "formula": "=$.provision.kind = \"liability\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.date",
+            "lines": [
+              {
+                "account": "830",
+                "debit": "=$.amount"
+              },
+              {
+                "account": "=$.provision.cost_account",
+                "credit": "=$.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 35d ust. 3: „Powstanie zobowiązania, na które uprzednio utworzono rezerwę, zmniejsza rezerwę”",
+          "wzorcowy plan kont: 830 Rezerwy na zobowiązania, 641 Bierne rozliczenia międzyokresowe kosztów, 280 Odpisy aktualizujące należności, 761 / 761-3 Pozostałe koszty operacyjne, 760 Pozostałe przychody operacyjne, 201 Rozrachunki z odbiorcami"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-provision-use-accrual",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Powstałe zobowiązanie objęte biernym RMK: Wn 641 / Ma konto kosztu",
+      "spec": {
+        "match": {
+          "event_type": "provision.used",
+          "where": [
+            {
+              "formula": "=$.provision.kind = \"accrual\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.date",
+            "lines": [
+              {
+                "account": "641",
+                "debit": "=$.amount"
+              },
+              {
+                "account": "=$.provision.cost_account",
+                "credit": "=$.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 39 ust. 2 pkt 2: bierne rozliczenia międzyokresowe kosztów w wysokości prawdopodobnych zobowiązań przypadających na bieżący okres, w tym „z tytułu napraw gwarancyjnych i rękojmi za sprzedane produkty długotrwałego użytku”; KSR 6 „Rezerwy, bierne rozliczenia międzyokresowe kosztów, zobowiązania warunkowe”: bierne RMK rozwiązuje się zmniejszając koszty, których dotyczyły",
+          "wzorcowy plan kont: 830 Rezerwy na zobowiązania, 641 Bierne rozliczenia międzyokresowe kosztów, 280 Odpisy aktualizujące należności, 761 / 761-3 Pozostałe koszty operacyjne, 760 Pozostałe przychody operacyjne, 201 Rozrachunki z odbiorcami"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-release-provision",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Rozwiązanie rezerwy: kwota rozwiązana rośnie; gdy wykorzystane i rozwiązane sięgają kwoty rezerwy, rezerwa jest zamknięta",
+      "spec": {
+        "match": {
+          "event_type": "provision.released"
+        },
+        "effect": {
+          "amend": {
+            "type": "provision",
+            "target": "=$.provision",
+            "set": {
+              "released": "=$.provision.released + $.amount",
+              "status": "=if($.provision.used + $.provision.released + $.amount >= $.provision.amount, \"closed\", \"open\")"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 35d ust. 4: „Niewykorzystane rezerwy, wobec zmniejszenia lub ustania ryzyka uzasadniającego ich utworzenie, zwiększają na dzień, na który okazały się zbędne, odpowiednio pozostałe przychody operacyjne, przychody finansowe lub zyski nadzwyczajne”"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-provision-release-liability",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Rozwiązana rezerwa na zobowiązania w dniu, w którym okazała się zbędna: Wn 830 / Ma 760",
+      "spec": {
+        "match": {
+          "event_type": "provision.released",
+          "where": [
+            {
+              "formula": "=$.provision.kind = \"liability\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.date",
+            "lines": [
+              {
+                "account": "830",
+                "debit": "=$.amount"
+              },
+              {
+                "account": "760",
+                "credit": "=$.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 35d ust. 4: „Niewykorzystane rezerwy, wobec zmniejszenia lub ustania ryzyka uzasadniającego ich utworzenie, zwiększają na dzień, na który okazały się zbędne, odpowiednio pozostałe przychody operacyjne, przychody finansowe lub zyski nadzwyczajne”",
+          "wzorcowy plan kont: 830 Rezerwy na zobowiązania, 641 Bierne rozliczenia międzyokresowe kosztów, 280 Odpisy aktualizujące należności, 761 / 761-3 Pozostałe koszty operacyjne, 760 Pozostałe przychody operacyjne, 201 Rozrachunki z odbiorcami"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-provision-release-accrual",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Rozwiązane bierne RMK zmniejszają koszt, którego dotyczyły: Wn 641 / Ma konto kosztu",
+      "spec": {
+        "match": {
+          "event_type": "provision.released",
+          "where": [
+            {
+              "formula": "=$.provision.kind = \"accrual\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.date",
+            "lines": [
+              {
+                "account": "641",
+                "debit": "=$.amount"
+              },
+              {
+                "account": "=$.provision.cost_account",
+                "credit": "=$.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 39 ust. 2 pkt 2: bierne rozliczenia międzyokresowe kosztów w wysokości prawdopodobnych zobowiązań przypadających na bieżący okres, w tym „z tytułu napraw gwarancyjnych i rękojmi za sprzedane produkty długotrwałego użytku”; KSR 6 „Rezerwy, bierne rozliczenia międzyokresowe kosztów, zobowiązania warunkowe”: bierne RMK rozwiązuje się zmniejszając koszty, których dotyczyły",
+          "wzorcowy plan kont: 830 Rezerwy na zobowiązania, 641 Bierne rozliczenia międzyokresowe kosztów, 280 Odpisy aktualizujące należności, 761 / 761-3 Pozostałe koszty operacyjne, 760 Pozostałe przychody operacyjne, 201 Rozrachunki z odbiorcami"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-write-down-receivable",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Odpis aktualizujący należność z faktury sprzedaży: kwota, dzień, powód; kosztem podatkowym jest odpis przy upadłości, likwidacji lub restrukturyzacji dłużnika (insolvency), pozostałe nie",
+      "spec": {
+        "match": {
+          "event_type": "receivable.written_down"
+        },
+        "effect": {
+          "object": {
+            "type": "receivable_write_down",
+            "fields": {
+              "invoice": "=$.invoice",
+              "amount": "=$.amount",
+              "date": "=$.date",
+              "reason": "=$.reason",
+              "deductible": "=if($.reason = \"insolvency\", \"yes\", \"no\")",
+              "status": "open",
+              "book": "pl-stat"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 35b ust. 1: wartość należności aktualizuje się odpisem aktualizującym — pkt 1: od dłużników postawionych w stan likwidacji lub upadłości, w restrukturyzacji — do wysokości nieobjętej zabezpieczeniem; pkt 3: kwestionowanych lub zaległych, gdy spłata nie jest prawdopodobna; pkt 5: przeterminowanych o znacznym stopniu prawdopodobieństwa nieściągalności",
+          "ustawa o CIT (t.j. Dz. U. z 2026 r. poz. 554) art. 16 ust. 1 pkt 26a: odpisy aktualizujące należności są kosztem, gdy należność była przychodem należnym, a jej nieściągalność uprawdopodobiono; ust. 2a pkt 1: w szczególności gdy dłużnik został postawiony w stan likwidacji lub ogłoszono jego upadłość, otwarto restrukturyzację, wierzytelność potwierdzono prawomocnym orzeczeniem i skierowano do egzekucji — stąd powód „insolvency” daje koszt podatkowy (761), inne powody idą na 761-3 (NKUP)"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-write-down-deductible",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Odpis z uprawdopodobnioną nieściągalnością księguje się: Wn 761 / Ma 280",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "receivable_write_down"
+            },
+            {
+              "path": "$.state.deductible",
+              "op": "eq",
+              "value": "yes"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.date",
+            "lines": [
+              {
+                "account": "761",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "280",
+                "credit": "=$.state.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 35b ust. 2: „Odpisy aktualizujące wartość należności zalicza się odpowiednio do pozostałych kosztów operacyjnych lub do kosztów finansowych”",
+          "ustawa o CIT (t.j. Dz. U. z 2026 r. poz. 554) art. 16 ust. 1 pkt 26a: odpisy aktualizujące należności są kosztem, gdy należność była przychodem należnym, a jej nieściągalność uprawdopodobiono; ust. 2a pkt 1: w szczególności gdy dłużnik został postawiony w stan likwidacji lub ogłoszono jego upadłość, otwarto restrukturyzację, wierzytelność potwierdzono prawomocnym orzeczeniem i skierowano do egzekucji — stąd powód „insolvency” daje koszt podatkowy (761), inne powody idą na 761-3 (NKUP)",
+          "wzorcowy plan kont: 830 Rezerwy na zobowiązania, 641 Bierne rozliczenia międzyokresowe kosztów, 280 Odpisy aktualizujące należności, 761 / 761-3 Pozostałe koszty operacyjne, 760 Pozostałe przychody operacyjne, 201 Rozrachunki z odbiorcami"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-write-down-non-deductible",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Odpis bez uprawdopodobnionej nieściągalności księguje się: Wn 761-3 (NKUP) / Ma 280",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "receivable_write_down"
+            },
+            {
+              "path": "$.state.deductible",
+              "op": "eq",
+              "value": "no"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.date",
+            "lines": [
+              {
+                "account": "761-3",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "280",
+                "credit": "=$.state.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 35b ust. 2: „Odpisy aktualizujące wartość należności zalicza się odpowiednio do pozostałych kosztów operacyjnych lub do kosztów finansowych”",
+          "ustawa o CIT (t.j. Dz. U. z 2026 r. poz. 554) art. 16 ust. 1 pkt 26a: odpisy aktualizujące należności są kosztem, gdy należność była przychodem należnym, a jej nieściągalność uprawdopodobiono; ust. 2a pkt 1: w szczególności gdy dłużnik został postawiony w stan likwidacji lub ogłoszono jego upadłość, otwarto restrukturyzację, wierzytelność potwierdzono prawomocnym orzeczeniem i skierowano do egzekucji — stąd powód „insolvency” daje koszt podatkowy (761), inne powody idą na 761-3 (NKUP)",
+          "wzorcowy plan kont: 830 Rezerwy na zobowiązania, 641 Bierne rozliczenia międzyokresowe kosztów, 280 Odpisy aktualizujące należności, 761 / 761-3 Pozostałe koszty operacyjne, 760 Pozostałe przychody operacyjne, 201 Rozrachunki z odbiorcami"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-settle-write-down",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Odpis kończy się spłatą (reversed) albo odpisaniem należności (written_off) z dniem",
+      "spec": {
+        "match": {
+          "event_type": "receivable.write_down.settled"
+        },
+        "effect": {
+          "amend": {
+            "type": "receivable_write_down",
+            "target": "=$.write_down",
+            "set": {
+              "status": "=$.outcome",
+              "settled_on": "=$.date"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 35b ust. 3: „Należności umorzone, przedawnione lub nieściągalne zmniejszają dokonane uprzednio odpisy aktualizujące ich wartość”; ust. 4: ustanie przyczyny odpisu — równowartość odpisu zwiększa pozostałe przychody operacyjne"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-write-down-reversed",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Dłużnik zapłacił: odpis wraca w pozostałe przychody operacyjne — Wn 280 / Ma 760",
+      "spec": {
+        "match": {
+          "event_type": "receivable.write_down.settled",
+          "where": [
+            {
+              "formula": "=$.outcome = \"reversed\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.date",
+            "lines": [
+              {
+                "account": "280",
+                "debit": "=$.write_down.amount"
+              },
+              {
+                "account": "760",
+                "credit": "=$.write_down.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 35b ust. 3: „Należności umorzone, przedawnione lub nieściągalne zmniejszają dokonane uprzednio odpisy aktualizujące ich wartość”; ust. 4: ustanie przyczyny odpisu — równowartość odpisu zwiększa pozostałe przychody operacyjne",
+          "wzorcowy plan kont: 830 Rezerwy na zobowiązania, 641 Bierne rozliczenia międzyokresowe kosztów, 280 Odpisy aktualizujące należności, 761 / 761-3 Pozostałe koszty operacyjne, 760 Pozostałe przychody operacyjne, 201 Rozrachunki z odbiorcami"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-write-down-written-off",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Należność umorzona, przedawniona lub nieściągalna schodzi z ksiąg w ciężar odpisu — Wn 280 / Ma 201",
+      "spec": {
+        "match": {
+          "event_type": "receivable.write_down.settled",
+          "where": [
+            {
+              "formula": "=$.outcome = \"written_off\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.date",
+            "lines": [
+              {
+                "account": "280",
+                "debit": "=$.write_down.amount"
+              },
+              {
+                "account": "201",
+                "credit": "=$.write_down.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 35b ust. 3: „Należności umorzone, przedawnione lub nieściągalne zmniejszają dokonane uprzednio odpisy aktualizujące ich wartość”; ust. 4: ustanie przyczyny odpisu — równowartość odpisu zwiększa pozostałe przychody operacyjne",
+          "wzorcowy plan kont: 830 Rezerwy na zobowiązania, 641 Bierne rozliczenia międzyokresowe kosztów, 280 Odpisy aktualizujące należności, 761 / 761-3 Pozostałe koszty operacyjne, 760 Pozostałe przychody operacyjne, 201 Rozrachunki z odbiorcami"
+        ]
+      }
     }
   ],
   "activities": [
@@ -7483,6 +8368,205 @@
           "human"
         ]
       }
+    },
+    {
+      "name": "create_provision",
+      "domain": "finance",
+      "description": "Firma tworzy rezerwę: na zobowiązanie pewne lub bardzo prawdopodobne, którego kwotę da się wiarygodnie oszacować (sprawa sądowa, gwarancja, poręczenie — rezerwa na zobowiązania, konto 830), albo bierne rozliczenie międzyokresowe kosztów (naprawy gwarancyjne, świadczenia wobec nieznanych osób — konto 641); konto kosztu, gdy inne niż 761 dla rezerwy i 403 dla RMK biernych",
+      "spec": {
+        "inputs": [
+          {
+            "name": "kind",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "liability",
+              "accrual"
+            ]
+          },
+          {
+            "name": "title",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "amount",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "cost_account",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "provision.created",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "use_provision",
+      "domain": "finance",
+      "description": "Zobowiązanie, na które była rezerwa, powstało (przyszła faktura, zapadł wyrok): rezerwa maleje o tę kwotę, a koszt zaksięgowany z faktury schodzi — koszt był już w rezerwie",
+      "spec": {
+        "inputs": [
+          {
+            "name": "provision",
+            "type": "ref<provision>",
+            "required": true
+          },
+          {
+            "name": "amount",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "provision.used",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "release_provision",
+      "domain": "finance",
+      "description": "Ryzyko ustało albo zmalało: niewykorzystana część rezerwy rozwiązuje się w dniu, w którym okazała się zbędna — rezerwa na zobowiązania w pozostałe przychody operacyjne, bierne RMK zmniejszają koszt",
+      "spec": {
+        "inputs": [
+          {
+            "name": "provision",
+            "type": "ref<provision>",
+            "required": true
+          },
+          {
+            "name": "amount",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "reason",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "provision.released",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "write_down_receivable",
+      "domain": "finance",
+      "description": "Firma aktualizuje należność z faktury sprzedaży odpisem, bo zapłata stała się mało prawdopodobna: powód — upadłość, likwidacja albo restrukturyzacja dłużnika (insolvency: koszt podatkowy), spór (dispute), przeterminowanie (overdue), inny; kwota do wysokości należności niepokrytej zabezpieczeniem",
+      "spec": {
+        "inputs": [
+          {
+            "name": "invoice",
+            "type": "ref<sales_invoice>",
+            "required": true
+          },
+          {
+            "name": "amount",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "reason",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "insolvency",
+              "dispute",
+              "overdue",
+              "other"
+            ]
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "receivable.written_down",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "settle_write_down",
+      "domain": "finance",
+      "description": "Odpis aktualizujący kończy się: dłużnik zapłacił — odpis wraca w pozostałe przychody operacyjne (reversed); należność umorzona, przedawniona albo nieściągalna — odpisuje się ją z ksiąg w ciężar odpisu (written_off)",
+      "spec": {
+        "inputs": [
+          {
+            "name": "write_down",
+            "type": "ref<receivable_write_down>",
+            "required": true
+          },
+          {
+            "name": "outcome",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "reversed",
+              "written_off"
+            ]
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "receivable.write_down.settled",
+        "who": [
+          "human"
+        ]
+      }
     }
   ],
   "events": [
@@ -8061,6 +9145,60 @@
         "code": "241",
         "name": "Rozrachunki z właścicielami z tytułu dywidend",
         "type": "creditor",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.created",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/account/830",
+      "payload": {
+        "code": "830",
+        "name": "Rezerwy na zobowiązania",
+        "type": "creditor",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.created",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/account/641",
+      "payload": {
+        "code": "641",
+        "name": "Bierne rozliczenia międzyokresowe kosztów",
+        "type": "creditor",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.created",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/account/280",
+      "payload": {
+        "code": "280",
+        "name": "Odpisy aktualizujące należności (konto korygujące)",
+        "type": "asset",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.created",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/account/761-3",
+      "payload": {
+        "code": "761-3",
+        "name": "Odpisy aktualizujące należności (NKUP)",
+        "type": "expense",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.tax_treatment.set",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/tax-treatment/761-3",
+      "payload": {
+        "account": "761-3",
+        "tax_treatment": "non_deductible",
         "market": "pl"
       }
     }

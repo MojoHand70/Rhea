@@ -4079,3 +4079,36 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   stretched a rule to a sector it excludes; the exam catches that too. Theory: 5 of 60,
   all right, one of them the reserve-capital rule cited by name. Two papers: 9 of 109
   from rules against 5 before v33, 8 right.
+
+## 2026-10-19 — Pack v34: provisions, accruals and receivable write-downs
+
+- The third auditor's lesson (EXAM.md 6.1.2 d, 6.1.3 d, 6.1.5, 6.1.8 c), five doors.
+  `create_provision` makes a provision for a liability (UoR art. 35d ust. 1: a certain
+  or highly probable future obligation, reliably estimable — a lawsuit, a guarantee)
+  charged to other operating costs against 830, or an accrual (art. 39 ust. 2 pkt 2:
+  warranty repairs, benefits to persons not yet known) charged to the cost it belongs to
+  against 641. `use_provision` is art. 35d ust. 3: the obligation arrives as an invoice
+  the pack has already booked to a cost, so the provision shrinks and the cost comes off
+  — the cost was in the provision. `release_provision` is art. 35d ust. 4: what proved
+  unnecessary goes to other operating revenues on the day it did; an accrual released
+  reduces the cost it charged (KSR 6). `write_down_receivable` is art. 35b: a sales
+  invoice's receivable written down for the debtor's insolvency, a dispute, lateness; a
+  tax cost (761) only when uncollectability is made probable in the CIT act's sense —
+  insolvency, liquidation, restructuring (art. 16 ust. 1 pkt 26a and ust. 2a) — else
+  761-3, non-deductible. `settle_write_down` ends it: the debtor paid and the write-down
+  returns to revenue, or the receivable is uncollectable and leaves the books against the
+  write-down (art. 35b ust. 3–4). Accounts 830, 641, 280 and 761-3 join the chart; views
+  `rezerwy` and `odpisy-naleznosci`; the dictionary names every value.
+- Two small things learned. A lifecycle refuses a status set to its current value, so a
+  type whose amendment may leave the status as it is declares the self-transition, as
+  the bank operation does. A money field born at zero takes the literal "0.00" in the
+  template, since the formula language has no money literal.
+- Said in the history: the written-off receivable does not yet close the invoice's open
+  amount in settlements (a write-off as a settlement kind is owed); write-downs of
+  inventories come with the inventories lesson.
+- Test: `TestProvisionsAndWriteDowns` — a lawsuit provided for at 10 000, used for 6 000
+  and released for 4 000; a 5 000 warranty accrual used for 1 500 and released for 3 500
+  against 403; a bankrupt customer's 1 230 written down as a tax cost and written off
+  against 201; a late customer's 615 written down as non-deductible and reversed to 760
+  when paid. Pinned counts: 32 types, 32 views, 88 rules, 21 doors, 58 events, 46
+  accounts.
