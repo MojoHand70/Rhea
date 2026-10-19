@@ -1,0 +1,299 @@
+{
+  "paper": "Rachunkowość finansowa 2025",
+  "task": "I-3",
+  "company": "KONSOLEX sp. z o.o.",
+  "accounts": [
+    {
+      "code": "023",
+      "name": "Inne wartości niematerialne i prawne",
+      "type": "asset"
+    },
+    {
+      "code": "072",
+      "name": "Odpisy umorzeniowe innych wartości niematerialnych i prawnych",
+      "type": "asset"
+    },
+    {
+      "code": "080",
+      "name": "Środki trwałe w budowie",
+      "type": "asset"
+    },
+    {
+      "code": "130",
+      "name": "Rachunek bieżący",
+      "type": "asset"
+    },
+    {
+      "code": "134",
+      "name": "Kredyty bankowe",
+      "type": "liability"
+    },
+    {
+      "code": "200",
+      "name": "Rozrachunki z odbiorcami",
+      "type": "asset"
+    },
+    {
+      "code": "200/A",
+      "name": "Rozrachunki z odbiorcami – kontrahent A",
+      "type": "asset"
+    },
+    {
+      "code": "200/B",
+      "name": "Rozrachunki z odbiorcami – kontrahent B",
+      "type": "asset"
+    },
+    {
+      "code": "200/E",
+      "name": "Rozrachunki z odbiorcami – kontrahent E",
+      "type": "asset"
+    },
+    {
+      "code": "210",
+      "name": "Rozrachunki z dostawcami",
+      "type": "liability"
+    },
+    {
+      "code": "311",
+      "name": "Materiały",
+      "type": "asset"
+    },
+    {
+      "code": "500",
+      "name": "Koszty produkcji",
+      "type": "expense"
+    },
+    {
+      "code": "527",
+      "name": "Koszty sprzedaży",
+      "type": "expense"
+    },
+    {
+      "code": "550",
+      "name": "Koszty ogólnego zarządu",
+      "type": "expense"
+    },
+    {
+      "code": "640",
+      "name": "Czynne rozliczenia międzyokresowe kosztów",
+      "type": "asset"
+    },
+    {
+      "code": "641",
+      "name": "Bierne rozliczenia międzyokresowe kosztów",
+      "type": "liability"
+    },
+    {
+      "code": "751",
+      "name": "Koszty finansowe",
+      "type": "expense"
+    },
+    {
+      "code": "761",
+      "name": "Pozostałe koszty operacyjne",
+      "type": "expense"
+    },
+    {
+      "code": "831",
+      "name": "Pozostałe rezerwy",
+      "type": "liability"
+    },
+    {
+      "code": "840",
+      "name": "Rozliczenia międzyokresowe przychodów",
+      "type": "liability"
+    }
+  ],
+  "events": [
+    {
+      "event_type": "prepayment.rent_paid",
+      "occurred_at": "2024-12-21",
+      "payload": {
+        "amount": "620000.00",
+        "currency": "PLN",
+        "description": "Przelew czynszu za I półrocze 2025 r."
+      }
+    },
+    {
+      "event_type": "loan.received",
+      "occurred_at": "2024-12-28",
+      "payload": {
+        "cash_received": "79000.00",
+        "currency": "PLN",
+        "description": "Otrzymano kredyt do spłaty do końca roku 2026; wpływ środków 79000 zł, potrącono odsetki za cały okres 21000 zł",
+        "interest_deducted": "21000.00",
+        "nominal_amount": "100000.00"
+      }
+    },
+    {
+      "event_type": "receivable.payment_deferred",
+      "occurred_at": "2024-12-20",
+      "payload": {
+        "amount": "15000.00",
+        "counterparty": "A",
+        "currency": "PLN",
+        "description": "Odroczono termin spłaty należności od kontrahenta A na 30.06.2025 r.",
+        "new_due_date": "2025-06-30",
+        "no_entry": true
+      }
+    },
+    {
+      "event_type": "receivable.written_off",
+      "occurred_at": "2025-01-30",
+      "payload": {
+        "amount": "60000.00",
+        "booking_year": 2024,
+        "counterparty": "B",
+        "currency": "PLN",
+        "description": "Postanowienie sądu o umorzeniu postępowania upadłościowego obejmującego likwidację majątku kontrahenta B – zdarzenie dotyczące roku 2024 ujęte w księgach 2024",
+        "subsequent_event_adjusting": true
+      }
+    },
+    {
+      "event_type": "inventory.damaged",
+      "occurred_at": "2024-12-30",
+      "payload": {
+        "currency": "PLN",
+        "damage_percentage": "0.20",
+        "description": "Zalanie magazynu – zniszczeniu uległo 20% zapasów komponentów",
+        "total_inventory": "100000.00",
+        "write_off_amount": "20000.00"
+      }
+    },
+    {
+      "event_type": "advance.received",
+      "occurred_at": "2024-12-30",
+      "payload": {
+        "amount": "25000.00",
+        "counterparty": "E",
+        "currency": "PLN",
+        "description": "Wpływ zaliczki od kontrahenta E na dostawę konsol z produkcji roku 2025"
+      }
+    },
+    {
+      "event_type": "provision.repair_reserve_decision",
+      "occurred_at": "2024-12-20",
+      "payload": {
+        "currency": "PLN",
+        "description": "Decyzja zarządu o tworzeniu rezerwy na remont i modernizację budynku – rezerwa 40000 zł/miesiąc od grudnia 2024; brak podstawy prawnej dla jednostki małej, brak wpisu",
+        "monthly_amount": "40000.00",
+        "no_entry": true
+      }
+    },
+    {
+      "event_type": "provision.warranty_increased",
+      "occurred_at": "2025-01-15",
+      "payload": {
+        "additional_provision": "50000.00",
+        "booking_year": 2024,
+        "currency": "PLN",
+        "description": "Decyzja zarządu o zwiększeniu rezerwy na naprawy gwarancyjne z 0,5% na 1,0% sprzedanych konsol – zdarzenie dotyczące roku 2024 ujęte w księgach 2024",
+        "subsequent_event_adjusting": true
+      }
+    }
+  ],
+  "intents": [
+    "When prepayment.rent_paid arrives, book the advance rent payment as deferred cost: debit 640 620000.00, credit 130 620000.00.",
+    "When loan.received arrives, book the full loan liability and cash received and prepaid interest: debit 130 79000.00, debit 640 21000.00, credit 134 100000.00. Acceptable alternative: debit 130 100000.00, credit 134 100000.00 for the loan receipt; then debit 640 21000.00, credit 130 21000.00 for the interest deduction.",
+    "When receivable.payment_deferred arrives with no_entry true, make no journal entry (X).",
+    "When receivable.written_off arrives with subsequent_event_adjusting true and booking_year 2024, book the write-off in 2024 books: debit 761 60000.00, credit 200/B 60000.00.",
+    "When inventory.damaged arrives, book the write-off of destroyed inventory: debit 761 20000.00, credit 311 20000.00.",
+    "When advance.received arrives, book the advance received from counterparty E: debit 130 25000.00, credit 840 25000.00. Acceptable alternative: debit 130 25000.00, credit 200/E 25000.00.",
+    "When provision.repair_reserve_decision arrives with no_entry true, make no journal entry (X) – units małe are not required to create such provisions and the repair has not yet started.",
+    "When provision.warranty_increased arrives with subsequent_event_adjusting true and booking_year 2024, book the additional warranty provision in 2024 books: debit 527 50000.00, credit 641 50000.00."
+  ],
+  "expect_postings": [
+    {
+      "account": "640",
+      "side": "debit",
+      "amount": "620000.00"
+    },
+    {
+      "account": "130",
+      "side": "credit",
+      "amount": "620000.00"
+    },
+    {
+      "account": "130",
+      "side": "debit",
+      "amount": "79000.00"
+    },
+    {
+      "account": "640",
+      "side": "debit",
+      "amount": "21000.00"
+    },
+    {
+      "account": "134",
+      "side": "credit",
+      "amount": "100000.00"
+    },
+    {
+      "account": "761",
+      "side": "debit",
+      "amount": "60000.00"
+    },
+    {
+      "account": "200/B",
+      "side": "credit",
+      "amount": "60000.00"
+    },
+    {
+      "account": "761",
+      "side": "debit",
+      "amount": "20000.00"
+    },
+    {
+      "account": "311",
+      "side": "credit",
+      "amount": "20000.00"
+    },
+    {
+      "account": "130",
+      "side": "debit",
+      "amount": "25000.00"
+    },
+    {
+      "account": "840",
+      "side": "credit",
+      "amount": "25000.00"
+    },
+    {
+      "account": "527",
+      "side": "debit",
+      "amount": "50000.00"
+    },
+    {
+      "account": "641",
+      "side": "credit",
+      "amount": "50000.00"
+    }
+  ],
+  "answers": [
+    {
+      "question": "Czy odroczenie terminu spłaty należności od kontrahenta A (20.12.2024) powinno być ujęte w księgach roku 2024?",
+      "answer": "Nie – brak dekretu (X). Samo porozumienie o odroczeniu terminu płatności nie skutkuje zapisem księgowym."
+    },
+    {
+      "question": "Czy decyzja zarządu o tworzeniu rezerwy na remont i modernizację budynku (20.12.2024) powinna być ujęta w księgach roku 2024?",
+      "answer": "Nie – brak dekretu (X). Jednostka mała korzysta z uproszczenia polegającego na niestosowaniu przepisów o rezerwach na przyszłe zobowiązania (art. 37 ust. 10 UoR); remont nie rozpoczął się w 2024 r., brak obowiązku ujęcia."
+    },
+    {
+      "question": "Jak zaksięgować postanowienie sądu z 30.01.2025 r. o umorzeniu postępowania upadłościowego kontrahenta B?",
+      "answer": "Zdarzenie stanowi dowód warunków istniejących na dzień bilansowy (31.12.2024), dlatego należy je ująć w księgach roku 2024: Dt 761 / Ct 200/B – 60 000 zł."
+    },
+    {
+      "question": "Jak zaksięgować decyzję zarządu z 15.01.2025 r. o zwiększeniu rezerwy na naprawy gwarancyjne?",
+      "answer": "Zdarzenie dotyczy usterkowości produkcji 2024 roku, dlatego należy je ująć w księgach roku 2024: Dt 527 / Ct 641 – 50 000 zł."
+    },
+    {
+      "question": "Jakie są akceptowalne alternatywy dla wpływu zaliczki od kontrahenta E?",
+      "answer": "Akceptowalne jest ujęcie: Dt 130 / Ct 840 – 25 000 zł (rozliczenia międzyokresowe przychodów) lub Dt 130 / Ct 200/E – 25 000 zł (rozrachunki z odbiorcami)."
+    },
+    {
+      "question": "Jakie są akceptowalne alternatywy dla zaksięgowania kredytu bankowego?",
+      "answer": "Wariant 1 (podstawowy): Dt 130 79 000 / Dt 640 21 000 / Ct 134 100 000. Wariant 2 (alternatywny): wpływ Dt 130 100 000 / Ct 134 100 000, a następnie potrącenie odsetek Dt 640 21 000 / Ct 130 21 000."
+    }
+  ],
+  "notes": "Zdarzenie z 30.01.2025 r. (umorzenie postępowania upadłościowego kontrahenta B) traktowane jako zdarzenie korygujące po dniu bilansowym zgodnie z KSR 7, ujmowane w księgach 2024. Decyzja o rezerwie na remont odrzucona na podstawie uproszczenia dla jednostki małej (art. 37 ust. 10 UoR). Kwota zniszczonych zapasów: 20% × 100 000 zł = 20 000 zł. Reviewed 2026-10-19 against the Commission's table: entries and amounts agree; the loan with interest deducted up front follows the alternative the Commission accepts (Dt 130 79 000, Dt 640 21 000 / Ct 134 100 000); the two X rows (deferred receivable, repair provision) are no-entry events, explained without a posting."
+}

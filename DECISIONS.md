@@ -3911,3 +3911,18 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   by an intent — otherwise the case can never be done. The parser now says why a question
   has no key (no option in bold, or two), and the page footer ". str. 3" of some papers no
   longer glues itself to the last option.
+- **Measured, 2026-10-19, round two: all ten 2025 papers under the final parser,
+  claude-sonnet-4-6, 429 keyed questions, 858 points.** Bare model: 708 points (82%),
+  passes 6 papers of 10 — theory, economics and internal control, law, tax I, cost
+  accounting, audit and ethics; fails financial accounting (the banks' block), finance
+  (block III), tax II (46% on block I) and statements (block I). Host with the rulebook
+  open: 590 points (68%), passes 3 of 10 — theory, economics, cost accounting; 0 of 429
+  answers from a rule on any paper, 380 from memory, 63 abstentions naming the lesson.
+  The host's deficit against the bare model is its abstentions: the rulebook has nothing
+  on these subjects, and the sharpened rule still leaves it blank where it is unsure.
+  Task I-3 (events after the balance sheet date under KSR 7, two no-entry decisions, 20
+  accounts, 13 lines) DONE on the model's own reading, reviewed afterwards against the
+  Commission's table: three tasks of financial accounting 2025 for three. Parser debt: 14
+  questions across the ten papers read as two options in bold and stay unkeyed; one
+  question in finance (III-8) swallowed its neighbours' options; to check by eye.
+  Reports in research_notes/pibr-egzaminy/results/round2/.
