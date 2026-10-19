@@ -57,7 +57,7 @@ var (
 	reTask     = regexp.MustCompile(`^Zadanie\s+(\d+)\b`)
 	reBlock    = regexp.MustCompile(`^BLOK\s+TEMATYCZNY\s+([IVX]+)`)
 	reYear     = regexp.MustCompile(`\b(20\d\d)\b`)
-	reFooter   = regexp.MustCompile(`^\W*(str\.?\s*\d+|strona\s*\d+|Komisja Egzaminacyjna)\W*$`) // ". str. 3" on some papers
+	reFooter   = regexp.MustCompile(`(?i)^\W*(str\.?\s*\d+|strona\s*\d+|Komisja Egzaminacyjna)\W*$`) // ". str. 3", "Strona 4" on some papers
 )
 
 // paperLines groups the XML's text elements into baselines.

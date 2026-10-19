@@ -3926,3 +3926,7 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   questions across the ten papers read as two options in bold and stay unkeyed; one
   question in finance (III-8) swallowed its neighbours' options; to check by eye.
   Reports in research_notes/pibr-egzaminy/results/round2/.
+- Parser debt paid the same hour: the papers that print their footer as "Strona 4" (a
+  capital S) had it glued onto the last option; the footer pattern is now case-insensitive
+  and the ten papers carry 3 unkeyed questions instead of 14 (two of them the Commission's
+  own: no option or every option in bold). The next round sits them.
