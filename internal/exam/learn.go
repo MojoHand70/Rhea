@@ -2,6 +2,7 @@ package exam
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -85,6 +86,24 @@ type LearnOptions struct {
 	Parallel int
 	Limit    int // at most this many lessons; 0 = all
 	Verbose  io.Writer
+	// Keep, when set, is where the author's drafts go as a file for a
+	// person to review: one entry per lesson with the bundle as proposed and
+	// whether the recorded approver let it through. The throwaway is dropped;
+	// this file is what becomes the next pack version after review.
+	Keep string
+}
+
+// KeptLesson is one lesson with the author's answer to it.
+type KeptLesson struct {
+	Block    string          `json:"block"`
+	N        int             `json:"n"`
+	Citation string          `json:"citation"`
+	Intent   string          `json:"intent"`
+	Bundle   string          `json:"bundle"`
+	Approved bool            `json:"approved"`
+	Reasks   []string        `json:"reasks,omitempty"`
+	Errors   []string        `json:"errors,omitempty"`
+	Draft    json.RawMessage `json:"draft,omitempty"`
 }
 
 // LearnResult is the measurement.
@@ -145,6 +164,31 @@ func Learn(ctx context.Context, a *agent.Agent, model string, subject string, pa
 	res.Drafted = rep
 	if opt.Verbose != nil {
 		fmt.Fprint(opt.Verbose, rep.Verbose())
+	}
+	if opt.Keep != "" {
+		var kept []KeptLesson
+		for i, row := range rep.Rows {
+			k := KeptLesson{Intent: row.Intent, Bundle: row.RuleID, Approved: row.Approved && len(row.ApproveErrs) == 0, Reasks: row.Reasks, Draft: row.Draft}
+			if row.Error != "" {
+				k.Errors = append(k.Errors, row.Error)
+			}
+			k.Errors = append(k.Errors, row.ApproveErrs...)
+			if i < len(lessons) {
+				k.Block, k.N, k.Citation = lessons[i].Block, lessons[i].N, lessons[i].Citation
+			}
+			kept = append(kept, k)
+		}
+		b, err := json.MarshalIndent(kept, "", " ")
+		if err != nil {
+			return res, err
+		}
+		if err := os.MkdirAll(filepath.Dir(opt.Keep), 0o755); err != nil {
+			return res, err
+		}
+		if err := os.WriteFile(opt.Keep, b, 0o644); err != nil {
+			return res, err
+		}
+		fmt.Fprintf(out, "the author's drafts are kept in %s for review\n", opt.Keep)
 	}
 	rules, err := st.ActiveRules(ctx)
 	if err != nil {

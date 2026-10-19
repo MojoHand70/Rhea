@@ -350,9 +350,10 @@ rhea run pibr-exam -paper FILE -learn SITTING.json -block I [-limit N]
 The test questions only, marked +2 / -1 / 0 with 60% of each block to pass; the situational
 tasks are parsed and counted, not yet sat. Needs ANTHROPIC_API_KEY (RHEA_MODEL optional).`
 
+// the common packs first: the Poland pack requires their types
 var defaultPacks = []string{
+	"packs/common/people.json", "packs/common/periods.json", "packs/common/documents.json",
 	"packs/pl/pack.json", "packs/pl/warehouse.json", "packs/pl/nbp.json",
-	"packs/common/documents.json", "packs/common/people.json", "packs/common/periods.json",
 }
 
 func runPIBRExam(ctx context.Context, args []string, out io.Writer) error {
@@ -377,6 +378,7 @@ func runPIBRExam(ctx context.Context, args []string, out io.Writer) error {
 	learnFrom := fs.String("learn", "", "a prior sitting's -out file whose non-rule answers become the author's lessons")
 	block := fs.String("block", "I", "the block the learning-rate test runs on")
 	limit := fs.Int("limit", 0, "at most this many lessons (0: all)")
+	keep := fs.String("keep", "", "write the author's drafts here for review (the learning-rate test)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -395,7 +397,7 @@ func runPIBRExam(ctx context.Context, args []string, out io.Writer) error {
 		return sitTask(ctx, out, paper, *taskRef, *casesDir, *seedsDir, *recompile, *dry)
 	}
 	if *learnFrom != "" {
-		return learnTest(ctx, out, paper, *learnFrom, *block, *limit, strings.Split(*packs, ","), *seedsDir, *statuteDir, *parallel)
+		return learnTest(ctx, out, paper, *learnFrom, *block, *limit, strings.Split(*packs, ","), *seedsDir, *statuteDir, *parallel, *keep)
 	}
 	keyed, blocks := 0, map[string]int{}
 	for _, q := range paper.Questions {
@@ -535,7 +537,7 @@ func sitTask(ctx context.Context, out io.Writer, paper exam.Paper, ref, casesDir
 }
 
 // learnTest runs the learning-rate test on one block of a paper.
-func learnTest(ctx context.Context, out io.Writer, paper exam.Paper, sittingPath, block string, limit int, packs []string, seedsDir, statuteDir string, parallel int) error {
+func learnTest(ctx context.Context, out io.Writer, paper exam.Paper, sittingPath, block string, limit int, packs []string, seedsDir, statuteDir string, parallel int, keep string) error {
 	b, err := os.ReadFile(sittingPath)
 	if err != nil {
 		return err
@@ -553,7 +555,14 @@ func learnTest(ctx context.Context, out io.Writer, paper exam.Paper, sittingPath
 	if host == nil {
 		return fmt.Errorf("%s holds no host sitting", sittingPath)
 	}
-	opt := exam.LearnOptions{Packs: packs, SeedsDir: seedsDir, Parallel: parallel, Limit: limit, Verbose: out}
+	// the common packs and the Poland pack: the warehouse and NBP packs rest on seeds the test does not load
+	var installed []string
+	for _, p := range packs {
+		if p = strings.TrimSpace(p); p != "" && !strings.Contains(p, "warehouse") && !strings.Contains(p, "nbp") {
+			installed = append(installed, p)
+		}
+	}
+	opt := exam.LearnOptions{Packs: installed, SeedsDir: seedsDir, Parallel: parallel, Limit: limit, Verbose: out, Keep: keep}
 	if statuteDir != "" {
 		if lib, err := statute.Load(statuteDir); err == nil && len(lib.Acts()) > 0 {
 			opt.Library = lib
