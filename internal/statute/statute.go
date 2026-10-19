@@ -45,31 +45,48 @@ type Library struct {
 	index  map[string]map[string]*Article
 }
 
-// Load reads every act file (*.json) of a directory.
-func Load(dir string) (*Library, error) {
+// Load reads every act file (*.json) of one or more directories (a
+// comma-separated list): the acts, the standards, whatever the market
+// fetched into its own folders. A directory that does not exist is skipped.
+func Load(dirs string) (*Library, error) {
+	l := &Library{byName: map[string]*Act{}, index: map[string]map[string]*Article{}}
+	for _, dir := range strings.Split(dirs, ",") {
+		if dir = strings.TrimSpace(dir); dir == "" {
+			continue
+		}
+		if err := l.loadDir(dir); err != nil {
+			return nil, err
+		}
+	}
+	return l, nil
+}
+
+func (l *Library) loadDir(dir string) error {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return nil, err
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
 	}
-	l := &Library{byName: map[string]*Act{}, index: map[string]map[string]*Article{}}
 	for _, e := range entries {
 		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") || strings.HasSuffix(e.Name(), ".meta.json") {
 			continue
 		}
 		b, err := os.ReadFile(filepath.Join(dir, e.Name()))
 		if err != nil {
-			return nil, err
+			return err
 		}
 		var a Act
 		if err := json.Unmarshal(b, &a); err != nil {
-			return nil, fmt.Errorf("%s: %w", e.Name(), err)
+			return fmt.Errorf("%s: %w", e.Name(), err)
 		}
 		if a.Key == "" || len(a.Articles) == 0 {
 			continue
 		}
 		l.Add(a)
 	}
-	return l, nil
+	return nil
 }
 
 // New makes an empty library; Add puts an act in it.
@@ -144,6 +161,9 @@ type Citation struct {
 }
 
 var reCitation = regexp.MustCompile(`(?i)^(.*?)\s*\bart\.?\s*(\d+[a-z]*)\b\.?\s*(.*)$`)
+
+// a standard's point: "KSR 11 pkt 6.18", "KSR nr 6 pkt 3.1"
+var rePoint = regexp.MustCompile(`(?i)^(.*?)\s*\bpkt\.?\s*(\d{1,2}\.\d{1,3}[a-z]?)\b\.?\s*(.*)$`)
 var reParen = regexp.MustCompile(`\([^)]*\)`)
 
 // ParseCitation reads "ustawa o rachunkowości (t.j. Dz.U. 2026 poz. 522)
@@ -152,6 +172,9 @@ var reParen = regexp.MustCompile(`\([^)]*\)`)
 func ParseCitation(s string) (Citation, bool) {
 	s = strings.TrimSpace(s)
 	m := reCitation.FindStringSubmatch(s)
+	if m == nil {
+		m = rePoint.FindStringSubmatch(s) // a standard cites points, not articles
+	}
 	if m == nil {
 		return Citation{}, false
 	}

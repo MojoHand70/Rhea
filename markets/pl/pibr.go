@@ -322,6 +322,7 @@ func init() {
 
 const pibrExamHelp = `rhea run pibr-exam -paper FILE [-packs a.json,b.json] [-who bare,host] [-parallel N] [-only N] [-out FILE] [-dry]
 rhea run pibr-exam -paper FILE -task I-1 [-cases DIR] [-seeds DIR] [-recompile] [-dry]
+rhea run pibr-exam -paper FILE -learn SITTING.json -block I [-limit N]
 
   -paper    a Commission sample paper: the PDF (pdftohtml runs on it) or its pdftohtml -xml output
   -task     sit one situational task through the kernel instead of the test questions: the
@@ -333,9 +334,14 @@ rhea run pibr-exam -paper FILE -task I-1 [-cases DIR] [-seeds DIR] [-recompile] 
             run, and the books read against the solution's entries
   -packs    the pack files the host is taught (default: the Poland pack and the common packs)
   -who      who sits it: bare (the model alone), host (with the rulebook open), or both
-  -statute  the acts the host may consult (rhea run pl-acts fetch writes them; default data/acts/pl
-            when it exists; "" for none): before answering, the host names the provisions it would
-            open, is handed their text, and may answer "statute" only citing one of them
+  -statute  the acts and standards the host may consult (rhea run pl-acts fetch, rhea run
+            pl-standards fetch; default data/acts/pl,data/standards/pl, missing folders skipped;
+            "" for none): before answering, the host names the provisions it would open, is handed
+            their text, and may answer "statute" only citing one of them
+  -learn    the learning-rate test: the answers of a prior sitting (its -out file) that did not
+            rest on a rule become lessons for the author, which drafts them as definitions on a
+            throwaway database; the block is sat again with that rulebook; before and after are
+            reported against the clock. -block names the block (I), -limit caps the lessons.
   -parallel calls in flight at once (default 6)
   -only     sit only the first N questions (a smoke run)
   -out      write the report with every answer as JSON here
@@ -367,7 +373,10 @@ func runPIBRExam(ctx context.Context, args []string, out io.Writer) error {
 	casesDir := fs.String("cases", "testdata/exam", "where case files live")
 	seedsDir := fs.String("seeds", "testdata/seed", "the finance base a case runs on")
 	recompile := fs.Bool("recompile", false, "read the task again even if its case file exists")
-	statuteDir := fs.String("statute", "data/acts/pl", "the acts the host may consult; \"\" for none")
+	statuteDir := fs.String("statute", "data/acts/pl,data/standards/pl", "the acts and standards the host may consult; \"\" for none")
+	learnFrom := fs.String("learn", "", "a prior sitting's -out file whose non-rule answers become the author's lessons")
+	block := fs.String("block", "I", "the block the learning-rate test runs on")
+	limit := fs.Int("limit", 0, "at most this many lessons (0: all)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -384,6 +393,9 @@ func runPIBRExam(ctx context.Context, args []string, out io.Writer) error {
 	}
 	if *taskRef != "" {
 		return sitTask(ctx, out, paper, *taskRef, *casesDir, *seedsDir, *recompile, *dry)
+	}
+	if *learnFrom != "" {
+		return learnTest(ctx, out, paper, *learnFrom, *block, *limit, strings.Split(*packs, ","), *seedsDir, *statuteDir, *parallel)
 	}
 	keyed, blocks := 0, map[string]int{}
 	for _, q := range paper.Questions {
@@ -519,5 +531,38 @@ func sitTask(ctx context.Context, out io.Writer, paper exam.Paper, ref, casesDir
 	} else {
 		fmt.Fprintln(out, "NOT DONE")
 	}
+	return nil
+}
+
+// learnTest runs the learning-rate test on one block of a paper.
+func learnTest(ctx context.Context, out io.Writer, paper exam.Paper, sittingPath, block string, limit int, packs []string, seedsDir, statuteDir string, parallel int) error {
+	b, err := os.ReadFile(sittingPath)
+	if err != nil {
+		return err
+	}
+	var prior exam.Report
+	if err := json.Unmarshal(b, &prior); err != nil {
+		return fmt.Errorf("%s: %w", sittingPath, err)
+	}
+	var host *exam.Result
+	for i := range prior.Results {
+		if prior.Results[i].Answerer == "host" {
+			host = &prior.Results[i]
+		}
+	}
+	if host == nil {
+		return fmt.Errorf("%s holds no host sitting", sittingPath)
+	}
+	opt := exam.LearnOptions{Packs: packs, SeedsDir: seedsDir, Parallel: parallel, Limit: limit, Verbose: out}
+	if statuteDir != "" {
+		if lib, err := statute.Load(statuteDir); err == nil && len(lib.Acts()) > 0 {
+			opt.Library = lib
+		}
+	}
+	res, err := exam.Learn(ctx, agent.New(), agent.Model(), paper.Subject+" "+paper.Year, paper, *host, block, PIBRScoring, opt, out)
+	if err != nil {
+		return err
+	}
+	fmt.Fprint(out, "\n"+res.String())
 	return nil
 }

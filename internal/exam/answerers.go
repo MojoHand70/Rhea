@@ -136,9 +136,10 @@ Reply with exactly one JSON object and nothing else:
 {"answer": "a" | "b" | "c" | "", "source": "rule" | "statute" | "memory" | "abstain", "rule_id": "", "citation": "", "note": ""}`
 
 const consultSystem = `You are about to answer a single-choice examination question with a library of
-consolidated acts at hand. Name the provisions you would open to decide it: up to six, each
-an act from the list given and an article number as the act numbers it (e.g. "28", "106e"),
-optionally the unit ("ust. 1 pkt 5"). Name only acts from the list. If none applies, give an
+consolidated acts and standards at hand. Name the provisions you would open to decide it: up to six, each
+an act or standard from the list given and an article number as the act numbers it (e.g. "28",
+"106e") — for a standard (KSR) its point (e.g. "6.18") —
+optionally the unit ("ust. 1 pkt 5"). Name only acts and standards from the list. If none applies, give an
 empty list. Reply with exactly one JSON object and nothing else:
 {"consult": [{"act": "", "article": "", "unit": ""}]}`
 
