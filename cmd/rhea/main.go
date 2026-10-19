@@ -64,7 +64,25 @@ import (
 func main() {
 	log.SetFlags(0)
 	if len(os.Args) < 2 {
-		log.Fatal("usage: rhea init|load|submit|intake|pass|file|issue|backup|restore|serve|replay|channels|clock")
+		log.Fatal("usage: rhea init|load|submit|intake|pass|file|issue|backup|restore|serve|replay|channels|clock|run")
+	}
+	if os.Args[1] == "run" {
+		// A market's tool by name: no log, no store (adapter.Command).
+		if len(os.Args) < 3 {
+			fmt.Println("usage: rhea run COMMAND …   — the commands the markets in this binary provide:")
+			for _, c := range adapter.Commands() {
+				fmt.Printf("  %-20s %s\n", c.Name, c.Summary)
+			}
+			return
+		}
+		c, ok := adapter.LookupCommand(os.Args[2])
+		if !ok {
+			log.Fatalf("no command %q — rhea run lists them", os.Args[2])
+		}
+		if err := c.Run(context.Background(), os.Args[3:], os.Stdout); err != nil {
+			log.Fatal(err)
+		}
+		return
 	}
 	// The caller's scope: the company whose facts this run is in
 	// (DIRECTION 2026-10-08, the partition key); empty means the whole log.

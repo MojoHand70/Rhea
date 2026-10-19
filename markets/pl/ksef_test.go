@@ -3,6 +3,7 @@ package pl_test
 import (
 	"context"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"encoding/xml"
@@ -309,6 +310,48 @@ func TestKSeFCertificateLive(t *testing.T) {
 	}
 	sendLive(t, &pl.KSeF2{BaseURL: pl.KSeFEnvironments["test"], NIP: nip, Signer: seal,
 		Log: func(format string, args ...any) { t.Logf(format, args...) }})
+}
+
+// TestKSeFCertificateEnrollLive rehearses on TEST what Novi will do once:
+// log in with a signature (here a self-made seal), ask KSeF for its own login
+// certificate and an Offline one, then log in with the issued login
+// certificate and send an invoice. Each run creates certificates in KSeF's
+// records, so it is gated apart: RHEA_LIVE_KSEF_ENROLL=1.
+func TestKSeFCertificateEnrollLive(t *testing.T) {
+	if os.Getenv("RHEA_LIVE_KSEF_ENROLL") == "" {
+		t.Skip("set RHEA_LIVE_KSEF_ENROLL=1 to ask the Ministry's TEST environment for KSeF certificates")
+	}
+	nip := os.Getenv("RHEA_KSEF_NIP")
+	if nip == "" {
+		nip = "8058083055"
+	}
+	logf := func(format string, args ...any) { t.Logf(format, args...) }
+	seal, err := pl.SelfSignedSeal(nip, "Rhea Test sp. z o.o.", time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	first := &pl.KSeF2{BaseURL: pl.KSeFEnvironments["test"], NIP: nip, Signer: seal, Log: logf}
+	access, err := first.Login(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	login, err := first.EnrollCertificate(ctx, access, pl.CertAuthentication, "Rhea logowanie test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	offline, err := first.EnrollCertificate(ctx, access, pl.CertOffline, "Rhea offline test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("login certificate: subject %s, issuer %s, key usage %v", login.Cert.Subject, login.Cert.Issuer, login.Cert.KeyUsage)
+	t.Logf("offline certificate: subject %s, key usage %v", offline.Cert.Subject, offline.Cert.KeyUsage)
+	if offline.Cert.KeyUsage&x509.KeyUsageContentCommitment == 0 {
+		t.Errorf("the Offline certificate does not carry non-repudiation: %v", offline.Cert.KeyUsage)
+	}
+	// The issued certificate is the way in now.
+	sendLive(t, &pl.KSeF2{BaseURL: pl.KSeFEnvironments["test"], NIP: nip, Signer: login, Log: logf})
 }
 
 // sendLive sends one invoice through client and reads the receipt back.

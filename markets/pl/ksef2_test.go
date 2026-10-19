@@ -3,6 +3,7 @@ package pl
 import (
 	"context"
 	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -12,6 +13,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"errors"
+	"fmt"
 	"io"
 	"math/big"
 	"net/http"
@@ -43,6 +45,9 @@ type fakeKSeFAPI struct {
 	received map[string][]byte // invoice reference -> plain XML
 	numbers  map[string]string // invoice reference -> invoice number
 	closed   bool
+	// loggedInBy is how the last login proved who it was: "token" or
+	// "signature" — KSeF issues certificates only after a signature.
+	loggedInBy string
 }
 
 func selfSigned(t *testing.T) (*rsa.PrivateKey, string) {
@@ -99,6 +104,9 @@ func (f *fakeKSeFAPI) handler() http.Handler {
 			refuse(w, 400, "Nieprawidłowe szyfrowanie tokena")
 			return
 		}
+		f.mu.Lock()
+		f.loggedInBy = "token"
+		f.mu.Unlock()
 		reply(w, 202, map[string]any{"referenceNumber": "AUTH-1", "authenticationToken": map[string]any{"token": "auth-token", "validUntil": "2099-01-01T00:00:00Z"}})
 	})
 	mux.HandleFunc("POST /auth/xades-signature", func(w http.ResponseWriter, r *http.Request) {
@@ -115,8 +123,109 @@ func (f *fakeKSeFAPI) handler() http.Handler {
 		}
 		f.mu.Lock()
 		f.polls["xades"]++
+		f.loggedInBy = "signature"
 		f.mu.Unlock()
 		reply(w, 202, map[string]any{"referenceNumber": "AUTH-1", "authenticationToken": map[string]any{"token": "auth-token", "validUntil": "2099-01-01T00:00:00Z"}})
+	})
+	// KSeF's certificate authority: the identity of the signed login, a
+	// request that must carry exactly it, issued on the second poll.
+	caKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	caName := pkix.Name{CommonName: "TEST CCK KSeF (fake)", Country: []string{"PL"}}
+	caTmpl := &x509.Certificate{SerialNumber: big.NewInt(1), Subject: caName, NotBefore: time.Now().Add(-time.Hour),
+		NotAfter: time.Now().AddDate(2, 0, 0), IsCA: true, BasicConstraintsValid: true, KeyUsage: x509.KeyUsageCertSign}
+	caDER, _ := x509.CreateCertificate(rand.Reader, caTmpl, caTmpl, &caKey.PublicKey, caKey)
+	ca, _ := x509.ParseCertificate(caDER)
+	issued := map[string][]byte{}
+	identity := map[string]string{"commonName": "Rhea Test sp. z o.o.", "countryName": "PL",
+		"organizationName": "Rhea Test sp. z o.o.", "organizationIdentifier": "VATPL-" + f.nip}
+	mux.HandleFunc("GET /certificates/limits", func(w http.ResponseWriter, r *http.Request) {
+		reply(w, 200, map[string]any{"canRequest": true, "enrollment": map[string]int{"limit": 300, "remaining": 299}, "certificate": map[string]int{"limit": 100, "remaining": 99}})
+	})
+	mux.HandleFunc("GET /certificates/enrollments/data", func(w http.ResponseWriter, r *http.Request) {
+		if f.loggedInBy != "signature" {
+			refuse(w, 400, "Pobranie danych certyfikacyjnych jest możliwe wyłącznie po uwierzytelnieniu podpisem")
+			return
+		}
+		reply(w, 200, identity)
+	})
+	mux.HandleFunc("POST /certificates/enrollments", func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Name string `json:"certificateName"`
+			Type string `json:"certificateType"`
+			CSR  string `json:"csr"`
+		}
+		json.NewDecoder(r.Body).Decode(&req)
+		der, _ := base64.StdEncoding.DecodeString(req.CSR)
+		csr, err := x509.ParseCertificateRequest(der)
+		if err != nil || csr.CheckSignature() != nil {
+			refuse(w, 400, "Nieprawidłowy CSR")
+			return
+		}
+		got := map[string]string{"commonName": csr.Subject.CommonName}
+		if len(csr.Subject.Country) == 1 {
+			got["countryName"] = csr.Subject.Country[0]
+		}
+		if len(csr.Subject.Organization) == 1 {
+			got["organizationName"] = csr.Subject.Organization[0]
+		}
+		for _, n := range csr.Subject.Names {
+			if n.Type.String() == "2.5.4.97" {
+				got["organizationIdentifier"] = fmt.Sprint(n.Value)
+			}
+		}
+		for k, v := range identity {
+			if got[k] != v {
+				refuse(w, 400, "Dane we wniosku różnią się od danych certyfikacyjnych: "+k)
+				return
+			}
+		}
+		usage := x509.KeyUsageDigitalSignature
+		suffix := " (uwierzytelnienie)"
+		if req.Type == "Offline" {
+			usage, suffix = x509.KeyUsageContentCommitment, " (offline)"
+		}
+		subject := csr.Subject
+		subject.CommonName += suffix
+		for _, n := range csr.Subject.Names {
+			if n.Type.String() == "2.5.4.97" {
+				subject.ExtraNames = append(subject.ExtraNames, n) // a parsed name re-marshals only what is extra
+			}
+		}
+		serial := fmt.Sprintf("%016X", len(issued)+0x01F33EC518362167)
+		n, _ := new(big.Int).SetString(serial, 16)
+		certDER, _ := x509.CreateCertificate(rand.Reader, &x509.Certificate{SerialNumber: n, Subject: subject,
+			NotBefore: time.Now().Add(-time.Minute), NotAfter: time.Now().AddDate(2, 0, 0), KeyUsage: usage}, ca, csr.PublicKey, caKey)
+		f.mu.Lock()
+		issued[serial] = certDER
+		f.mu.Unlock()
+		reply(w, 202, map[string]any{"referenceNumber": "ENR-" + serial, "timestamp": "2026-10-19T08:00:00Z"})
+	})
+	mux.HandleFunc("GET /certificates/enrollments/{ref}", func(w http.ResponseWriter, r *http.Request) {
+		ref := r.PathValue("ref")
+		f.mu.Lock()
+		f.polls[ref]++
+		n := f.polls[ref]
+		f.mu.Unlock()
+		if n == 1 {
+			reply(w, 200, map[string]any{"requestDate": "2026-10-19T08:00:00Z", "status": map[string]any{"code": 100, "description": "Wniosek przyjęty do realizacji"}})
+			return
+		}
+		reply(w, 200, map[string]any{"requestDate": "2026-10-19T08:00:00Z", "status": map[string]any{"code": 200, "description": "Wniosek obsłużony"},
+			"certificateSerialNumber": strings.TrimPrefix(ref, "ENR-")})
+	})
+	mux.HandleFunc("POST /certificates/retrieve", func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Serials []string `json:"certificateSerialNumbers"`
+		}
+		json.NewDecoder(r.Body).Decode(&req)
+		var out []map[string]any
+		for _, sn := range req.Serials {
+			if der, ok := issued[sn]; ok {
+				out = append(out, map[string]any{"certificate": base64.StdEncoding.EncodeToString(der), "certificateName": "x",
+					"certificateSerialNumber": sn, "certificateType": "Authentication"})
+			}
+		}
+		reply(w, 200, map[string]any{"certificates": out})
 	})
 	mux.HandleFunc("GET /auth/AUTH-1", func(w http.ResponseWriter, r *http.Request) {
 		if bearer(r) != "auth-token" {
@@ -473,5 +582,64 @@ func TestClientFromEnvCertificate(t *testing.T) {
 	t.Setenv("RHEA_KSEF_CERT", "")
 	if c, ok := ClientFromEnv().(*KSeF2); !ok || c.Signer != nil || c.Token != "a-token" {
 		t.Fatalf("the token, when there is no certificate: %+v", c)
+	}
+}
+
+// KSeF's own certificate (KSEF-21, KSEF-05): after a signed login Rhea asks
+// for a login certificate and an Offline one, with a key she generates and
+// a request carrying exactly the identity KSeF returned; the issued login
+// certificate is then the way in. After a token login KSeF gives no
+// certificate data, and a name KSeF would refuse is refused before asking.
+func TestEnrollCertificate(t *testing.T) {
+	api := &fakeKSeFAPI{t: t, token: "20250101-TK-SECRET", nip: "8058083055"}
+	srv := httptest.NewServer(api.handler())
+	defer srv.Close()
+	instant := func(context.Context, time.Duration) error { return nil }
+	seal, _ := SelfSignedSeal(api.nip, "Rhea Test sp. z o.o.", time.Now())
+	first := &KSeF2{BaseURL: srv.URL, NIP: api.nip, Signer: seal, Sleep: instant}
+	ctx := context.Background()
+	access, err := first.Login(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := first.EnrollCertificate(ctx, access, CertAuthentication, "Rhea — logowanie"); err == nil || !strings.Contains(err.Error(), "may hold only") {
+		t.Fatalf("a name KSeF refuses: %v", err)
+	}
+	login, err := first.EnrollCertificate(ctx, access, CertAuthentication, "Rhea logowanie")
+	if err != nil {
+		t.Fatal(err)
+	}
+	offline, err := first.EnrollCertificate(ctx, access, CertOffline, "Rhea offline")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if login.Cert.Subject.CommonName != "Rhea Test sp. z o.o. (uwierzytelnienie)" || login.Cert.KeyUsage != x509.KeyUsageDigitalSignature ||
+		offline.Cert.KeyUsage != x509.KeyUsageContentCommitment || !samePublic(login.Key.Public(), login.Cert.PublicKey) {
+		t.Fatalf("issued: %v %v / %v", login.Cert.Subject, login.Cert.KeyUsage, offline.Cert.KeyUsage)
+	}
+	// The issued certificate logs in.
+	if _, err := (&KSeF2{BaseURL: srv.URL, NIP: api.nip, Signer: login, Sleep: instant}).Login(ctx); err != nil {
+		t.Fatalf("login with the issued certificate: %v", err)
+	}
+	// After a token login there is no certificate to be had.
+	byToken := &KSeF2{BaseURL: srv.URL, NIP: api.nip, Token: api.token, Sleep: instant}
+	tokenAccess, err := byToken.Login(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := byToken.EnrollCertificate(ctx, tokenAccess, CertAuthentication, "Rhea logowanie"); err == nil || !strings.Contains(err.Error(), "never after a token") {
+		t.Fatalf("after a token login: %v", err)
+	}
+	// A login document for a person to sign elsewhere: a fresh challenge,
+	// the company, the subject's identity — and no signature yet.
+	unsigned, err := first.LoginRequest(ctx)
+	if err != nil || !strings.Contains(string(unsigned), "<Challenge>20250101-CR-") || !strings.Contains(string(unsigned), "<Nip>"+api.nip+"</Nip>") ||
+		strings.Contains(string(unsigned), "Signature") {
+		t.Fatalf("the login file: %v\n%s", err, unsigned)
+	}
+	// Signed elsewhere (here by the seal) and handed back, it logs in.
+	signed, _ := seal.SignAuthTokenRequest("20250101-CR-0123456789ABCDEF0123-0123456789-AB", api.nip, time.Now())
+	if _, err := first.LoginSigned(ctx, signed); err != nil {
+		t.Fatalf("a login signed elsewhere: %v", err)
 	}
 }

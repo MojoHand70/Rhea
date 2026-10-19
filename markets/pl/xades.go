@@ -165,12 +165,17 @@ const (
 // with the identity read from the certificate's subject, and signs it. The
 // result is what POST /auth/xades-signature takes.
 func (s *CertSigner) SignAuthTokenRequest(challenge, nip string, signingTime time.Time) ([]byte, error) {
-	root := el("", "AuthTokenRequest").declare("", nsAuthToken).add(
+	return s.signEnveloped(authTokenRequest(challenge, nip), signingTime)
+}
+
+// authTokenRequest is the login document (schema auth 2.0): the challenge,
+// the company it logs in for, the identity read from the certificate's subject.
+func authTokenRequest(challenge, nip string) *xel {
+	return el("", "AuthTokenRequest").declare("", nsAuthToken).add(
 		el("", "Challenge").txt(challenge),
 		el("", "ContextIdentifier").add(el("", "Nip").txt(nip)),
 		el("", "SubjectIdentifierType").txt("certificateSubject"),
 	)
-	return s.signEnveloped(root, signingTime)
 }
 
 // signEnveloped appends an enveloped XAdES-BES signature to root and returns

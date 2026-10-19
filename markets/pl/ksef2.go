@@ -247,21 +247,15 @@ func keyFor(keys []publicKey, usage string) (publicKey, error) {
 // certificate, or the token encrypted with the challenge's timestamp; the
 // operation polled to success; the access token redeemed.
 func (c *KSeF2) authenticate(ctx context.Context, keys []publicKey) (string, error) {
-	var challenge struct {
-		Challenge   string `json:"challenge"`
-		TimestampMs int64  `json:"timestampMs"`
-	}
-	if err := c.call(ctx, "POST", "/auth/challenge", "", nil, &challenge); err != nil {
+	ch, err := c.challenge(ctx)
+	if err != nil {
 		return "", err
 	}
-	var started struct {
-		ReferenceNumber     string          `json:"referenceNumber"`
-		AuthenticationToken json.RawMessage `json:"authenticationToken"` // {token, validUntil} on the wire
-	}
+	var started authStarted
 	if c.Signer != nil {
 		// The certificate: the login document for the company's NIP, the
 		// identity read from the certificate's subject, signed in XAdES.
-		signed, err := c.Signer.SignAuthTokenRequest(challenge.Challenge, c.NIP, c.now())
+		signed, err := c.Signer.SignAuthTokenRequest(ch.Challenge, c.NIP, c.now())
 		if err != nil {
 			return "", err
 		}
@@ -274,13 +268,13 @@ func (c *KSeF2) authenticate(ctx context.Context, keys []publicKey) (string, err
 		if err != nil {
 			return "", err
 		}
-		plain := []byte(c.Token + "|" + strconv.FormatInt(challenge.TimestampMs, 10))
+		plain := []byte(c.Token + "|" + strconv.FormatInt(ch.TimestampMs, 10))
 		encrypted, err := rsa.EncryptOAEP(sha256.New(), rand.Reader, tokenKey.key, plain, nil)
 		if err != nil {
 			return "", err
 		}
 		if err := c.call(ctx, "POST", "/auth/ksef-token", "", map[string]any{
-			"challenge":         challenge.Challenge,
+			"challenge":         ch.Challenge,
 			"contextIdentifier": map[string]string{"type": "Nip", "value": c.NIP},
 			"encryptedToken":    base64.StdEncoding.EncodeToString(encrypted),
 			"publicKeyId":       tokenKey.ID,
@@ -288,6 +282,28 @@ func (c *KSeF2) authenticate(ctx context.Context, keys []publicKey) (string, err
 			return "", err
 		}
 	}
+	return c.finishLogin(ctx, started)
+}
+
+type authChallenge struct {
+	Challenge   string `json:"challenge"`
+	TimestampMs int64  `json:"timestampMs"`
+}
+
+func (c *KSeF2) challenge(ctx context.Context) (authChallenge, error) {
+	var ch authChallenge
+	err := c.call(ctx, "POST", "/auth/challenge", "", nil, &ch)
+	return ch, err
+}
+
+type authStarted struct {
+	ReferenceNumber     string          `json:"referenceNumber"`
+	AuthenticationToken json.RawMessage `json:"authenticationToken"` // {token, validUntil} on the wire
+}
+
+// finishLogin polls a started authentication to its end and redeems the
+// access token.
+func (c *KSeF2) finishLogin(ctx context.Context, started authStarted) (string, error) {
 	authToken := tokenString(started.AuthenticationToken)
 	if authToken == "" {
 		return "", errors.New("ksef: no authentication token started")
@@ -323,6 +339,46 @@ func (c *KSeF2) authenticate(ctx context.Context, keys []publicKey) (string, err
 		}
 		wait = min(wait*2, pollMax)
 	}
+}
+
+// Login authenticates as the client is configured — certificate or token —
+// and returns the access token.
+func (c *KSeF2) Login(ctx context.Context) (string, error) {
+	if c.BaseURL == "" || c.NIP == "" || (c.Token == "" && c.Signer == nil) {
+		return "", errors.New("ksef: the channel is not configured (environment, NIP, and a certificate or a token)")
+	}
+	var keys []publicKey
+	if c.Signer == nil {
+		var err error
+		if keys, err = c.publicKeys(ctx); err != nil {
+			return "", err
+		}
+	}
+	return c.authenticate(ctx, keys)
+}
+
+// LoginRequest is the login document for the company's NIP with a fresh
+// challenge, unsigned — for a person to sign outside Rhea (a trusted profile
+// on gov.pl, a qualified signature) within the challenge's ten minutes.
+func (c *KSeF2) LoginRequest(ctx context.Context) ([]byte, error) {
+	if c.BaseURL == "" || c.NIP == "" {
+		return nil, errors.New("ksef: the channel is not configured (environment and NIP)")
+	}
+	ch, err := c.challenge(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return []byte(`<?xml version="1.0" encoding="utf-8"?>` + "\n" + authTokenRequest(ch.Challenge, c.NIP).c14n(nil, nil) + "\n"), nil
+}
+
+// LoginSigned completes a login with a document a person signed outside
+// Rhea and returns the access token.
+func (c *KSeF2) LoginSigned(ctx context.Context, signed []byte) (string, error) {
+	var started authStarted
+	if err := c.callXML(ctx, "/auth/xades-signature", signed, &started); err != nil {
+		return "", err
+	}
+	return c.finishLogin(ctx, started)
 }
 
 // tokenString reads an access token the API returns either as a string

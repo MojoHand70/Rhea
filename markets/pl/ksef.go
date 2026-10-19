@@ -57,31 +57,18 @@ func init() {
 // misnamed environment, half a certificate or an unreadable one is a client
 // that refuses to send, not a guess.
 func ClientFromEnv() KSeFClient {
-	token := os.Getenv("RHEA_KSEF_TOKEN")
-	certPath, keyPath := os.Getenv("RHEA_KSEF_CERT"), os.Getenv("RHEA_KSEF_KEY")
-	if token == "" && certPath == "" && keyPath == "" {
+	if os.Getenv("RHEA_KSEF_TOKEN") == "" && os.Getenv("RHEA_KSEF_CERT") == "" && os.Getenv("RHEA_KSEF_KEY") == "" {
 		return FakeKSeF{}
 	}
+	c, err := ksef2FromEnv()
+	if err != nil {
+		return refusingClient{err}
+	}
 	env := os.Getenv("RHEA_KSEF_ENV")
-	base, ok := KSeFEnvironments[env]
-	if !ok {
-		return refusingClient{fmt.Errorf("RHEA_KSEF_ENV must be test, demo or prod (got %q)", env)}
+	c.Log = func(format string, args ...any) {
+		log.Printf("ksef (%s, NIP %s): "+format, append([]any{env, c.NIP}, args...)...)
 	}
-	var signer *CertSigner
-	if certPath != "" || keyPath != "" {
-		if certPath == "" || keyPath == "" {
-			return refusingClient{fmt.Errorf("a KSeF certificate needs both RHEA_KSEF_CERT and RHEA_KSEF_KEY")}
-		}
-		var err error
-		if signer, err = LoadCertSigner(certPath, keyPath); err != nil {
-			return refusingClient{err}
-		}
-		token = ""
-	}
-	return &KSeF2{BaseURL: base, NIP: os.Getenv("RHEA_KSEF_NIP"), Token: token, Signer: signer,
-		Log: func(format string, args ...any) {
-			log.Printf("ksef (%s, NIP %s): "+format, append([]any{env, os.Getenv("RHEA_KSEF_NIP")}, args...)...)
-		}}
+	return c
 }
 
 type refusingClient struct{ err error }

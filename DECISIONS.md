@@ -3765,3 +3765,42 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   Offline type for QR code II — which needs a signed login first (a token cannot ask,
   § 13 ust. 2); rehearsed on TEST with the self-made seal, then once with the owner's
   signature on DEMO.
+
+## 2026-10-19 — KSeF certificate login, step 2: Rhea asks KSeF for its own certificates
+
+- **What.** `KSeF2.EnrollCertificate(access, kind, name)` (`markets/pl/ksefcert.go`): after a
+  signed login, the limits, the identity KSeF read from the signature
+  (`/certificates/enrollments/data`), an EC P-256 key generated here, a PKCS#10 request
+  carrying exactly that identity, the request (`Authentication` — the login certificate
+  that replaces the token — or `Offline`, for the second QR code), polled to its serial,
+  retrieved and checked to be for the key that asked. The key never leaves Rhea. After
+  a token login KSeF gives no data (§ 13 ust. 2) and the error says so; a name KSeF would
+  refuse (21405: letters incl. Polish, digits, spaces, `-`, `_`) is refused before asking.
+- **Logging in, in pieces.** The login is split into the challenge, the start (signed
+  document or token) and the finish (poll, redeem); `Login`, `LoginRequest` (the unsigned
+  document with a fresh challenge, for a person to sign elsewhere within its ten minutes)
+  and `LoginSigned` (a document signed elsewhere) are exported for the tool.
+- **A command seam.** `adapter.ProvideCommand` and `rhea run NAME …`: a market's tool that
+  talks to a statutory system for the owner but writes nothing to the log; handled
+  before the store opens; the kernel and the CLI name no command (invariant 8).
+  `markets/pl` provides `ksef-certificate`: `test-seal` (a seal for a made-up NIP, TEST
+  only), `login-file` (the unsigned login document), `request -kind login|offline -name
+  … -out DIR [-signed FILE]` (with the signed file, or with the certificate in
+  `RHEA_KSEF_CERT`/`RHEA_KSEF_KEY`); files are written once and never overwritten, the key
+  readable by its owner only, and the tool prints the two variables that switch Rhea to
+  the issued certificate. `ClientFromEnv` and the tool read one configuration
+  (`ksef2FromEnv`).
+- **Rehearsed live on TEST, the route Novi will take minus the owner's signature.**
+  `TestKSeFCertificateEnrollLive` (gated by `RHEA_LIVE_KSEF_ENROLL`, since each run creates
+  certificates): signed login with a self-made seal, a login certificate issued (serial
+  01F33EC518362167, two years, issuer "TEST CCK KSeF", key usage digital signature) and an
+  Offline one (non-repudiation), then a login with the issued certificate and an invoice
+  accepted (8058083055-20261019-48B661C00000-B0). KSeF adds "(uwierzytelnienie)" /
+  "(offline)" to the subject's common name. The tool itself was run the same way.
+- **Not yet proven.** The `-signed` route with a real trusted-profile or qualified
+  signature: it needs the owner's signature on DEMO (Novi), the one step left for a
+  person. The Offline certificate's use (signing QR code II) arrives with the QR codes.
+- **Test:** `TestEnrollCertificate` against a fake certificate authority in the fake
+  Ministry (requests must carry exactly the returned identity, issued on the second
+  poll; the issued certificate logs in; nothing after a token login; the login file and a
+  login signed elsewhere).
