@@ -3804,3 +3804,18 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   Ministry (requests must carry exactly the returned identity, issued on the second
   poll; the issued certificate logs in; nothing after a token login; the login file and a
   login signed elsewhere).
+
+## 2026-10-19 — KSeF certificates for users: parked until the real Rhea UI
+
+- KK: everything a user does happens in Rhea's interface; the command-line tool
+  (`rhea run ksef-certificate`) is developer tooling for TEST only, never a user step.
+- The user flow, as the market does it: the owner or the accountant generates the
+  certificate in the Ministry's KSeF application (Profil Zaufany or a qualified
+  signature), saves the `.crt`, the `.key` and the password, and uploads them on a
+  "Połączenie z KSeF" screen in Rhea, which checks the connection at once, says plainly
+  what is wrong if it fails, keeps the key encrypted outside the books, and warns before
+  the two years end. The token moves to the same screen until 31 December.
+- Owed when the UI is built: reading a password-protected key, encrypted storage of the
+  certificate and password, the kernel's upload/test/status endpoints, the screen, the
+  expiry warning; to verify on TEST: renewal by Rhea with the current certificate.
+- Shipped and kept: certificate login and enrollment (c41f1c7, c960f19), proven on TEST.
