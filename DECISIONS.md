@@ -4175,3 +4175,21 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   thirty: statute 432 (92% right), memory 670 (90%), rule 42 (95%), abstain 185. The
   statute share is low on the papers without an act to open — economics, finance, cost
   accounting, audit — which is where the standards and the KSB now in reach will tell.
+- **The learning-rate test, two runs, 2026-10-19 night.** Financial accounting block I, 30
+  questions, 25 lessons (every answer of the v34 sitting not from a rule). Run one: 25
+  bundles approved on the throwaway in 14 m 27 s, the share from rules 5 → 15 of 30, all
+  fifteen right. Run two, drafts kept: 25 approved in 14 m 20 s, 5 → 17 of 30, all right;
+  six lessons "already answered" by a bundle drafted earlier in the same run. The score
+  stayed at 54 of 60 both times — she already read those answers — what moved is whose
+  they are. The author drafted some 60 rules, 20 doors and 15 types per run, each bundle
+  warranted by the article: going-concern valuation (art. 29), fire damage during
+  construction (art. 28 ust. 3), finished-goods write-downs, price deviations on goods,
+  reclassification to investment property (art. 31 ust. 4), advances for fixed assets,
+  loans at nominal value (art. 28 ust. 11), idle capacity, development costs and the
+  distribution restriction (art. 33), deferred tax (art. 37), a change of inventory
+  policy (art. 8), FX equity investments, sales of materials. Five of twenty-five rest on
+  IFRS and are not a small company's pack; the rest go to review. The pass line KK and I
+  set (twenty points in an hour, rules that stand against the text) is cleared twice
+  over; the slower part is now the person reading the drafts. Next: the review of the
+  block I drafts into pack v35 with its story tests, then the same loop block by block
+  and paper by paper, each measured the same way.
