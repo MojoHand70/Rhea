@@ -51,6 +51,10 @@ type Corpus struct {
 	// documents carry, the stock the counts found — computed values a count
 	// cannot judge. Money totals are decimal strings, int totals plain.
 	ExpectSum []Sum `json:"expect_sum,omitempty"`
+	// ExpectPostings are the entries an examiner's model solution lists
+	// (DIRECTION 2026-10-19, "The auditor's exam"): the postings on one
+	// account and side add up to the amount the solution gives.
+	ExpectPostings []Posting `json:"expect_postings,omitempty"`
 	// Packs are pack files, relative to the corpus file, installed and
 	// approved before the intake: the vocabulary and the channels the
 	// documents need (the documents pack, a market's reader).
@@ -78,6 +82,59 @@ type Sum struct {
 	Type  string `json:"type"`
 	Field string `json:"field"`
 	Total string `json:"total"`
+}
+
+// Posting expects the postings on Account (its code) and Side ("debit" or
+// "credit") to total Amount, money as a decimal string — in Book when set.
+type Posting struct {
+	Account string `json:"account"`
+	Side    string `json:"side"`
+	Amount  string `json:"amount"`
+	Book    string `json:"book,omitempty"`
+}
+
+// checkPostings reads the books the way an examiner reads a solution: the
+// solution's lines on one account and side add up to what the books hold
+// on that account and side (a solution lists several lines on one account;
+// the books may compress or split an entry and still agree). Accounts are
+// referenced by id in a posting's state; their codes resolve here.
+func checkPostings(accounts, postings []core.Object, want []Posting) []string {
+	code := map[string]string{}
+	for _, a := range accounts {
+		code[a.ID] = fmt.Sprint(a.State["code"])
+	}
+	type key struct{ account, side, book string }
+	wanted := map[key]int64{}
+	var order []key
+	for _, w := range want {
+		k := key{w.Account, w.Side, w.Book}
+		if _, seen := wanted[k]; !seen {
+			order = append(order, k)
+		}
+		minor, err := core.ParseMoney(w.Amount)
+		if err != nil {
+			return []string{fmt.Sprintf("posting %s %s: amount %q", w.Account, w.Side, w.Amount)}
+		}
+		wanted[k] += minor
+	}
+	var mismatch []string
+	for _, k := range order {
+		var total int64
+		for _, p := range postings {
+			if code[fmt.Sprint(p.State["account"])] != k.account || fmt.Sprint(p.State["side"]) != k.side {
+				continue
+			}
+			if k.book != "" && fmt.Sprint(p.State["book"]) != k.book {
+				continue
+			}
+			n, _ := p.State["amount"].(float64) // JSON numbers; money is minor units
+			total += int64(n)
+		}
+		if total != wanted[k] {
+			mismatch = append(mismatch, fmt.Sprintf("posting %s %s: %s of %s", k.account, k.side, core.FormatMoney(total), core.FormatMoney(wanted[k])))
+		}
+	}
+	return mismatch
 }
 
 // Where expects Count objects of Type whose Field equals Value.
@@ -290,6 +347,15 @@ func Run(ctx context.Context, st *store.Store, a *agent.Agent, model string, c C
 	if err != nil {
 		return rep, err
 	}
+	// A bundle drafted without a sample applies from the first fact in the
+	// log: a case set in an earlier year (an exam task) is explained from
+	// its own dates, not from today's.
+	opening := ""
+	for _, e := range raws {
+		if opening == "" || e.OccurredAt < opening {
+			opening = e.OccurredAt
+		}
+	}
 	for _, task := range c.Tasks {
 		row := Row{Intent: task.Intent}
 		var sample core.Event
@@ -305,7 +371,7 @@ func Run(ctx context.Context, st *store.Store, a *agent.Agent, model string, c C
 			return rep, err
 		}
 		if task.Mode == "bundle" {
-			if err := runBundle(ctx, st, x, a, model, ask, k, &row); err != nil {
+			if err := runBundle(ctx, st, x, a, model, ask, k, &row, opening); err != nil {
 				return rep, err
 			}
 			rep.Rows = append(rep.Rows, row)
@@ -425,6 +491,17 @@ func Run(ctx context.Context, st *store.Store, a *agent.Agent, model string, c C
 			rep.Mismatch = append(rep.Mismatch, fmt.Sprintf("sum of %s.%s: %s of %s", sm.Type, sm.Field, got, sm.Total))
 		}
 	}
+	if len(c.ExpectPostings) > 0 {
+		accounts, err := st.ObjectsByType(ctx, "account")
+		if err != nil {
+			return rep, err
+		}
+		postings, err := st.ObjectsByType(ctx, "posting")
+		if err != nil {
+			return rep, err
+		}
+		rep.Mismatch = append(rep.Mismatch, checkPostings(accounts, postings, c.ExpectPostings)...)
+	}
 	types := make([]string, 0, len(c.Expect))
 	for t := range c.Expect {
 		types = append(types, t)
@@ -490,10 +567,10 @@ const maxReasks = 1
 // runBundle plays one bundle task as a person would: draft, land as drafts,
 // dry-run the whole bundle, approve it whole when the dry run is clean — and
 // when the draft is refused, say why and ask again, once.
-func runBundle(ctx context.Context, st *store.Store, x *exec.Executor, a *agent.Agent, model string, ask agent.Ask, k *network.Knowledge, row *Row) error {
+func runBundle(ctx context.Context, st *store.Store, x *exec.Executor, a *agent.Agent, model string, ask agent.Ask, k *network.Knowledge, row *Row, opening string) error {
 	after := ""
 	for {
-		refusal, rejected, err := tryBundle(ctx, st, x, a, model, ask, k, row, after)
+		refusal, rejected, err := tryBundle(ctx, st, x, a, model, ask, k, row, after, opening)
 		if err != nil {
 			return err
 		}
@@ -527,7 +604,7 @@ func compact(draft json.RawMessage) json.RawMessage {
 // approver would send back — empty when the bundle was approved or there
 // was nothing to approve — and the id of the bundle refused and rejected on
 // the record, if one was stored.
-func tryBundle(ctx context.Context, st *store.Store, x *exec.Executor, a *agent.Agent, model string, ask agent.Ask, k *network.Knowledge, row *Row, after string) (refusal, rejected string, err error) {
+func tryBundle(ctx context.Context, st *store.Store, x *exec.Executor, a *agent.Agent, model string, ask agent.Ask, k *network.Knowledge, row *Row, after, opening string) (refusal, rejected string, err error) {
 	bd, err := a.DraftBundle(ctx, ask)
 	if errors.Is(err, agent.ErrAlreadyAnswered) {
 		// Nothing to approve; whether that was right, the state check says.
@@ -543,6 +620,9 @@ func tryBundle(ctx context.Context, st *store.Store, x *exec.Executor, a *agent.
 		return row.Error, "", nil
 	}
 	date := ask.Sample.OccurredAt
+	if date == "" {
+		date = opening
+	}
 	if date == "" {
 		date = "2026-01-01"
 	}

@@ -57,7 +57,7 @@ var (
 	reTask     = regexp.MustCompile(`^Zadanie\s+(\d+)\b`)
 	reBlock    = regexp.MustCompile(`^BLOK\s+TEMATYCZNY\s+([IVX]+)`)
 	reYear     = regexp.MustCompile(`\b(20\d\d)\b`)
-	reFooter   = regexp.MustCompile(`^(str\.\s*\d+|strona\s*\d+|Komisja Egzaminacyjna)$`)
+	reFooter   = regexp.MustCompile(`^\W*(str\.?\s*\d+|strona\s*\d+|Komisja Egzaminacyjna)\W*$`) // ". str. 3" on some papers
 )
 
 // paperLines groups the XML's text elements into baselines.
@@ -153,18 +153,20 @@ func ParsePIBRPaper(xml []byte, source string) (exam.Paper, error) {
 		if q == nil {
 			return
 		}
-		key := ""
+		var marked []string
 		for i, b := range optBold {
-			if !b {
-				continue
+			if b {
+				marked = append(marked, q.Options[i].Letter)
 			}
-			if key != "" { // two bold options: the paper's marking is ambiguous
-				key = ""
-				break
-			}
-			key = q.Options[i].Letter
 		}
-		q.Key = key
+		switch len(marked) {
+		case 1:
+			q.Key = marked[0]
+		case 0:
+			q.KeyNote = "no option marked in bold"
+		default: // the paper's marking is ambiguous; a person decides
+			q.KeyNote = "options marked in bold: " + strings.Join(marked, ", ")
+		}
 		p.Questions = append(p.Questions, *q)
 		q, opt, optBold = nil, nil, nil
 	}
@@ -177,9 +179,13 @@ func ParsePIBRPaper(xml []byte, source string) (exam.Paper, error) {
 		}
 	}
 	nextN := 1
+	headerTop := -1 // the running header's baseline: the first line of page 1, repeated on every page
 	for _, ln := range paperLines(string(xml)) {
 		text := ln.text
-		if ln.top <= 40 { // the page header: subject and year
+		if headerTop < 0 {
+			headerTop = ln.top
+		}
+		if ln.top <= headerTop+8 { // the page header: subject and year
 			if ln.page == 1 && p.Subject == "" {
 				if m := reYear.FindString(text); m != "" {
 					p.Year = m
@@ -314,8 +320,16 @@ func init() {
 }
 
 const pibrExamHelp = `rhea run pibr-exam -paper FILE [-packs a.json,b.json] [-who bare,host] [-parallel N] [-only N] [-out FILE] [-dry]
+rhea run pibr-exam -paper FILE -task I-1 [-cases DIR] [-seeds DIR] [-recompile] [-dry]
 
   -paper    a Commission sample paper: the PDF (pdftohtml runs on it) or its pdftohtml -xml output
+  -task     sit one situational task through the kernel instead of the test questions: the
+            model reads the task and its model solution into a case file under -cases
+            (testdata/exam/<paper>/<task>.json — review it; it is kept and reused unless
+            -recompile), then the case runs as an implementation in miniature on a throwaway
+            log: the finance base from -seeds (testdata/seed), the chart and the facts as
+            intake, the author drafting a bundle per intent, the approver reading each dry
+            run, and the books read against the solution's entries
   -packs    the pack files the host is taught (default: the Poland pack and the common packs)
   -who      who sits it: bare (the model alone), host (with the rulebook open), or both
   -parallel calls in flight at once (default 6)
@@ -345,6 +359,10 @@ func runPIBRExam(ctx context.Context, args []string, out io.Writer) error {
 	only := fs.Int("only", 0, "sit only the first N questions")
 	outPath := fs.String("out", "", "write the JSON report here")
 	dry := fs.Bool("dry", false, "parse only")
+	taskRef := fs.String("task", "", "sit this situational task through the kernel, e.g. I-1")
+	casesDir := fs.String("cases", "testdata/exam", "where case files live")
+	seedsDir := fs.String("seeds", "testdata/seed", "the finance base a case runs on")
+	recompile := fs.Bool("recompile", false, "read the task again even if its case file exists")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -359,6 +377,9 @@ func runPIBRExam(ctx context.Context, args []string, out io.Writer) error {
 	if err != nil {
 		return err
 	}
+	if *taskRef != "" {
+		return sitTask(ctx, out, paper, *taskRef, *casesDir, *seedsDir, *recompile, *dry)
+	}
 	keyed, blocks := 0, map[string]int{}
 	for _, q := range paper.Questions {
 		blocks[q.Block]++
@@ -370,7 +391,11 @@ func runPIBRExam(ctx context.Context, args []string, out io.Writer) error {
 		paper.Subject, paper.Year, len(paper.Questions), len(blocks), keyed, len(paper.Questions)-keyed, len(paper.Tasks))
 	if *dry {
 		for _, q := range paper.Questions {
-			fmt.Fprintf(out, "  %s-%d key=%s options=%d: %.80s\n", q.Block, q.N, q.Key, len(q.Options), q.Stem)
+			fmt.Fprintf(out, "  %s-%d key=%s options=%d: %.80s", q.Block, q.N, q.Key, len(q.Options), q.Stem)
+			if q.KeyNote != "" {
+				fmt.Fprintf(out, "  [%s]", q.KeyNote)
+			}
+			fmt.Fprintln(out)
 		}
 		for _, t := range paper.Tasks {
 			fmt.Fprintf(out, "  task %s-%d: %d chars, solution %d chars\n", t.Block, t.N, len(t.Text), len(t.Solution))
@@ -412,6 +437,63 @@ func runPIBRExam(ctx context.Context, args []string, out io.Writer) error {
 			return err
 		}
 		fmt.Fprintf(out, "every answer kept in %s\n", *outPath)
+	}
+	return nil
+}
+
+// sitTask reads one situational task into a case (or takes the case file a
+// person reviewed) and sits it through the kernel.
+func sitTask(ctx context.Context, out io.Writer, paper exam.Paper, ref, casesDir, seedsDir string, recompile, dry bool) error {
+	var task *exam.Task
+	for i := range paper.Tasks {
+		if fmt.Sprintf("%s-%d", paper.Tasks[i].Block, paper.Tasks[i].N) == strings.ToUpper(ref) {
+			task = &paper.Tasks[i]
+		}
+	}
+	if task == nil {
+		return fmt.Errorf("no task %s on this paper (%d tasks)", ref, len(paper.Tasks))
+	}
+	casePath := filepath.Join(casesDir, exam.Slug(paper.Subject+" "+paper.Year), strings.ToLower(ref)+".json")
+	c, err := exam.ReadCase(casePath)
+	switch {
+	case err == nil && !recompile:
+		fmt.Fprintf(out, "case %s as reviewed\n", casePath)
+	case err == nil || errors.Is(err, os.ErrNotExist):
+		fmt.Fprintf(out, "the model reads task %s (%d chars, solution %d chars)…\n", ref, len(task.Text), len(task.Solution))
+		c, err = exam.CompileCase(ctx, agent.New(), paper, *task)
+		if err != nil {
+			return err
+		}
+		if err := exam.WriteCase(casePath, c); err != nil {
+			return err
+		}
+		fmt.Fprintf(out, "case written to %s — review it before trusting the result\n", casePath)
+	default:
+		return err
+	}
+	fmt.Fprintf(out, "%s, task %s: %s\n  %d accounts, %d events, %d intents, %d expected postings, %d answers for the host\n",
+		c.Paper, c.Task, c.Company, len(c.Accounts), len(c.Events), len(c.Intents), len(c.ExpectPostings), len(c.Answers))
+	for _, in := range c.Intents {
+		fmt.Fprintf(out, "  intent: %s\n", in)
+	}
+	for _, p := range c.ExpectPostings {
+		fmt.Fprintf(out, "  expects: %s %s %s\n", p.Account, p.Side, p.Amount)
+	}
+	if c.Notes != "" {
+		fmt.Fprintf(out, "  notes: %s\n", c.Notes)
+	}
+	if dry {
+		return nil
+	}
+	rep, err := exam.SitCase(ctx, agent.New(), agent.Model(), casePath, seedsDir)
+	if err != nil {
+		return err
+	}
+	fmt.Fprint(out, "\n"+rep.Verbose()) // every draft and dry run: what the author did with the case
+	if rep.Done() {
+		fmt.Fprintln(out, "DONE: the books hold every entry the solution expects, nothing left unexplained")
+	} else {
+		fmt.Fprintln(out, "NOT DONE")
 	}
 	return nil
 }

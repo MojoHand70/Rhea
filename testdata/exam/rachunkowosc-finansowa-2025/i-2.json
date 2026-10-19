@@ -1,0 +1,244 @@
+{
+  "paper": "Rachunkowość finansowa 2025",
+  "task": "I-2",
+  "company": "BeZet SA",
+  "accounts": [
+    {
+      "code": "135",
+      "name": "Rachunek bankowy walutowy",
+      "type": "asset"
+    },
+    {
+      "code": "234",
+      "name": "Kasa walutowa / Rozrachunki z pracownikami (zaliczki)",
+      "type": "asset"
+    },
+    {
+      "code": "300",
+      "name": "Rozliczenie zakupu / Przedpłaty na środki trwałe",
+      "type": "asset"
+    },
+    {
+      "code": "402",
+      "name": "Usługi obce",
+      "type": "expense"
+    },
+    {
+      "code": "405",
+      "name": "Podróże służbowe (diety)",
+      "type": "expense"
+    },
+    {
+      "code": "751",
+      "name": "Koszty operacji finansowych (ujemne różnice kursowe)",
+      "type": "expense"
+    },
+    {
+      "code": "752",
+      "name": "Przychody operacji finansowych (dodatnie różnice kursowe)",
+      "type": "revenue"
+    },
+    {
+      "code": "760",
+      "name": "Pozostałe przychody operacyjne (kary umowne)",
+      "type": "revenue"
+    }
+  ],
+  "events": [
+    {
+      "event_type": "advance.issued",
+      "occurred_at": "2024-07-05",
+      "payload": {
+        "amount_eur": "400",
+        "amount_pln": "1694.16",
+        "currency": "EUR",
+        "description": "Zaliczka na delegację służbową pobrana z kasy walutowej",
+        "rate": "4.2354"
+      }
+    },
+    {
+      "event_type": "advance.settled",
+      "occurred_at": "2024-07-20",
+      "payload": {
+        "advance_amount_eur": "400",
+        "advance_amount_pln": "1694.16",
+        "advance_rate": "4.2354",
+        "currency": "EUR",
+        "description": "Rozliczenie zaliczki na delegację: faktura hotelowa 300 EUR kurs 4,3322 + diety 100 EUR kurs 4,3155",
+        "diet_eur": "100",
+        "diet_pln": "431.55",
+        "diet_rate": "4.3155",
+        "exchange_diff_pln": "37.05",
+        "exchange_diff_type": "dodatnie",
+        "hotel_invoice_date": "2024-07-12",
+        "hotel_invoice_eur": "300",
+        "hotel_invoice_pln": "1299.66",
+        "hotel_invoice_rate": "4.3322"
+      }
+    },
+    {
+      "event_type": "prepayment.paid",
+      "occurred_at": "2024-11-15",
+      "payload": {
+        "amount_eur": "100000",
+        "amount_pln": "425690.00",
+        "currency": "EUR",
+        "description": "Przekazanie zaliczki na zakup aparatury – modernizacja linii produkcyjnej",
+        "note": "Zaliczka wyceniona po kursie FIFO stanu na rachunku bankowym z 30 czerwca 2024 (100 000 EUR @ 4,2569)",
+        "rate_fifo": "4.2569"
+      }
+    },
+    {
+      "event_type": "prepayment.valued",
+      "occurred_at": "2024-12-31",
+      "payload": {
+        "amount_eur": "100000",
+        "amount_pln": "425690.00",
+        "currency": "EUR",
+        "description": "Wycena bilansowa przedpłaty – brak przeszacowania zgodnie z KSR nr 11 pkt 6.18",
+        "exchange_diff_pln": "0.00",
+        "exchange_diff_type": "brak",
+        "rate": "4.2569"
+      }
+    },
+    {
+      "event_type": "penalty.received",
+      "occurred_at": "2024-11-15",
+      "payload": {
+        "amount_eur": "1000",
+        "amount_pln": "4356.00",
+        "currency": "EUR",
+        "description": "Wpływ kary umownej od kontrahenta włoskiego",
+        "rate_nbp": "4.3560"
+      }
+    },
+    {
+      "event_type": "penalty.valued",
+      "occurred_at": "2024-12-31",
+      "payload": {
+        "amount_eur": "1000",
+        "amount_pln_balance_date": "4434.00",
+        "amount_pln_initial": "4356.00",
+        "currency": "EUR",
+        "description": "Wycena bilansowa środków z kary umownej na rachunku bankowym",
+        "exchange_diff_pln": "78.00",
+        "exchange_diff_type": "dodatnie",
+        "rate_nbp_balance_date": "4.4340",
+        "rate_nbp_initial": "4.3560"
+      }
+    }
+  ],
+  "intents": [
+    "When advance.issued arrives, book the advance issued from foreign currency cash: debit 234 (1694.16), credit 135 (1694.16) at rate 4.2354 for 400 EUR.",
+    "When advance.settled arrives, book hotel expense: debit 402 (1299.66) at rate 4.3322 for 300 EUR; book diet expense: debit 405 (431.55) at rate 4.3155 for 100 EUR; credit 234 (1694.16) to clear advance; book positive exchange difference 37.05: debit 234 (37.05), credit 752 (37.05). [1694.16 - (1299.66 + 431.55) = 37.05 additional income]",
+    "When prepayment.paid arrives, book the foreign currency prepayment for fixed asset modernisation at FIFO rate 4.2569: debit 300 (425690.00), credit 135 (425690.00).",
+    "When prepayment.valued arrives at 2024-12-31, no revaluation is performed per KSR nr 11 pkt 6.18 – prepayment stays at 425690.00; no exchange difference entry.",
+    "When penalty.received arrives, book the contractual penalty received on the bank account at NBP mid rate 4.3560: debit 135 (4356.00), credit 760 (4356.00).",
+    "When penalty.valued arrives at 2024-12-31, revalue the 1000 EUR on the bank account from 4.3560 to 4.4340 (difference 78.00 PLN): debit 135 (78.00), credit 752 (78.00)."
+  ],
+  "expect_postings": [
+    {
+      "account": "234",
+      "side": "debit",
+      "amount": "1694.16"
+    },
+    {
+      "account": "135",
+      "side": "credit",
+      "amount": "1694.16"
+    },
+    {
+      "account": "402",
+      "side": "debit",
+      "amount": "1299.66"
+    },
+    {
+      "account": "405",
+      "side": "debit",
+      "amount": "431.55"
+    },
+    {
+      "account": "752",
+      "side": "credit",
+      "amount": "37.05"
+    },
+    {
+      "account": "234",
+      "side": "credit",
+      "amount": "1694.16"
+    },
+    {
+      "account": "300",
+      "side": "debit",
+      "amount": "425690.00"
+    },
+    {
+      "account": "135",
+      "side": "credit",
+      "amount": "425690.00"
+    },
+    {
+      "account": "135",
+      "side": "debit",
+      "amount": "4356.00"
+    },
+    {
+      "account": "760",
+      "side": "credit",
+      "amount": "4356.00"
+    },
+    {
+      "account": "135",
+      "side": "debit",
+      "amount": "78.00"
+    },
+    {
+      "account": "752",
+      "side": "credit",
+      "amount": "78.00"
+    }
+  ],
+  "answers": [
+    {
+      "question": "1a: Kwota i kurs zaliczki na delegację służbową",
+      "answer": "400 EUR × 4,2354 zł = 1.694,16 zł"
+    },
+    {
+      "question": "1b: Kwota i kurs faktury za hotel",
+      "answer": "300 EUR × 4,3322 zł (kurs średni NBP z dnia 11 lipca 202X, tj. dnia poprzedzającego wystawienie faktury 12 lipca) = 1.299,66 zł"
+    },
+    {
+      "question": "1c: Kwota i kurs diet",
+      "answer": "100 EUR × 4,3155 zł (kurs średni NBP z dnia 19 lipca 202X, tj. dnia poprzedzającego rozliczenie 20 lipca) = 431,55 zł"
+    },
+    {
+      "question": "1d: Różnice kursowe przy rozliczeniu zaliczki – charakter",
+      "answer": "1.694,16 – (1.299,66 + 431,55) = 37,05 zł – różnice dodatnie"
+    },
+    {
+      "question": "2a: Kwota przekazanej przedpłaty (zaliczki) na zakup aparatury",
+      "answer": "100.000 EUR × 4,2569 zł (kurs FIFO – środki na rachunku bankowym wycenione 30 czerwca 202X) = 425.690,00 zł"
+    },
+    {
+      "question": "2b: Wycena bilansowa przedpłaty (zaliczki) na dzień 31 grudnia 202X",
+      "answer": "100.000 EUR × 4,2569 zł = 425.690,00 zł – brak przeszacowania na dzień bilansowy zgodnie z KSR nr 11 pkt 6.18"
+    },
+    {
+      "question": "2c: Różnice kursowe dotyczące przedpłaty (zaliczki) – charakter",
+      "answer": "0 zł – różnice kursowe nie występują (brak)"
+    },
+    {
+      "question": "3a: Kwota wpływu kary umownej",
+      "answer": "1.000 EUR × 4,3560 zł (kurs średni NBP z dnia 14 listopada 202X, tj. dnia poprzedzającego wpływ 15 listopada) = 4.356,00 zł"
+    },
+    {
+      "question": "3b: Wycena bilansowa środków na rachunku bankowym z tytułu kary umownej",
+      "answer": "1.000 EUR × 4,4340 zł (kurs średni NBP na 31 grudnia 202X) = 4.434,00 zł"
+    },
+    {
+      "question": "3c: Różnice kursowe dotyczące kary umownej – kwota i charakter",
+      "answer": "1.000 EUR × (4,4340 – 4,3560) = 1.000 × 0,0780 = 78,00 zł – różnice dodatnie"
+    }
+  ],
+  "notes": "Kurs dla faktury hotelowej (12 lipca) przyjęto jako kurs średni NBP z dnia poprzedniego roboczego – 11 lipca (4,3322); kurs dla diet rozliczanych 20 lipca przyjęto jako kurs NBP z 19 lipca (4,3155), zgodnie z UoR art. 30. Zaliczka przekazana 15 listopada wyceniona po kursie FIFO: 100 000 EUR dostępnych na rachunku po kursie 4,2569 (stan z 30 czerwca); po przekazaniu tej zaliczki na rachunku nie ma już środków eurowych, więc kara umowna wpłynęła jako nowy wpływ wyceniany po kursie NBP z 14 listopada (4,3560). Reviewed 2026-10-19: the Commission's solution is a table of amounts, rates and exchange differences (1 694,16; 1 299,66; 431,55; +37,05; 425 690,00; 0; 4 356; 4 434; +78), not entries; the entries here are the reviewer's reading of those amounts against the task's chart. The advance is cleared net (Ct 234 1 694,16, the +37,05 difference to 752), the model's first reading had it gross on one side only."
+}

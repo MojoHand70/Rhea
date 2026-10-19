@@ -34,6 +34,10 @@ type Question struct {
 	Stem    string   `json:"stem"`
 	Options []Option `json:"options"`
 	Key     string   `json:"key,omitempty"`
+	// KeyNote says why Key is empty: the paper marked no option, or more
+	// than one (the parser's reading of the body's marking, for a person
+	// to check against the page).
+	KeyNote string `json:"key_note,omitempty"`
 }
 
 // Prompt renders the question as the candidate sees it.

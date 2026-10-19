@@ -3877,3 +3877,37 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   review register; the other 2025 papers (the harness takes any of the 75); the host
   reading the statute's text once retrieval by article lands, so "memory" becomes
   "statute" with a dated version.
+
+## 2026-10-19 — The auditor's exam, step 3: a situational task through the kernel
+
+- The claim that matters is the one no chatbot can print: the ERP did the task with its own
+  hands. `rhea run pibr-exam -paper FILE -task I-1` reads the task and the Commission's
+  model solution into a case (`internal/exam.Case`: the company's chart as it is given,
+  the facts as events, the instructions as intents, the solution's entries as expected
+  postings, the rest as questions for the host), written to testdata/exam/<paper>/<task>.json
+  for a person to review — the file is kept and reused, the model reads only once — and
+  sits it as an implementation in miniature on a throwaway log: the finance base seeded,
+  the chart and the facts as intake, the author drafting a bundle per intent, the recorded
+  approver reading each dry run, then the books read against the solution. The reading is
+  the model's (as it reads a PDF into a fact); the drafting is the author's normal loop;
+  the posting is the kernel's; the comparison is exact in values.
+- Two tasks of financial accounting 2025 DONE on the first sitting after review. I-1 (a
+  write-down of shares at the balance sheet date): the chart approved, Dt 751 / Ct 145
+  10 000, nothing unexplained. I-2 (foreign currency: an advance and its settlement, a
+  prepayment under KSR 11 pkt 6.18, a penalty received and revalued — six events, twelve
+  lines): seven bundles approved, one after a re-ask in which the kernel refused an entry
+  that did not balance and the author balanced it; every amount the Commission's table
+  gives is in the books.
+- Three things learned. A bundle drafted without a sample was dated 2026-01-01 and never
+  reached a case set in 2024: eval now dates it from the first fact in the log. The
+  solution's lines on one account add up: `expect_postings` compares, per account and
+  side, the solution's total with the books' — an entry compressed or split still agrees.
+  Not every solution is entries: I-2's is a table of amounts, rates and differences, so
+  the case's entries are the reviewer's reading of those amounts against the task's chart,
+  said so in the case's notes; the review is a real step, and the model's first reading
+  of I-2 had one line gross on one side and net on the other.
+- A case may carry only facts whose entries the solution lists (a purchase the task does
+  not book is context, folded into the event it bears on), and every event must be named
+  by an intent — otherwise the case can never be done. The parser now says why a question
+  has no key (no option in bold, or two), and the page footer ". str. 3" of some papers no
+  longer glues itself to the last option.

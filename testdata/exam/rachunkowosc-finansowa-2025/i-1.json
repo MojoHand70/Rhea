@@ -1,0 +1,96 @@
+{
+  "paper": "Rachunkowość finansowa 2025",
+  "task": "I-1",
+  "company": "MANITU S.A.",
+  "accounts": [
+    {
+      "code": "141",
+      "name": "Krótkoterminowe aktywa finansowe – udziały i akcje",
+      "type": "asset"
+    },
+    {
+      "code": "145",
+      "name": "Odpisy aktualizujące krótkoterminowe aktywa finansowe",
+      "type": "asset"
+    },
+    {
+      "code": "750",
+      "name": "Przychody finansowe",
+      "type": "revenue"
+    },
+    {
+      "code": "751",
+      "name": "Koszty finansowe",
+      "type": "expense"
+    },
+    {
+      "code": "760",
+      "name": "Pozostałe przychody operacyjne",
+      "type": "revenue"
+    },
+    {
+      "code": "761",
+      "name": "Pozostałe koszty operacyjne",
+      "type": "expense"
+    },
+    {
+      "code": "813",
+      "name": "Kapitał z aktualizacji wyceny",
+      "type": "equity"
+    }
+  ],
+  "events": [
+    {
+      "event_type": "shares.valued",
+      "occurred_at": "2024-12-31",
+      "payload": {
+        "cost_per_share": "54.00",
+        "currency": "PLN",
+        "issuer": "ABOCO S.A.",
+        "market_price_per_share": "44.00",
+        "quantity": "1000",
+        "write_down": "10000.00",
+        "purchased_on": "2024-06-30",
+        "market": "GPW (NewConnect at purchase)"
+      }
+    }
+  ],
+  "intents": [
+    "When shares.valued arrives for ABOCO S.A., book the write_down as a valuation allowance: debit 751, credit 145, amount 10000.00 PLN (1000 shares × (54.00 – 44.00))."
+  ],
+  "expect_postings": [
+    {
+      "account": "751",
+      "side": "debit",
+      "amount": "10000.00"
+    },
+    {
+      "account": "145",
+      "side": "credit",
+      "amount": "10000.00"
+    }
+  ],
+  "answers": [
+    {
+      "question": "Tabela 1: Sposób ujęcia wyceny bilansowej akcji spółki ABOCO S.A. na dzień 31.12.2024 r.",
+      "answer": "Utworzenie odpisu aktualizującego dla krótkoterminowych aktywów finansowych: 1 000 szt. × (54 zł – 44 zł) = 10 000 zł; Dt 751 / Ct 145."
+    },
+    {
+      "question": "Tabela 2: Pozycja bilansu, w której na dzień 31.12.2024 r. powinny być wykazane obligacje skarbowe.",
+      "answer": "B.III.1.b. Krótkoterminowe aktywa finansowe w pozostałych jednostkach – Inne papiery wartościowe."
+    },
+    {
+      "question": "Tabela 3: Pozycja bilansu, w której na dzień 31.12.2024 r. powinny być wykazane akcje spółki ABOCO S.A.",
+      "answer": "B.III.1.b. Krótkoterminowe aktywa finansowe w pozostałych jednostkach – Udziały lub akcje."
+    },
+    {
+      "question": "Tabela 4: Czy metoda wyceny na dzień bilansowy obligacji skarbowych stosowana przez MANITU (skorygowana cena nabycia) jest prawidłowa?",
+      "answer": "Prawidłowa. Uzasadnienie: Dla inwestycji krótkoterminowych, dla których określony został termin wymagalności, jedyną dopuszczalną przez ustawę o rachunkowości metodą wyceny na dzień bilansowy jest metoda według skorygowanej ceny nabycia."
+    },
+    {
+      "question": "Tabela 5: Czy metoda wyceny na dzień bilansowy akcji spółki COTOBO S.A. stosowana przez MANITU (skorygowana cena nabycia) jest prawidłowa?",
+      "answer": "Nieprawidłowa. Prawidłowa metoda: wycena według ceny (wartości) rynkowej albo według ceny nabycia lub ceny (wartości) rynkowej, zależnie od tego, która z nich jest niższa. Uzasadnienie: Dla inwestycji krótkoterminowych, dla których istnieje aktywny rynek, ustawa o rachunkowości dopuszcza wyłącznie metodę wyceny według ceny rynkowej albo według ceny nabycia lub ceny rynkowej, zależnie od tego, która jest niższa; metoda skorygowanej ceny nabycia nie jest tu dopuszczalna."
+    }
+  ],
+  "notes": "Reviewed 2026-10-19: the June purchase is context — the solution books no entry for it — so its facts ride on shares.valued (cost per share, quantity, purchased_on); the bonds and the COTOBO shares are questions for the host, not entries. Dates: the task says June 2024 without a day; 2024-06-30 taken."
+}
