@@ -49,6 +49,11 @@ type Host struct {
 	Agent    *agent.Agent
 	rulebook string
 	known    map[string]bool
+	// warranted maps a provision (act name, article, unit) a rule's warrant
+	// cites to that rule: an answer resting on such a provision is the
+	// pack's lesson, and is labelled "rule" with the rule named — the pack
+	// was taught it, with that very article.
+	warranted []warrantedProvision
 	// Library, when set, is the statute in front of the host: before
 	// answering it names the provisions it would consult, is handed their
 	// text, and may then answer "statute" — only citing a provision it was
@@ -63,6 +68,11 @@ type Provision struct {
 	Unit    string `json:"unit,omitempty"`
 }
 
+type warrantedProvision struct {
+	rule string
+	c    statute.Citation
+}
+
 // NewHost opens the rulebook once for every question.
 func NewHost(a *agent.Agent, rules []core.Rule, types []core.ObjectType) *Host {
 	h := &Host{Agent: a, known: map[string]bool{}}
@@ -70,6 +80,13 @@ func NewHost(a *agent.Agent, rules []core.Rule, types []core.ObjectType) *Host {
 	sb.WriteString("The rulebook — the pack's rules, each as rule_id: description [basis: citations]:\n")
 	for _, r := range rules {
 		h.known[r.ID] = true
+		if r.Warrant != nil {
+			for _, cit := range r.Warrant.Citations {
+				if c, ok := statute.ParseCitation(cit); ok {
+					h.warranted = append(h.warranted, warrantedProvision{rule: r.ID, c: c})
+				}
+			}
+		}
 		fmt.Fprintf(&sb, "- %s: %s", r.ID, strings.TrimSpace(r.Description))
 		if r.Warrant != nil {
 			fmt.Fprintf(&sb, " [%s", r.Warrant.Basis)
@@ -233,5 +250,65 @@ func (h *Host) Answer(ctx context.Context, q Question) (Answer, error) {
 	default:
 		ans.Source = SourceMemory
 	}
+	// An answer resting on a provision a rule's warrant carries is the
+	// pack's lesson: it is labelled "rule", the rule named, so a reader can
+	// open the rule and its warrant beside the answer.
+	if ans.Source == SourceStatute || ans.Source == SourceMemory {
+		if rule, ok := h.warrantedBy(ans.Citation); ok {
+			ans.Note = strings.TrimSpace(fmt.Sprintf("rests on a provision the pack's rule %s is warranted by (answered as %s). ", rule, ans.Source) + ans.Note)
+			ans.Source, ans.RuleID = SourceRule, rule
+		}
+	}
 	return ans, nil
+}
+
+// warrantedBy finds a rule whose warrant cites the provision an answer
+// cites: the same act and article, and a unit that is the other's or
+// contains it ("ust. 7" against "ust. 7" or against a warrant that names
+// the article whole).
+func (h *Host) warrantedBy(citation string) (string, bool) {
+	c, ok := statute.ParseCitation(citation)
+	if !ok {
+		return "", false
+	}
+	for _, w := range h.warranted {
+		if !strings.EqualFold(w.c.Article, c.Article) || !h.sameAct(w.c.Act, c.Act) {
+			continue
+		}
+		wu, cu := unitKey(w.c.Unit), unitKey(c.Unit)
+		if wu == "" || cu == "" || strings.HasPrefix(cu, wu) || strings.HasPrefix(wu, cu) {
+			return w.rule, true
+		}
+	}
+	return "", false
+}
+
+func (h *Host) sameAct(a, b string) bool {
+	if h.Library != nil {
+		x, okx := h.Library.Act(a)
+		y, oky := h.Library.Act(b)
+		if okx && oky {
+			return x.Key == y.Key
+		}
+	}
+	return normAct(a) == normAct(b)
+}
+
+// unitKey keeps the leading "ust. N pkt M" of a unit, lower-cased, so that
+// "ust. 7 (t.j. …)" and "ust. 7:" compare equal.
+func unitKey(u string) string {
+	u = strings.ToLower(strings.TrimSpace(u))
+	var sb strings.Builder
+	for _, f := range strings.Fields(u) {
+		if strings.HasPrefix(f, "(") || strings.HasSuffix(f, ":") || f == "i" || f == "oraz" || f == "w" || f == "zw." {
+			break
+		}
+		sb.WriteString(strings.Trim(f, ",;:"))
+		sb.WriteString(" ")
+	}
+	return strings.TrimSpace(sb.String())
+}
+
+func normAct(s string) string {
+	return strings.Join(strings.Fields(strings.ToLower(strings.NewReplacer(".", "", ",", "").Replace(s))), " ")
 }

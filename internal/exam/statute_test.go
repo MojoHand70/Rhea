@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"rhea/internal/agent"
+	"rhea/internal/core"
 	"rhea/internal/statute"
 )
 
@@ -73,5 +74,27 @@ func TestAnUnknownActHandsNothing(t *testing.T) {
 	}
 	if ans.Source != SourceMemory {
 		t.Errorf("%+v", ans)
+	}
+}
+
+func TestAnAnswerOnAWarrantedProvisionIsTheRules(t *testing.T) {
+	h, _ := scriptedHost(t,
+		`{"consult": [{"act": "UoR", "article": "28"}]}`,
+		`{"answer": "c", "source": "statute", "citation": "ustawa o rachunkowości art. 28 ust. 1 pkt 5: „inwestycje krótkoterminowe – według ceny rynkowej”", "note": ""}`)
+	h2 := NewHost(h.Agent, []core.Rule{{ID: "pl-value-investments", Warrant: &core.Warrant{Basis: "statute",
+		Citations: []string{"ustawa o rachunkowości (t.j. Dz.U. 2026 poz. 522) art. 28 ust. 1 pkt 5: inwestycje krótkoterminowe wycenia się według ceny rynkowej"}}}}, nil)
+	h2.Library = h.Library
+	ans, err := h2.Answer(context.Background(), Question{N: 1, Stem: "?", Options: []Option{{"a", "x"}, {"b", "y"}, {"c", "z"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ans.Source != SourceRule || ans.RuleID != "pl-value-investments" || !strings.Contains(ans.Note, "answered as statute") {
+		t.Errorf("%+v", ans)
+	}
+	// a different unit of the same article is not the rule's lesson
+	h3 := NewHost(h.Agent, []core.Rule{{ID: "pl-other", Warrant: &core.Warrant{Basis: "statute", Citations: []string{"ustawa o rachunkowości art. 28 ust. 1 pkt 1: środki trwałe"}}}}, nil)
+	h3.Library = h.Library
+	if ans, _ := h3.Answer(context.Background(), Question{N: 1, Stem: "?", Options: []Option{{"a", "x"}, {"b", "y"}, {"c", "z"}}}); ans.Source != SourceStatute {
+		t.Errorf("pkt 1 is not pkt 5: %+v", ans)
 	}
 }

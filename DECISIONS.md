@@ -4028,3 +4028,19 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   February with 800 off 071, 11 200 into 761 and 12 000 off 010, no charge after; a
   printer at an absurd 600% depreciated in two months and scrapped without a cost line.
   The pack's pinned counts moved (26 types, 28 views, 60 rules, 12 doors, 50 events).
+- **The first answers from rules (2026-10-19, pack v32 with the statute open).** On the
+  v32 sitting the host answered question I-4 — a small entity may depreciate by the tax
+  rules if its policy says so — by quoting UoR art. 32 ust. 7 from the statute in front
+  of it, the very provision the new depreciation rule's warrant carries. An answer that
+  rests on a provision a pack rule is warranted by is the pack's lesson: the host now
+  labels it "rule" and names the rule (the same act and article, the unit the warrant's
+  or inside it; a note says how it was first answered), so a reader opens the rule and
+  its warrant beside the answer. Measured: financial accounting 2 of 49 from rules (both
+  `pl-accept-fixed-asset`: art. 3 ust. 1 pkt 15 and art. 32 ust. 7), theory 3 of 60
+  (`pl-post-explained-bank-operation` on art. 3 ust. 1 pkt 32, `pl-set-cost-account` on
+  art. 10), all five right; the host 68 and 108 points on the two papers (one sitting
+  each; the financial accounting host moved 77 → 68 between two sittings of the same
+  questions, the usual reminder). The share from rules is no longer zero, and it moves
+  the only way it can: a lesson at a time, each with its article.
+- Owed: the live databases are on pack v31 — `rhea pack packs/pl/pack.json` drafts the
+  upgrade bundle and a person approves it in the shell; not done from here.
