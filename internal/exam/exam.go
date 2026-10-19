@@ -82,6 +82,7 @@ type Scoring struct {
 // always its own.
 const (
 	SourceRule    = "rule"    // a rule of the pack, named, with the citation relied on
+	SourceStatute = "statute" // a provision the host was handed the text of, quoted — no rule covers it
 	SourceMemory  = "memory"  // the model's own knowledge of the statute — the pack was never taught it
 	SourceModel   = "model"   // the bare model, no rulebook
 	SourceAbstain = "abstain" // left blank: never taught, not sure
@@ -97,9 +98,12 @@ type Answer struct {
 	Citation string `json:"citation,omitempty"`
 	Note     string `json:"note,omitempty"`
 	Key      string `json:"key,omitempty"`
-	Verdict  string `json:"verdict"` // correct | wrong | blank | unkeyed | error
-	Points   int    `json:"points"`
-	Err      string `json:"error,omitempty"`
+	// Consulted lists the provisions the host asked for and was handed
+	// before answering, when a statute library was open.
+	Consulted json.RawMessage `json:"consulted,omitempty"`
+	Verdict   string          `json:"verdict"` // correct | wrong | blank | unkeyed | error
+	Points    int             `json:"points"`
+	Err       string          `json:"error,omitempty"`
 }
 
 // An Answerer sits the paper: the bare model, or the host.

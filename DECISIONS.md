@@ -3961,3 +3961,33 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   task without entries — the host's to answer in words") and keeps the case with its
   answers for the host, instead of failing. Five tasks read so far: four sat and done,
   one the host's.
+
+## 2026-10-19 — The statute in front of the host: `internal/statute`, `rhea run pl-acts`
+
+- Retrieval by citation, not by similarity (DECISIONS 2026-10-19, "Are the rules enough"):
+  the host names the provisions it would open, is handed their text, and may answer
+  "statute" only citing a provision it was handed and quoting its decisive words; a
+  citation of anything else is counted as memory. Every statute answer therefore carries
+  the act, the article, the quoted words and the consolidation the text was made from.
+  No vector store, nothing outside the stack: the library is JSON files of acts split
+  into articles, the host's consult step is one model call that returns citations, and
+  the lookup is by the act's name and the article's number.
+- The acts are a market's. `rhea run pl-acts fetch` takes each act the Poland pack cites
+  from the Sejm's ELI service (api.sejm.gov.pl/eli: the metadata and the Chancellery's
+  consolidated text, type U) and reads the PDF into articles, the page headers dropped,
+  the consolidation basis from the first page's margin kept whole. Ten acts today — UoR,
+  VAT, CIT, PIT, Ordynacja, KSH, KC, KP, the auditors' act, PCC — 4 413 articles, in
+  data/acts/pl (out of git; regenerable; the texts are public domain). `internal/statute`
+  is generic: an act, its names, its articles, a lookup, a citation parser.
+- **Measured, host with the statute open, three 2025 papers, claude-sonnet-4-6.** Theory:
+  94 → 111 of 120 (78% → 92%), above the bare model's 105; 41 of 60 answers from quoted
+  statute, 40 right. Financial accounting: 64 → 67 of 98; statute 18, 16 right; wrong
+  answers 8 → 5. Tax I: 52 → 51 points but PASSED (both blocks over 60%); statute 17,
+  16 right. Across the three: statute answers 72 right of 76 (95%), memory 48 of 55 (87%).
+  Where the act is in the library the host now reads it rather than remembers it; where
+  it is not (banks, insurers, KSR, the regulations), it still remembers or abstains. The
+  share from rules is unchanged at zero; this step makes the host's words verifiable, not
+  the pack's rules larger.
+- Owed: the KSR and the regulations the papers cite (the Ministry publishes them outside
+  ELI); the rulebook's own warrants resolved to text in front of the host; a second sitting
+  of each paper, as always.

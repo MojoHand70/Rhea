@@ -21,6 +21,7 @@ import (
 	"rhea/internal/core"
 	"rhea/internal/exam"
 	"rhea/internal/pack"
+	"rhea/internal/statute"
 )
 
 // The Commission's sample papers (Komisja Egzaminacyjna at the Polska Izba
@@ -332,6 +333,9 @@ rhea run pibr-exam -paper FILE -task I-1 [-cases DIR] [-seeds DIR] [-recompile] 
             run, and the books read against the solution's entries
   -packs    the pack files the host is taught (default: the Poland pack and the common packs)
   -who      who sits it: bare (the model alone), host (with the rulebook open), or both
+  -statute  the acts the host may consult (rhea run pl-acts fetch writes them; default data/acts/pl
+            when it exists; "" for none): before answering, the host names the provisions it would
+            open, is handed their text, and may answer "statute" only citing one of them
   -parallel calls in flight at once (default 6)
   -only     sit only the first N questions (a smoke run)
   -out      write the report with every answer as JSON here
@@ -363,6 +367,7 @@ func runPIBRExam(ctx context.Context, args []string, out io.Writer) error {
 	casesDir := fs.String("cases", "testdata/exam", "where case files live")
 	seedsDir := fs.String("seeds", "testdata/seed", "the finance base a case runs on")
 	recompile := fs.Bool("recompile", false, "read the task again even if its case file exists")
+	statuteDir := fs.String("statute", "data/acts/pl", "the acts the host may consult; \"\" for none")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -417,7 +422,22 @@ func runPIBRExam(ctx context.Context, args []string, out io.Writer) error {
 				return err
 			}
 			fmt.Fprintf(out, "the host is taught %d rules and %d object types\n", len(rules), len(types))
-			sitters = append(sitters, exam.NewHost(a, rules, types))
+			host := exam.NewHost(a, rules, types)
+			if *statuteDir != "" {
+				if lib, err := statute.Load(*statuteDir); err == nil && len(lib.Acts()) > 0 {
+					host.Library = lib
+					var names []string
+					for _, act := range lib.Acts() {
+						names = append(names, act.Key)
+					}
+					fmt.Fprintf(out, "the host may consult %d acts: %s\n", len(names), strings.Join(names, ", "))
+				} else if err != nil && !errors.Is(err, os.ErrNotExist) {
+					return err
+				} else {
+					fmt.Fprintln(out, "no acts to consult (rhea run pl-acts fetch)")
+				}
+			}
+			sitters = append(sitters, host)
 		default:
 			return fmt.Errorf("-who: %q is neither bare nor host", w)
 		}
