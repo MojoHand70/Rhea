@@ -3928,5 +3928,8 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   Reports in research_notes/pibr-egzaminy/results/round2/.
 - Parser debt paid the same hour: the papers that print their footer as "Strona 4" (a
   capital S) had it glued onto the last option; the footer pattern is now case-insensitive
-  and the ten papers carry 3 unkeyed questions instead of 14 (two of them the Commission's
-  own: no option or every option in bold). The next round sits them.
+  — and the audit paper's footer sets its word and its number four pixels apart, so the
+  baseline grouping widened to five and the footer pattern takes either alone. The ten
+  papers carry 5 unkeyed questions instead of 14: two the Commission's own (no option, or
+  every option, in bold), one on finance that swallowed its neighbours' options, two to
+  check by eye. The next round sits them.

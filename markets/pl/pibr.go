@@ -57,7 +57,7 @@ var (
 	reTask     = regexp.MustCompile(`^Zadanie\s+(\d+)\b`)
 	reBlock    = regexp.MustCompile(`^BLOK\s+TEMATYCZNY\s+([IVX]+)`)
 	reYear     = regexp.MustCompile(`\b(20\d\d)\b`)
-	reFooter   = regexp.MustCompile(`(?i)^\W*(str\.?\s*\d+|strona\s*\d+|Komisja Egzaminacyjna)\W*$`) // ". str. 3", "Strona 4" on some papers
+	reFooter   = regexp.MustCompile(`(?i)^\W*(str\.?\s*\d*|strona\s*\d*|\d{1,3}|Komisja Egzaminacyjna)\W*$`) // ". str. 3", "Strona 4", "strona" + "13" apart
 )
 
 // paperLines groups the XML's text elements into baselines.
@@ -76,7 +76,7 @@ func paperLines(xml string) []paperLine {
 		if text == "" {
 			continue
 		}
-		if n := len(lines); n > 0 && lines[n-1].page == page && abs(lines[n-1].top-top) <= 3 {
+		if n := len(lines); n > 0 && lines[n-1].page == page && abs(lines[n-1].top-top) <= 5 { // a footer's word and number sit 4 apart
 			lines[n-1].text += "  " + text
 			lines[n-1].bold = lines[n-1].bold || bold
 			continue
