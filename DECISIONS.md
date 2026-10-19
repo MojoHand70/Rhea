@@ -3991,3 +3991,40 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
 - Owed: the KSR and the regulations the papers cite (the Ministry publishes them outside
   ELI); the rulebook's own warrants resolved to text in front of the host; a second sitting
   of each paper, as always.
+
+## 2026-10-19 — Pack v32: fixed assets, the first auditor's lesson in the pack
+
+- The register's most-tested missing row (EXAM.md 6.1.2 a; financial accounting 2025,
+  question I-4) as pack rules, modelled on the prepaid-cost mechanism: a door
+  `accept_fixed_asset` (the OT: name, inventory number, KŚT, initial value, the day of
+  acceptance, the annual rate from the Wykaz) makes a `fixed_asset` (v2: annual rate,
+  start, status with a lifecycle active → depreciated → disposed) and books Wn 010 /
+  Ma 080 on the day of acceptance; when a month opens, every active asset gets a
+  `depreciation_charge` for the month that ended — cumulative, initial value × rate ×
+  months since the start ÷ 12, capped at the initial value, minus what was charged
+  before, so a skipped month is caught up at once — booked Wn 401 / Ma 071 on the last
+  day of its month; an asset whose charges reach its value is depreciated and charged no
+  more; a door `dispose_fixed_asset` (the LT) moves it to disposed and books Wn 071 for
+  the accumulated depreciation, Wn 761 for the net value, Ma 010 for the initial value,
+  a fully depreciated asset without the zero cost line. Account 080 Środki trwałe w
+  budowie joins the chart; views `srodki-trwale` and `amortyzacja`; the dictionary names
+  it all. Every rule's warrant quotes the provision from the act in the library: UoR art.
+  32 ust. 1 (systematic, planned, from acceptance to the equalling of charges and value
+  or liquidation), ust. 3 (rate and method set on the day of acceptance), ust. 7 (a small
+  entity may depreciate by the tax rules — Rhea's default for a small firm: one rate,
+  tax and balance), CIT art. 16h ust. 1 pkt 1 (from the month after entry into the
+  register) and 16i ust. 1 (the Wykaz), KSR 11.
+- Simplifications of this version, said in the history: one rate (tax = balance), the
+  linear method, no charge in the month of disposal, improvements (art. 31 ust. 1) and
+  the sale of an asset in the next version. A degressive method, a separate balance
+  rate (with the deferred tax it creates) and low-value one-off write-offs (art. 32 ust.
+  6) are the rows that follow.
+- The kernel learned one thing: a door may ask for a decimal (`activity` input type
+  "decimal", a string across the boundary like money) — a rate, a coefficient; the shell
+  shows it as a number. Without it the rate had no honest type (int cannot say 2,5 for a
+  building). Doors take decimals from here on.
+- Test: `TestFixedAssets` in the shell — a laptop at 20% from 15 September: 200 a month
+  from October, a skipped January caught up with February's charge of 400, scrapped on 10
+  February with 800 off 071, 11 200 into 761 and 12 000 off 010, no charge after; a
+  printer at an absurd 600% depreciated in two months and scrapped without a cost line.
+  The pack's pinned counts moved (26 types, 28 views, 60 rules, 12 doors, 50 events).

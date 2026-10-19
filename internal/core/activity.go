@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -233,7 +234,7 @@ func (a Activity) Validate() error {
 		}
 		byName[f.Name] = f
 		switch f.Type {
-		case "string", "int", "date", "money", "file":
+		case "string", "int", "decimal", "date", "money", "file":
 		case "enum":
 			if len(f.Values) == 0 {
 				return fmt.Errorf("activity %q input %q: enum needs values", a.Name, f.Name)
@@ -462,6 +463,23 @@ func coerceInput(f FieldDef, v any) (any, error) {
 			return nil, fmt.Errorf("input %q: %w", f.Name, err)
 		}
 		return s, nil // canonical boundary encoding: the string crosses, int64 lives in Go
+	case "decimal":
+		// a rate, a coefficient: exact, as a string across the boundary like
+		// money; a JSON number is accepted and written out exactly
+		switch n := v.(type) {
+		case string:
+			if _, err := parseDecimal(n); err != nil {
+				return nil, fmt.Errorf("input %q: %q is not a decimal", f.Name, n)
+			}
+			return n, nil
+		case float64:
+			return strconv.FormatFloat(n, 'f', -1, 64), nil
+		case int:
+			return strconv.Itoa(n), nil
+		case int64:
+			return strconv.FormatInt(n, 10), nil
+		}
+		return nil, fmt.Errorf("input %q wants a decimal, got %T", f.Name, v)
 	case "enum":
 		s, ok := v.(string)
 		if !ok {

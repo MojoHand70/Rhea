@@ -150,7 +150,7 @@ function fmtMoney(v) { // "-1234.56" canonical → locale-grouped; BigInt keeps 
   catch { return v; }
 }
 
-const numericType = (t) => t === "money" || t === "int";
+const numericType = (t) => t === "money" || t === "int" || t === "decimal";
 
 /* Formats one typed cell into DOM content. A ref shows its label and is a
    door: it opens the referenced object's detail view (every type has one,

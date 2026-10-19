@@ -1,9 +1,14 @@
 {
   "pack": "pl",
-  "version": 31,
+  "version": 32,
   "stage": "initial",
   "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
   "history": [
+    {
+      "versions": "32",
+      "date": "2026-10-19",
+      "changes": "Środki trwałe (lekcja z egzaminu na biegłego rewidenta 2025: rachunkowość finansowa, pytanie I-4; rejestr EXAM.md 6.1.2 a): przyjęcie do używania (OT) przez drzwi accept_fixed_asset księguje Wn 010 / Ma 080 i otwiera plan amortyzacji liniowej od pierwszego miesiąca po przyjęciu; gdy otwiera się miesiąc, każdy czynny środek dostaje odpis za miesiąc, który się skończył — narastająco, stawka roczna z Wykazu stawek (jednostka mała stosuje stawki podatkowe także bilansowo, art. 32 ust. 7 UoR), Wn 401 / Ma 071 — aż suma odpisów zrówna się z wartością początkową (status depreciated); likwidacja (LT) przez drzwi dispose_fixed_asset: Wn 071 umorzenie, Wn 761 wartość netto / Ma 010 (status disposed); nowe konto 080 Środki trwałe w budowie; widoki srodki-trwale i amortyzacja. Uproszczenia tej wersji: jedna stawka (podatkowa = bilansowa), metoda liniowa, miesiąc likwidacji bez odpisu, ulepszenia i sprzedaż środka — w następnej wersji."
+    },
     {
       "versions": "31",
       "date": "2026-10-18",
@@ -536,7 +541,7 @@
     },
     {
       "name": "fixed_asset",
-      "version": 1,
+      "version": 2,
       "domain": "finance",
       "is_document": false,
       "label_field": "name",
@@ -608,7 +613,50 @@
         {
           "name": "sale_date",
           "type": "date"
+        },
+        {
+          "name": "annual_rate",
+          "type": "decimal",
+          "required": true,
+          "description": "roczna stawka amortyzacji w procentach (z Wykazu stawek, zał. nr 1 do ustawy o CIT)"
+        },
+        {
+          "name": "start",
+          "type": "date",
+          "required": true,
+          "description": "pierwszy miesiąc amortyzacji: miesiąc następujący po przyjęciu do używania"
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "active",
+            "depreciated",
+            "disposed"
+          ]
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
         }
+      ],
+      "lifecycle": {
+        "field": "status",
+        "transitions": {
+          "active": [
+            "depreciated",
+            "disposed"
+          ],
+          "depreciated": [
+            "disposed"
+          ]
+        }
+      },
+      "amendable": [
+        "liquidation_date",
+        "liquidation_reason"
       ]
     },
     {
@@ -1686,6 +1734,47 @@
           "required": true
         }
       ]
+    },
+    {
+      "name": "depreciation_charge",
+      "version": 1,
+      "domain": "finance",
+      "label_field": "period",
+      "fields": [
+        {
+          "name": "asset",
+          "type": "ref<fixed_asset>",
+          "required": true
+        },
+        {
+          "name": "period",
+          "type": "string",
+          "required": true,
+          "description": "miesiąc odpisu, YYYY-MM"
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true,
+          "description": "odpis za ten miesiąc (z nadrobieniem miesięcy pominiętych)"
+        },
+        {
+          "name": "charged",
+          "type": "money",
+          "required": true,
+          "description": "suma odpisów od początku amortyzacji po tym miesiącu"
+        },
+        {
+          "name": "closed_on",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ]
     }
   ],
   "view_defs": [
@@ -2098,7 +2187,7 @@
     },
     {
       "view_id": "slownik",
-      "version": 5,
+      "version": 6,
       "notion": "words",
       "title": "Słownik",
       "domain": "finance",
@@ -2269,6 +2358,11 @@
           "prepaid_release": {
             "label": "Część RMK za miesiąc",
             "plural": "Części RMK za miesiące",
+            "shape": "card"
+          },
+          "depreciation_charge": {
+            "label": "Odpis amortyzacyjny za miesiąc",
+            "plural": "Odpisy amortyzacyjne",
             "shape": "card"
           }
         },
@@ -2483,7 +2577,14 @@
           "prepaid_release.period": "Miesiąc",
           "prepaid_release.amount": "Wraca w koszty",
           "prepaid_release.released": "W kosztach razem",
-          "prepaid_release.closed_on": "Na dzień"
+          "prepaid_release.closed_on": "Na dzień",
+          "depreciation_charge.asset": "Środek trwały",
+          "depreciation_charge.period": "Miesiąc",
+          "depreciation_charge.amount": "Odpis za miesiąc",
+          "depreciation_charge.charged": "Umorzenie razem",
+          "depreciation_charge.closed_on": "Na dzień",
+          "fixed_asset.annual_rate": "Stawka roczna %",
+          "fixed_asset.start": "Amortyzacja od"
         },
         "values": {
           "account.type": {
@@ -2716,6 +2817,11 @@
           "prepaid_cost.status": {
             "active": "rozliczany",
             "done": "rozliczony"
+          },
+          "fixed_asset.status": {
+            "active": "w używaniu",
+            "depreciated": "umorzony",
+            "disposed": "zlikwidowany"
           }
         },
         "events": {
@@ -2754,7 +2860,9 @@
           "cit_limit.defined": "Limity CIT na rok",
           "company.cit_status.declared": "Status CIT na rok",
           "cit_advance.recomputed": "Zaliczka na CIT przeliczona",
-          "cost.spread": "Koszt rozłożony w czasie"
+          "cost.spread": "Koszt rozłożony w czasie",
+          "fixed_asset.accepted": "Przyjęcie środka trwałego do używania (OT)",
+          "fixed_asset.disposed": "Likwidacja środka trwałego (LT)"
         },
         "doors": {
           "appoint_deputy": "wyznaczenie zastępcy",
@@ -2786,7 +2894,9 @@
           "set_tax_treatment": "znaczenie konta dla podatku dochodowego",
           "declare_cit_status": "status CIT na rok",
           "recompute_cit_advance": "przeliczenie zaliczki na CIT",
-          "spread_cost": "rozłożenie kosztu w czasie (RMK)"
+          "spread_cost": "rozłożenie kosztu w czasie (RMK)",
+          "accept_fixed_asset": "przyjęcie środka trwałego do używania (OT)",
+          "dispose_fixed_asset": "likwidacja środka trwałego (LT)"
         },
         "account_groups": {
           "0": "Aktywa trwałe",
@@ -3327,6 +3437,99 @@
             "sum_of": [
               "open"
             ]
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "srodki-trwale",
+      "version": 1,
+      "notion": "list",
+      "title": "Środki trwałe",
+      "domain": "finance",
+      "function": "fixed_assets",
+      "spec": {
+        "object_type": "fixed_asset",
+        "columns": [
+          {
+            "field": "number",
+            "label": "Nr inw."
+          },
+          {
+            "field": "name",
+            "label": "Nazwa"
+          },
+          {
+            "field": "kst",
+            "label": "KŚT"
+          },
+          {
+            "field": "initial_value",
+            "label": "Wartość początkowa"
+          },
+          {
+            "field": "accepted_date",
+            "label": "Przyjęty"
+          },
+          {
+            "field": "annual_rate",
+            "label": "Stawka %"
+          },
+          {
+            "field": "start",
+            "label": "Amortyzacja od"
+          },
+          {
+            "field": "status",
+            "label": "Status"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "amortyzacja",
+      "version": 1,
+      "notion": "analysis",
+      "title": "Amortyzacja środków trwałych",
+      "domain": "finance",
+      "function": "fixed_assets",
+      "spec": {
+        "sql": "WITH ch AS (SELECT json_extract_string(state,'$.asset') AS a, SUM(CAST(json_extract(state,'$.amount') AS BIGINT)) AS charged, MAX(json_extract_string(state,'$.period')) AS last_period FROM objects WHERE object_type = 'depreciation_charge' GROUP BY 1) SELECT COALESCE(json_extract_string(f.state,'$.number'), '') AS number, json_extract_string(f.state,'$.name') AS name, CAST(json_extract(f.state,'$.initial_value') AS BIGINT) AS initial_value, COALESCE(ch.charged, 0) AS charged, CAST(json_extract(f.state,'$.initial_value') AS BIGINT) - COALESCE(ch.charged, 0) AS net, COALESCE(ch.last_period, '') AS last_period, json_extract_string(f.state,'$.status') AS status, f.object_id AS _of FROM objects f LEFT JOIN ch ON ch.a = f.object_id WHERE f.object_type = 'fixed_asset' ORDER BY json_extract_string(f.state,'$.status'), json_extract_string(f.state,'$.accepted_date'), f.object_id",
+        "columns": [
+          {
+            "field": "number",
+            "label": "Nr inw.",
+            "type": "string"
+          },
+          {
+            "field": "name",
+            "label": "Nazwa",
+            "type": "string"
+          },
+          {
+            "field": "initial_value",
+            "label": "Wartość początkowa",
+            "type": "money"
+          },
+          {
+            "field": "charged",
+            "label": "Umorzenie",
+            "type": "money"
+          },
+          {
+            "field": "net",
+            "label": "Wartość netto",
+            "type": "money"
+          },
+          {
+            "field": "last_period",
+            "label": "Ostatni odpis",
+            "type": "string"
+          },
+          {
+            "field": "status",
+            "label": "Status",
+            "type": "string"
           }
         ]
       }
@@ -5532,6 +5735,329 @@
           }
         }
       }
+    },
+    {
+      "rule_id": "pl-accept-fixed-asset",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Przyjęcie środka trwałego do używania (OT) staje się obiektem fixed_asset: wartość początkowa, dzień przyjęcia, roczna stawka z Wykazu, metoda liniowa; amortyzacja zaczyna się od pierwszego dnia miesiąca następującego po przyjęciu",
+      "spec": {
+        "match": {
+          "event_type": "fixed_asset.accepted"
+        },
+        "effect": {
+          "object": {
+            "type": "fixed_asset",
+            "fields": {
+              "name": "=$.name",
+              "number": "=coalesce($.number, \"\")",
+              "kst": "=coalesce($.kst, \"\")",
+              "description": "=coalesce($.description, \"\")",
+              "initial_value": "=$.initial_value",
+              "accepted_date": "=$.accepted_date",
+              "amortization_type": "linear",
+              "annual_rate": "=$.rate",
+              "start": "=end_of_month($.accepted_date) + 1",
+              "status": "active",
+              "book": "pl-stat"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 3 ust. 1 pkt 15: środki trwałe — rzeczowe aktywa trwałe o przewidywanym okresie ekonomicznej użyteczności dłuższym niż rok, kompletne, zdatne do użytku i przeznaczone na potrzeby jednostki",
+          "ustawa o rachunkowości art. 32 ust. 3: „Na dzień przyjęcia środka trwałego do używania należy ustalić okres lub stawkę i metodę jego amortyzacji”",
+          "ustawa o CIT (t.j. Dz. U. z 2026 r. poz. 554) art. 16h ust. 1 pkt 1: odpisów dokonuje się „począwszy od pierwszego miesiąca następującego po miesiącu, w którym ten środek lub wartość wprowadzono do ewidencji […] do końca tego miesiąca, w którym następuje zrównanie sumy odpisów amortyzacyjnych z ich wartością początkową lub w którym postawiono je w stan likwidacji, zbyto lub stwierdzono ich niedobór”",
+          "ustawa o CIT art. 16i ust. 1: odpisów dokonuje się przy zastosowaniu stawek z Wykazu stawek amortyzacyjnych (załącznik nr 1 do ustawy) — stawkę podaje osoba przyjmująca środek",
+          "ustawa o rachunkowości art. 32 ust. 7: jednostka mikro i jednostka mała mogą dokonywać odpisów amortyzacyjnych lub umorzeniowych od środków trwałych według zasad określonych w przepisach podatkowych — Rhea przyjmuje dla małej firmy stawkę podatkową także bilansowo; inna stawka bilansowa to następna wersja"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-fixed-asset-acceptance",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Przyjęty środek trwały księguje się w dniu przyjęcia: Wn 010 Środki trwałe / Ma 080 Środki trwałe w budowie, w wartości początkowej",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "fixed_asset"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.accepted_date",
+            "lines": [
+              {
+                "account": "010",
+                "debit": "=$.state.initial_value"
+              },
+              {
+                "account": "080",
+                "credit": "=$.state.initial_value"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "wzorcowy plan kont: 010 Środki trwałe, 071 Umorzenie środków trwałych, 080 Środki trwałe w budowie, 401 Amortyzacja, 761 Pozostałe koszty operacyjne",
+          "ustawa o rachunkowości art. 28 ust. 1 pkt 1 i art. 31 ust. 1: wartość początkowa to cena nabycia lub koszt wytworzenia"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-depreciate-fixed-assets",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Gdy zaczyna się miesiąc, każdy czynny środek trwały dostaje odpis amortyzacyjny za miesiąc, który się skończył: narastająco — wartość początkowa razy stawka roczna razy miesiące od początku amortyzacji, przez dwanaście, nie więcej niż wartość początkowa — minus odpisy już dokonane; miesiące pominięte nadrabia od razu",
+      "spec": {
+        "match": {
+          "event_type": "time.month_opened",
+          "where": [
+            {
+              "formula": "=count(a in objects(fixed_asset, status, \"active\")) > 0"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "depreciation_charge",
+            "each": "=objects(fixed_asset, status, \"active\")",
+            "fields": {
+              "asset": "=$.line.object_id",
+              "period": "=month($.doc.date - 1)",
+              "closed_on": "=$.doc.date - 1",
+              "book": "pl-stat",
+              "charged": "=min($.line.state.initial_value, round($.line.state.initial_value * $.line.state.annual_rate / 100 * max(months_between($.line.state.start, $.doc.date - 1) + 1, 0) / 12, 2, half_up))",
+              "amount": "=max(min($.line.state.initial_value, round($.line.state.initial_value * $.line.state.annual_rate / 100 * max(months_between($.line.state.start, $.doc.date - 1) + 1, 0) / 12, 2, half_up)) - (sum(c in objects(depreciation_charge, asset, $.line.object_id) : c.amount)), 0)"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 32 ust. 1: „Odpisów amortyzacyjnych lub umorzeniowych od środka trwałego dokonuje się drogą systematycznego, planowego rozłożenia jego wartości początkowej na ustalony okres amortyzacji. Rozpoczęcie amortyzacji następuje nie wcześniej niż po przyjęciu środka trwałego do używania, a jej zakończenie – nie później niż z chwilą zrównania wartości odpisów amortyzacyjnych lub umorzeniowych z wartością początkową środka trwałego lub przeznaczenia go do likwidacji, sprzedaży lub stwierdzenia jego niedoboru”",
+          "ustawa o CIT (t.j. Dz. U. z 2026 r. poz. 554) art. 16h ust. 1 pkt 1: odpisów dokonuje się „począwszy od pierwszego miesiąca następującego po miesiącu, w którym ten środek lub wartość wprowadzono do ewidencji […] do końca tego miesiąca, w którym następuje zrównanie sumy odpisów amortyzacyjnych z ich wartością początkową lub w którym postawiono je w stan likwidacji, zbyto lub stwierdzono ich niedobór”",
+          "ustawa o CIT art. 16i ust. 1: odpisów dokonuje się przy zastosowaniu stawek z Wykazu stawek amortyzacyjnych (załącznik nr 1 do ustawy) — stawkę podaje osoba przyjmująca środek",
+          "KSR 11 „Środki trwałe” pkt 8.1–8.3: amortyzacja planowa od momentu przyjęcia do używania, metoda i stawka ustalone na ten dzień; pkt 9.3: zaprzestanie amortyzacji z chwilą rozchodu"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-depreciation",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Odpis amortyzacyjny za miesiąc księguje się na ostatni dzień tego miesiąca: Wn 401 Amortyzacja / Ma 071 Umorzenie środków trwałych",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "depreciation_charge"
+            },
+            {
+              "formula": "=$.state.amount > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.closed_on",
+            "lines": [
+              {
+                "account": "401",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "071",
+                "credit": "=$.state.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "wzorcowy plan kont: 010 Środki trwałe, 071 Umorzenie środków trwałych, 080 Środki trwałe w budowie, 401 Amortyzacja, 761 Pozostałe koszty operacyjne",
+          "ustawa o rachunkowości art. 31 ust. 2: wartość początkową zmniejszają odpisy amortyzacyjne lub umorzeniowe dokonywane w celu uwzględnienia utraty wartości na skutek używania lub upływu czasu"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-finish-depreciation",
+      "priority": 300,
+      "effective_from": "2026-01-01",
+      "description": "Środek trwały, którego suma odpisów zrównała się z wartością początkową, jest umorzony (depreciated) i nie dostaje dalszych odpisów",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "depreciation_charge"
+            },
+            {
+              "formula": "=$.state.charged >= $.state.asset.initial_value"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "fixed_asset",
+            "target": "=$.state.asset",
+            "set": {
+              "status": "depreciated"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 32 ust. 1: „Odpisów amortyzacyjnych lub umorzeniowych od środka trwałego dokonuje się drogą systematycznego, planowego rozłożenia jego wartości początkowej na ustalony okres amortyzacji. Rozpoczęcie amortyzacji następuje nie wcześniej niż po przyjęciu środka trwałego do używania, a jej zakończenie – nie później niż z chwilą zrównania wartości odpisów amortyzacyjnych lub umorzeniowych z wartością początkową środka trwałego lub przeznaczenia go do likwidacji, sprzedaży lub stwierdzenia jego niedoboru”",
+          "ustawa o CIT (t.j. Dz. U. z 2026 r. poz. 554) art. 16h ust. 1 pkt 1: odpisów dokonuje się „począwszy od pierwszego miesiąca następującego po miesiącu, w którym ten środek lub wartość wprowadzono do ewidencji […] do końca tego miesiąca, w którym następuje zrównanie sumy odpisów amortyzacyjnych z ich wartością początkową lub w którym postawiono je w stan likwidacji, zbyto lub stwierdzono ich niedobór”"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-dispose-fixed-asset",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Likwidacja albo wycofanie środka trwałego (LT): środek przechodzi w stan disposed z dniem i powodem; odpisów już nie dostaje",
+      "spec": {
+        "match": {
+          "event_type": "fixed_asset.disposed"
+        },
+        "effect": {
+          "amend": {
+            "type": "fixed_asset",
+            "target": "=$.asset",
+            "set": {
+              "status": "disposed",
+              "liquidation_date": "=$.date",
+              "liquidation_reason": "=$.reason"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 32 ust. 1 (zakończenie amortyzacji z chwilą przeznaczenia do likwidacji) i art. 3 ust. 1 pkt 32 lit. b (pozostałe koszty operacyjne: koszty związane ze zbyciem i likwidacją środków trwałych) — wartość netto zlikwidowanego środka to pozostały koszt operacyjny; w tej wersji miesiąc likwidacji nie dostaje już odpisu",
+          "KSR 11 „Środki trwałe” pkt 8.1–8.3: amortyzacja planowa od momentu przyjęcia do używania, metoda i stawka ustalone na ten dzień; pkt 9.3: zaprzestanie amortyzacji z chwilą rozchodu"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-fixed-asset-disposal",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Likwidacja środka trwałego nie w pełni umorzonego księguje się w dniu likwidacji: Wn 071 dotychczasowe umorzenie, Wn 761 wartość netto / Ma 010 wartość początkowa",
+      "spec": {
+        "match": {
+          "event_type": "fixed_asset.disposed",
+          "where": [
+            {
+              "formula": "=$.asset.initial_value - sum(c in objects(depreciation_charge, asset, $.asset) : c.amount) > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.date",
+            "lines": [
+              {
+                "account": "071",
+                "debit": "=sum(c in objects(depreciation_charge, asset, $.asset) : c.amount)"
+              },
+              {
+                "account": "761",
+                "debit": "=$.asset.initial_value - sum(c in objects(depreciation_charge, asset, $.asset) : c.amount)"
+              },
+              {
+                "account": "010",
+                "credit": "=$.asset.initial_value"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 32 ust. 1 (zakończenie amortyzacji z chwilą przeznaczenia do likwidacji) i art. 3 ust. 1 pkt 32 lit. b (pozostałe koszty operacyjne: koszty związane ze zbyciem i likwidacją środków trwałych) — wartość netto zlikwidowanego środka to pozostały koszt operacyjny; w tej wersji miesiąc likwidacji nie dostaje już odpisu",
+          "wzorcowy plan kont: 010 Środki trwałe, 071 Umorzenie środków trwałych, 080 Środki trwałe w budowie, 401 Amortyzacja, 761 Pozostałe koszty operacyjne"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-fixed-asset-disposal-depreciated",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Likwidacja środka trwałego w pełni umorzonego księguje się: Wn 071 / Ma 010 w wartości początkowej — bez linii kosztu, której kwota byłaby zerem",
+      "spec": {
+        "match": {
+          "event_type": "fixed_asset.disposed",
+          "where": [
+            {
+              "formula": "=$.asset.initial_value - sum(c in objects(depreciation_charge, asset, $.asset) : c.amount) = 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.date",
+            "lines": [
+              {
+                "account": "071",
+                "debit": "=$.asset.initial_value"
+              },
+              {
+                "account": "010",
+                "credit": "=$.asset.initial_value"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 32 ust. 1 (zakończenie amortyzacji z chwilą przeznaczenia do likwidacji) i art. 3 ust. 1 pkt 32 lit. b (pozostałe koszty operacyjne: koszty związane ze zbyciem i likwidacją środków trwałych) — wartość netto zlikwidowanego środka to pozostały koszt operacyjny; w tej wersji miesiąc likwidacji nie dostaje już odpisu",
+          "wzorcowy plan kont: 010 Środki trwałe, 071 Umorzenie środków trwałych, 080 Środki trwałe w budowie, 401 Amortyzacja, 761 Pozostałe koszty operacyjne"
+        ]
+      }
     }
   ],
   "activities": [
@@ -5913,6 +6439,98 @@
           }
         ],
         "emits": "cost.spread",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "accept_fixed_asset",
+      "domain": "finance",
+      "description": "Firma przyjmuje środek trwały do używania (dokument OT): nazwa, numer inwentarzowy, symbol KŚT, wartość początkowa, dzień przyjęcia i roczna stawka amortyzacji z Wykazu stawek (np. 20 dla komputera, 10 dla maszyny, 2,5 dla budynku); amortyzacja liniowa zaczyna się od następnego miesiąca",
+      "spec": {
+        "inputs": [
+          {
+            "name": "name",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "number",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "kst",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "initial_value",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "accepted_date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "rate",
+            "type": "decimal",
+            "required": true
+          },
+          {
+            "name": "description",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "fixed_asset.accepted",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "dispose_fixed_asset",
+      "domain": "finance",
+      "description": "Firma likwiduje środek trwały (dokument LT) albo wycofuje go z używania: który środek, kiedy i dlaczego; umorzenie schodzi z 071, wartość netto idzie w pozostałe koszty operacyjne",
+      "spec": {
+        "inputs": [
+          {
+            "name": "asset",
+            "type": "ref<fixed_asset>",
+            "required": true
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "reason",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "liquidation",
+              "sale",
+              "loss",
+              "other"
+            ]
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "fixed_asset.disposed",
         "who": [
           "human"
         ]
@@ -6450,6 +7068,17 @@
       "payload": {
         "code": "640",
         "name": "Czynne rozliczenia międzyokresowe kosztów",
+        "type": "asset",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.created",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/account/080",
+      "payload": {
+        "code": "080",
+        "name": "Środki trwałe w budowie",
         "type": "asset",
         "market": "pl"
       }
