@@ -3933,3 +3933,31 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   papers carry 5 unkeyed questions instead of 14: two the Commission's own (no option, or
   every option, in bold), one on finance that swallowed its neighbours' options, two to
   check by eye. The next round sits them.
+
+## 2026-10-19 — The auditor's curriculum as the pack's register: packs/pl/EXAM.md
+
+- The January 2026 syllabus read as a map of what the Poland pack must know: 421 rows
+  (every numbered point of the ten subjects, the lettered sub-items where the books live
+  — theory, financial accounting, the law's contracts), each graded by what in Rhea
+  answers it — *books* (the pack as data: 83), *kernel* (by construction: 20), *engine*
+  (code a writer or an engine must provide: 28), *host* (knowledge and judgement answered
+  in words from the statute, never a rule: 290) — and, for the first three kinds, what
+  the pack holds today: covered 22, partial 77, missing 52. The 2025 sitting stands
+  beside each subject. Prepared by AI, not yet read by an auditor, as REVIEW.md was.
+- What it says: the books' own subjects — theory, financial accounting, cost accounting —
+  are covered on the bookkeeper's half and missing the auditor's half: fixed assets and
+  depreciation, inventories and cost of manufacture, equity and the distribution of the
+  result, provisions, deferred tax, impairment, leasing, financial instruments, year-end
+  closing, the statements themselves (one writer, the e-Sprawozdania XML, and the derived
+  statements). Tax II is the nearest gap with the most rules to write. Economics, the law
+  as such, the finance of banks and insurers and the audit profession's own rules are the
+  host's — 290 of 421 rows — which is why the statute by article in front of the host is
+  the next lever, and why no rule will ever answer those papers.
+- Sector charts hold. Task II-1 of financial accounting 2025 — a SKOK with the sector's
+  model chart, 32 accounts, 8 operations, 20 lines, off-balance entries included — was
+  DONE through the kernel on the model's own reading, not yet reviewed by a person. Task
+  III-1 (insurers) is not a bookkeeping task: a review of two insurers' accounting
+  policies with verdicts and recommended changes; the harness now says so plainly ("a
+  task without entries — the host's to answer in words") and keeps the case with its
+  answers for the host, instead of failing. Five tasks read so far: four sat and done,
+  one the host's.

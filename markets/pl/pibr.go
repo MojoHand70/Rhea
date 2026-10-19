@@ -473,6 +473,10 @@ func sitTask(ctx context.Context, out io.Writer, paper exam.Paper, ref, casesDir
 	}
 	fmt.Fprintf(out, "%s, task %s: %s\n  %d accounts, %d events, %d intents, %d expected postings, %d answers for the host\n",
 		c.Paper, c.Task, c.Company, len(c.Accounts), len(c.Events), len(c.Intents), len(c.ExpectPostings), len(c.Answers))
+	if c.ForTheHost() {
+		fmt.Fprintln(out, "a task without entries — the host's to answer in words, not the kernel's to sit; its answers are kept in the case")
+		return nil
+	}
 	for _, in := range c.Intents {
 		fmt.Fprintf(out, "  intent: %s\n", in)
 	}

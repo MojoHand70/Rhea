@@ -80,3 +80,13 @@ func TestSeedsLoadInVersionOrder(t *testing.T) {
 		t.Errorf("order: %v", seeds)
 	}
 }
+
+func TestATaskWithoutEntriesIsTheHosts(t *testing.T) {
+	c := Case{Answers: []CaseAnswer{{Question: "Pozycja bilansu?", Answer: "B.III.1.b"}}}
+	if !c.ForTheHost() {
+		t.Fatal("a case with answers and no entries is for the host")
+	}
+	if (Case{}).ForTheHost() {
+		t.Fatal("an empty case is not for anyone")
+	}
+}

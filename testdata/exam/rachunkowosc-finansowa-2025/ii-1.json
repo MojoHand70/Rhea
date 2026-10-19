@@ -1,0 +1,390 @@
+{
+  "paper": "Rachunkowość finansowa 2025",
+  "task": "II-1",
+  "company": "Spółdzielcza Kasa Oszczędnościowo-Kredytowa (SKOK)",
+  "accounts": [
+    {
+      "code": "011",
+      "name": "Środki trwałe",
+      "type": "asset"
+    },
+    {
+      "code": "021",
+      "name": "Wartości niematerialne i prawne",
+      "type": "asset"
+    },
+    {
+      "code": "070",
+      "name": "Umorzenie środków trwałych",
+      "type": "asset"
+    },
+    {
+      "code": "075",
+      "name": "Umorzenie wartości niematerialnych i prawnych",
+      "type": "asset"
+    },
+    {
+      "code": "100",
+      "name": "Kasa krajowych środków pieniężnych",
+      "type": "asset"
+    },
+    {
+      "code": "130",
+      "name": "Rachunek bieżący – podstawowy",
+      "type": "asset"
+    },
+    {
+      "code": "131",
+      "name": "Inne rachunki bankowe",
+      "type": "asset"
+    },
+    {
+      "code": "149",
+      "name": "Rozrachunki SKOK z tytułu przelewów zewnętrznych",
+      "type": "asset"
+    },
+    {
+      "code": "200",
+      "name": "Rozrachunki z dostawcami i odbiorcami",
+      "type": "asset"
+    },
+    {
+      "code": "210",
+      "name": "Rozrachunki członkowskie - różne",
+      "type": "asset"
+    },
+    {
+      "code": "235",
+      "name": "Rozrachunki z KSKOK z tytułu kredytów, pożyczek i lokat",
+      "type": "liability"
+    },
+    {
+      "code": "237",
+      "name": "Rozrachunki z KSKOK z tytułu odsetek od kredytów, pożyczek i lokat",
+      "type": "liability"
+    },
+    {
+      "code": "240",
+      "name": "Kredyty i pożyczki udzielone",
+      "type": "asset"
+    },
+    {
+      "code": "241",
+      "name": "Odsetki od kredytów i pożyczek udzielonych",
+      "type": "asset"
+    },
+    {
+      "code": "242-01",
+      "name": "Rachunki bieżące",
+      "type": "liability"
+    },
+    {
+      "code": "242-02",
+      "name": "Lokaty terminowe",
+      "type": "liability"
+    },
+    {
+      "code": "242-03",
+      "name": "Rachunki bieżące i oszczędnościowo-rozliczeniowe",
+      "type": "liability"
+    },
+    {
+      "code": "244-01",
+      "name": "Odsetki od rachunków bieżących",
+      "type": "liability"
+    },
+    {
+      "code": "244-02",
+      "name": "Odsetki od lokat terminowych",
+      "type": "liability"
+    },
+    {
+      "code": "244-03",
+      "name": "Odsetki od rachunków oszczędnościowo-rozliczeniowych",
+      "type": "liability"
+    },
+    {
+      "code": "246",
+      "name": "Należności dochodzone na drodze sądowej",
+      "type": "asset"
+    },
+    {
+      "code": "248",
+      "name": "Rozrachunki członkowskie",
+      "type": "asset"
+    },
+    {
+      "code": "254",
+      "name": "Wkłady członkowskie",
+      "type": "liability"
+    },
+    {
+      "code": "270",
+      "name": "Odpisy aktualizujące należności z tytułu kredytów i pożyczek",
+      "type": "asset"
+    },
+    {
+      "code": "408",
+      "name": "Amortyzacja",
+      "type": "expense"
+    },
+    {
+      "code": "700-10",
+      "name": "Odsetki od kredytów i pożyczek",
+      "type": "revenue"
+    },
+    {
+      "code": "700-20",
+      "name": "Opłaty i prowizje",
+      "type": "revenue"
+    },
+    {
+      "code": "702-01",
+      "name": "Koszty odsetek od lokat terminowych",
+      "type": "expense"
+    },
+    {
+      "code": "702-02",
+      "name": "Koszty odsetek od rachunków bieżących i oszczędnościowo-rozliczeniowych",
+      "type": "expense"
+    },
+    {
+      "code": "702-03",
+      "name": "Koszty odsetek od rachunków a'vista",
+      "type": "expense"
+    },
+    {
+      "code": "760",
+      "name": "Przychody z tytułu rozwiązanych odpisów aktualizujących na kredyty i pożyczki",
+      "type": "revenue"
+    },
+    {
+      "code": "761",
+      "name": "Koszty z tytułu odpisów aktualizujących należności z tytułu kredytów i pożyczek",
+      "type": "expense"
+    }
+  ],
+  "events": [
+    {
+      "event_type": "payment.order.external",
+      "occurred_at": "2024-06-01",
+      "payload": {
+        "amount": "12300.00",
+        "currency": "PLN",
+        "description": "Przedsiębiorca zlecił realizację zlecenia płatniczego do innego banku z rachunku bieżącego"
+      }
+    },
+    {
+      "event_type": "allowance.created",
+      "occurred_at": "2024-06-01",
+      "payload": {
+        "amount": "28000.00",
+        "currency": "PLN",
+        "description": "Utworzono odpis aktualizujący na kredyt zaklasyfikowany do należności o znacznym stopniu prawdopodobieństwa nieściągalności, udzielony przedsiębiorcy"
+      }
+    },
+    {
+      "event_type": "credit.terminated",
+      "occurred_at": "2024-06-01",
+      "payload": {
+        "capital": "115000.00",
+        "currency": "PLN",
+        "description": "Wypowiedziano umowę kredytową, należności nieściągalne przekazane na drogę sądową",
+        "interest": "12300.00"
+      }
+    },
+    {
+      "event_type": "loan.received",
+      "occurred_at": "2024-06-01",
+      "payload": {
+        "amount": "100000.00",
+        "currency": "PLN",
+        "description": "Na rachunek bieżący SKOK wpłynęła kwota pożyczki otrzymanej z KSKOK"
+      }
+    },
+    {
+      "event_type": "interest.paid",
+      "occurred_at": "2024-06-30",
+      "payload": {
+        "amount": "1000.00",
+        "currency": "PLN",
+        "description": "Na koniec miesiąca przekazano z rachunku bieżącego odsetki od pożyczki otrzymanej z KSKOK"
+      }
+    },
+    {
+      "event_type": "membership.contribution.paid",
+      "occurred_at": "2024-06-01",
+      "payload": {
+        "amount": "500.00",
+        "currency": "PLN",
+        "description": "Członek SKOK wpłacił do kasy wkład członkowski"
+      }
+    },
+    {
+      "event_type": "depreciation.charged",
+      "occurred_at": "2024-06-30",
+      "payload": {
+        "currency": "PLN",
+        "description": "Na koniec miesiąca naliczono koszty amortyzacji",
+        "fixed_assets": "32000.00",
+        "intangible_assets": "5000.00"
+      }
+    },
+    {
+      "event_type": "allowance.written_off",
+      "occurred_at": "2024-06-01",
+      "payload": {
+        "amount": "250.00",
+        "currency": "PLN",
+        "description": "Spisano w ciężar odpisu aktualizującego należność nieściągalną z tytułu odsetek od pożyczki udzielonej osobie fizycznej"
+      }
+    }
+  ],
+  "intents": [
+    "When payment.order.external arrives, book the amount: debit 242-01, credit 149 (or 130). Amount: 12300.00.",
+    "When allowance.created arrives, book the write_down: debit 761, credit 270. Amount: 28000.00.",
+    "When credit.terminated arrives, transfer capital to court receivables: debit 246, credit 240. Amount: 115000.00. Also transfer interest to court receivables: debit 246, credit 241. Amount: 12300.00.",
+    "When loan.received arrives, book the receipt: debit 130, credit 235. Amount: 100000.00.",
+    "When interest.paid arrives, book the payment: debit 237, credit 130. Amount: 1000.00.",
+    "When membership.contribution.paid arrives, book the cash receipt: debit 100, credit 254. Amount: 500.00.",
+    "When depreciation.charged arrives, book amortisation of fixed assets: debit 408, credit 070. Amount: 32000.00. Also book amortisation of intangible assets: debit 408, credit 075. Amount: 5000.00.",
+    "When allowance.written_off arrives, book the write-off of interest receivable against the allowance: debit 270, credit 241. Amount: 250.00."
+  ],
+  "expect_postings": [
+    {
+      "account": "242-01",
+      "side": "debit",
+      "amount": "12300.00"
+    },
+    {
+      "account": "149",
+      "side": "credit",
+      "amount": "12300.00"
+    },
+    {
+      "account": "761",
+      "side": "debit",
+      "amount": "28000.00"
+    },
+    {
+      "account": "270",
+      "side": "credit",
+      "amount": "28000.00"
+    },
+    {
+      "account": "246",
+      "side": "debit",
+      "amount": "115000.00"
+    },
+    {
+      "account": "240",
+      "side": "credit",
+      "amount": "115000.00"
+    },
+    {
+      "account": "246",
+      "side": "debit",
+      "amount": "12300.00"
+    },
+    {
+      "account": "241",
+      "side": "credit",
+      "amount": "12300.00"
+    },
+    {
+      "account": "130",
+      "side": "debit",
+      "amount": "100000.00"
+    },
+    {
+      "account": "235",
+      "side": "credit",
+      "amount": "100000.00"
+    },
+    {
+      "account": "237",
+      "side": "debit",
+      "amount": "1000.00"
+    },
+    {
+      "account": "130",
+      "side": "credit",
+      "amount": "1000.00"
+    },
+    {
+      "account": "100",
+      "side": "debit",
+      "amount": "500.00"
+    },
+    {
+      "account": "254",
+      "side": "credit",
+      "amount": "500.00"
+    },
+    {
+      "account": "408",
+      "side": "debit",
+      "amount": "32000.00"
+    },
+    {
+      "account": "070",
+      "side": "credit",
+      "amount": "32000.00"
+    },
+    {
+      "account": "408",
+      "side": "debit",
+      "amount": "5000.00"
+    },
+    {
+      "account": "075",
+      "side": "credit",
+      "amount": "5000.00"
+    },
+    {
+      "account": "270",
+      "side": "debit",
+      "amount": "250.00"
+    },
+    {
+      "account": "241",
+      "side": "credit",
+      "amount": "250.00"
+    }
+  ],
+  "answers": [
+    {
+      "question": "Jaka jest dekretacja operacji nr 1 (zlecenie płatnicze przedsiębiorcy do innego banku z rachunku bieżącego, 12.300)?",
+      "answer": "Wn 242-01 / Ma 149 (lub Ma 130), kwota 12.300 zł"
+    },
+    {
+      "question": "Jaka jest dekretacja operacji nr 2 (utworzenie odpisu aktualizującego na kredyt o znacznym stopniu prawdopodobieństwa nieściągalności, 28.000)?",
+      "answer": "Wn 761 / Ma 270, kwota 28.000 zł"
+    },
+    {
+      "question": "Jaka jest dekretacja operacji nr 3 (wypowiedzenie umowy kredytowej i skierowanie na drogę sądową: kapitał 115.000, odsetki 12.300)?",
+      "answer": "Wn 246 / Ma 240, kwota 115.000 zł; Wn 246 / Ma 241, kwota 12.300 zł"
+    },
+    {
+      "question": "Jaka jest dekretacja operacji nr 4 (wpływ pożyczki z KSKOK na rachunek bieżący, 100.000)?",
+      "answer": "Wn 130 / Ma 235, kwota 100.000 zł"
+    },
+    {
+      "question": "Jaka jest dekretacja operacji nr 5 (przekazanie odsetek od pożyczki z KSKOK z rachunku bieżącego, 1.000)?",
+      "answer": "Wn 237 / Ma 130, kwota 1.000 zł"
+    },
+    {
+      "question": "Jaka jest dekretacja operacji nr 6 (wpłata wkładu członkowskiego do kasy, 500)?",
+      "answer": "Wn 100 / Ma 254, kwota 500 zł"
+    },
+    {
+      "question": "Jaka jest dekretacja operacji nr 7 (naliczenie amortyzacji: środki trwałe 32.000, WNiP 5.000)?",
+      "answer": "Wn 408 / Ma 070, kwota 32.000 zł; Wn 408 / Ma 075, kwota 5.000 zł"
+    },
+    {
+      "question": "Jaka jest dekretacja operacji nr 8 (spisanie w ciężar odpisu aktualizującego odsetek od pożyczki osoby fizycznej, 250)?",
+      "answer": "Wn 270 / Ma 241, kwota 250 zł"
+    }
+  ],
+  "notes": "Operacja nr 1: model solution shows 'debit 242-01, credit 149 lub 130' – both alternatives recorded; the credit side reflects the transfer out of the member's current account via external transfer clearing. Dates within June 2024 are not individually specified; end-of-month events (5, 7) assigned 2024-06-30, others 2024-06-01. NOT YET REVIEWED by a person against the Commission's table (2026-10-19): DONE on the model's own reading, first sitting; a SKOK's sector chart (wzorcowy plan kont), 32 accounts, off-balance entries included."
+}

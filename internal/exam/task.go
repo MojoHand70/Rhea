@@ -109,7 +109,17 @@ func CompileCase(ctx context.Context, a *agent.Agent, paper Paper, t Task) (Case
 	}
 	c.Paper = strings.TrimSpace(paper.Subject + " " + paper.Year)
 	c.Task = fmt.Sprintf("%s-%d", t.Block, t.N)
+	if c.ForTheHost() {
+		return c, nil
+	}
 	return c, c.Check()
+}
+
+// ForTheHost reports a task with no entries to book — a classification, a
+// verdict, a presentation — which is the host's to answer in words, not
+// the kernel's to sit. Its answers are kept for the host.
+func (c Case) ForTheHost() bool {
+	return len(c.ExpectPostings) == 0 && len(c.Events) == 0 && len(c.Answers) > 0
 }
 
 // Check is what a case needs before it can be sat.

@@ -1,0 +1,36 @@
+{
+  "paper": "Rachunkowość finansowa 2025",
+  "task": "III-1",
+  "company": "Zakłady ubezpieczeń (Dział I i Dział II) – grupa kapitałowa",
+  "accounts": [],
+  "events": [],
+  "intents": [],
+  "expect_postings": [],
+  "answers": [
+    {
+      "question": "Dział I, poz. 1: Czy obligacje skarbowe zakwalifikowane do aktywów finansowych dostępnych do sprzedaży, nieuwzględniane przy ustalaniu rezerw techniczno-ubezpieczeniowych, wyceniane według skorygowanej ceny nabycia, z dodatnimi różnicami wykazywanymi jako niezrealizowane zyski z lokat, są ujmowane prawidłowo?",
+      "answer": "Błędnie. Rekomendowane zmiany: (1) Obligacje skarbowe zakwalifikowane do aktywów finansowych dostępnych do sprzedaży zakład ubezpieczeń wycenia według wartości godziwej. (2) W przypadku obligacji skarbowych, które nie są uwzględniane przy ustalaniu rezerw techniczno-ubezpieczeniowych, dodatnia różnica pomiędzy wartością godziwą a skorygowaną ceną nabycia ujmowana jest w kapitale z aktualizacji wyceny. (3) Różnice pomiędzy skorygowaną ceną nabycia a ceną nabycia dłużnych papierów wartościowych (a w przypadku uprzednio przeszacowanych – odpowiednio wartością przeszacowaną) ujmuje się bezpośrednio w przychodach z lokat w pozycji II.3.2 technicznego rachunku ubezpieczeń na życie."
+    },
+    {
+      "question": "Dział I, poz. 2: Czy nieruchomości stanowiące aktywa ubezpieczeniowych funduszy kapitałowych wyceniane według wartości godziwej są ujmowane prawidłowo?",
+      "answer": "Prawidłowo. Brak rekomendowanych zmian."
+    },
+    {
+      "question": "Dział I, poz. 3: Czy składkę przypisaną dla umów ubezpieczenia z określonym okresem odpowiedzialności ustalaną jako kwotę składek należnych za cały okres odpowiedzialności (niezależnie od jego długości), z tytułu umów zawartych w okresie sprawozdawczym, ujmuje się prawidłowo?",
+      "answer": "Błędnie. Rekomendowana zmiana: Składkę przypisaną zakład ubezpieczeń ustala jako kwotę składek z tytułu umów ubezpieczenia należnych w okresie sprawozdawczym, niezależnie od tego, czy kwoty te opłacono."
+    },
+    {
+      "question": "Dział II, poz. 1: Czy udziały w spółce X sp. z o.o. (75% kapitału zakładowego), wyceniane w cenie nabycia z uwagi na brak możliwości wiarygodnego ustalenia wartości godziwej, są ujmowane prawidłowo?",
+      "answer": "Błędnie. Rekomendowana zmiana: Udziały w spółce X sp. z o.o., w której zakład posiada 75% kapitału zakładowego, zakład ubezpieczeń wycenia metodą praw własności."
+    },
+    {
+      "question": "Dział II, poz. 2: Czy prowizje reasekuracyjne rozliczane w czasie analogicznie do kosztów akwizycji ponoszonych z tytułu zawarcia umów ubezpieczenia objętych umowami reasekuracji biernej są ujmowane prawidłowo?",
+      "answer": "Prawidłowo. Brak rekomendowanych zmian."
+    },
+    {
+      "question": "Dział II, poz. 3: Czy należności depozytowe od cedentów wyceniane w kwocie wymaganej zapłaty określanej zgodnie z warunkami umowy reasekuracji (z uwzględnieniem wyceny instrumentu finansowego oraz odpisów z tytułu trwałej utraty wartości) są ujmowane prawidłowo?",
+      "answer": "Prawidłowo. Brak rekomendowanych zmian."
+    }
+  ],
+  "notes": "Zadanie ma charakter wyłącznie oceny poprawności zasad rachunkowości – brak operacji księgowych do zaksięgowania. Puste tablice accounts, events, intents i expect_postings są zamierzone."
+}
