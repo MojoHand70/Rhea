@@ -4145,3 +4145,23 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
 - Owed: `rhea pack` as a screen in the shell (KK 2026-10-19: every user step in the
   app); `rhea init`'s migration to run on `rhea serve` as well, so an old database never
   refuses a new notion again.
+
+## 2026-10-19 — The standards in front of the host; the learning-rate test
+
+- KK, evening: the quiz score is the model's; what matters is what Rhea knows, and
+  "she learned nothing all day" at a person's teaching pace. Two answers built the same
+  evening. First, the standards: `rhea run pl-standards fetch` takes the sixteen Krajowe
+  Standardy Rachunkowości from the Ministry's journal and reads each into its points
+  (KSR 11 alone 272; some fourteen hundred in all), the library loads acts and standards
+  from several folders, "KSR 11 pkt 6.18" is a citation the host can name and be handed.
+  Reading is most of what the curriculum asks and it costs nothing to teach. Second, the
+  learning-rate test: `pibr-exam -learn SITTING -block I` turns every non-rule answer of a
+  prior sitting into a lesson for the author — the question, the key, the provision the
+  host read — lets the author draft definitions on a throwaway database with the
+  recorded approver reading each dry run, sits the block again with that rulebook, and
+  reports the share from rules before and after against the clock. The pass line KK
+  and I agreed: a real move in an hour of machine time with rules that stand against the
+  text; else the approach fails at the thing he needs and stopping is right.
+- Also this evening, sitting five ArsLege company-law questions pasted by hand, the host
+  answered five of five from the statute, naming the article it opened and quoting the
+  words (KSH art. 201, 237, 247, 252, 286) — the thing the product sells, seen plainly.
