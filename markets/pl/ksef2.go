@@ -21,9 +21,11 @@ import (
 )
 
 // KSeF2 speaks to the national e-invoice API 2.0 (DIRECTION 2026-10-15,
-// "Documents out"): the token the owner pasted once, a challenge, the
-// token encrypted with the Ministry's published key, a short-lived access
-// token; then one interactive session per pass — FA(3) declared, every
+// "Documents out"): a challenge answered either with a certificate — the
+// login document signed in XAdES (xades.go), the only way in from 2027 — or
+// with the token the owner pasted once, encrypted with the Ministry's
+// published key; a short-lived access token; then one interactive session
+// per pass — FA(3) declared, every
 // invoice encrypted with a fresh AES key wrapped with the Ministry's other
 // key, sent, polled to its final status, its UPO fetched, the session
 // closed. Standard library only: RSA-OAEP and AES-CBC are in crypto, the
@@ -34,6 +36,7 @@ type KSeF2 struct {
 	BaseURL string       // https://api-test.ksef.mf.gov.pl/v2 and its siblings
 	NIP     string       // the context: the company whose invoices these are
 	Token   string       // the KSeF token the owner generated — a secret, never logged
+	Signer  *CertSigner  // a certificate and its key: when set, the login is signed with it, not the token
 	HTTP    *http.Client // nil: a 60 s client
 	Now     func() time.Time
 	// Sleep waits between polls; nil sleeps for real. Tests make it instant.
@@ -131,8 +134,8 @@ func (c *KSeF2) Submit(ctx context.Context, invoices []Outbound) ([]Submission, 
 	if len(invoices) == 0 {
 		return nil, nil
 	}
-	if c.BaseURL == "" || c.NIP == "" || c.Token == "" {
-		return nil, errors.New("ksef: the channel is not configured (environment, NIP and token)")
+	if c.BaseURL == "" || c.NIP == "" || (c.Token == "" && c.Signer == nil) {
+		return nil, errors.New("ksef: the channel is not configured (environment, NIP, and a certificate or a token)")
 	}
 	keys, err := c.publicKeys(ctx)
 	if err != nil {
@@ -240,13 +243,10 @@ func keyFor(keys []publicKey, usage string) (publicKey, error) {
 	return publicKey{}, fmt.Errorf("ksef publishes no key for %s", usage)
 }
 
-// authenticate: a challenge, the token encrypted with its timestamp,
-// the operation polled to success, the access token redeemed.
+// authenticate: a challenge; the login document signed with the
+// certificate, or the token encrypted with the challenge's timestamp; the
+// operation polled to success; the access token redeemed.
 func (c *KSeF2) authenticate(ctx context.Context, keys []publicKey) (string, error) {
-	tokenKey, err := keyFor(keys, "KsefTokenEncryption")
-	if err != nil {
-		return "", err
-	}
 	var challenge struct {
 		Challenge   string `json:"challenge"`
 		TimestampMs int64  `json:"timestampMs"`
@@ -254,22 +254,39 @@ func (c *KSeF2) authenticate(ctx context.Context, keys []publicKey) (string, err
 	if err := c.call(ctx, "POST", "/auth/challenge", "", nil, &challenge); err != nil {
 		return "", err
 	}
-	plain := []byte(c.Token + "|" + strconv.FormatInt(challenge.TimestampMs, 10))
-	encrypted, err := rsa.EncryptOAEP(sha256.New(), rand.Reader, tokenKey.key, plain, nil)
-	if err != nil {
-		return "", err
-	}
 	var started struct {
 		ReferenceNumber     string          `json:"referenceNumber"`
 		AuthenticationToken json.RawMessage `json:"authenticationToken"` // {token, validUntil} on the wire
 	}
-	if err := c.call(ctx, "POST", "/auth/ksef-token", "", map[string]any{
-		"challenge":         challenge.Challenge,
-		"contextIdentifier": map[string]string{"type": "Nip", "value": c.NIP},
-		"encryptedToken":    base64.StdEncoding.EncodeToString(encrypted),
-		"publicKeyId":       tokenKey.ID,
-	}, &started); err != nil {
-		return "", err
+	if c.Signer != nil {
+		// The certificate: the login document for the company's NIP, the
+		// identity read from the certificate's subject, signed in XAdES.
+		signed, err := c.Signer.SignAuthTokenRequest(challenge.Challenge, c.NIP, c.now())
+		if err != nil {
+			return "", err
+		}
+		if err := c.callXML(ctx, "/auth/xades-signature", signed, &started); err != nil {
+			return "", err
+		}
+		c.logf("signed with the certificate of %s", c.Signer.Cert.Subject.CommonName)
+	} else {
+		tokenKey, err := keyFor(keys, "KsefTokenEncryption")
+		if err != nil {
+			return "", err
+		}
+		plain := []byte(c.Token + "|" + strconv.FormatInt(challenge.TimestampMs, 10))
+		encrypted, err := rsa.EncryptOAEP(sha256.New(), rand.Reader, tokenKey.key, plain, nil)
+		if err != nil {
+			return "", err
+		}
+		if err := c.call(ctx, "POST", "/auth/ksef-token", "", map[string]any{
+			"challenge":         challenge.Challenge,
+			"contextIdentifier": map[string]string{"type": "Nip", "value": c.NIP},
+			"encryptedToken":    base64.StdEncoding.EncodeToString(encrypted),
+			"publicKeyId":       tokenKey.ID,
+		}, &started); err != nil {
+			return "", err
+		}
 	}
 	authToken := tokenString(started.AuthenticationToken)
 	if authToken == "" {
@@ -463,6 +480,35 @@ func (c *KSeF2) call(ctx context.Context, method, path, bearer string, body any,
 	if out != nil && len(bytes.TrimSpace(raw)) > 0 {
 		if err := json.Unmarshal(raw, out); err != nil {
 			return fmt.Errorf("%s %s: %w", method, path, err)
+		}
+	}
+	return nil
+}
+
+// callXML posts an XML document — the signed login — and decodes the JSON
+// answer as call does.
+func (c *KSeF2) callXML(ctx context.Context, path string, doc []byte, out any) error {
+	req, err := http.NewRequestWithContext(ctx, "POST", c.BaseURL+path, bytes.NewReader(doc))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/xml")
+	res, err := c.http().Do(req)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	raw, err := io.ReadAll(io.LimitReader(res.Body, 4<<20))
+	if err != nil {
+		return err
+	}
+	if res.StatusCode < 200 || res.StatusCode > 299 {
+		return fmt.Errorf("POST %s: %d %s", path, res.StatusCode, apiWords(raw))
+	}
+	if out != nil && len(bytes.TrimSpace(raw)) > 0 {
+		if err := json.Unmarshal(raw, out); err != nil {
+			return fmt.Errorf("POST %s: %w", path, err)
 		}
 	}
 	return nil

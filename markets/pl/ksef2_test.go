@@ -2,6 +2,7 @@ package pl
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -10,9 +11,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/xml"
+	"errors"
+	"io"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -95,6 +99,23 @@ func (f *fakeKSeFAPI) handler() http.Handler {
 			refuse(w, 400, "Nieprawidłowe szyfrowanie tokena")
 			return
 		}
+		reply(w, 202, map[string]any{"referenceNumber": "AUTH-1", "authenticationToken": map[string]any{"token": "auth-token", "validUntil": "2099-01-01T00:00:00Z"}})
+	})
+	mux.HandleFunc("POST /auth/xades-signature", func(w http.ResponseWriter, r *http.Request) {
+		raw, _ := io.ReadAll(r.Body)
+		doc := string(raw)
+		if r.Header.Get("Content-Type") != "application/xml" || !strings.Contains(doc, "<Challenge>20250101-CR-") ||
+			!strings.Contains(doc, "<Nip>"+f.nip+"</Nip>") || !strings.Contains(doc, "<SubjectIdentifierType>certificateSubject</SubjectIdentifierType>") {
+			refuse(w, 400, "Nieprawidłowy dokument AuthTokenRequest")
+			return
+		}
+		if err := checkSignedLogin(doc, f.nip); err != nil {
+			refuse(w, 400, "Nieprawidłowy podpis: "+err.Error())
+			return
+		}
+		f.mu.Lock()
+		f.polls["xades"]++
+		f.mu.Unlock()
 		reply(w, 202, map[string]any{"referenceNumber": "AUTH-1", "authenticationToken": map[string]any{"token": "auth-token", "validUntil": "2099-01-01T00:00:00Z"}})
 	})
 	mux.HandleFunc("GET /auth/AUTH-1", func(w http.ResponseWriter, r *http.Request) {
@@ -267,6 +288,124 @@ func TestKSeF2AgainstTheFakeMinistry(t *testing.T) {
 	}
 }
 
+// checkSignedLogin verifies a signed login the way a verifier would, by
+// text surgery rather than by the signer's own canonicalizer: the
+// document's digest is the document with its signature cut out, SignedInfo
+// canonical is SignedInfo with its namespace declared on itself, and its
+// signature verifies with the key of the certificate the document carries,
+// a company seal for the context's NIP.
+func checkSignedLogin(doc, nip string) error {
+	between := func(s, from, to string) (string, int, int) {
+		i := strings.Index(s, from)
+		j := strings.Index(s, to)
+		if i < 0 || j < i {
+			return "", -1, -1
+		}
+		return s[i : j+len(to)], i, j + len(to)
+	}
+	sig, i, j := between(doc, "<ds:Signature ", "</ds:Signature>")
+	if sig == "" {
+		return errors.New("no signature")
+	}
+	inner := func(s, tag string) string {
+		v, _, _ := between(s, "<"+tag+">", "</"+tag+">")
+		return strings.TrimSuffix(strings.TrimPrefix(v, "<"+tag+">"), "</"+tag+">")
+	}
+	docSum := sha256.Sum256([]byte(doc[:i] + doc[j:]))
+	if !strings.Contains(sig, `<ds:Reference URI="">`) || inner(sig, "ds:DigestValue") != base64.StdEncoding.EncodeToString(docSum[:]) {
+		return errors.New("the document's digest")
+	}
+	der, err := base64.StdEncoding.DecodeString(inner(sig, "ds:X509Certificate"))
+	if err != nil {
+		return err
+	}
+	cert, err := x509.ParseCertificate(der)
+	if err != nil {
+		return err
+	}
+	seal := false
+	for _, n := range cert.Subject.Names {
+		if n.Type.String() == "2.5.4.97" && n.Value == "VATPL-"+nip {
+			seal = true
+		}
+	}
+	if !seal {
+		return errors.New("the certificate is not a seal for the context's NIP")
+	}
+	signedInfo, _, _ := between(sig, "<ds:SignedInfo>", "</ds:SignedInfo>")
+	canonical := strings.Replace(signedInfo, "<ds:SignedInfo>", `<ds:SignedInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#">`, 1)
+	value, err := base64.StdEncoding.DecodeString(inner(sig, "ds:SignatureValue"))
+	if err != nil || len(value) != 64 {
+		return errors.New("the signature value")
+	}
+	pub, ok := cert.PublicKey.(*ecdsa.PublicKey)
+	if !ok {
+		return errors.New("not an EC key")
+	}
+	sum := sha256.Sum256([]byte(canonical))
+	if !ecdsa.Verify(pub, sum[:], new(big.Int).SetBytes(value[:32]), new(big.Int).SetBytes(value[32:])) {
+		return errors.New("SignedInfo does not verify")
+	}
+	return nil
+}
+
+// Certificate login (KSEF-21): the same session as with the token, but the
+// way in is the login document signed in XAdES with the company's seal.
+// A seal for another NIP is refused, and nothing is sent.
+func TestKSeF2CertificateLogin(t *testing.T) {
+	api := &fakeKSeFAPI{t: t, token: "unused", nip: "8058083055"}
+	srv := httptest.NewServer(api.handler())
+	defer srv.Close()
+	seal, err := SelfSignedSeal(api.nip, "Rhea Test sp. z o.o.", time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	client := &KSeF2{BaseURL: srv.URL, NIP: api.nip, Signer: seal, Sleep: func(context.Context, time.Duration) error { return nil }}
+	body, err := WriteFA3(FA3Invoice{
+		Seller:   FA3Party{NIP: api.nip, Name: "Rhea Test sp. z o.o.", Address: "ul. Testowa 1, 00-001 Warszawa"},
+		Buyer:    FA3Party{NIP: "5265877635", Name: "Nabywca S.A."},
+		Currency: "PLN", IssueDate: "2026-10-19", Number: "FV/C/1", RateCode: "23",
+		Net: 10000, VAT: 2300, Gross: 12300, Created: "2026-10-19T08:00:00Z", SystemInfo: "Rhea test",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	subs, err := client.Submit(context.Background(), []Outbound{{ID: "sales_invoice-1", Number: "FV/C/1", XML: body}})
+	if err != nil || len(subs) != 1 || !subs[0].Accepted || api.polls["xades"] != 1 {
+		t.Fatalf("certificate login: %+v %v (signed logins %d)", subs, err, api.polls["xades"])
+	}
+	other, _ := SelfSignedSeal("5265877635", "Ktoś Inny S.A.", time.Now())
+	stranger := &KSeF2{BaseURL: srv.URL, NIP: api.nip, Signer: other, Sleep: client.Sleep}
+	if _, err := stranger.Submit(context.Background(), []Outbound{{ID: "x", Number: "x", XML: body}}); err == nil || !strings.Contains(err.Error(), "seal for the context") {
+		t.Fatalf("a seal for another NIP: %v", err)
+	}
+}
+
+// A certificate and its key travel as PEM and come back the same; a key
+// that is not the certificate's, or an encrypted one, is refused.
+func TestCertSignerPEM(t *testing.T) {
+	seal, err := SelfSignedSeal("8058083055", "Rhea Test sp. z o.o.", time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	certPEM, keyPEM, err := seal.PEM()
+	if err != nil {
+		t.Fatal(err)
+	}
+	back, err := ParseCertSigner(certPEM, keyPEM)
+	if err != nil || !back.Cert.Equal(seal.Cert) {
+		t.Fatalf("round trip: %v", err)
+	}
+	other, _ := SelfSignedSeal("8058083055", "Rhea Test sp. z o.o.", time.Now())
+	_, otherKey, _ := other.PEM()
+	if _, err := ParseCertSigner(certPEM, otherKey); err == nil || !strings.Contains(err.Error(), "not the certificate's key") {
+		t.Fatalf("another key: %v", err)
+	}
+	if _, err := ParseCertSigner(certPEM, []byte("-----BEGIN ENCRYPTED PRIVATE KEY-----\nAAAA\n-----END ENCRYPTED PRIVATE KEY-----\n")); err == nil || !strings.Contains(err.Error(), "encrypted") {
+		t.Fatalf("an encrypted key: %v", err)
+	}
+}
+
 // The Ministry's own example number passes its CRC-8, and a touched one
 // does not; the fake's references are shaped and checksummed the same way.
 func TestKSeFNumber(t *testing.T) {
@@ -299,5 +438,40 @@ func TestAESCBC(t *testing.T) {
 		if err != nil || string(back) != string(plain) {
 			t.Fatalf("n=%d: %v %q", n, err, back)
 		}
+	}
+}
+
+// The channel's configuration: a certificate wins over a token; half a
+// certificate, or a misnamed environment, is a client that refuses.
+func TestClientFromEnvCertificate(t *testing.T) {
+	dir := t.TempDir()
+	seal, err := SelfSignedSeal("8058083055", "Rhea Test sp. z o.o.", time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	certPEM, keyPEM, _ := seal.PEM()
+	certPath, keyPath := dir+"/cert.pem", dir+"/key.pem"
+	if err := os.WriteFile(certPath, certPEM, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(keyPath, keyPEM, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("RHEA_KSEF_ENV", "test")
+	t.Setenv("RHEA_KSEF_NIP", "8058083055")
+	t.Setenv("RHEA_KSEF_TOKEN", "a-token")
+	t.Setenv("RHEA_KSEF_CERT", certPath)
+	t.Setenv("RHEA_KSEF_KEY", keyPath)
+	c, ok := ClientFromEnv().(*KSeF2)
+	if !ok || c.Signer == nil || c.Token != "" || c.BaseURL != KSeFEnvironments["test"] {
+		t.Fatalf("a certificate wins: %+v", c)
+	}
+	t.Setenv("RHEA_KSEF_KEY", "")
+	if _, ok := ClientFromEnv().(refusingClient); !ok {
+		t.Fatal("half a certificate is refused")
+	}
+	t.Setenv("RHEA_KSEF_CERT", "")
+	if c, ok := ClientFromEnv().(*KSeF2); !ok || c.Signer != nil || c.Token != "a-token" {
+		t.Fatalf("the token, when there is no certificate: %+v", c)
 	}
 }

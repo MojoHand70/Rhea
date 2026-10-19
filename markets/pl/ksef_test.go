@@ -286,8 +286,35 @@ func TestKSeFLive(t *testing.T) {
 		t.Fatal("the live check never runs against production")
 	}
 	nip, token := os.Getenv("RHEA_KSEF_NIP"), os.Getenv("RHEA_KSEF_TOKEN")
-	client := &pl.KSeF2{BaseURL: pl.KSeFEnvironments[env], NIP: nip, Token: token,
-		Log: func(format string, args ...any) { t.Logf(format, args...) }}
+	sendLive(t, &pl.KSeF2{BaseURL: pl.KSeFEnvironments[env], NIP: nip, Token: token,
+		Log: func(format string, args ...any) { t.Logf(format, args...) }})
+}
+
+// TestKSeFCertificateLive logs in to the Ministry's TEST environment with a
+// certificate instead of the token — a company seal Rhea makes for the NIP,
+// which only TEST accepts — and sends one invoice through the same session.
+// Run by hand: RHEA_LIVE_KSEF_CERT=1, with RHEA_KSEF_NIP (default 8058083055,
+// the made-up NIP of the token check).
+func TestKSeFCertificateLive(t *testing.T) {
+	if os.Getenv("RHEA_LIVE_KSEF_CERT") == "" {
+		t.Skip("set RHEA_LIVE_KSEF_CERT=1 to log in to the Ministry's TEST environment with a self-made certificate")
+	}
+	nip := os.Getenv("RHEA_KSEF_NIP")
+	if nip == "" {
+		nip = "8058083055"
+	}
+	seal, err := pl.SelfSignedSeal(nip, "Rhea Test sp. z o.o.", time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	sendLive(t, &pl.KSeF2{BaseURL: pl.KSeFEnvironments["test"], NIP: nip, Signer: seal,
+		Log: func(format string, args ...any) { t.Logf(format, args...) }})
+}
+
+// sendLive sends one invoice through client and reads the receipt back.
+func sendLive(t *testing.T, client *pl.KSeF2) {
+	t.Helper()
+	nip := client.NIP
 	number := "RHEA/TEST/" + time.Now().UTC().Format("20060102-150405")
 	today := time.Now().UTC().Format("2006-01-02")
 	body, err := pl.WriteFA3(pl.FA3Invoice{

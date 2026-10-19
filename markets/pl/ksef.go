@@ -50,12 +50,16 @@ func init() {
 }
 
 // ClientFromEnv is the national API when the channel is configured —
-// RHEA_KSEF_ENV (test | demo | prod), RHEA_KSEF_NIP, RHEA_KSEF_TOKEN; the
-// secret stays outside the log — and the deterministic fake otherwise. A
-// misnamed environment is a client that refuses to send, not a guess.
+// RHEA_KSEF_ENV (test | demo | prod), RHEA_KSEF_NIP, and the way in: a
+// certificate (RHEA_KSEF_CERT and RHEA_KSEF_KEY, PEM files) or, until tokens
+// end on 31 December 2026, RHEA_KSEF_TOKEN; the secrets stay outside the log —
+// and the deterministic fake otherwise. A certificate wins over a token. A
+// misnamed environment, half a certificate or an unreadable one is a client
+// that refuses to send, not a guess.
 func ClientFromEnv() KSeFClient {
 	token := os.Getenv("RHEA_KSEF_TOKEN")
-	if token == "" {
+	certPath, keyPath := os.Getenv("RHEA_KSEF_CERT"), os.Getenv("RHEA_KSEF_KEY")
+	if token == "" && certPath == "" && keyPath == "" {
 		return FakeKSeF{}
 	}
 	env := os.Getenv("RHEA_KSEF_ENV")
@@ -63,7 +67,18 @@ func ClientFromEnv() KSeFClient {
 	if !ok {
 		return refusingClient{fmt.Errorf("RHEA_KSEF_ENV must be test, demo or prod (got %q)", env)}
 	}
-	return &KSeF2{BaseURL: base, NIP: os.Getenv("RHEA_KSEF_NIP"), Token: token,
+	var signer *CertSigner
+	if certPath != "" || keyPath != "" {
+		if certPath == "" || keyPath == "" {
+			return refusingClient{fmt.Errorf("a KSeF certificate needs both RHEA_KSEF_CERT and RHEA_KSEF_KEY")}
+		}
+		var err error
+		if signer, err = LoadCertSigner(certPath, keyPath); err != nil {
+			return refusingClient{err}
+		}
+		token = ""
+	}
+	return &KSeF2{BaseURL: base, NIP: os.Getenv("RHEA_KSEF_NIP"), Token: token, Signer: signer,
 		Log: func(format string, args ...any) {
 			log.Printf("ksef (%s, NIP %s): "+format, append([]any{env, os.Getenv("RHEA_KSEF_NIP")}, args...)...)
 		}}

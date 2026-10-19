@@ -3724,3 +3724,44 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   company kinds. History entry 31 in Polish (the other session's rule: every version says what it adds).
 - **Live on Helios**: "ile zapłaciłem ZUS w pierwszym kwartale 2026?" now reads `kind = 'zus'` going
   out, taxes read `kind = 'tax'`, customers' payments read settlements against sales invoices.
+
+## 2026-10-19 — KSeF certificate login, step 1: the signed login, proven on TEST
+
+- **Why.** From 1 January 2027 a KSeF token no longer logs in (regulation Dz.U. 2025 poz.
+  1815, § 13 ust. 1 pkt 1); a certificate does. The review's KSEF-21.
+- **The signer** (`markets/pl/xades.go`, standard library only). The login document
+  `AuthTokenRequest` (schema auth 2.0: the challenge, the context NIP,
+  `certificateSubject`) gets an enveloped XAdES-BES signature: a reference to the
+  document (enveloped-signature + exclusive C14N) and to the signed properties (signing
+  time, the signing certificate's SHA-256 digest and issuer/serial), SignedInfo signed
+  with ECDSA P-256 (R‖S, XMLDSig 1.1) or RSA-SHA256, the certificate in KeyInfo. The
+  documents are ours and small, so they are built as a tree that prints its own
+  exclusive canonical form — namespaces where first visibly used, attributes sorted,
+  start and end tags always; the transmitted document is that form, so what a verifier
+  recomputes is what was digested. Checked independently with Python's `signxml`
+  (XMLDSig and XAdES verification, both references, the certificate digest) before the
+  first live call.
+- **The client.** `KSeF2.Signer` (a certificate and its key): when set, the challenge is
+  answered with the signed document at `POST /auth/xades-signature` (XML in, the same
+  202 out); status, redeem and the session are the token path's, unchanged. The channel
+  reads `RHEA_KSEF_CERT` and `RHEA_KSEF_KEY` (PEM; PKCS#8, EC or RSA key; an encrypted key
+  or one that is not the certificate's is refused); a certificate wins over a token,
+  half a certificate refuses. The token stays as the fallback until it stops.
+- **TEST only, for self-made certificates.** `SelfSignedSeal(nip, organization)` makes a
+  company seal (organizationIdentifier `VATPL-<NIP>`, EC P-256), which the Ministry's
+  TEST environment accepts for any made-up NIP; DEMO and production need a qualified
+  or a KSeF-issued certificate.
+- **Live.** `TestKSeFCertificateLive` (gated by `RHEA_LIVE_KSEF_CERT`) logged in to TEST with
+  a seal for 8058083055 on the first attempt and sent one invoice in the same session:
+  accepted, KSeF number 8058083055-20261019-4834E8800000-BF, the receipt's fingerprint
+  ours — and the receipt now names the fingerprint of the signed login document
+  (`SkrotDokumentuUwierzytelniajacego`).
+- **Offline tests.** `TestKSeF2CertificateLogin` (the fake Ministry verifies the login by
+  text surgery, not by the signer's canonicalizer: the document's digest with the
+  signature cut out, SignedInfo with its namespace on itself, the ECDSA value with the
+  seal's key; a seal for another NIP is refused); `TestCertSignerPEM`;
+  `TestClientFromEnvCertificate`.
+- **Next (step 2).** Asking KSeF for its own certificate — the login type for Novi, the
+  Offline type for QR code II — which needs a signed login first (a token cannot ask,
+  § 13 ust. 2); rehearsed on TEST with the self-made seal, then once with the owner's
+  signature on DEMO.
