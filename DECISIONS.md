@@ -4165,3 +4165,13 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
 - Also this evening, sitting five ArsLege company-law questions pasted by hand, the host
   answered five of five from the statute, naming the article it opened and quoting the
   words (KSH art. 201, 237, 247, 252, 286) — the thing the product sells, seen plainly.
+- **Round three, 2026-10-19 night: all ten 2025 papers, three sittings each, the host with
+  the acts open (standards not yet), pack v34, claude-sonnet-4-6.** Six papers passed on
+  every sitting — theory 90%, law 90%, statements 78%, cost accounting 75%, economics
+  75%, tax I 73% — and four failed on every sitting: finance 78% (banks' block), financial
+  accounting 68% (banks' and insurers' blocks), tax II 57%, audit and ethics 56%. 75% of
+  points over thirty sittings; the spread within a paper is a few points (theory
+  111/109/106), so a sitting is now a measurement. Where the answers came from over all
+  thirty: statute 432 (92% right), memory 670 (90%), rule 42 (95%), abstain 185. The
+  statute share is low on the papers without an act to open — economics, finance, cost
+  accounting, audit — which is where the standards and the KSB now in reach will tell.
