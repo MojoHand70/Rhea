@@ -1,0 +1,41 @@
+- web ui
+- business generator
+- biegły rewident
+- rule collaborative editing
+- can we use Rhea to audit books
+- cash forecast
+- lista wszystkich biur rachunkowych w Polsce
+- proactive monitoring (eg. submission dates)
+- repetitive BAU habits
+- issue an invoice
+- smart documents calculation engine
+- Splitting it into areas like sales, purchasing, bank, tax and fleet would give the collection the separate databases you described. 
+
+- mapping engine
+- import openning balances
+- statements
+- import from another system
+- law watching - build a law watch (KK 2026-10-19: later, together with "biegły rewident")
+  - as an accountant does it: watch the official sources → find the rules resting on the changed article → draft the rule's next version from the day the law applies → approval → tell the owner what it means for them
+  - sources: Poland — the Sejm's ELI service lists every act's amending acts with dates (checked on the VAT act: Dz.U. 2026 poz. 1270, in force in stages 1 Dec 2026 – 1 Jul 2028), draft laws on legislacja.gov.pl, the Ministry's KSeF/JPK pages; US — the Watch line on every point of packs/us/REVIEW.md
+  - first slice: each rule's warrant names the act by its official id plus the article (today 30 of 57 Poland rules carry a warrant, written as prose); one feed on the ELI service for the acts the pack cites; a task when one of them changes
+  - needs first: a new rule version must not stop the old one for documents dated before it (packs/us/REVIEW.md cause 3; the smart documents brief in DIRECTION names the same fix)
+- common path of the Polish first phase, the missing ordinary cases (Claude 2026-10-19, from the status check against the eleven lines; edge cases are smart documents, not this list)
+  - receivables: issue from the face, correction invoice, prepayment invoice, reminder to the customer (needs an outgoing e-mail channel), partial payment, write-off
+  - payables: payment proposal with due dates, split payment (MPP mark on FA(3), VAT-account statement), white-list check, correction received, prepayment to a supplier, duplicate caught
+  - close: a checklist with status, accrued revenue and costs (RMP, mirror of RMK v30), the stocktake rule (type exists only), year end — closing entries, the statement, the annual return
+  - integrations: a bank feed instead of a statement file, ZUS
+  - multi-entity: two companies in one face, one approval each
+  - permissions: login with audit, roles, per-state rights (smart documents)
+  - the register: packs/pl/OPERATIONS.md next to REVIEW.md, one point per situation per line, marked built / missing / smart document — the scope as a file
+- sales, the parts that are research and drafting (Claude can carry these; the meetings are KK's): the list of biura rachunkowe with size and the software they use today; a demo that runs itself in 20 minutes (a persona played with rhea sim -play, then one real KSeF send); the one page for an accountant — what she does, what she never does, what it costs; three design partners through one office before any stranger; the date to sell against: the KSeF transition period ends 31 December 2026 (penalties and the last wave from 1 January 2027); outreach drafts and a follow-up list kept in the repo
+- usability, what a stranger meets before anything else (Claude 2026-10-19; the face today: steps 1–4 done and live at app.rhea.plus, installable, reporting and teaching work — but one password, one person and one company set on the server, five doors written by hand, Helios data)
+  - sign-in: a person signs in with their own name and password and every decision is signed by them (today FACE_PERSON on the server); invitations; sign-ins recorded; the security platform KK picks
+  - the empty company: what she says when there are no books yet and what to do first — say who the company is, connect KSeF, bring a bank statement
+  - who the company is, in the app: identify_company, declare_company_form, declare_company_accounts, set_tax_treatment, declare_cit_status as one onboarding conversation, and the consent for what may reach the house
+  - documents in from the app: a photo or PDF of an invoice, a bank statement file (receive_document already takes a file through its door; the face has no upload); KSeF access on one screen (certificate .crt + .key + password, as the market does it) and the inbound channel running for that company
+  - documents out from the app: issue a sales invoice, its KSeF status, the JPK_V7M file to download after the close (the kernel serves /api/files; the face does not open it)
+  - every door of the pack as a screen rendered from its definition — the pack has 16 doors, the face opens five by hand; fixed assets, year end, CIT status and tax treatment have no screen; the pack declaring its screens (the open refinement of step 3)
+  - the accountant's desk: several companies, a switcher, density; one person signing for many companies
+  - comments on objects and figures (the comment door, step 4's remainder) and the preference door
+  - Novi walks through all of the above as the first real company — the usability test and the reference
