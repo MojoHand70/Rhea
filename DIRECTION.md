@@ -3060,6 +3060,195 @@ element data.
   table others read, as a price list does).
 - *The accrual for proof 2* (above).
 
+## People and rights: who may do what, and the doors people come in through (KK, 2026-10-19)
+
+KK, the evening of the status check against the eleven lines: the to-do
+list must carry the notions of user, role, group, supervisor, substitution
+and permissions. Users will want to *see* who can do what in the system;
+accountants will not accept Rhea without it, and the road into accounting
+offices (biura rachunkowe) needs these objects and roles. Then onboarding on
+every level: Rhea onboards an office or a client company; an office onboards
+its own employees, its clients, and its clients' employees; a company
+onboards its employees, and its suppliers, customers and partners. Rights
+must be enforced, not only shown; some super admin handles exceptions; by
+invitation or by self-nomination; a modern login, with a key; a person who
+works for several entities; and in the Poland pack, the company's details
+pulled from GUS by its NIP. "This is the sign-in step. Without it we cannot
+progress nor proceed."
+
+**What it rests on, already decided.** Permissions belong on activities
+("who may trigger this verb"), declared, versioned and gated — never a
+second permission system ("Scale and security are welded", rule 2); the
+company key is the isolation key. `Activity.Who` exists and is displayed,
+never enforced. The people pack (v2) has the person with a handle, a single
+`role` string, a status lifecycle (active ⇄ away → left) and a deputy whose
+routing a rule already does. "Packs built together" put a full login with
+an audit trail before any workspace; "Smart documents" proposed roles as
+data, a person holding roles with dates, groups, and rights declared and
+checked from the first step with identity attributed until the login lands.
+This note is that step.
+
+**How the market does it, so the words are the accountant's.** KSeF 2.0 has
+exactly KK's ladder: the taxpayer (the owner, authenticated as the company)
+holds all rights; it grants rights to people and to an authorised entity —
+the accounting office — with or without the right to pass them on; the
+office then grants its employees rights in the client's context, indirectly.
+The rights are few and named: manage rights, issue invoices, read invoices.
+Beyond KSeF, the office holds the client's tax mandate (UPL-1) and a service
+agreement; the office's own books are a company like any other. The company
+register: GUS's REGON base (the BIR API, with a key GUS issues free on
+request) gives name, address, REGON, PKD and legal form by NIP; the
+Ministry's VAT white list (no key, daily limits) gives VAT status and bank
+accounts. An accountant adds a client by typing a NIP and confirming what
+comes back; nobody retypes an address.
+
+**The notions, in Rhea's terms — all data, all in the log.**
+
+- *Person*: one per human, as the people pack has it, with as many
+  memberships as they have workplaces. The handle signs every act.
+- *Entity*: a company — an office is a company too (it has its own books).
+- *Membership*: a person in an entity with a role, from a date, to a date.
+  A person who works for several entities is one person with several
+  memberships; the desk shows them side by side.
+- *Mandate*: an office keeps an entity's books, from a date, with a scope of
+  rights the client granted (KSeF's authorised entity). An office employee's
+  rights to a client come through the mandate and the employee's role in
+  the office — never by a direct membership in the client, unless the
+  client grants one.
+- *Role*: a named set of rights, data in a pack (owner, accountant, chief
+  accountant, invoicing clerk, reader), a company able to declare its own.
+- *Right*: to a door (a verb), to a view or report, to a type's objects or
+  a field, to a smart document's state (edit, see, move) — the same
+  vocabulary the smart documents brief asks for, within an entity's scope.
+- *Group*: a named set of persons in an entity, for rights granted at once
+  and for a supervisor's reach.
+- *Supervisor*: a right, not a notion of its own — "sees the work of" and
+  "approves for" a group; amounts above a threshold route to it.
+- *Substitution*: the deputy the pack already has, with dates and a scope
+  (which entities), the work routed while it lasts, nothing after.
+- *The house*: Rhea's team, an entity like the others, with rights over
+  packs, the network and installations — and none over any entity's books
+  except as granted below.
+
+**Enforcement — the face says who, the kernel says whether.** The face's
+server authenticates the person and is the only door from outside; the
+kernel takes the person on every call and decides: memberships in the scope
+entity — direct, through a mandate, or as a deputy within dates — give
+roles, roles give rights, and a door whose right the person lacks is refused
+with the reason, the refusal a recorded fact. Reads are filtered the same
+way: objects, views, kept reports and the locked analysis copy answer only
+within the person's entities. Rights apply to the person as the pack's
+`Who` applies to actor kinds today, so no second system appears: `Who` grows
+from "human, agent" into the roles. When faces other than ours exist on the
+open API, the kernel verifies a signed token rather than trusting a header;
+on white01, bound to the machine, the header from the face is enough.
+
+**Seeing who can do what.** A view, rendered generically like every other:
+rows the persons and roles of an entity, columns the doors and views, each
+cell a right that opens — the number-opens move applied to rights — to the
+membership, mandate, role or substitution that grants it and the person who
+granted it, on which day. The same question asked on an object ("who may
+move this?") answers from the same facts. This is what an accountant will
+show an auditor, and it is the difference from a settings page: every right
+has a reason, like every entry.
+
+**Sign-in.** Passkeys (WebAuthn): a key on the person's phone or computer,
+nothing to remember, nothing to phish. Enrolment is an invitation: a single-
+use link by e-mail that expires, the person registers their first key and
+their account is the membership the invitation carried. Recovery is a second
+key, or a re-invitation by the entity's owner, recorded. Every sign-in,
+failed sign-in and sign-out is a fact under the person. No passwords. The
+face's server keeps the sessions; the kernel never sees a credential.
+
+**Onboarding, level by level — who, where, when, what for, and what they
+see when it fails.**
+
+1. *Rhea onboards an office or a company.* The person who will own it, on
+   the sign-in page's "Załóż konto": NIP, the GUS channel fills name,
+   address, form and REGON, the white list adds VAT status and accounts,
+   the person confirms — the `identify_company` and `declare_company_form`
+   doors pre-filled — and registers the first key as the owner. In the
+   private beta the page opens from KK's invitation link; in public, by
+   self-registration with the e-mail verified. Fails: a NIP GUS does not
+   know (type the details, flagged unverified); an entity already in Rhea
+   (the way to its owner or office, never a second copy). Consent for what
+   may reach the house is asked here (KK, 2026-10-17).
+2. *An office onboards its employees.* The office's owner or a manager, on
+   the office's People screen, "Zaproś": e-mail, role, groups; the invitee
+   enrols a key. Fails: an expired or used invitation says so.
+3. *An office onboards its clients.* An office person with the right, on
+   Clients, "Dodaj klienta": NIP → GUS → confirm; the client entity is
+   created with a mandate from a date and its scope. The client's owner is
+   invited to claim their entity; if they never sign in, the office acts
+   under the mandate and the owner's seat stays empty, visible. The KSeF
+   authorisation the client granted the office is recorded when it is.
+4. *An office onboards a client's employees.* Under the mandate, on the
+   client's People screen; typically the client's owner sees everything and
+   approves, an employee issues invoices. The client's owner can do the
+   same, and revoke.
+5. *A company onboards its employees.* As 2, within the company.
+6. *A company onboards suppliers, customers and partners.* They are
+   contractors — objects the pack already has — not users. A login for one
+   of them is a guest membership limited to their own documents, and it
+   arrives with the smart document that needs it (a supplier uploading its
+   invoices, a customer seeing their account), not before.
+
+**The house and exceptions.** No standing power over any entity's books.
+An entity's owner grants the house timed support access through a door —
+hours and a reason — and every act under it is signed as the house's person
+on the owner's grant, visible on the entity's Today and in its audit, and
+ends when the time does. Exceptions at Rhea's level — an owner locked out,
+an entity claimed twice, an office that stopped serving a client who cannot
+reach their own books — are house doors, each with a reason, each a fact
+the entity sees. The owner regains an entity the way it was claimed.
+
+**What the invariants demand.** Granting and revoking are doors, not the
+gate: a human act, enforced by rights, never an AI draft. Every grant,
+revocation, mandate, substitution and sign-in is an event; replay rebuilds
+who-may-do-what identically, and the view is a projection of it. The kernel
+never writes a right on its own and never trusts a claim about the person
+beyond the face that authenticated them. The GUS and white-list readers are
+market code under `markets/pl`, channels registered like KSeF; the kernel
+knows no register by name (invariant 8). Secrets — keys, sessions — live in
+the face's server, never in the log.
+
+**Order of work.** (1) The notions in the common people pack (v3): role,
+membership, group, mandate, deputy with dates and scope, and the rights
+vocabulary (doors, views, types, states); every pack's doors keep `Who`,
+now in roles. (2) Enforcement in the kernel at every door and every read,
+refusals recorded, tests that a person without the right is refused and the
+refusal replays. (3) The "who can do what" view, each right opening to its
+grant. (4) Passkey sign-in and invitations in the face's server, sign-ins
+recorded. (5) The onboarding screens: claim an entity (NIP → the GUS and
+white-list channels in `markets/pl`), invite people, add a client with its
+mandate. (6) The house: support access, the exception doors. (7) Novi
+onboards itself as the first real entity, then one accounting office in a
+pilot — the usability test of the whole ladder.
+
+**Open for KK**, each with the standard Rhea proposes:
+
+- *Invitation or self-nomination.* Proposed: self-nomination only at the
+  top (an office or a company registering itself; invitation-only in the
+  beta), everything below by invitation from someone who holds the right.
+- *Claiming an entity.* Proposed: in the beta, KK's invitation; in public,
+  the e-mail verified and the NIP checked against GUS, and when it matters
+  (a dispute, a second claim) a KSeF-authenticated step, the way the
+  Ministry proves who acts for a company.
+- *Passkeys only.* Proposed: no passwords at all; an e-mail link only to
+  enrol and to recover, both single-use and recorded.
+- *Supervisor.* Proposed: two rights on a group — sees the work of, and
+  approves for — rather than a hierarchy object; thresholds on amounts
+  route to whoever holds "approves for".
+- *Guests.* Proposed: a contractor gets a login only when a smart document
+  needs one, with rights to its own documents alone.
+- *The super admin.* Proposed: the house with no standing access, timed
+  support access granted by the owner, exceptions as doors with reasons,
+  all visible to the entity.
+- *What an office employee sees of a client.* Proposed: what the mandate's
+  scope allows and their office role grants, nothing by default.
+- *One person across installations.* Later; today every entity lives on
+  one installation and a person's memberships are there.
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
