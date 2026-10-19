@@ -78,3 +78,18 @@ func TestDecodeReplyTakesTheFirstObjectInTheText(t *testing.T) {
 		t.Fatal("expected an error")
 	}
 }
+
+func TestDecodeReplyReadsFieldsWhenTheObjectIsBroken(t *testing.T) {
+	// a line break inside the citation breaks the JSON; the fields still read
+	broken := "{\"answer\": \"c\", \"source\": \"memory\", \"rule_id\": \"\", \"citation\": \"MSR 8 „Zasady\nrachunkowości” par. 42\", \"note\": \"the pack lacks error correction\"}"
+	r, err := decodeReply(broken)
+	if err != nil || r.Answer != "c" || r.Source != "memory" || r.Note != "the pack lacks error correction" || !strings.Contains(r.Citation, "par. 42") {
+		t.Fatalf("%+v %v", r, err)
+	}
+	if r, err := decodeReply("{\"answer\": \"\", \"source\": \"abstain\", \"note\": \"x\n\"}"); err != nil || r.Answer != "" || r.Source != "abstain" {
+		t.Fatalf("blank answer: %+v %v", r, err)
+	}
+	if _, err := decodeReply("{\"answer\": \"maybe b\", \"note\": \"x\n\"}"); err == nil {
+		t.Fatal("a broken object with a non-letter answer must not pass as an answer")
+	}
+}

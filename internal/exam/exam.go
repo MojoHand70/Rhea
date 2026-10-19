@@ -13,6 +13,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -318,7 +319,10 @@ type reply struct {
 }
 
 // decodeReply tolerates a model that wraps its JSON in prose or a fence: it
-// decodes the first complete JSON object in the text.
+// decodes the first complete JSON object in the text. When no object
+// decodes — a citation with a raw line break or a bare quote inside it —
+// it reads the fields one by one, the answer letter strictly; a reply
+// without an "answer" field is an error that keeps the raw text.
 func decodeReply(s string) (reply, error) {
 	for i := 0; i < len(s); i++ {
 		if s[i] != '{' {
@@ -329,5 +333,25 @@ func decodeReply(s string) (reply, error) {
 			return r, nil
 		}
 	}
-	return reply{}, fmt.Errorf("no JSON object in the reply: %.120q", s)
+	if m := reAnswerField.FindStringSubmatch(s); m != nil {
+		return reply{Answer: m[1], Source: field(s, "source"), RuleID: field(s, "rule_id"), Citation: field(s, "citation"), Note: field(s, "note")}, nil
+	}
+	return reply{}, fmt.Errorf("no JSON object in the reply: %.400q", s)
+}
+
+var (
+	reAnswerField = regexp.MustCompile(`"answer"\s*:\s*"([a-cA-C]?)"`)
+	reFields      = map[string]*regexp.Regexp{}
+)
+
+func field(s, name string) string {
+	re := reFields[name]
+	if re == nil {
+		re = regexp.MustCompile(`"` + name + `"\s*:\s*"((?:[^"\\]|\\.)*)"`)
+		reFields[name] = re
+	}
+	if m := re.FindStringSubmatch(s); m != nil {
+		return strings.TrimSpace(strings.ReplaceAll(m[1], "\n", " "))
+	}
+	return ""
 }

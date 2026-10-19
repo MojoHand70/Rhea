@@ -3857,3 +3857,23 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   three blocks (one unkeyed: the Commission marked no option on III-7) and 10 tasks. The
   bare model's score is the baseline every later claim is measured against, published
   beside Rhea's.
+- **Measured, 2026-10-19, financial accounting 2025, claude-sonnet-4-6, 49 keyed questions,
+  two sittings.** Bare model: 71 of 98 (72%) then 68 of 98 (69%), never blank, NOT PASSED
+  both times — block I (the Accounting Act) 80% passed, block II (banks and SKOK) 25%
+  failed, block III (insurers, public sector) 100% then 83%. Host with the rulebook open:
+  first 44 of 98 (44%) with 21 abstentions and 3 replies the reader dropped; after the
+  lenient reader and the rule "answer from memory when more likely right than wrong",
+  61 of 98 (62%), block I 80% passed, II 25%, III 44%. From rules: 0 of 49 in both
+  sittings. From memory: 45, 35 of them right. Abstained: 5, each naming the lesson the
+  pack lacks. The reading: the model knows the Accounting Act well and sector accounting
+  (banks, insurers, public bodies) and IFRS unreliably; the Poland pack, a bookkeeper's,
+  has nothing to say on an auditor's paper yet — which is the point of the yardstick. The
+  exam now generates the pack's missing-lesson list: every memory or abstain note names
+  one, 50 for this paper. The bare model moved three points between two sittings of the
+  same questions: one sitting is not a measurement; rounds, as with eval. A sitting of
+  both is about 100 calls and three minutes. Results kept in
+  research_notes/pibr-egzaminy/results/ (out of git).
+- Next: the situational tasks through the kernel; the syllabus graded into the pack's
+  review register; the other 2025 papers (the harness takes any of the 75); the host
+  reading the statute's text once retrieval by article lands, so "memory" becomes
+  "statute" with a dated version.

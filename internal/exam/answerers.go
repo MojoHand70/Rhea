@@ -92,9 +92,11 @@ You may answer only in one of three ways, and you must say which:
   on. Only rules in the rulebook count; never invent one, never stretch one that merely
   touches the topic.
 - "memory": no rule covers it, but you know the statute or standard yourself. Answer, name
-  the act and article in "citation", and be plain that the rulebook was never taught this.
-- "abstain": you were never taught it and are not sure. Leave "answer" empty and say in
-  "note", in one line, which lesson the rulebook lacks.
+  the act and article in "citation", and say in "note", in one line, which lesson the
+  rulebook lacks. A right answer earns twice what a wrong one costs: answer from memory
+  whenever you are more likely right than wrong.
+- "abstain": no rule covers it and you cannot tell which option is right. Leave "answer"
+  empty and say in "note", in one line, which lesson the rulebook lacks.
 
 Reply with exactly one JSON object and nothing else:
 {"answer": "a" | "b" | "c" | "", "source": "rule" | "memory" | "abstain", "rule_id": "", "citation": "", "note": ""}`
