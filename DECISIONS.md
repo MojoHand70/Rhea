@@ -4044,3 +4044,31 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   the only way it can: a lesson at a time, each with its article.
 - Owed: the live databases are on pack v31 — `rhea pack packs/pl/pack.json` drafts the
   upgrade bundle and a person approves it in the shell; not done from here.
+
+## 2026-10-19 — Pack v33: the year-end close, the statement's approval, the result's distribution
+
+- The second auditor's lesson, and the one the first needed: a distribution without a
+  close would debit an account nothing had credited. Four doors, each a step the law
+  names. `close_year` (UoR art. 12 ust. 2 pkt 1): every cost, revenue and income-tax
+  account gives its balance on the balance sheet date to 860 — one close object per
+  account, three types by the side of the result (`year_close_cost`, `_revenue`, `_tax`),
+  because the kernel refuses two rules minting the same object from one event, and
+  rightly: one fact, one rule. `approve_statement` (art. 53 ust. 1; KSH art. 231) moves
+  the result from 860 to 820 on the day of approval, profit or loss. `distribute_result`
+  (art. 53 ust. 4; KSH art. 191–192) is the resolution: so much to reserve capital (Wn
+  820 / Ma 802), so much to dividends (Wn 820 / Ma 241), so much of a loss covered from
+  reserve (Wn 802 / Ma 820); what is left stays on 820 as undistributed. `pay_dividend`
+  (PIT art. 30a ust. 1 pkt 4 and art. 41 ust. 4; CIT art. 22) books the gross off 241,
+  the net to 130 and the 19% withheld to 225, or no tax line at a rate of 0 under the
+  exemption. Accounts 802, 820 and 241 join the chart; views `kapitaly` and
+  `podzial-wyniku`; the dictionary names it all; the warrants quote the provisions.
+- Simplifications said in the history: the comparative variant without the change in
+  products (490 stays out), no interim dividend, no contributions in kind. The close is a
+  door, not an automatic step on the December lock, because the month's own close posts
+  the CIT advance on the same event and a balance read then would miss it; closing the
+  year is a deliberate act after the adjustments, as art. 12 ust. 4 has it.
+- Test: `TestYearEndAndResult` — 1 500 of revenue and 650,01 of costs close into a profit
+  of 849,99; approval on 30 April moves it to 820; the resolution sends 68 to reserve and
+  750 to dividends, 31,99 stays; 700 paid to a person leaves 567 at the bank and 133 on
+  225, 50 paid to an exempt company carries no tax line. Pinned counts: 30 types, 30
+  views, 73 rules, 16 doors, 53 events, 42 accounts.

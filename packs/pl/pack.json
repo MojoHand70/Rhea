@@ -1,9 +1,14 @@
 {
   "pack": "pl",
-  "version": 32,
+  "version": 33,
   "stage": "initial",
   "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
   "history": [
+    {
+      "versions": "33",
+      "date": "2026-10-19",
+      "changes": "Zamknięcie roku i podział wyniku (rejestr EXAM.md 6.1.7, 6.1.2 c, 9.1.3): drzwi close_year zamykają konta wynikowe na dzień bilansowy — każde konto kosztów, przychodów i podatku dochodowego oddaje saldo na 860 Wynik finansowy; drzwi approve_statement (zatwierdzenie sprawozdania, art. 53 UoR) przenoszą wynik z 860 na 820 Rozliczenie wyniku finansowego w dniu zatwierdzenia; drzwi distribute_result (uchwała o podziale zysku albo pokryciu straty, art. 191–192 i 231 KSH) księgują odpis na kapitał zapasowy (Wn 820 / Ma 802), dywidendy (Wn 820 / Ma 241) i pokrycie straty z kapitału zapasowego (Wn 802 / Ma 820); drzwi pay_dividend księgują wypłatę z potrąceniem zryczałtowanego podatku 19% (art. 30a ust. 1 pkt 4 i art. 41 ust. 4 PIT; art. 22 ust. 1 CIT): Wn 241 brutto / Ma 130 netto, Ma 225 podatek; nowe konta 802, 820, 241; widoki kapitaly i podzial-wyniku. Uproszczenia: wariant porównawczy bez zmiany stanu produktów (konto 490 nie bierze udziału), zaliczka na dywidendę i wkłady niepieniężne — w następnych wersjach."
+    },
     {
       "versions": "32",
       "date": "2026-10-19",
@@ -1775,6 +1780,149 @@
           "required": true
         }
       ]
+    },
+    {
+      "name": "result_distribution",
+      "version": 1,
+      "domain": "finance",
+      "label_field": "year_end",
+      "fields": [
+        {
+          "name": "year_end",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "resolution_date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "reserve",
+          "type": "money",
+          "required": true,
+          "description": "na kapitał zapasowy"
+        },
+        {
+          "name": "dividends",
+          "type": "money",
+          "required": true,
+          "description": "na dywidendy (brutto)"
+        },
+        {
+          "name": "loss_cover",
+          "type": "money",
+          "required": true,
+          "description": "pokrycie straty z kapitału zapasowego"
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "year_close_cost",
+      "version": 1,
+      "domain": "finance",
+      "label_field": "code",
+      "fields": [
+        {
+          "name": "account",
+          "type": "ref<account>",
+          "required": true
+        },
+        {
+          "name": "code",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "year_end",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true,
+          "description": "saldo konta na dzień bilansowy: Wn minus Ma; przechodzi na 860"
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "year_close_revenue",
+      "version": 1,
+      "domain": "finance",
+      "label_field": "code",
+      "fields": [
+        {
+          "name": "account",
+          "type": "ref<account>",
+          "required": true
+        },
+        {
+          "name": "code",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "year_end",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true,
+          "description": "saldo konta na dzień bilansowy: Wn minus Ma; przechodzi na 860"
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "year_close_tax",
+      "version": 1,
+      "domain": "finance",
+      "label_field": "code",
+      "fields": [
+        {
+          "name": "account",
+          "type": "ref<account>",
+          "required": true
+        },
+        {
+          "name": "code",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "year_end",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true,
+          "description": "saldo konta na dzień bilansowy: Wn minus Ma; przechodzi na 860"
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ]
     }
   ],
   "view_defs": [
@@ -2187,7 +2335,7 @@
     },
     {
       "view_id": "slownik",
-      "version": 6,
+      "version": 7,
       "notion": "words",
       "title": "Słownik",
       "domain": "finance",
@@ -2363,6 +2511,26 @@
           "depreciation_charge": {
             "label": "Odpis amortyzacyjny za miesiąc",
             "plural": "Odpisy amortyzacyjne",
+            "shape": "card"
+          },
+          "result_distribution": {
+            "label": "Podział wyniku",
+            "plural": "Podziały wyniku",
+            "shape": "card"
+          },
+          "year_close_cost": {
+            "label": "Zamknięcie roku – konto kosztów",
+            "plural": "Zamknięcie roku – konta kosztów",
+            "shape": "card"
+          },
+          "year_close_revenue": {
+            "label": "Zamknięcie roku – konto przychodów",
+            "plural": "Zamknięcie roku – konta przychodów",
+            "shape": "card"
+          },
+          "year_close_tax": {
+            "label": "Zamknięcie roku – podatek dochodowy",
+            "plural": "Zamknięcie roku – podatek dochodowy",
             "shape": "card"
           }
         },
@@ -2584,7 +2752,24 @@
           "depreciation_charge.charged": "Umorzenie razem",
           "depreciation_charge.closed_on": "Na dzień",
           "fixed_asset.annual_rate": "Stawka roczna %",
-          "fixed_asset.start": "Amortyzacja od"
+          "fixed_asset.start": "Amortyzacja od",
+          "result_distribution.year_end": "Rok do",
+          "result_distribution.resolution_date": "Uchwała z dnia",
+          "result_distribution.reserve": "Na kapitał zapasowy",
+          "result_distribution.dividends": "Na dywidendy (brutto)",
+          "result_distribution.loss_cover": "Pokrycie straty",
+          "year_close_cost.account": "Konto",
+          "year_close_revenue.account": "Konto",
+          "year_close_tax.account": "Konto",
+          "year_close_cost.code": "Nr konta",
+          "year_close_revenue.code": "Nr konta",
+          "year_close_tax.code": "Nr konta",
+          "year_close_cost.year_end": "Dzień bilansowy",
+          "year_close_revenue.year_end": "Dzień bilansowy",
+          "year_close_tax.year_end": "Dzień bilansowy",
+          "year_close_cost.amount": "Saldo (Wn minus Ma)",
+          "year_close_revenue.amount": "Saldo (Wn minus Ma)",
+          "year_close_tax.amount": "Saldo (Wn minus Ma)"
         },
         "values": {
           "account.type": {
@@ -2862,7 +3047,11 @@
           "cit_advance.recomputed": "Zaliczka na CIT przeliczona",
           "cost.spread": "Koszt rozłożony w czasie",
           "fixed_asset.accepted": "Przyjęcie środka trwałego do używania (OT)",
-          "fixed_asset.disposed": "Likwidacja środka trwałego (LT)"
+          "fixed_asset.disposed": "Likwidacja środka trwałego (LT)",
+          "year.closed": "Zamknięcie roku obrotowego",
+          "statement.approved": "Zatwierdzenie sprawozdania finansowego",
+          "result.distributed": "Uchwała o podziale wyniku",
+          "dividend.paid": "Wypłata dywidendy"
         },
         "doors": {
           "appoint_deputy": "wyznaczenie zastępcy",
@@ -2896,7 +3085,11 @@
           "recompute_cit_advance": "przeliczenie zaliczki na CIT",
           "spread_cost": "rozłożenie kosztu w czasie (RMK)",
           "accept_fixed_asset": "przyjęcie środka trwałego do używania (OT)",
-          "dispose_fixed_asset": "likwidacja środka trwałego (LT)"
+          "dispose_fixed_asset": "likwidacja środka trwałego (LT)",
+          "close_year": "zamknięcie roku",
+          "approve_statement": "zatwierdzenie sprawozdania",
+          "distribute_result": "podział wyniku",
+          "pay_dividend": "wypłata dywidendy"
         },
         "account_groups": {
           "0": "Aktywa trwałe",
@@ -3530,6 +3723,67 @@
             "field": "status",
             "label": "Status",
             "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "kapitaly",
+      "version": 1,
+      "notion": "analysis",
+      "title": "Kapitały własne",
+      "domain": "finance",
+      "function": "equity",
+      "spec": {
+        "sql": "SELECT json_extract_string(a.state,'$.code') AS code, json_extract_string(a.state,'$.name') AS name, SUM(CASE WHEN json_extract_string(p.state,'$.side') = 'credit' THEN CAST(json_extract(p.state,'$.amount') AS BIGINT) ELSE -CAST(json_extract(p.state,'$.amount') AS BIGINT) END) AS balance, a.object_id AS _of FROM objects a LEFT JOIN objects p ON p.object_type = 'posting' AND json_extract_string(p.state,'$.account') = a.object_id AND json_extract_string(p.state,'$.book') = 'pl-stat' WHERE a.object_type = 'account' AND json_extract_string(a.state,'$.type') = 'equity' GROUP BY 1, 2, 4 ORDER BY 1",
+        "columns": [
+          {
+            "field": "code",
+            "label": "Konto",
+            "type": "string"
+          },
+          {
+            "field": "name",
+            "label": "Nazwa",
+            "type": "string"
+          },
+          {
+            "field": "balance",
+            "label": "Saldo (Ma)",
+            "type": "money"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "podzial-wyniku",
+      "version": 1,
+      "notion": "list",
+      "title": "Podział wyniku",
+      "domain": "finance",
+      "function": "equity",
+      "spec": {
+        "object_type": "result_distribution",
+        "columns": [
+          {
+            "field": "year_end",
+            "label": "Rok do"
+          },
+          {
+            "field": "resolution_date",
+            "label": "Uchwała z dnia"
+          },
+          {
+            "field": "reserve",
+            "label": "Na kapitał zapasowy"
+          },
+          {
+            "field": "dividends",
+            "label": "Na dywidendy"
+          },
+          {
+            "field": "loss_cover",
+            "label": "Pokrycie straty"
           }
         ]
       }
@@ -6058,6 +6312,553 @@
           "wzorcowy plan kont: 010 Środki trwałe, 071 Umorzenie środków trwałych, 080 Środki trwałe w budowie, 401 Amortyzacja, 761 Pozostałe koszty operacyjne"
         ]
       }
+    },
+    {
+      "rule_id": "pl-close-year-expenses",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Zamknięcie roku: każde konto kosztów oddaje swoje saldo na dzień bilansowy (Wn minus Ma, od początku roku) jako pozycję zamknięcia, która przechodzi na 860",
+      "spec": {
+        "match": {
+          "event_type": "year.closed",
+          "where": [
+            {
+              "path": "$.book",
+              "op": "eq",
+              "value": "pl-stat"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "year_close_cost",
+            "each": "=objects(account, type, \"expense\")",
+            "fields": {
+              "account": "=$.line.object_id",
+              "code": "=$.line.state.code",
+              "year_end": "=$.doc.year_end",
+              "book": "=$.doc.book",
+              "amount": "=balance($.doc.book, $.line.state.code, start_of_year($.doc.year_end), $.doc.year_end)"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 12 ust. 2 pkt 1: „Księgi rachunkowe zamyka się […] na dzień kończący rok obrotowy”; ust. 4: ostateczne zamknięcie i otwarcie ksiąg najpóźniej w ciągu 15 dni od dnia zatwierdzenia sprawozdania",
+          "ustawa o rachunkowości art. 42 ust. 1: na wynik finansowy netto składają się wynik działalności operacyjnej (w tym pozostałe przychody i koszty operacyjne), wynik operacji finansowych i obowiązkowe obciążenia wyniku z tytułu podatku dochodowego — stąd na 860 przechodzą wszystkie konta kosztów, przychodów i podatku dochodowego",
+          "wzorcowy plan kont: 860 Wynik finansowy, 820 Rozliczenie wyniku finansowego, 801 Kapitał podstawowy, 802 Kapitał zapasowy, 241 rozrachunki z właścicielami z tytułu dywidend"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-close-year-revenues",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Zamknięcie roku: każde konto przychodów oddaje swoje saldo na dzień bilansowy (Wn minus Ma, od początku roku) jako pozycję zamknięcia, która przechodzi na 860",
+      "spec": {
+        "match": {
+          "event_type": "year.closed",
+          "where": [
+            {
+              "path": "$.book",
+              "op": "eq",
+              "value": "pl-stat"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "year_close_revenue",
+            "each": "=objects(account, type, \"revenue\")",
+            "fields": {
+              "account": "=$.line.object_id",
+              "code": "=$.line.state.code",
+              "year_end": "=$.doc.year_end",
+              "book": "=$.doc.book",
+              "amount": "=balance($.doc.book, $.line.state.code, start_of_year($.doc.year_end), $.doc.year_end)"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 12 ust. 2 pkt 1: „Księgi rachunkowe zamyka się […] na dzień kończący rok obrotowy”; ust. 4: ostateczne zamknięcie i otwarcie ksiąg najpóźniej w ciągu 15 dni od dnia zatwierdzenia sprawozdania",
+          "ustawa o rachunkowości art. 42 ust. 1: na wynik finansowy netto składają się wynik działalności operacyjnej (w tym pozostałe przychody i koszty operacyjne), wynik operacji finansowych i obowiązkowe obciążenia wyniku z tytułu podatku dochodowego — stąd na 860 przechodzą wszystkie konta kosztów, przychodów i podatku dochodowego",
+          "wzorcowy plan kont: 860 Wynik finansowy, 820 Rozliczenie wyniku finansowego, 801 Kapitał podstawowy, 802 Kapitał zapasowy, 241 rozrachunki z właścicielami z tytułu dywidend"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-close-year-income-tax",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Zamknięcie roku: każde konto podatku dochodowego oddaje swoje saldo na dzień bilansowy (Wn minus Ma, od początku roku) jako pozycję zamknięcia, która przechodzi na 860",
+      "spec": {
+        "match": {
+          "event_type": "year.closed",
+          "where": [
+            {
+              "path": "$.book",
+              "op": "eq",
+              "value": "pl-stat"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "year_close_tax",
+            "each": "=objects(account, type, \"income_tax\")",
+            "fields": {
+              "account": "=$.line.object_id",
+              "code": "=$.line.state.code",
+              "year_end": "=$.doc.year_end",
+              "book": "=$.doc.book",
+              "amount": "=balance($.doc.book, $.line.state.code, start_of_year($.doc.year_end), $.doc.year_end)"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 12 ust. 2 pkt 1: „Księgi rachunkowe zamyka się […] na dzień kończący rok obrotowy”; ust. 4: ostateczne zamknięcie i otwarcie ksiąg najpóźniej w ciągu 15 dni od dnia zatwierdzenia sprawozdania",
+          "ustawa o rachunkowości art. 42 ust. 1: na wynik finansowy netto składają się wynik działalności operacyjnej (w tym pozostałe przychody i koszty operacyjne), wynik operacji finansowych i obowiązkowe obciążenia wyniku z tytułu podatku dochodowego — stąd na 860 przechodzą wszystkie konta kosztów, przychodów i podatku dochodowego",
+          "wzorcowy plan kont: 860 Wynik finansowy, 820 Rozliczenie wyniku finansowego, 801 Kapitał podstawowy, 802 Kapitał zapasowy, 241 rozrachunki z właścicielami z tytułu dywidend"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-year-close-debit",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Konto z saldem Wn (koszty) zamyka się na dzień bilansowy: Wn 860 / Ma konto, w kwocie salda",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "formula": "=($.object_type = \"year_close_cost\" or $.object_type = \"year_close_revenue\" or $.object_type = \"year_close_tax\") and $.state.amount > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.year_end",
+            "lines": [
+              {
+                "account": "860",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "=$.state.code",
+                "credit": "=$.state.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 42 ust. 1: na wynik finansowy netto składają się wynik działalności operacyjnej (w tym pozostałe przychody i koszty operacyjne), wynik operacji finansowych i obowiązkowe obciążenia wyniku z tytułu podatku dochodowego — stąd na 860 przechodzą wszystkie konta kosztów, przychodów i podatku dochodowego",
+          "wzorcowy plan kont: 860 Wynik finansowy, 820 Rozliczenie wyniku finansowego, 801 Kapitał podstawowy, 802 Kapitał zapasowy, 241 rozrachunki z właścicielami z tytułu dywidend"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-year-close-credit",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Konto z saldem Ma (przychody) zamyka się na dzień bilansowy: Wn konto / Ma 860, w kwocie salda",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "formula": "=($.object_type = \"year_close_cost\" or $.object_type = \"year_close_revenue\" or $.object_type = \"year_close_tax\") and $.state.amount < 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.year_end",
+            "lines": [
+              {
+                "account": "=$.state.code",
+                "debit": "=abs($.state.amount)"
+              },
+              {
+                "account": "860",
+                "credit": "=abs($.state.amount)"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 42 ust. 1: na wynik finansowy netto składają się wynik działalności operacyjnej (w tym pozostałe przychody i koszty operacyjne), wynik operacji finansowych i obowiązkowe obciążenia wyniku z tytułu podatku dochodowego — stąd na 860 przechodzą wszystkie konta kosztów, przychodów i podatku dochodowego",
+          "wzorcowy plan kont: 860 Wynik finansowy, 820 Rozliczenie wyniku finansowego, 801 Kapitał podstawowy, 802 Kapitał zapasowy, 241 rozrachunki z właścicielami z tytułu dywidend"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-approve-statement-profit",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Zatwierdzenie sprawozdania przy zysku: wynik roku przechodzi z 860 na 820 w dniu zatwierdzenia (Wn 860 / Ma 820)",
+      "spec": {
+        "match": {
+          "event_type": "statement.approved",
+          "where": [
+            {
+              "formula": "=balance($.book, \"860\", start_of_year($.year_end), $.year_end) < 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.approved_on",
+            "lines": [
+              {
+                "account": "860",
+                "debit": "=abs(balance($.book, \"860\", start_of_year($.year_end), $.year_end))"
+              },
+              {
+                "account": "820",
+                "credit": "=abs(balance($.book, \"860\", start_of_year($.year_end), $.year_end))"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 53 ust. 1: „Roczne sprawozdanie finansowe jednostki […] podlega zatwierdzeniu przez organ zatwierdzający, nie później niż 6 miesięcy od dnia bilansowego”",
+          "Kodeks spółek handlowych (t.j. Dz. U. z 2024 r. poz. 18) art. 231 § 1–2: zwyczajne zgromadzenie wspólników w terminie sześciu miesięcy po upływie roku obrotowego rozpatruje i zatwierdza sprawozdanie finansowe oraz podejmuje uchwałę o podziale zysku albo pokryciu straty",
+          "wzorcowy plan kont: 860 Wynik finansowy, 820 Rozliczenie wyniku finansowego, 801 Kapitał podstawowy, 802 Kapitał zapasowy, 241 rozrachunki z właścicielami z tytułu dywidend"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-approve-statement-loss",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Zatwierdzenie sprawozdania przy stracie: strata roku przechodzi z 860 na 820 w dniu zatwierdzenia (Wn 820 / Ma 860)",
+      "spec": {
+        "match": {
+          "event_type": "statement.approved",
+          "where": [
+            {
+              "formula": "=balance($.book, \"860\", start_of_year($.year_end), $.year_end) > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.approved_on",
+            "lines": [
+              {
+                "account": "820",
+                "debit": "=balance($.book, \"860\", start_of_year($.year_end), $.year_end)"
+              },
+              {
+                "account": "860",
+                "credit": "=balance($.book, \"860\", start_of_year($.year_end), $.year_end)"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 53 ust. 1: „Roczne sprawozdanie finansowe jednostki […] podlega zatwierdzeniu przez organ zatwierdzający, nie później niż 6 miesięcy od dnia bilansowego”",
+          "Kodeks spółek handlowych (t.j. Dz. U. z 2024 r. poz. 18) art. 231 § 1–2: zwyczajne zgromadzenie wspólników w terminie sześciu miesięcy po upływie roku obrotowego rozpatruje i zatwierdza sprawozdanie finansowe oraz podejmuje uchwałę o podziale zysku albo pokryciu straty",
+          "wzorcowy plan kont: 860 Wynik finansowy, 820 Rozliczenie wyniku finansowego, 801 Kapitał podstawowy, 802 Kapitał zapasowy, 241 rozrachunki z właścicielami z tytułu dywidend"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-distribute-result",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Uchwała o podziale zysku albo pokryciu straty staje się obiektem result_distribution: rok, dzień uchwały, kwoty na kapitał zapasowy, na dywidendy i pokrycia straty",
+      "spec": {
+        "match": {
+          "event_type": "result.distributed"
+        },
+        "effect": {
+          "object": {
+            "type": "result_distribution",
+            "fields": {
+              "year_end": "=$.year_end",
+              "resolution_date": "=$.resolution_date",
+              "reserve": "=$.to_reserve",
+              "dividends": "=$.to_dividends",
+              "loss_cover": "=$.loss_cover",
+              "book": "=$.book"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 53 ust. 4: „Podział lub pokrycie wyniku finansowego netto jednostek niezobowiązanych do poddania badaniu rocznego sprawozdania finansowego może nastąpić po zatwierdzeniu sprawozdania finansowego przez organ zatwierdzający”; ust. 3: w jednostkach badanych — po zatwierdzeniu poprzedzonym opinią biegłego rewidenta, inaczej podział jest nieważny z mocy prawa",
+          "Kodeks spółek handlowych art. 191 § 1: „Wspólnik ma prawo do udziału w zysku wynikającym z rocznego sprawozdania finansowego i przeznaczonym do podziału uchwałą zgromadzenia wspólników”; art. 192: kwota do podziału nie może przekraczać zysku za ostatni rok, powiększonego o niepodzielone zyski z lat ubiegłych i kwoty z kapitałów zapasowego i rezerwowych utworzonych z zysku, pomniejszonego o niepokryte straty, udziały własne i kwoty, które z mocy ustawy lub umowy idą na kapitały",
+          "Kodeks spółek handlowych (t.j. Dz. U. z 2024 r. poz. 18) art. 231 § 1–2: zwyczajne zgromadzenie wspólników w terminie sześciu miesięcy po upływie roku obrotowego rozpatruje i zatwierdza sprawozdanie finansowe oraz podejmuje uchwałę o podziale zysku albo pokryciu straty"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-result-to-reserve",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Odpis z zysku na kapitał zapasowy księguje się w dniu uchwały: Wn 820 / Ma 802",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "result_distribution"
+            },
+            {
+              "formula": "=$.state.reserve > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.resolution_date",
+            "lines": [
+              {
+                "account": "820",
+                "debit": "=$.state.reserve"
+              },
+              {
+                "account": "802",
+                "credit": "=$.state.reserve"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "Kodeks spółek handlowych art. 396 § 1 (spółka akcyjna): na pokrycie straty tworzy się kapitał zapasowy, na który przelewa się co najmniej 8% zysku za rok obrotowy, dopóki nie osiągnie jednej trzeciej kapitału zakładowego; w sp. z o.o. odpis na kapitał zapasowy jest dobrowolny, jak uchwali zgromadzenie",
+          "ustawa o rachunkowości art. 36 ust. 1: kapitały własne ujmuje się w księgach z podziałem na ich rodzaje i według zasad określonych przepisami prawa, postanowieniami statutu lub umowy",
+          "wzorcowy plan kont: 860 Wynik finansowy, 820 Rozliczenie wyniku finansowego, 801 Kapitał podstawowy, 802 Kapitał zapasowy, 241 rozrachunki z właścicielami z tytułu dywidend"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-result-to-dividends",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Zysk przeznaczony na dywidendy staje się zobowiązaniem wobec wspólników w dniu uchwały: Wn 820 / Ma 241 (brutto)",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "result_distribution"
+            },
+            {
+              "formula": "=$.state.dividends > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.resolution_date",
+            "lines": [
+              {
+                "account": "820",
+                "debit": "=$.state.dividends"
+              },
+              {
+                "account": "241",
+                "credit": "=$.state.dividends"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "Kodeks spółek handlowych art. 191 § 1: „Wspólnik ma prawo do udziału w zysku wynikającym z rocznego sprawozdania finansowego i przeznaczonym do podziału uchwałą zgromadzenia wspólników”; art. 192: kwota do podziału nie może przekraczać zysku za ostatni rok, powiększonego o niepodzielone zyski z lat ubiegłych i kwoty z kapitałów zapasowego i rezerwowych utworzonych z zysku, pomniejszonego o niepokryte straty, udziały własne i kwoty, które z mocy ustawy lub umowy idą na kapitały",
+          "ustawa o rachunkowości art. 53 ust. 4: „Podział lub pokrycie wyniku finansowego netto jednostek niezobowiązanych do poddania badaniu rocznego sprawozdania finansowego może nastąpić po zatwierdzeniu sprawozdania finansowego przez organ zatwierdzający”; ust. 3: w jednostkach badanych — po zatwierdzeniu poprzedzonym opinią biegłego rewidenta, inaczej podział jest nieważny z mocy prawa",
+          "wzorcowy plan kont: 860 Wynik finansowy, 820 Rozliczenie wyniku finansowego, 801 Kapitał podstawowy, 802 Kapitał zapasowy, 241 rozrachunki z właścicielami z tytułu dywidend"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-loss-cover",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Pokrycie straty z kapitału zapasowego księguje się w dniu uchwały: Wn 802 / Ma 820",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "result_distribution"
+            },
+            {
+              "formula": "=$.state.loss_cover > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.resolution_date",
+            "lines": [
+              {
+                "account": "802",
+                "debit": "=$.state.loss_cover"
+              },
+              {
+                "account": "820",
+                "credit": "=$.state.loss_cover"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "Kodeks spółek handlowych art. 396 § 1 (spółka akcyjna): na pokrycie straty tworzy się kapitał zapasowy, na który przelewa się co najmniej 8% zysku za rok obrotowy, dopóki nie osiągnie jednej trzeciej kapitału zakładowego; w sp. z o.o. odpis na kapitał zapasowy jest dobrowolny, jak uchwali zgromadzenie",
+          "Kodeks spółek handlowych (t.j. Dz. U. z 2024 r. poz. 18) art. 231 § 1–2: zwyczajne zgromadzenie wspólników w terminie sześciu miesięcy po upływie roku obrotowego rozpatruje i zatwierdza sprawozdanie finansowe oraz podejmuje uchwałę o podziale zysku albo pokryciu straty",
+          "wzorcowy plan kont: 860 Wynik finansowy, 820 Rozliczenie wyniku finansowego, 801 Kapitał podstawowy, 802 Kapitał zapasowy, 241 rozrachunki z właścicielami z tytułu dywidend"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-pay-dividend-withheld",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Wypłata dywidendy z potrąceniem zryczałtowanego podatku: Wn 241 brutto / Ma 130 netto, Ma 225 podatek pobrany przez spółkę jako płatnika",
+      "spec": {
+        "match": {
+          "event_type": "dividend.paid",
+          "where": [
+            {
+              "formula": "=round($.gross * $.withholding_rate / 100, 2, half_up) > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.date",
+            "lines": [
+              {
+                "account": "241",
+                "debit": "=$.gross"
+              },
+              {
+                "account": "130",
+                "credit": "=$.gross - round($.gross * $.withholding_rate / 100, 2, half_up)"
+              },
+              {
+                "account": "225",
+                "credit": "=round($.gross * $.withholding_rate / 100, 2, half_up)"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o PIT (t.j. Dz. U. z 2026 r. poz. 592) art. 30a ust. 1 pkt 4: od dochodów „z dywidend i innych przychodów z tytułu udziału w zyskach osób prawnych” pobiera się 19% zryczałtowany podatek dochodowy; art. 41 ust. 4: płatnicy pobierają zryczałtowany podatek od dokonywanych wypłat z tytułów określonych w art. 30a ust. 1 pkt 1–11",
+          "ustawa o CIT (t.j. Dz. U. z 2026 r. poz. 554) art. 22 ust. 1: podatek od przychodów z dywidend i innych przychodów z tytułu udziału w zyskach osób prawnych z siedzibą w Polsce wynosi 19% uzyskanego przychodu; ust. 4: zwolnienie dla spółek z udziałem co najmniej 10% przez dwa lata — wtedy stawka 0",
+          "wzorcowy plan kont: 860 Wynik finansowy, 820 Rozliczenie wyniku finansowego, 801 Kapitał podstawowy, 802 Kapitał zapasowy, 241 rozrachunki z właścicielami z tytułu dywidend"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-pay-dividend-exempt",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Wypłata dywidendy bez podatku (stawka 0 — zwolnienie): Wn 241 / Ma 130 brutto, bez linii podatku, której kwota byłaby zerem",
+      "spec": {
+        "match": {
+          "event_type": "dividend.paid",
+          "where": [
+            {
+              "formula": "=round($.gross * $.withholding_rate / 100, 2, half_up) = 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.date",
+            "lines": [
+              {
+                "account": "241",
+                "debit": "=$.gross"
+              },
+              {
+                "account": "130",
+                "credit": "=$.gross"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o CIT (t.j. Dz. U. z 2026 r. poz. 554) art. 22 ust. 1: podatek od przychodów z dywidend i innych przychodów z tytułu udziału w zyskach osób prawnych z siedzibą w Polsce wynosi 19% uzyskanego przychodu; ust. 4: zwolnienie dla spółek z udziałem co najmniej 10% przez dwa lata — wtedy stawka 0",
+          "wzorcowy plan kont: 860 Wynik finansowy, 820 Rozliczenie wyniku finansowego, 801 Kapitał podstawowy, 802 Kapitał zapasowy, 241 rozrachunki z właścicielami z tytułu dywidend"
+        ]
+      }
     }
   ],
   "activities": [
@@ -6531,6 +7332,153 @@
           }
         ],
         "emits": "fixed_asset.disposed",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "close_year",
+      "domain": "finance",
+      "description": "Firma zamyka rok obrotowy na dzień bilansowy (po wszystkich zapisach roku, przed sprawozdaniem): salda kont kosztów, przychodów i podatku dochodowego przechodzą na 860 Wynik finansowy",
+      "spec": {
+        "inputs": [
+          {
+            "name": "year_end",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "book",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "year.closed",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "approve_statement",
+      "domain": "finance",
+      "description": "Organ zatwierdzający zatwierdził sprawozdanie finansowe za rok (nie później niż 6 miesięcy od dnia bilansowego): wynik przechodzi z 860 na 820 Rozliczenie wyniku finansowego w dniu zatwierdzenia",
+      "spec": {
+        "inputs": [
+          {
+            "name": "year_end",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "approved_on",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "book",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "statement.approved",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "distribute_result",
+      "domain": "finance",
+      "description": "Uchwała zgromadzenia wspólników o podziale zysku albo pokryciu straty za rok: ile na kapitał zapasowy, ile na dywidendy (brutto), ile straty pokrywa kapitał zapasowy — 0,00 tam, gdzie nic; reszta zostaje na 820 jako wynik niepodzielony",
+      "spec": {
+        "inputs": [
+          {
+            "name": "year_end",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "resolution_date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "to_reserve",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "to_dividends",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "loss_cover",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "book",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "result.distributed",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "pay_dividend",
+      "domain": "finance",
+      "description": "Wypłata dywidendy wspólnikowi: kwota brutto, dzień wypłaty i stawka zryczałtowanego podatku (19 dla osoby fizycznej i spółki bez zwolnienia; 0 przy zwolnieniu z art. 22 ust. 4 ustawy o CIT) — spółka jako płatnik potrąca podatek i odprowadza go z 225",
+      "spec": {
+        "inputs": [
+          {
+            "name": "date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "gross",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "withholding_rate",
+            "type": "decimal",
+            "required": true
+          },
+          {
+            "name": "recipient",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "dividend.paid",
         "who": [
           "human"
         ]
@@ -7080,6 +8028,39 @@
         "code": "080",
         "name": "Środki trwałe w budowie",
         "type": "asset",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.created",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/account/802",
+      "payload": {
+        "code": "802",
+        "name": "Kapitał zapasowy",
+        "type": "equity",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.created",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/account/820",
+      "payload": {
+        "code": "820",
+        "name": "Rozliczenie wyniku finansowego",
+        "type": "equity",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.created",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/account/241",
+      "payload": {
+        "code": "241",
+        "name": "Rozrachunki z właścicielami z tytułu dywidend",
+        "type": "creditor",
         "market": "pl"
       }
     }

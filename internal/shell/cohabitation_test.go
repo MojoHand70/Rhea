@@ -125,14 +125,14 @@ func TestCohabitation(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	for _, id := range []string{"pack-pl-v32", "pack-de-v3"} {
+	for _, id := range []string{"pack-pl-v33", "pack-de-v3"} {
 		post("/api/bundles/"+id+"/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	}
 	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {
 		t.Fatalf("worklist = %d, want 0 — both markets' master data installed", len(wl))
 	}
 	accs, _ := s.ObjectsByType(ctx, "account")
-	if len(accs) != 53 {
+	if len(accs) != 56 {
 		t.Fatalf("accounts = %d, want both charts", len(accs))
 	}
 	// The capture is gone: the SKR03 is explained by its own market's rule.
