@@ -4072,3 +4072,10 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   750 to dividends, 31,99 stays; 700 paid to a person leaves 567 at the bank and 133 on
   225, 50 paid to an exempt company carries no tax line. Pinned counts: 30 types, 30
   views, 73 rules, 16 doors, 53 events, 42 accounts.
+- **Measured on v33 (one sitting each).** Financial accounting: 4 of 49 answers from
+  rules — three right (the fixed-asset rule twice, the bank-operation rule on other
+  operating costs), one wrong: II-8, a SKOK's net result, answered through the close
+  rule's warrant on UoR art. 42, which opens "w jednostkach innych niż banki" — the host
+  stretched a rule to a sector it excludes; the exam catches that too. Theory: 5 of 60,
+  all right, one of them the reserve-capital rule cited by name. Two papers: 9 of 109
+  from rules against 5 before v33, 8 right.
