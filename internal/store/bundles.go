@@ -37,9 +37,11 @@ func (s *Store) InsertBundle(ctx context.Context, b core.Bundle) (core.Bundle, e
 		if state != core.StatusDraft {
 			return b, fmt.Errorf("bundle %s: %s %s v%d is %s, only drafts can join a bundle", b.ID, m.Kind, m.Name, m.Version, state)
 		}
-		if other, _, ok, err := s.BundleOf(ctx, m); err != nil {
+		// a draft a rejected bundle held is free again; one a draft or active
+		// bundle holds is spoken for
+		if other, status, ok, err := s.BundleOf(ctx, m); err != nil {
 			return b, err
-		} else if ok {
+		} else if ok && (status == core.StatusDraft || status == core.StatusActive) {
 			return b, fmt.Errorf("bundle %s: %s %s v%d already belongs to bundle %s", b.ID, m.Kind, m.Name, m.Version, other)
 		}
 	}

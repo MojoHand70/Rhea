@@ -122,8 +122,12 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("pack %s: %d types, %d views, %d rules, %d activities drafted, %d upgraded, %d events loaded; %d already present\n",
+		fmt.Printf("pack %s: %d types, %d views, %d rules, %d activities drafted, %d upgraded, %d events loaded; %d already present",
 			sum.Pack, sum.Types, sum.Views, sum.Rules, sum.Activities, sum.Upgraded, sum.Events, sum.Skipped)
+		if sum.Adopted > 0 {
+			fmt.Printf("; %d orphan draft(s) adopted into the bundle", sum.Adopted)
+		}
+		fmt.Println()
 		for _, c := range sum.Conflicts {
 			fmt.Printf("conflict: %s evolved locally since the pack's version — the pack's change was not drafted; resolve by hand\n", c)
 		}

@@ -4117,3 +4117,31 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   provision rule twice on art. 39 ust. 2), the same II-8 wrong — the close rule's art. 42
   stretched to a SKOK; block I at 90%, 73 of 98 overall. Theory: 7 of 60, all right, 111
   of 120. The share from rules on these two papers, pack by pack: 0 → 5 → 9 → 13 of 109.
+
+## 2026-10-19 — Upgrading the live databases: orphan drafts are adopted, not skipped
+
+- Asked to bring the live databases to pack v34, I found them where they were, not where
+  I had said: rhea_pl on v18 with a stale v19 draft bundle never approved; rhea_face on
+  v31; the default rhea without the Poland pack. Loading v34 into rhea_pl failed partway
+  — its schema predated the dictionary's "words" notion, and `rhea init` (idempotent;
+  the schema file carries the migration) had never been re-run there. The failed load
+  left eighteen types and four views as drafts with no bundle, and a re-run would have
+  skipped them as "already present" and shipped a bundle without them: an installed pack
+  with its types still drafts.
+- The loader now adopts an orphan — a draft version already on the record that no draft
+  or active bundle holds, left by a load that failed partway or freed by a rejection —
+  into its bundle (`Summary.Adopted`), and the bundle's guard lets a member of a rejected
+  bundle join a new one; a member a pending or active bundle holds is still that
+  bundle's. On rhea_pl the v34 load then adopted 133 orphans (the two failed loads' rows
+  and v19's freed drafts) and drafted `pack-pl-v34`; on rhea_face it drafted the same
+  bundle directly. `TestALoadAdoptsOrphanDrafts` covers the orphan, the pending bundle
+  that keeps its own, and the approval that activates the adopted draft.
+- The approval is not mine to give: the gate wants a person (invariant 2), and the
+  agent approving the bundle it drafted is the one thing the gate exists to prevent — the
+  session's classifier said as much before I had thought it through. Both bundles wait
+  for KK in the shell (`./shell.sh 8071` for rhea_pl; a shell with RHEA_PG_DSN on
+  rhea_face) or by `rhea approve pack-pl-v34`. Backups of both databases from before the
+  load are in data/backups/. The server at white01 is not reachable from this machine.
+- Owed: `rhea pack` as a screen in the shell (KK 2026-10-19: every user step in the
+  app); `rhea init`'s migration to run on `rhea serve` as well, so an old database never
+  refuses a new notion again.

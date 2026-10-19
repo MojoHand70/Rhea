@@ -98,15 +98,19 @@ type Event struct {
 // (a pack upgrade, 2026-10-15); Conflicts names the ones it left alone
 // because a person or the agent evolved them locally since.
 type Summary struct {
-	Pack       string   `json:"pack"`
-	Types      int      `json:"types"`
-	Views      int      `json:"views"`
-	Rules      int      `json:"rules"`
-	Activities int      `json:"activities"`
-	Events     int      `json:"events"`
-	Skipped    int      `json:"skipped"`
-	Upgraded   int      `json:"upgraded"`
-	Conflicts  []string `json:"conflicts,omitempty"`
+	Pack       string `json:"pack"`
+	Types      int    `json:"types"`
+	Views      int    `json:"views"`
+	Rules      int    `json:"rules"`
+	Activities int    `json:"activities"`
+	Events     int    `json:"events"`
+	Skipped    int    `json:"skipped"`
+	Upgraded   int    `json:"upgraded"`
+	// Adopted counts drafts already on the record that no draft or active
+	// bundle held — left by a load that failed partway, or freed by a
+	// rejection — taken into this load's bundle instead of skipped.
+	Adopted   int      `json:"adopted"`
+	Conflicts []string `json:"conflicts,omitempty"`
 	// Bundle is the approval scope holding every draft this load added;
 	// empty when the load added none (a reload).
 	Bundle string `json:"bundle,omitempty"`
@@ -121,6 +125,25 @@ type Summary struct {
 // already present. Object types and views were always keyed by version,
 // so their new versions upgrade by the same path they install.
 func packOwns(createdBy, pack string) bool { return createdBy == "pack:"+pack }
+
+// adopt takes a definition already on the record into this load's bundle
+// when it is a draft no draft or active bundle holds — an orphan of a load
+// that failed partway or of a rejected bundle — so the pack installs whole.
+func adopt(ctx context.Context, s *store.Store, status string, m core.Member, members *[]core.Member, sum *Summary) (bool, error) {
+	if status != core.StatusDraft {
+		return false, nil
+	}
+	_, holder, ok, err := s.BundleOf(ctx, m)
+	if err != nil {
+		return false, err
+	}
+	if ok && (holder == core.StatusDraft || holder == core.StatusActive) {
+		return false, nil
+	}
+	*members = append(*members, m)
+	sum.Adopted++
+	return true, nil
+}
 
 func sameRule(have core.Rule, want Rule) bool {
 	a, _ := json.Marshal(have.Spec)
@@ -168,8 +191,12 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 	packTypes := map[string]core.ObjectType{}
 	for _, t := range m.ObjectTypes {
 		packTypes[t.Name] = t
-		if _, _, err := s.GetObjectTypeVersion(ctx, t.Name, t.Version); err == nil {
-			sum.Skipped++
+		if _, status, err := s.GetObjectTypeVersion(ctx, t.Name, t.Version); err == nil {
+			if adopted, err := adopt(ctx, s, status, core.Member{Kind: core.KindObjectType, Name: t.Name, Version: t.Version}, &members, &sum); err != nil {
+				return sum, err
+			} else if !adopted {
+				sum.Skipped++
+			}
 			continue
 		}
 		if err := store.InsertObjectTypeRow(ctx, s.Pool, t, core.StatusDraft); err != nil {
@@ -179,8 +206,12 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 		sum.Types++
 	}
 	for _, v := range m.ViewDefs {
-		if _, _, err := s.GetViewDefVersion(ctx, v.ID, v.Version); err == nil {
-			sum.Skipped++
+		if _, status, err := s.GetViewDefVersion(ctx, v.ID, v.Version); err == nil {
+			if adopted, err := adopt(ctx, s, status, core.Member{Kind: core.KindViewDef, Name: v.ID, Version: v.Version}, &members, &sum); err != nil {
+				return sum, err
+			} else if !adopted {
+				sum.Skipped++
+			}
 			continue
 		}
 		if err := store.InsertViewDefRow(ctx, s.Pool, v, core.StatusDraft); err != nil {
@@ -195,7 +226,12 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 		if have, err := s.GetRule(ctx, r.RuleID); err == nil {
 			switch {
 			case sameRule(have, r):
-				sum.Skipped++ // already present, this version or an earlier one with the same content
+				// already present, this version or an earlier one with the same content
+				if adopted, err := adopt(ctx, s, have.Status, core.Member{Kind: core.KindRule, Name: have.ID, Version: have.Version}, &members, &sum); err != nil {
+					return sum, err
+				} else if !adopted {
+					sum.Skipped++
+				}
 				continue
 			case !packOwns(have.CreatedBy, m.Pack):
 				// evolved locally since: not the pack's to touch
@@ -256,7 +292,11 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 		if have, err := s.GetActivity(ctx, a.Name); err == nil {
 			switch {
 			case sameActivity(have, a):
-				sum.Skipped++
+				if adopted, err := adopt(ctx, s, have.Status, core.Member{Kind: core.KindActivity, Name: have.Name, Version: have.Version}, &members, &sum); err != nil {
+					return sum, err
+				} else if !adopted {
+					sum.Skipped++
+				}
 				continue
 			case !packOwns(have.CreatedBy, m.Pack):
 				sum.Conflicts = append(sum.Conflicts, fmt.Sprintf("activity %s v%d (by %s)", have.Name, have.Version, have.CreatedBy))
