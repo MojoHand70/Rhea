@@ -4112,3 +4112,8 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   against 201; a late customer's 615 written down as non-deductible and reversed to 760
   when paid. Pinned counts: 32 types, 32 views, 88 rules, 21 doors, 58 events, 46
   accounts.
+- **Measured on v34 (one sitting each).** Financial accounting: 6 of 49 from rules, 5
+  right (the fixed-asset rule twice, the write-down rule on art. 35b ust. 2, the
+  provision rule twice on art. 39 ust. 2), the same II-8 wrong — the close rule's art. 42
+  stretched to a SKOK; block I at 90%, 73 of 98 overall. Theory: 7 of 60, all right, 111
+  of 120. The share from rules on these two papers, pack by pack: 0 → 5 → 9 → 13 of 109.
