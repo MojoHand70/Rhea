@@ -3,7 +3,10 @@ package core
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
+	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 )
 
@@ -81,6 +84,10 @@ func (t Template) Computes() bool { return t.kind == "formula" }
 
 // Formula is the compiled formula behind an "=" template; nil for literals.
 func (t Template) Formula() *Formula { return t.f }
+
+// numericLiteral is what a literal on a numeric field may be: a number,
+// optionally negative, with an optional fraction.
+var numericLiteral = regexp.MustCompile(`^-?[0-9]+(\.[0-9]+)?$`)
 
 func ParseTemplate(s string) (Template, error) {
 	if !strings.HasPrefix(s, "=") {
@@ -211,7 +218,12 @@ func (t Template) Evaluate(payload any, fd FieldDef, env *Env) (any, *Calc, erro
 		case "money", "int", "decimal":
 			// A number written as a literal is a number: coerced by its
 			// field as a computed value is — money in minor units, never the
-			// text it was written as (invariant 6).
+			// text it was written as (invariant 6). Only a number: anything
+			// else on a numeric field is a computation, and a computation
+			// starts with "=" so its Calc is recorded (invariant 5).
+			if !numericLiteral.MatchString(strings.TrimSpace(t.raw)) {
+				return nil, nil, fmt.Errorf("%q is not a %s literal — a computation starts with \"=\"", t.raw, fd.Type)
+			}
 			f, err := ParseFormula(t.raw)
 			if err != nil {
 				return nil, nil, fmt.Errorf("%q is not a %s: %w", t.raw, fd.Type, err)
@@ -220,7 +232,7 @@ func (t Template) Evaluate(payload any, fd FieldDef, env *Env) (any, *Calc, erro
 			if err != nil {
 				return nil, nil, err
 			}
-			out, err := toField(v, fd, false)
+			out, err := toField(v, fd, false, false)
 			return out, nil, err
 		}
 		v, err := checked(t.raw, fd)
@@ -230,7 +242,7 @@ func (t Template) Evaluate(payload any, fd FieldDef, env *Env) (any, *Calc, erro
 	if err != nil {
 		return nil, nil, err
 	}
-	out, err := toField(v, fd, t.kind == "path")
+	out, err := toField(v, fd, t.kind == "path", env != nil && env.Raw)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -364,31 +376,57 @@ func EvalCondition(payload any, c Condition) (bool, error) {
 	case "ne":
 		return !looseEq(v, c.Value), nil
 	case "gt", "lt":
-		a, aok := asFloat(v)
-		b, bok := asFloat(c.Value)
+		a, aok := conditionNum(v)
+		b, bok := conditionNum(c.Value)
 		if !aok || !bok {
 			return false, fmt.Errorf("op %q needs numbers", c.Op)
 		}
 		if c.Op == "gt" {
-			return a > b, nil
+			return a.Cmp(b) > 0, nil
 		}
-		return a < b, nil
+		return a.Cmp(b) < 0, nil
 	}
 	return false, fmt.Errorf("unknown op %q", c.Op)
 }
 
-// looseEq compares across JSON's habit of making every number a float64.
-// Only scalars compare: an array or an object on either side is false, never
-// a comparison of uncomparable types that would take the kernel down.
-func looseEq(a, b any) bool {
-	if af, ok := asFloat(a); ok {
-		if bf, ok := asFloat(b); ok {
-			return af == bf
-		}
-		return false
+// conditionNum reads a JSON value as an exact number: a number, or text in
+// the boundary form ("50.00") — the one comparison the formula language
+// makes, so a path condition and a formula condition agree on money.
+func conditionNum(v any) (*big.Rat, bool) {
+	switch x := v.(type) {
+	case float64:
+		r, ok := new(big.Rat).SetString(strconv.FormatFloat(x, 'f', -1, 64))
+		return r, ok
+	case int:
+		return ratInt(int64(x)), true
+	case int64:
+		return ratInt(x), true
+	case json.Number:
+		r, err := parseDecimal(x.String())
+		return r, err == nil
+	case string:
+		r, err := parseDecimal(x)
+		return r, err == nil
 	}
+	return nil, false
+}
+
+// looseEq compares across JSON's habit of making every number a float64,
+// exactly: a number against a number or against text in the boundary form
+// compares as numbers; two texts compare as text (an identifier "0100" is
+// not "100"). Only scalars compare: an array or an object on either side is
+// false, never a comparison of uncomparable types that would take the
+// kernel down.
+func looseEq(a, b any) bool {
 	if !scalar(a) || !scalar(b) {
 		return false
+	}
+	_, aNum := asFloat(a)
+	_, bNum := asFloat(b)
+	if aNum || bNum {
+		x, xok := conditionNum(a)
+		y, yok := conditionNum(b)
+		return xok && yok && x.Cmp(y) == 0
 	}
 	return a == b
 }

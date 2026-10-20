@@ -292,7 +292,16 @@ func (p Problem) restore(r *Result, original map[string]Item) error {
 			latestDateSide = o.Date
 		}
 	}
-	for name, allocs := range r.Sides {
+	// Side names in a fixed order: the differences list is part of the
+	// derived event, and rules fanning out over it mint object ids from
+	// their position.
+	names := make([]string, 0, len(r.Sides))
+	for name := range r.Sides {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		allocs := r.Sides[name]
 		for i := range allocs {
 			a := &allocs[i]
 			o, converted := original[a.ID]

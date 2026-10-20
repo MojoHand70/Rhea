@@ -473,7 +473,15 @@ func coerceInput(f FieldDef, v any) (any, error) {
 			}
 			return n, nil
 		case float64:
-			return strconv.FormatFloat(n, 'f', -1, 64), nil
+			// A JSON number is what someone typed, written out exactly —
+			// unless it carries the sixteen or seventeen digits only a
+			// computed float has (0.1 + 0.2): then it is refused, since
+			// the precision was lost before the door.
+			s := strconv.FormatFloat(n, 'f', -1, 64)
+			if len(strings.Trim(strings.ReplaceAll(s, ".", ""), "-0")) > 15 {
+				return nil, fmt.Errorf("input %q: %s is a computed float — send decimals as text", f.Name, s)
+			}
+			return s, nil
 		case int:
 			return strconv.Itoa(n), nil
 		case int64:

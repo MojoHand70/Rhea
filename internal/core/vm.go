@@ -30,8 +30,9 @@ type Value struct {
 	// Origin is the concrete path the value was read at — $.lines[2].qty,
 	// $.state.item.std_cost, stock_movement-12.qty — for the inputs record.
 	Origin string
-	// untyped marks a number read from an untyped payload: in a bare copy
-	// into a money field it keeps the boundary convention (minor units).
+	// untyped marks a number read from an untyped payload: copied into a
+	// money field it is minor units in a derived payload and refused in a
+	// raw one (Env.Raw), where money crosses as text (invariant 6).
 	untyped bool
 }
 
@@ -47,6 +48,12 @@ type Env struct {
 	Typed         map[string]string
 	MaxCollection int
 	Balance       Balance
+	// Raw says the payload is a raw fact — a submitted event, a door's
+	// inputs — where money crosses as text (invariant 6), so a bare number
+	// copied into a money field is refused. A derived payload (an object's
+	// state, a match) carries money as integer minor units, and a copy keeps
+	// them.
+	Raw bool
 }
 
 // Balance is the ledger's own read: the debits less the credits of one
@@ -390,6 +397,14 @@ func (m *vm) ref(typ, field string, v Value) (Value, error) {
 // fx_rate master data postings' convert and the matching engine read, by its
 // code from/to/d or the inverse pair inverted. The rate read is an input.
 func (m *vm) fx(from, to, d Value) (Value, error) {
+	for _, c := range []Value{from, to} {
+		if c.Kind != KString || c.Str == "" {
+			return Value{}, fmt.Errorf("fx() takes currency codes, not %s %s", orDefault(c.Origin, "a value"), c.Kind)
+		}
+	}
+	if _, err := toDate(d); err != nil {
+		return Value{}, fmt.Errorf("fx(): %w", err)
+	}
 	if from.Str == to.Str {
 		return Value{Kind: KDecimal, Num: big.NewRat(1, 1)}, nil
 	}
@@ -801,6 +816,10 @@ func looksDate(v Value) bool {
 	return err == nil
 }
 
+// maxDays bounds date arithmetic: ten thousand years, so a wild integer
+// cannot wrap the calendar into a date that reads as real.
+const maxDays = 3_650_000
+
 func toDate(v Value) (time.Time, error) {
 	if v.Kind != KDate && v.Kind != KString {
 		return time.Time{}, fmt.Errorf("%s is a %s, not a date", orDefault(v.Origin, "value"), v.Kind)
@@ -846,6 +865,9 @@ func dateArith(op string, a, b Value) (Value, error) {
 		n, err := toInt(b)
 		if err != nil {
 			return Value{}, fmt.Errorf("a date takes whole days: %w", err)
+		}
+		if n > maxDays || n < -maxDays {
+			return Value{}, fmt.Errorf("a date takes at most %d days either way, not %d", maxDays, n)
 		}
 		if op == "-" {
 			n = -n
@@ -1107,9 +1129,12 @@ func jsonOf(v Value) any {
 // toField converts a result into the value a field of the given type
 // stores, refusing what does not fit: a money field holds two places, an
 // int a whole number — any finer value must have been rounded on purpose.
-// copy marks a bare path: untyped numbers then keep the boundary convention
-// (minor units), exactly as copies always worked.
-func toField(v Value, fd FieldDef, copy bool) (any, error) {
+// copy marks a bare path: a copied string into money is read in the
+// boundary form, strictly; a copied bare number is minor units in a derived
+// payload, the kernel's own convention, and refused in a raw fact (raw),
+// where it has no unit — read as minor units on a copy and as major units
+// in any computation, =$.net and =coalesce($.net, 0) differed a hundredfold.
+func toField(v Value, fd FieldDef, copy, raw bool) (any, error) {
 	switch fd.Type {
 	case "":
 		return natural(v), nil
@@ -1118,6 +1143,9 @@ func toField(v Value, fd FieldDef, copy bool) (any, error) {
 			return nil, fmt.Errorf("%s is missing", orDefault(v.Origin, "the value"))
 		}
 		if copy && v.Kind == KInt && v.untyped {
+			if raw {
+				return nil, fmt.Errorf("%s is a bare number with no unit — money crosses the boundary as text with two places (\"123.45\")", orDefault(v.Origin, "the value"))
+			}
 			return v.Num.Num().Int64(), nil // minor units, the derived-payload form
 		}
 		if copy && v.Kind == KString {
@@ -1136,9 +1164,8 @@ func toField(v Value, fd FieldDef, copy bool) (any, error) {
 		}
 		return minor.Int64(), nil
 	case "int":
-		if v.Kind == KString && copy {
-			return v.Str, nil // copies keep what they copy
-		}
+		// A copied string is read as a whole number or refused: stored as
+		// text it would poison every later typed read of the object.
 		n, err := toInt(v)
 		if err != nil {
 			return nil, err
@@ -1213,7 +1240,9 @@ func natural(v Value) any {
 	case KMoney:
 		if fits(v.Num, 2) {
 			minor := new(big.Int).Quo(new(big.Int).Mul(v.Num.Num(), big.NewInt(100)), v.Num.Denom())
-			return minor.Int64()
+			if minor.IsInt64() {
+				return minor.Int64()
+			}
 		}
 	case KList, KObject:
 		return v.Raw

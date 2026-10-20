@@ -4,9 +4,9 @@
 package exec
 
 import (
-	"errors"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -350,8 +350,10 @@ func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []cor
 	}
 	fire := func(ev core.Event, evPayload any, cause int) error {
 		// A fact that came through a door has the door's shape: its ref
-		// inputs, vouched by the door, read as links.
+		// inputs, vouched by the door, read as links. A raw fact's money is
+		// text; a derived payload's is minor units (core.Env.Raw).
 		ctx := withDoor(ctx, ev)
+		ctx = context.WithValue(ctx, rawFactKey{}, ev.Kind == core.KindRaw)
 		idBase := fmt.Sprintf("%d", root.ID)
 		if cause >= 0 {
 			idBase = nodes[cause].idBase()
@@ -582,7 +584,7 @@ func (x *Executor) bookTx(ctx context.Context, tx store.Querier, root core.Event
 			CauseEventID: &cause,
 			RuleID:       n.rule.ID,
 			RuleVersion:  n.rule.Version,
-			Actor:        "kernel", // rule provenance explains the rest
+			Actor:        "kernel",     // rule provenance explains the rest
 			Company:      root.Company, // and the partition key
 		})
 		if err != nil {
@@ -918,6 +920,7 @@ func (x *Executor) env(ctx context.Context, payload any, lookup core.Lookup, get
 	}
 	memo := map[string]known{}
 	typed := typedPrefixes(payload)
+	raw, _ := ctx.Value(rawFactKey{}).(bool)
 	shape, isDoor := x.doorShape(ctx)
 	if isDoor {
 		if typed == nil {
@@ -938,6 +941,7 @@ func (x *Executor) env(ctx context.Context, payload any, lookup core.Lookup, get
 			return t, err == nil
 		},
 		Typed:         typed,
+		Raw:           raw,
 		MaxCollection: x.MaxCollection,
 		Balance: func(book, account, from, to string) (int64, error) {
 			n, err := x.Store.AccountBalance(ctx, book, account, from, to)
@@ -960,6 +964,10 @@ type doorRef struct {
 
 // withDoor marks a firing on a fact that came through a declared door. Facts
 // rules derive, and facts with no door, carry nothing.
+// rawFactKey marks a fire over a raw fact's payload — a submitted event, a
+// door's inputs — as against a derived event's.
+type rawFactKey struct{}
+
 func withDoor(ctx context.Context, ev core.Event) context.Context {
 	if ev.Kind != core.KindRaw || ev.ActivityName == "" {
 		return ctx

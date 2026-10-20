@@ -688,13 +688,13 @@ func encode(r *big.Rat, kind string) (any, error) {
 	switch kind {
 	case "money":
 		minor := new(big.Rat).Mul(r, big.NewRat(100, 1))
-		if !minor.IsInt() {
+		if !minor.IsInt() || !minor.Num().IsInt64() {
 			return nil, fmt.Errorf("%s does not fit a money field", r.RatString())
 		}
 		return minor.Num().Int64(), nil
 	case "int":
-		if !r.IsInt() {
-			return nil, fmt.Errorf("%s is not a whole number", r.RatString())
+		if !r.IsInt() || !r.Num().IsInt64() {
+			return nil, fmt.Errorf("%s is not a whole number that fits", r.RatString())
 		}
 		return r.Num().Int64(), nil
 	}

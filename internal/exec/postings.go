@@ -78,6 +78,7 @@ func ExpandPostings(p *core.PostingsTemplate, postingType core.ObjectType, ev co
 	// from before books existed matches no book and locks nothing from here
 	// on (DECISIONS 2026-10-04, E1).
 	date := ev.OccurredAt
+	var intended string // the template's date when its month is locked
 	if p.Date != "" {
 		d, err := evalString(p.Date, payload, env)
 		if err != nil {
@@ -90,6 +91,8 @@ func ExpandPostings(p *core.PostingsTemplate, postingType core.ObjectType, ev co
 			return nil, err
 		} else if !locked {
 			date = d
+		} else {
+			intended = d
 		}
 	}
 	month := date[:7]
@@ -230,6 +233,15 @@ func ExpandPostings(p *core.PostingsTemplate, postingType core.ObjectType, ev co
 				field = "tx_amount"
 			}
 			mat.Calc = map[string]core.Calc{field: *tx.calc}
+		}
+		// A date the rule asked for in a locked month books on the fact's
+		// date; the derived event says which date was asked and why not.
+		if intended != "" {
+			if mat.Calc == nil {
+				mat.Calc = map[string]core.Calc{}
+			}
+			mat.Calc["date"] = core.Calc{Formula: p.Date, Inputs: map[string]any{
+				"intended": intended, "locked": book + " " + intended[:7], "booked": date}}
 		}
 		return mat
 	}

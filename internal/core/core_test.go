@@ -423,3 +423,78 @@ func TestObjectTypeNamesAndFields(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// The language's boundaries: a bare number copied into money is refused
+// (it was minor units on a copy and major units in any computation), a
+// string copied into an int is read or refused, a literal on a numeric
+// field is a number and nothing else, path conditions compare exactly and
+// read money text, fx() checks its kinds, and a date takes a sane number
+// of days.
+func TestLanguageBoundaries(t *testing.T) {
+	payload := decode(t, `{"net": 12345, "text": "abc", "n": "12", "amount": "70.00", "big": 1000000, "d": "2026-01-31"}`)
+	eval := func(tmpl, typ string) (any, error) {
+		t.Helper()
+		tm, err := ParseTemplate(tmpl)
+		if err != nil {
+			t.Fatal(err)
+		}
+		v, _, err := tm.Evaluate(payload, FieldDef{Name: "f", Type: typ}, &Env{Raw: true})
+		return v, err
+	}
+	if _, err := eval("=$.net", "money"); err == nil || !strings.Contains(err.Error(), "bare number") {
+		t.Fatalf("bare number into money from a raw fact: %v", err)
+	}
+	if tm, _ := ParseTemplate("=$.net"); tm.raw != "" {
+		if v, _, err := tm.Evaluate(payload, FieldDef{Name: "f", Type: "money"}, &Env{}); err != nil || v != int64(12345) {
+			t.Fatalf("a derived payload's bare number is minor units: %v, %v", v, err)
+		}
+	}
+	if v, err := eval("=$.amount", "money"); err != nil || v != int64(7000) {
+		t.Fatalf("money text copied: %v, %v", v, err)
+	}
+	if _, err := eval("=$.text", "int"); err == nil {
+		t.Fatal("abc stored in an int field")
+	}
+	if v, err := eval("=$.n", "int"); err != nil || v != int64(12) {
+		t.Fatalf("string into int: %v, %v", v, err)
+	}
+	if _, err := eval("$.net * 2", "money"); err == nil || !strings.Contains(err.Error(), "starts with") {
+		t.Fatalf("a computation without = on money: %v", err)
+	}
+	if v, err := eval("12.50", "money"); err != nil || v != int64(1250) {
+		t.Fatalf("money literal: %v, %v", v, err)
+	}
+	if v, err := eval("-3", "int"); err != nil || v != int64(-3) {
+		t.Fatalf("int literal: %v, %v", v, err)
+	}
+	if _, err := eval("=fx($.net, $.big, $.text)", "decimal"); err == nil || !strings.Contains(err.Error(), "currency codes") {
+		t.Fatalf("fx on numbers: %v", err)
+	}
+	if _, err := eval("=$.d + 9223372036854775807", "date"); err == nil || !strings.Contains(err.Error(), "at most") {
+		t.Fatalf("date plus a wild int: %v", err)
+	}
+	if v, err := eval("=$.d + 1", "date"); err != nil || v != "2026-02-01" {
+		t.Fatalf("date plus a day: %v, %v", v, err)
+	}
+
+	holds := func(c Condition) bool {
+		t.Helper()
+		ok, err := EvalCondition(payload, c)
+		if err != nil {
+			t.Fatalf("%+v: %v", c, err)
+		}
+		return ok
+	}
+	if !holds(Condition{Path: "$.amount", Op: "gt", Value: "50.00"}) || holds(Condition{Path: "$.amount", Op: "lt", Value: "50.00"}) {
+		t.Fatal("money text does not compare as a number")
+	}
+	if !holds(Condition{Path: "$.amount", Op: "gt", Value: 9.0}) || !holds(Condition{Path: "$.big", Op: "eq", Value: "1000000"}) {
+		t.Fatal("number against text")
+	}
+	if holds(Condition{Path: "$.n", Op: "eq", Value: "012"}) || !holds(Condition{Path: "$.n", Op: "eq", Value: 12.0}) {
+		t.Fatal("two texts compare as text, a number against text as numbers")
+	}
+	if _, err := EvalCondition(payload, Condition{Path: "$.text", Op: "gt", Value: 1.0}); err == nil {
+		t.Fatal("gt on text passed")
+	}
+}
