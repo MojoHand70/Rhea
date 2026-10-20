@@ -122,9 +122,16 @@ func (k KSeFInbound) Pass(ctx context.Context, reads adapter.Reads) ([]core.Even
 		read, _ := json.Marshal(map[string]any{
 			"document": hash, "channel": k.Name(), "event_type": "purchase.invoice.received",
 		})
+		// The same invoice in other bytes (a BOM, CRLF, a manual upload
+		// beside the pull) is the same invoice: keyed on its KSeF number,
+		// else on the seller and the number, never on the file alone.
+		dedup := "ksef_inbound/" + hash
+		if inv.SellerNIP != "" && inv.Number != "" {
+			dedup = "ksef_inbound/" + inv.SellerCountry + inv.SellerNIP + "/" + inv.Number
+		}
 		out = append(out,
 			core.Event{Type: "purchase.invoice.received", OccurredAt: inv.IssueDate,
-				Payload: payload, DedupKey: "ksef_inbound/" + hash},
+				Payload: payload, DedupKey: dedup},
 			core.Event{Type: adapter.EventDocumentRead, OccurredAt: inv.IssueDate,
 				Payload: read, DedupKey: "ksef_inbound/read/" + hash})
 	}

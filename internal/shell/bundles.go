@@ -163,7 +163,7 @@ func (s *Server) handleRejectBundle(w http.ResponseWriter, r *http.Request) {
 		Reason     string `json:"reason"`
 		RejectedBy string `json:"rejected_by"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := decodeBody(r, &req); err != nil {
 		writeErr(w, 400, err)
 		return
 	}
@@ -192,7 +192,7 @@ func (s *Server) handleDraftBundle(w http.ResponseWriter, r *http.Request) {
 		SampleEventID int64  `json:"sample_event_id"`
 		After         string `json:"after"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := decodeBody(r, &req); err != nil {
 		writeErr(w, 400, err)
 		return
 	}

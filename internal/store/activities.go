@@ -195,9 +195,19 @@ func (s *Store) seedBuiltinActivities(ctx context.Context) error {
 // kernel's vocabulary moves with the kernel (DECISIONS 2026-10-18). A door a
 // person evolved is left as they made it.
 func (s *Store) SeedActivities(ctx context.Context, builtins []core.Activity) error {
+	// One transaction under an advisory lock: two inits at once collided
+	// on the version's key with a raw error.
+	tx, err := s.Pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock($1)`, seedLock); err != nil {
+		return err
+	}
 	for _, a := range builtins {
 		var exists bool
-		if err := s.Pool.QueryRow(ctx,
+		if err := tx.QueryRow(ctx,
 			`SELECT EXISTS (SELECT 1 FROM activity WHERE name = $1)`, a.Name).Scan(&exists); err != nil {
 			return err
 		}
@@ -218,7 +228,7 @@ func (s *Store) SeedActivities(ctx context.Context, builtins []core.Activity) er
 		if err != nil {
 			return err
 		}
-		if _, err := s.AppendEvent(ctx, core.Event{
+		if _, err := AppendEvent(ctx, tx, core.Event{
 			Kind: core.KindRaw, Type: "activity.approved", OccurredAt: todayUTC(),
 			Payload: approval, DedupKey: fmt.Sprintf("activity-approve/%s/%d", a.Name, version),
 			Actor: "kernel", ActivityName: "approve_activity", ActivityVersion: 1,
@@ -227,12 +237,15 @@ func (s *Store) SeedActivities(ctx context.Context, builtins []core.Activity) er
 		}
 		a.Status = core.StatusActive
 		a.CreatedBy = "kernel"
-		if _, err := insertActivityVersion(ctx, s.Pool, a); err != nil {
+		if _, err := insertActivityVersion(ctx, tx, a); err != nil {
 			return fmt.Errorf("seed %s: %w", a.Name, err)
 		}
 	}
-	return nil
+	return tx.Commit(ctx)
 }
+
+// seedLock is the advisory lock the seed runs under.
+const seedLock = 0x53454544 // "SEED"
 
 // sameDoor compares a stored door with the kernel's definition of it, both
 // through JSON, so an empty list and an absent one read alike.

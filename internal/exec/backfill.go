@@ -237,20 +237,6 @@ func (x *Executor) backfillDiff(ctx context.Context, chains []BackfillChain) (Si
 	return diff, nil
 }
 
-// executeBackfill books an approved plan, chain by chain, each atomic.
-func (x *Executor) executeBackfill(ctx context.Context, plan *BackfillPlan) (int, []error) {
-	var n int
-	var errs []error
-	for _, c := range plan.Chains {
-		if err := x.book(ctx, c.root, c.nodes); err != nil {
-			errs = append(errs, fmt.Errorf("backfill event %d: %w", c.EventID, err))
-			continue
-		}
-		n++
-	}
-	return n, errs
-}
-
 // ApproveBackfill promotes the plan through the approve_backfill door: the
 // approval is a raw event naming every chain (invariant 2), then the chains
 // book. date is the backfill's business date — where forwarded chains land.

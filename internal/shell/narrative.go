@@ -43,11 +43,11 @@ func (s *Server) serveNarrative(ctx context.Context, w http.ResponseWriter, vd *
 		writeErr(w, status, err)
 		return
 	}
-	if said, err := s.saidBefore(ctx, vd.ID, 1); err != nil {
+	if said, err := s.lastSaid(ctx, vd.ID, 1); err != nil {
 		writeErr(w, 500, err)
 		return
 	} else if len(said) > 0 {
-		out["said"] = said[0]
+		out["said"], out["said_event"], out["said_date"] = said[0].Text, said[0].EventID, said[0].Date
 	}
 	writeJSON(w, 200, out)
 }
@@ -193,6 +193,7 @@ func (s *Server) handleSpeak(w http.ResponseWriter, r *http.Request) {
 		Said      string `json:"said,omitempty"`
 		SaidEvent int64  `json:"said_event,omitempty"`
 		Silent    string `json:"silent,omitempty"`
+		Error     string `json:"error,omitempty"`
 	}
 	out := []spoken{}
 	for i := range vds {
@@ -200,15 +201,22 @@ func (s *Server) handleSpeak(w http.ResponseWriter, r *http.Request) {
 		if vd.Notion != "narrative" || (only != "" && vd.ID != only) {
 			continue
 		}
-		res, status, err := s.narrate(ctx, vd)
+		// One narrative's failure is its own entry: the words already
+		// spoken for the others are logged, and a retrying alarm would
+		// speak them twice and pay twice.
+		res, _, err := s.narrate(ctx, vd)
 		if err != nil {
-			writeErr(w, status, fmt.Errorf("%s: %w", vd.ID, err))
-			return
+			out = append(out, spoken{View: vd.ID, Error: err.Error()})
+			continue
 		}
 		said, _ := res["said"].(string)
 		silent, _ := res["silent"].(string)
 		saidEvent, _ := res["said_event"].(int64)
 		out = append(out, spoken{View: vd.ID, Said: said, SaidEvent: saidEvent, Silent: silent})
+	}
+	if only != "" && len(out) == 0 {
+		writeErr(w, 404, fmt.Errorf("no narrative %q", only))
+		return
 	}
 	writeJSON(w, 200, out)
 }
@@ -259,21 +267,39 @@ func (s *Server) narrativeFor(ctx context.Context, handle string) (string, error
 
 // saidBefore reads the host's last words on a view, newest first.
 func (s *Server) saidBefore(ctx context.Context, viewID string, n int) ([]string, error) {
-	raws, err := s.Store.EventsByKind(ctx, core.KindRaw)
+	said, err := s.lastSaid(ctx, viewID, n)
 	if err != nil {
 		return nil, err
 	}
-	var out []string
+	out := make([]string, 0, len(said))
+	for _, w := range said {
+		out = append(out, w.Text)
+	}
+	return out, nil
+}
+
+// hostWords is one thing the host said of a view: the words, the event
+// that logged them and its business date.
+type hostWords struct {
+	Text    string
+	EventID int64
+	Date    string
+}
+
+// lastSaid is the host's last n sayings of a view, newest first.
+func (s *Server) lastSaid(ctx context.Context, viewID string, n int) ([]hostWords, error) {
+	raws, err := s.Store.EventsOfTypes(ctx, []string{core.EventHostSaid})
+	if err != nil {
+		return nil, err
+	}
+	var out []hostWords
 	for i := len(raws) - 1; i >= 0 && len(out) < n; i-- {
-		if raws[i].Type != core.EventHostSaid {
-			continue
-		}
 		var p struct {
 			View string `json:"view"`
 			Text string `json:"text"`
 		}
 		if json.Unmarshal(raws[i].Payload, &p) == nil && p.View == viewID {
-			out = append(out, p.Text)
+			out = append(out, hostWords{Text: p.Text, EventID: raws[i].ID, Date: raws[i].OccurredAt})
 		}
 	}
 	return out, nil

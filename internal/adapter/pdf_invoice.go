@@ -67,7 +67,11 @@ func (r *PDFInvoice) Bound(ch core.Activity) {
 	}
 	r.policy = ch.Spec.Channel.Confidence.Policy
 	if t := ch.Spec.Channel.Confidence.Threshold; t != "" {
-		r.threshold, _ = core.ParseDecimal(t)
+		// an unreadable threshold keeps the default: it must never become
+		// "accept every reading"
+		if th, err := core.ParseDecimal(t); err == nil {
+			r.threshold = th
+		}
 	}
 }
 
@@ -164,8 +168,15 @@ func (r *PDFInvoice) Pass(ctx context.Context, reads Reads) ([]core.Event, error
 			continue
 		}
 		read, _ := json.Marshal(map[string]any{"document": hash, "channel": r.Name(), "event_type": "purchase.invoice.received"})
+		// a resent scan of the same invoice is the same invoice
+		dedup := "pdf_invoice/" + hash
+		if nip, _ := fact["supplier_nip"].(string); nip != "" {
+			if number, _ := fact["number"].(string); number != "" {
+				dedup = "pdf_invoice/" + nip + "/" + number
+			}
+		}
 		out = append(out,
-			core.Event{Type: "purchase.invoice.received", OccurredAt: date, Payload: payload, DedupKey: "pdf_invoice/" + hash},
+			core.Event{Type: "purchase.invoice.received", OccurredAt: date, Payload: payload, DedupKey: dedup},
 			core.Event{Type: EventDocumentRead, OccurredAt: date, Payload: read, DedupKey: "pdf_invoice/read/" + hash})
 	}
 	return out, nil

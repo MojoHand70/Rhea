@@ -1,7 +1,6 @@
 package shell
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -42,7 +41,7 @@ func (s *Server) handleIssueFile(w http.ResponseWriter, r *http.Request) {
 		Actor      string            `json:"actor"`
 		OccurredAt string            `json:"occurred_at"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := decodeBody(r, &req); err != nil {
 		writeErr(w, 400, err)
 		return
 	}

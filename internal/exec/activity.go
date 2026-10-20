@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
 
 	"rhea/internal/core"
 	"rhea/internal/match"
@@ -166,7 +165,7 @@ func (x *Executor) TriggerActivity(ctx context.Context, name string, inputs map[
 	if err != nil {
 		return Triggered{}, err
 	}
-	built, err := act.BuildEvent(inputs, time.Now().UTC().Format("2006-01-02"))
+	built, err := act.BuildEvent(inputs, x.today())
 	if err != nil {
 		return Triggered{}, fmt.Errorf("activity %s: %w", name, err)
 	}
@@ -232,9 +231,6 @@ func (x *Executor) TriggerActivity(ctx context.Context, name string, inputs map[
 		return Triggered{}, err
 	}
 
-	if out.backfill != nil {
-		out.Backfilled, out.Errors = x.executeBackfill(ctx, out.backfill)
-	}
 	booked, errs := x.ProcessPending(ctx)
 	out.Booked, out.Errors = booked, append(out.Errors, errs...)
 	return out, nil
@@ -407,8 +403,19 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 			"approved_by": p.ApprovedBy, "chains": plan.Chains, "refused": plan.Errors,
 		})
 		ev.Payload = approval
-		out.backfill = &plan
-		return nil, nil
+		// The chains book in the approval's own transaction, as a bundle's
+		// members activate: an approval naming chains that never booked,
+		// or chains planned on balances of earlier ones that failed, is
+		// not a record.
+		return func(tx store.Querier) error {
+			for _, c := range plan.Chains {
+				if err := x.bookTx(ctx, tx, c.root, c.nodes); err != nil {
+					return fmt.Errorf("backfill event %d: %w", c.EventID, err)
+				}
+			}
+			out.Backfilled = len(plan.Chains)
+			return nil
+		}, nil
 
 	case core.EventMatchingPaired:
 		// The pairing verb (DIRECTION 2026-10-11, the grid): the kernel runs

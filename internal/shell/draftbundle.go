@@ -2,7 +2,10 @@ package shell
 
 import (
 	"context"
+	"errors"
 	"fmt"
+
+	"github.com/jackc/pgx/v5"
 
 	"rhea/internal/agent"
 	"rhea/internal/core"
@@ -88,8 +91,12 @@ func StoreBundleDraft(ctx context.Context, st *store.Store, k *network.Knowledge
 	}
 	id := bd.BundleID
 	for n := 2; ; n++ {
-		if _, err := st.GetBundle(ctx, id); err != nil {
-			break
+		_, err := st.GetBundle(ctx, id)
+		if errors.Is(err, pgx.ErrNoRows) {
+			break // free
+		}
+		if err != nil {
+			return core.Bundle{}, err // a store failure is not a free id
 		}
 		id = fmt.Sprintf("%s-%d", bd.BundleID, n)
 	}

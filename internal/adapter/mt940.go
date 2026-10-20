@@ -93,8 +93,10 @@ func (m MT940) Pass(ctx context.Context, reads Reads) ([]core.Event, error) {
 				if err != nil {
 					return out, err
 				}
+				// a re-downloaded statement is the same statement: keyed on
+				// the account, the statement number and the line
 				out = append(out, core.Event{Type: "bank.statement.line", OccurredAt: l.Date,
-					Payload: payload, DedupKey: fmt.Sprintf("bank_mt940/%s/%d", hash, lines)})
+					Payload: payload, DedupKey: fmt.Sprintf("bank_mt940/%s/%s/%d", st.Account, st.Number, lines)})
 			}
 		}
 		read, _ := json.Marshal(map[string]any{
@@ -238,6 +240,9 @@ func parseStatement(tags []mt940Tag, prev *Statement) (Statement, error) {
 	var opening, sum int64 // the page's opening balance and its entries so far
 	pages := 0
 	for _, t := range tags {
+		if t.tag != "86" && t.tag != "61" {
+			pending = nil // an :86: after a balance line is the statement's, not the last entry's
+		}
 		switch t.tag {
 		case "20":
 			st.Reference = t.value
@@ -293,6 +298,9 @@ func parseStatement(tags []mt940Tag, prev *Statement) (Statement, error) {
 			amount, err := mt940Amount(m[5])
 			if err != nil {
 				return st, fmt.Errorf(":61: amount %q: %w", m[5], err)
+			}
+			if amount >= 1e16 || sum >= 1e17 || sum <= -1e17 {
+				return st, fmt.Errorf(":61: amount %q is past what the books hold", m[5])
 			}
 			line := StatementLine{Seq: len(st.Lines) + 1, Date: day.Format("2006-01-02"), Amount: amount,
 				Reversal: strings.HasPrefix(m[3], "R"), Code: m[6]}

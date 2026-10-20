@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -156,12 +157,29 @@ func TestKSeFInboundReadsTheStore(t *testing.T) {
 
 	// The buyer's NIP carries the buyer's own country, and is absent when
 	// the document names none — never a bare "PL".
-	deBuyer := inBuyer(ksef[0].Bytes, "<KodKraju>PL</KodKraju>", "<KodKraju>DE</KodKraju>")
-	noBuyer := inBuyer(ksef[0].Bytes, "<NIP>5260301234</NIP>", "")
+	// (other invoice numbers: the same seller's same number is the same
+	// invoice whatever its bytes, and would deduplicate)
+	numbered := func(b []byte, suffix string) []byte {
+		m := invoiceNumber.FindSubmatch(b)
+		return bytes.Replace(b, m[0], []byte("<P_2>"+string(m[1])+suffix+"</P_2>"), 1)
+	}
+	deBuyer := numbered(inBuyer(ksef[0].Bytes, "<KodKraju>PL</KodKraju>", "<KodKraju>DE</KodKraju>"), "-DE")
+	noBuyer := numbered(inBuyer(ksef[0].Bytes, "<NIP>5260301234</NIP>", ""), "-NB")
 	receive(t, x, "de-buyer.xml", "application/xml", "ksef", "2026-01-23", deBuyer)
 	receive(t, x, "no-buyer.xml", "application/xml", "ksef", "2026-01-23", noBuyer)
 	if res, err := adapter.Run(ctx, s, x, pl.KSeFInbound{}); err != nil || res.Submitted != 4 {
 		t.Fatalf("buyer pass = %+v, %v", res, err)
+	}
+	// The same invoice in other bytes (CRLF, a manual upload beside the
+	// pull) is the same invoice: its reading is new, its fact a duplicate —
+	// never a second purchase invoice and input VAT twice.
+	invoicesBefore, _ := s.EventsOfTypes(ctx, []string{"purchase.invoice.received"})
+	receive(t, x, "again.xml", "application/xml", "email", "2026-01-24", bytes.ReplaceAll(ksef[0].Bytes, []byte("\n"), []byte("\r\n")))
+	if res, err := adapter.Run(ctx, s, x, pl.KSeFInbound{}); err != nil || res.Submitted != 1 || res.Duplicates < 1 {
+		t.Fatalf("the same invoice again = %+v, %v", res, err)
+	}
+	if invoicesAfter, _ := s.EventsOfTypes(ctx, []string{"purchase.invoice.received"}); len(invoicesAfter) != len(invoicesBefore) {
+		t.Fatalf("the same invoice in other bytes booked again: %d → %d", len(invoicesBefore), len(invoicesAfter))
 	}
 	raws, _ = s.EventsByKind(ctx, core.KindRaw)
 	factOf := func(hash string) map[string]any {
@@ -244,3 +262,5 @@ func TestParseFA(t *testing.T) {
 }
 
 func jsonUnmarshal(b []byte, v any) error { return json.Unmarshal(b, v) }
+
+var invoiceNumber = regexp.MustCompile(`<P_2>([^<]*)</P_2>`)

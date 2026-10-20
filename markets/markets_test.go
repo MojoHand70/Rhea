@@ -29,7 +29,7 @@ import (
 // that shortens this list (review 2026-10-20).
 func TestKernelNeverImportsAMarket(t *testing.T) {
 	out, err := exec.Command("go", "list", "-f",
-		"{{.ImportPath}}|{{join .Imports \" \"}}|{{join .TestImports \" \"}} {{join .XTestImports \" \"}}", "rhea/...").Output()
+		"{{.ImportPath}}|{{join .Imports \" \"}}|{{join .Deps \" \"}}|{{join .TestImports \" \"}} {{join .XTestImports \" \"}}", "rhea/...").Output()
 	if err != nil {
 		t.Fatalf("go list: %v", err)
 	}
@@ -41,11 +41,11 @@ func TestKernelNeverImportsAMarket(t *testing.T) {
 	}
 	var markets []string
 	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
-		parts := strings.SplitN(line, "|", 3)
-		if len(parts) != 3 {
+		parts := strings.SplitN(line, "|", 4)
+		if len(parts) != 4 {
 			continue
 		}
-		pkg, imports, testImports := parts[0], strings.Fields(parts[1]), strings.Fields(parts[2])
+		pkg, imports, deps, testImports := parts[0], strings.Fields(parts[1]), strings.Fields(parts[2]), strings.Fields(parts[3])
 		if strings.HasPrefix(pkg, "rhea/markets/") {
 			markets = append(markets, pkg)
 			for _, imp := range append(imports, testImports...) {
@@ -62,9 +62,11 @@ func TestKernelNeverImportsAMarket(t *testing.T) {
 			}
 			continue
 		}
-		for _, imp := range imports {
+		// every dependency, not only the direct imports: a kernel package
+		// that imported the simulator would link the Polish market through it
+		for _, imp := range deps {
 			if strings.HasPrefix(imp, "rhea/markets/") && !allowed[pkg] {
-				t.Errorf("%s imports %s: the kernel never imports a market", pkg, imp)
+				t.Errorf("%s depends on %s: the kernel never links a market", pkg, imp)
 			}
 		}
 		for _, imp := range testImports {

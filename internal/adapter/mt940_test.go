@@ -134,8 +134,10 @@ func TestMT940ReadsTheStore(t *testing.T) {
 	}
 
 	// Two months in one file: the lines number through the file, the read
-	// is dated by the last closing balance.
-	two := append(append([]byte{}, statements[0].Bytes...), statements[1].Bytes...)
+	// is dated by the last closing balance. (New statement numbers: a line
+	// is keyed on its account, statement and number, so the statements
+	// already read would be duplicates, which is the next check.)
+	two := bytes.ReplaceAll(append(append([]byte{}, statements[0].Bytes...), statements[1].Bytes...), []byte(":28C:"), []byte(":28C:Q-"))
 	receive(t, x, "q1.sta", "text/plain", "bank", "2026-03-01", two)
 	res, err = adapter.Run(ctx, s, x, adapter.MT940{})
 	if err != nil || res.Submitted != lines+1 || res.Booked != 1 {
@@ -148,8 +150,19 @@ func TestMT940ReadsTheStore(t *testing.T) {
 	last, _, _ := s.LatestEventOfType(ctx, "bank.statement.line")
 	var m map[string]any
 	jsonUnmarshal(last.Payload, &m)
-	if m["line"] != float64(lines) || m["statement"] != "2/2026" {
-		t.Fatalf("last line = %v, want line %d of statement 2/2026", m, lines)
+	if m["line"] != float64(lines) || m["statement"] != "Q-2/2026" {
+		t.Fatalf("last line = %v, want line %d of statement Q-2/2026", m, lines)
+	}
+
+	// A statement downloaded again in other bytes is the same statement:
+	// its reading is new, its lines are duplicates, nothing books twice.
+	linesBefore, _ := s.EventsOfTypes(ctx, []string{"bank.statement.line"})
+	receive(t, x, "again.sta", "text/plain", "bank", "2026-03-03", bytes.ReplaceAll(statements[0].Bytes, []byte("\r\n"), []byte("\n")))
+	if res, err := adapter.Run(ctx, s, x, adapter.MT940{}); err != nil || res.Submitted != 1 || res.Duplicates < 1 {
+		t.Fatalf("the same statement again = %+v, %v", res, err)
+	}
+	if linesAfter, _ := s.EventsOfTypes(ctx, []string{"bank.statement.line"}); len(linesAfter) != len(linesBefore) {
+		t.Fatalf("the same statement in other bytes booked its lines again: %d → %d", len(linesBefore), len(linesAfter))
 	}
 }
 

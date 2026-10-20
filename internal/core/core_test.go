@@ -406,6 +406,11 @@ func TestRuleJSONCannotPanic(t *testing.T) {
 	if _, err := ParseFormula(strings.Repeat("(", 60) + "1" + strings.Repeat(")", 60)); err != nil {
 		t.Fatalf("sixty levels refused: %v", err)
 	}
+	for _, deep := range []string{strings.Repeat("-", 20000) + "1", strings.Repeat("not ", 10000) + "true"} {
+		if _, err := ParseFormula(deep); err == nil || !strings.Contains(err.Error(), "nests deeper") {
+			t.Fatalf("twenty thousand unary operators: %v", err)
+		}
+	}
 }
 
 // Identity is checked by prefix, so a type name takes no hyphen; a field

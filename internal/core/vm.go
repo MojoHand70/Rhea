@@ -413,8 +413,11 @@ func (m *vm) fx(from, to, d Value) (Value, error) {
 	}
 	read := func(code string) (*big.Rat, bool, error) {
 		ids, err := m.env.Lookup("fx_rate", "code", code)
-		if err != nil || len(ids) != 1 {
+		if err != nil || len(ids) == 0 {
 			return nil, false, err
+		}
+		if len(ids) > 1 {
+			return nil, false, fmt.Errorf("fx_rate %s is ambiguous: %d rates carry that code", code, len(ids))
 		}
 		state, ok, err := m.env.Get(ids[0])
 		if err != nil || !ok {
@@ -594,7 +597,7 @@ func fromTyped(raw any, fd FieldDef, origin string) (Value, error) {
 		case nil:
 			return Value{Kind: KNull, Origin: origin}, nil
 		}
-		return Value{Kind: KString, Str: fmt.Sprint(raw), Origin: origin}, nil
+		return Value{Kind: KString, Str: Text(raw), Origin: origin}, nil
 	}
 	if target, ok := RefTarget(fd.Type); ok {
 		s, ok := raw.(string)
@@ -769,6 +772,18 @@ func roundRat(r *big.Rat, places int, method string) *big.Rat {
 
 // ---- operators ----------------------------------------------------------------------
 
+// maxBits bounds a number's numerator and denominator: a fold that squares
+// its accumulator doubles the bit length every element and would exhaust
+// the server's memory in thirty-five lines; a number past this is refused.
+const maxBits = 4096
+
+func bounded(r *big.Rat) error {
+	if r.Num().BitLen() > maxBits || r.Denom().BitLen() > maxBits {
+		return fmt.Errorf("the number grew past %d bits — a computation ran away", maxBits)
+	}
+	return nil
+}
+
 func binop(op string, a, b Value) (Value, error) {
 	switch op {
 	case "=", "<>", "<", "<=", ">", ">=":
@@ -804,6 +819,9 @@ func binop(op string, a, b Value) (Value, error) {
 		r.Quo(x, y)
 	default:
 		return Value{}, fmt.Errorf("unknown operator %q", op)
+	}
+	if err := bounded(r); err != nil {
+		return Value{}, err
 	}
 	return Value{Kind: k, Num: r}, nil
 }
@@ -1059,6 +1077,9 @@ func (it *iterator) accumulate(v Value) error {
 			return err
 		}
 		it.acc = Value{Kind: kind, Num: new(big.Rat).Add(it.acc.Num, r)}
+		if err := bounded(it.acc.Num); err != nil {
+			return err
+		}
 	case "min", "max":
 		if !it.has {
 			it.acc, it.has = v, true
@@ -1160,6 +1181,9 @@ func toField(v Value, fd FieldDef, copy, raw bool) (any, error) {
 			}
 			return v.Num.Num().Int64(), nil // minor units, the derived-payload form
 		}
+		if copy && v.Kind == KString && v.untyped && raw {
+			return nil, fmt.Errorf("%s is a bare number — money crosses the boundary as text with two places (\"123.45\")", orDefault(v.Origin, "the value"))
+		}
 		if copy && v.Kind == KString {
 			return ParseMoney(v.Str) // the boundary form, strictly
 		}
@@ -1185,9 +1209,13 @@ func toField(v Value, fd FieldDef, copy, raw bool) (any, error) {
 		return n, nil
 	case "decimal":
 		if v.Kind == KString && copy {
-			if _, err := parseDecimal(v.Str); err != nil {
+			// stored canonically, as a computed decimal is, so a lookup by
+			// value does not depend on how it was spelled
+			r, err := parseDecimal(v.Str)
+			if err != nil {
 				return nil, err
 			}
+			return CanonicalDecimal(r)
 			return v.Str, nil
 		}
 		r, _, err := toNum(v)

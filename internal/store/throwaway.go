@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -68,6 +69,25 @@ func ThrowawayDSN(ctx context.Context, prefix string) (string, func(), error) {
 			a.Close()
 		}
 	}
-	base := DSN()
-	return base[:strings.LastIndex(base, "/")+1] + name, drop, nil
+	return withDatabase(DSN(), name), drop, nil
 }
+
+// withDatabase names another database in a DSN, keeping its options: a URL
+// keeps its query string (sslmode and the like), a keyword DSN its other
+// keywords.
+func withDatabase(base, name string) string {
+	if strings.Contains(base, "://") {
+		path, query, hasQuery := strings.Cut(base, "?")
+		out := path[:strings.LastIndex(path, "/")+1] + name
+		if hasQuery {
+			out += "?" + query
+		}
+		return out
+	}
+	if dbnameKeyword.MatchString(base) {
+		return dbnameKeyword.ReplaceAllString(base, "dbname="+name)
+	}
+	return base + " dbname=" + name
+}
+
+var dbnameKeyword = regexp.MustCompile(`dbname=\S+`)

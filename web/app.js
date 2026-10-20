@@ -246,12 +246,25 @@ function openView(viewId, title, objectId) {
    is a signal, never data — live tabs re-read through the API. Tabs holding
    human state (worklist drafts, simulation results) stay manual. */
 
+/* The books' day, read from the kernel's clock: a fact a person enters is
+   dated by it, not by the browser's calendar (a simulated day is a day). */
+let booksToday = null;
+async function readBooksToday() {
+  try { booksToday = (await api("/api/time")).today || null; } catch { booksToday = null; }
+}
+
+/* A typed cell's text, whether it arrived as a cell ({v, …}) or a bare value. */
+function cellText(v) {
+  return (v && typeof v === "object" && "v" in v) ? v.v : v;
+}
+
 function startLive() {
+  readBooksToday();
   const es = new EventSource("/api/live");
   let timer;
   es.addEventListener("projection", () => {
     clearTimeout(timer); // bursts collapse into one re-render
-    timer = setTimeout(() => { if (activeTab?.live) refreshActive(); }, 200);
+    timer = setTimeout(() => { readBooksToday(); if (activeTab?.live) refreshActive(); }, 200);
   });
 }
 
@@ -293,7 +306,7 @@ function renderDetail(d) {
     explainLink({ object: d.object.object_id }, "walk the explanation")));
   // Amendments: why the object is what it is now, one provenanced move each.
   for (const a of (d.amendments || [])) {
-    const delta = Object.entries(a.set).map(([k, v]) => `${k} → ${v}`).join(", ");
+    const delta = Object.entries(a.set).map(([k, v]) => `${k} → ${cellText(v)}`).join(", ");
     out.push(el("p", { class: "provenance" },
       `Amended ${a.occurred_at}: ${delta} via rule ${a.rule_id} v${a.rule_version} — `,
       explainLink({ event: a.event_id }, "why")));
@@ -405,7 +418,7 @@ function openExplain(q) {
       if (n.amend) {
         const a = n.amend;
         const text = a.label || a.object_id;
-        const delta = Object.entries(a.set).map(([k, v]) => `${k} → ${v}`).join(", ");
+        const delta = Object.entries(a.set).map(([k, v]) => `${k} → ${cellText(v)}`).join(", ");
         head.append(el("div", { class: "explain-line" }, "amended ",
           a.detail_view_id
             ? el("a", { href: "#", title: a.object_id, onclick: (e) => {
@@ -1050,7 +1063,7 @@ function openVerbForm(name, prefill = {}) {
         c = el("input", { type: "file" });
       } else if (f.type === "date") {
         c = el("input", { type: "date" });
-        if (f.name === "occurred_at") c.value = new Date().toISOString().slice(0, 10);
+        if (f.name === "occurred_at") c.value = booksToday || new Date().toISOString().slice(0, 10);
       } else if (f.type === "int") {
         c = el("input", { type: "number", step: "1" });
       } else if (f.type === "money") {
@@ -1272,10 +1285,22 @@ function renderNarrative(d) {
   const out = [el("h1", {}, d.view.title)];
   if (d.said) {
     for (const para of d.said.split(/\n\s*\n/)) out.push(el("p", { class: "narrative" }, para));
-    out.push(el("p", { class: "hint" }, `said ${d.today}` + (d.said_event ? ` · event #${d.said_event}` : "")));
+    out.push(el("p", { class: "hint" }, `said ${d.said_date || d.today}` + (d.said_event ? ` · event #${d.said_event}` : "")));
   } else {
-    out.push(el("p", { class: "hint" }, d.silent || "the host has nothing to say"));
+    out.push(el("p", { class: "hint" }, d.silent || "the host has not spoken of this yet"));
   }
+  // Speaking is a deliberate act (POST /api/speak): a read never calls the
+  // model. The button asks the host for today's words and re-reads.
+  const speak = el("button", { onclick: async () => {
+    speak.disabled = true;
+    try {
+      const res = await api(`/api/speak?view=${encodeURIComponent(d.view.view_id)}`, { method: "POST" });
+      const r = (res || [])[0] || {};
+      if (r.error) toast(r.error, true); else if (r.silent) toast(r.silent, true);
+      refreshActive();
+    } catch (e) { toast(e.message, true); } finally { speak.disabled = false; }
+  } }, d.said ? "Speak again" : "Speak");
+  out.push(el("div", { class: "row" }, speak));
   for (const f of (d.facts || [])) {
     out.push(el("h3", {}, f.as || f.title));
     if (f.kind === "analysis") {

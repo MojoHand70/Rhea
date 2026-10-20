@@ -39,6 +39,9 @@ func NewBare(t *testing.T) *store.Store {
 	ctx := context.Background()
 	admin, err := store.Open(ctx, store.DSN())
 	if err != nil {
+		if os.Getenv("RHEA_CI") != "" {
+			t.Fatalf("postgres unavailable and RHEA_CI is set: %v", err)
+		}
 		t.Skipf("postgres unavailable: %v", err)
 	}
 	admin.Close()

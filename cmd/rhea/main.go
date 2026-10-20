@@ -64,7 +64,7 @@ import (
 func main() {
 	log.SetFlags(0)
 	if len(os.Args) < 2 {
-		log.Fatal("usage: rhea init|load|submit|intake|pass|file|issue|backup|restore|serve|replay|channels|clock|run")
+		log.Fatal("usage: rhea init|load|pack|submit|intake|pass|file|issue|backup|restore|serve|replay|channels|clock|approve|reject|eval|sim|ksef|run")
 	}
 	if os.Args[1] == "run" {
 		// A market's tool by name: no log, no store (adapter.Command).
@@ -391,11 +391,14 @@ func main() {
 		if len(os.Args) < 3 {
 			log.Fatal("usage: rhea submit FILE")
 		}
-		id, booked, err := submit(ctx, s, x, os.Args[2])
+		id, booked, left, err := submit(ctx, s, x, os.Args[2])
 		if err != nil {
 			log.Fatal(err)
 		}
 		fmt.Printf("event %d accepted; booked %d\n", id, booked)
+		for _, l := range left {
+			fmt.Printf("  waits in the worklist: %v\n", l) // the event is on the log; a rule did not explain it
+		}
 
 	case "intake":
 		// A document through the second open door: the file is the fact,
@@ -428,6 +431,7 @@ func main() {
 		addr := fs.String("addr", ":8070", "listen address")
 		fs.Parse(os.Args[2:])
 		srv := &shell.Server{Store: s, Exec: x, Agent: agent.New(), DuckPath: project.Path()}
+		x.Today = srv.Clock.TodayUTC // a door whose inputs carry no date takes the books' day
 		// Learning is optional: without a network Rhea runs alone.
 		if nw, err := network.Open(ctx, network.DSN()); err == nil {
 			defer nw.Close()
@@ -797,10 +801,10 @@ func actor() string {
 // Dedup key is the content hash: the same file can never book twice. The
 // submission goes through the submit_event door — the open door declared as
 // data — so the event carries its activity stamp like any other.
-func submit(ctx context.Context, s *store.Store, x *exec.Executor, path string) (int64, int, error) {
+func submit(ctx context.Context, s *store.Store, x *exec.Executor, path string) (int64, int, []error, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, nil, err
 	}
 	var ev struct {
 		EventType  string         `json:"event_type"`
@@ -808,18 +812,15 @@ func submit(ctx context.Context, s *store.Store, x *exec.Executor, path string) 
 		Payload    map[string]any `json:"payload"`
 	}
 	if err := json.Unmarshal(b, &ev); err != nil {
-		return 0, 0, err
+		return 0, 0, nil, err
 	}
 	t, err := x.TriggerActivity(ctx, "submit_event", map[string]any{
 		"event_type": ev.EventType, "occurred_at": ev.OccurredAt, "payload": ev.Payload,
 	}, actor(), fmt.Sprintf("file/%x", sha256.Sum256(b))[:21])
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, nil, err
 	}
-	if len(t.Errors) > 0 {
-		return t.EventID, t.Booked, t.Errors[0]
-	}
-	return t.EventID, t.Booked, nil
+	return t.EventID, t.Booked, t.Errors, nil
 }
 
 // printRegistry prints the channel registry: connected channels first, then

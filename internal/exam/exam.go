@@ -349,14 +349,22 @@ func decodeReply(s string) (reply, error) {
 
 var (
 	reAnswerField = regexp.MustCompile(`"answer"\s*:\s*"([a-cA-C]?)"`)
-	reFields      = map[string]*regexp.Regexp{}
+	// compiled once: answerers run in parallel, and a map filled lazily
+	// under them was a data race
+	reFields = map[string]*regexp.Regexp{
+		"source": fieldRegexp("source"), "rule_id": fieldRegexp("rule_id"),
+		"citation": fieldRegexp("citation"), "note": fieldRegexp("note"),
+	}
 )
+
+func fieldRegexp(name string) *regexp.Regexp {
+	return regexp.MustCompile(`"` + name + `"\s*:\s*"((?:[^"\\]|\\.)*)"`)
+}
 
 func field(s, name string) string {
 	re := reFields[name]
 	if re == nil {
-		re = regexp.MustCompile(`"` + name + `"\s*:\s*"((?:[^"\\]|\\.)*)"`)
-		reFields[name] = re
+		re = fieldRegexp(name)
 	}
 	if m := re.FindStringSubmatch(s); m != nil {
 		return strings.TrimSpace(strings.ReplaceAll(m[1], "\n", " "))

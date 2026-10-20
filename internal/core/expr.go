@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Templates (SPEC §2, Rule): every field value in an effect is a template.
@@ -296,10 +297,19 @@ func (t Template) Check(types Catalog, typed map[string]string, fd FieldDef) err
 
 // checked enforces per-type value constraints that need the field definition.
 func checked(v any, fd FieldDef) (any, error) {
-	if fd.Type == "enum" {
+	switch fd.Type {
+	case "enum":
 		s, ok := v.(string)
 		if !ok || !slices.Contains(fd.Values, s) {
 			return nil, fmt.Errorf("value %v is not one of %v", v, fd.Values)
+		}
+	case "date":
+		s, ok := v.(string)
+		if !ok {
+			return nil, fmt.Errorf("value %v is not a date", v)
+		}
+		if _, err := time.Parse("2006-01-02", s); err != nil {
+			return nil, fmt.Errorf("%q is not a date (YYYY-MM-DD)", s)
 		}
 	}
 	return v, nil

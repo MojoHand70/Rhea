@@ -67,13 +67,15 @@ func Rebuild(ctx context.Context, s *store.Store, duckPath string) (int, error) 
 	if err != nil {
 		return 0, err
 	}
-	last, err := s.MaxEventID(ctx)
+	last, count, err := s.LogMark(ctx)
 	if err != nil {
 		return 0, err
 	}
 	cat, _ := json.Marshal(types)
 	sum := sha256.Sum256(cat)
-	builtFrom := fmt.Sprintf("%s|%d|%s|%s", shape, last, store.CompanyOf(ctx), hex.EncodeToString(sum[:8]))
+	// The copy is the whole log's: no scope in its key, or two tabs on two
+	// companies would rebuild it on every alternate request.
+	builtFrom := fmt.Sprintf("%s|%d|%d|%s", shape, last, count, hex.EncodeToString(sum[:8]))
 
 	if err := os.MkdirAll(filepath.Dir(duckPath), 0o755); err != nil {
 		return 0, err

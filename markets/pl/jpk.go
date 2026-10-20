@@ -222,9 +222,13 @@ func WriteJPKV7M(ctx context.Context, reads adapter.Reads, params map[string]str
 	if err != nil {
 		return adapter.File{}, err
 	}
+	// The writer contract: the same state and parameters give the same
+	// bytes, so the creation time is a parameter, else the period's last
+	// instant — never the wall clock, or every rendering would read as a
+	// correction.
 	created := params["created"]
 	if created == "" {
-		created = time.Now().UTC().Format("2006-01-02T15:04:05Z")
+		created = periodEnd(period) + "T23:59:59Z"
 	}
 	doc := jpk{
 		XMLNS: JPKNamespace,
@@ -369,16 +373,25 @@ func WriteJPKV7M(ctx context.Context, reads adapter.Reads, params map[string]str
 		p.P15, p.P16 = pair("sales_net_5", "sales_vat_5")
 		p.P17, p.P18 = pair("sales_net_8", "sales_vat_8")
 		p.P19, p.P20 = pair("sales_net_23", "sales_vat_23")
+		// The totals are sums of the rounded positions, as the Ministry
+		// checks them: rounding the total on its own gave 111 where 101
+		// and 11 rounded make 112, and the file failed by one złoty.
 		bases := whole("sales_net_exempt") + whole("sales_net_0") + whole("sales_net_5") + whole("sales_net_8") + whole("sales_net_23")
 		if bases != 0 {
 			p.P37 = &bases
 		}
-		p.P38 = whole("output_vat")
+		p.P38 = whole("sales_vat_5") + whole("sales_vat_8") + whole("sales_vat_23")
 		p.P39 = opt("carried_in")
 		p.P42, p.P43 = pair("purchase_net", "purchase_vat")
-		p.P48 = opt("input_vat")
-		p.P51 = whole("vat_due")
-		p.P53, p.P62 = opt("vat_carry"), opt("vat_carry")
+		input := whole("carried_in") + whole("purchase_vat")
+		if input != 0 {
+			p.P48 = &input
+		}
+		if due := p.P38 - input; due > 0 {
+			p.P51 = due
+		} else if carry := input - p.P38; carry > 0 {
+			p.P53, p.P62 = &carry, &carry
+		}
 		doc.Deklaracja = &jpkReturn{
 			Naglowek: jpkReturnHeader{KodFormularzaDekl: jpkReturnCode{KodSystemowy: "VAT-7 (23)", KodPodatku: "VAT", RodzajZobowiazania: "Z", WersjaSchemy: "1-0E", Value: "VAT-7"},
 				WariantFormularzaDekl: 23},
@@ -452,4 +465,13 @@ func plnAmounts(state map[string]any) (net, vat int64) {
 func text(v any) string {
 	s, _ := v.(string)
 	return s
+}
+
+// periodEnd is the last day of a YYYY-MM period.
+func periodEnd(period string) string {
+	t, err := time.Parse("2006-01", period)
+	if err != nil {
+		return period + "-01"
+	}
+	return t.AddDate(0, 1, -1).Format("2006-01-02")
 }

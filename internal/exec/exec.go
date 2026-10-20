@@ -9,12 +9,17 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"rhea/internal/core"
 	"rhea/internal/store"
 )
 
 type Executor struct {
+	// Today is the business day for a door whose inputs carry no date — the
+	// shell sets it from its clock, so a simulated day dates every fact; nil
+	// reads the wall clock.
+	Today func() string
 	Store *store.Store
 	// MaxCollection caps a formula's linked collection read (objects());
 	// zero means core.DefaultMaxCollection. Tests lower it to see the
@@ -472,6 +477,14 @@ func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []cor
 		lo, hi = hi, len(nodes)
 	}
 	return nodes, nil
+}
+
+// today is the executor's business day.
+func (x *Executor) today() string {
+	if x.Today != nil {
+		return x.Today()
+	}
+	return time.Now().UTC().Format("2006-01-02")
 }
 
 // maxChainNodes bounds the consequences of one event: a chain larger than
@@ -950,7 +963,9 @@ func (x *Executor) env(ctx context.Context, payload any, lookup core.Lookup, get
 				return k.t, k.ok
 			}
 			t, err := x.objectType(ctx, name)
-			memo[name] = known{t, err == nil}
+			if err == nil || errors.Is(err, store.ErrNotFound) {
+				memo[name] = known{t, err == nil} // a failure is not memoized as "unknown"
+			}
 			return t, err == nil
 		},
 		Typed:         typed,

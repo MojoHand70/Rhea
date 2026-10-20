@@ -4236,3 +4236,58 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   none corrupts state.
 - Running the suite is `go test ./... -count=1`: the cache hid a failing kernel test for
   a day. storetest fails instead of skipping when RHEA_CI is set; cmd/rhea has a smoke test.
+
+## 2026-10-20 — The second review, after the fixing day
+
+- KK handed over a second read-only review at 94d28da (54 findings, 8 critical), run by
+  six parallel reviewers. The first review's fixes held; the new gaps sat one level
+  deeper, and three criticals were in the fixing day's own work (the executor lock, the
+  network's open, the pack loader's bump check). Two commits: the eight criticals, then
+  the high and medium findings with the cheap lows.
+- Decided on the way:
+  - A stored file is served as a sender's bytes: nosniff, a sandboxing CSP, and a
+    download unless it is a PDF or a raster image. The shell's own origin is the human
+    gate's origin; an emailed invoice.html must never script the approval doors.
+  - The executor's lock has an in-process gate before the pool: one goroutine per
+    process waits on Postgres holding a connection. The advisory lock stays for the CLI
+    beside the server.
+  - A chain is bounded by size (ten thousand consequences of one event) as well as
+    depth; a number by magnitude (4096 bits in numerator or denominator). Both refuse
+    into the worklist naming the rule.
+  - Two texts that both read as decimals compare as numbers in formulas. Identifiers
+    are text; money in a raw fact is text with a point, and "100.00" is more than
+    "99.00".
+  - A KSeF pass books every final result of a failed session and names what was sent
+    without a final word. Owed: polling the named reference next time instead of
+    resending it (the channel's event list would grow by one type, a pack change).
+  - A refused invoice is fingerprinted on its content with the creation time fixed, and
+    that is the rejection's `invoice_hash`; the exact sent hash rides beside it as
+    `sent_hash`.
+  - The accepted date of a KSeF invoice is the UPO's received timestamp in Polish
+    time, not the clock that ran the pass (VAT act, art. 106na).
+  - Inbound documents deduplicate on what they are: a KSeF invoice on the seller's VAT
+    id and the number, a PDF on the supplier's VAT id and the number, an MT940 line on
+    the account, the statement and the line. Three tests that fed the same documents
+    twice and expected two bookings were changed to expect one.
+  - A backfill approval books its chains in its own transaction, as a bundle's members
+    activate; one failing chain refuses the approval.
+  - The JPK totals are sums of the rounded positions, and the file's creation time is
+    the period's last instant unless given, so the writer is deterministic.
+  - The DuckDB copy's key is the log's highest id with its count, and carries no
+    company scope. Owed: a company column in the projected tables, so pack SQL can
+    filter; today a scoped analysis sums every company.
+  - The web shell can make the host speak again (a button posting to /api/speak), shows
+    when the words were said, and dates a person's fact by the books' day read from
+    the kernel's clock.
+- Assessed and left, each a line in the review: a forwarded late document matching
+  rules by the forwarded date (#10 — the chain is re-expanded on the new date by
+  design of the forward; to revisit with the dry run), the dry run's own balance and
+  matching (#12), an approval activating a version it does not name under a concurrent
+  draft (#13 — the executor lock now covers the insert path from the doors; a direct
+  store insert can still race), full-log scans in the pairing verbs (#14), duplicated
+  fan-out code (#16), a derived payload's plain integer read as minor units on a copy
+  and major units in arithmetic (#18 — the kernel's convention; packs copy or compare
+  to zero), dead helpers and the formula cache (#26), SQL in Go literals (#30, about
+  thirty statements, mechanical), doubtful PDFs re-read every pass (#47), status codes
+  beyond 404 (#41 in part), the remaining small client defects (#42 in part), and the
+  MT940 reader's globals (#54 in part).

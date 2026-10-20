@@ -400,7 +400,7 @@ func (s *Server) handleKeepAnswer(w http.ResponseWriter, r *http.Request) {
 	viewID := fmt.Sprintf("answer-%d", id)
 	bd := agent.BundleDraft{
 		BundleID:    "keep-" + viewID,
-		Description: fmt.Sprintf("Raport z pytania z %s: %s", ev.OccurredAt, p.Question),
+		Description: fmt.Sprintf("Report kept from the question of %s: %s", ev.OccurredAt, p.Question),
 		ViewDefs:    []core.ViewDef{{ID: viewID, Notion: "report", Title: title, Domain: "reports", Function: "report", Spec: spec}},
 		Warrant:     &core.Warrant{Basis: "client", Citations: []string{"asked by " + p.AskedBy + " on " + ev.OccurredAt + ": " + p.Question}, Scope: "this company"},
 	}

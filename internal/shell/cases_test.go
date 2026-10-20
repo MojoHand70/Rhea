@@ -236,8 +236,15 @@ func TestCasesArePureData(t *testing.T) {
 		t.Fatalf("case after verb = %+v", cases[0].State)
 	}
 	get("/api/views/derived:detail:case?object_id="+caseID, &detail)
+	// each moved value arrives as the typed cell its field renders
+	cellV := func(v any) any {
+		if m, ok := v.(map[string]any); ok {
+			return m["v"]
+		}
+		return v
+	}
 	if len(detail.Amendments) != 1 || detail.Amendments[0].RuleID != "resolve-case" ||
-		detail.Amendments[0].Set["status"] != "resolved" {
+		cellV(detail.Amendments[0].Set["status"]) != "resolved" {
 		t.Fatalf("amendments = %+v", detail.Amendments)
 	}
 

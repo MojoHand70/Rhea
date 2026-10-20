@@ -382,16 +382,29 @@ func (s *Store) ObjectRoots(ctx context.Context, typ string) (map[string]int64, 
 // an interview's rules begin to apply — they explain the client's history,
 // not only its future. Empty when the log holds no facts.
 func (s *Store) EarliestFactDate(ctx context.Context) (string, error) {
-	var d *string
-	err := s.Pool.QueryRow(ctx, `
-		SELECT to_char(MIN(occurred_at),'YYYY-MM-DD') FROM event
-		WHERE kind = 'raw' AND event_type NOT LIKE 'rule.%' AND event_type NOT LIKE 'activity.%'
-		  AND event_type NOT LIKE 'bundle.%' AND event_type NOT LIKE 'backfill.%'
-		  AND event_type NOT LIKE 'time.%'`).Scan(&d)
-	if err != nil || d == nil {
+	rows, err := s.Pool.Query(ctx, `
+		SELECT event_type, to_char(MIN(occurred_at),'YYYY-MM-DD') FROM event
+		WHERE kind = 'raw' GROUP BY event_type`)
+	if err != nil {
 		return "", err
 	}
-	return *d, nil
+	defer rows.Close()
+	earliest := ""
+	for rows.Next() {
+		var typ, d string
+		if err := rows.Scan(&typ, &d); err != nil {
+			return "", err
+		}
+		// the kernel's own verbs are not the client's facts: one list,
+		// core's, decides which
+		if core.ReservedEventType(typ) || core.TimeEventType(typ) {
+			continue
+		}
+		if earliest == "" || d < earliest {
+			earliest = d
+		}
+	}
+	return earliest, rows.Err()
 }
 
 // Installation names this kernel in the network: RHEA_INSTALLATION, or the
@@ -473,6 +486,15 @@ func (s *Store) MaxEventID(ctx context.Context) (int64, error) {
 	var id int64
 	err := s.Pool.QueryRow(ctx, `SELECT COALESCE(MAX(event_id), 0) FROM event`).Scan(&id)
 	return id, err
+}
+
+// LogMark is where the log stands: its highest id and its count. Ids are
+// drawn at insert, not at commit, so a later id can commit first; in an
+// append-only log the count moves on every commit, and the two together
+// change whenever anything landed.
+func (s *Store) LogMark(ctx context.Context) (maxID, count int64, err error) {
+	err = s.Pool.QueryRow(ctx, `SELECT COALESCE(MAX(event_id), 0), COUNT(*) FROM event`).Scan(&maxID, &count)
+	return maxID, count, err
 }
 
 // AmendmentsOf returns the object.amended events that moved one object, in
@@ -731,6 +753,9 @@ func (s *Store) GetObjectType(ctx context.Context, name string) (core.ObjectType
 		ORDER BY version DESC LIMIT 1`,
 		name).Scan(&spec)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return core.ObjectType{}, fmt.Errorf("object type %q: %w", name, ErrNotFound)
+		}
 		return core.ObjectType{}, fmt.Errorf("object type %q: %w", name, err)
 	}
 	var t core.ObjectType

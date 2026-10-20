@@ -2,7 +2,6 @@ package shell
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -68,7 +67,7 @@ func (s *Server) handleTrigger(w http.ResponseWriter, r *http.Request) {
 		DedupKey string         `json:"dedup_key"`
 		Actor    string         `json:"actor"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := decodeBody(r, &req); err != nil {
 		writeErr(w, 400, err)
 		return
 	}

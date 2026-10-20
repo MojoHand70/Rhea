@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"rhea/internal/core"
 )
@@ -123,22 +124,38 @@ func cell(kind string, v any) any {
 	}
 	switch kind {
 	case "money":
+		// DECIMAL(18,2) holds less than int64 minor units can: what does
+		// not fit, and a float that is not a number, is unreadable here.
+		var minor int64
 		switch x := v.(type) {
 		case float64:
-			return core.FormatMoney(int64(math.Round(x)))
-		case int64:
-			return core.FormatMoney(x)
-		case int:
-			return core.FormatMoney(int64(x))
-		case string:
-			if m, err := core.ParseMoney(x); err == nil {
-				return core.FormatMoney(m)
+			if math.IsNaN(x) || math.IsInf(x, 0) || math.Abs(x) >= 1e18 {
+				return nil
 			}
+			minor = int64(math.Round(x))
+		case int64:
+			minor = x
+		case int:
+			minor = int64(x)
+		case string:
+			m, err := core.ParseMoney(x)
+			if err != nil {
+				return nil
+			}
+			minor = m
+		default:
+			return nil
 		}
-		return nil
+		if minor >= 1e18 || minor <= -1e18 {
+			return nil
+		}
+		return core.FormatMoney(minor)
 	case "int":
 		switch x := v.(type) {
 		case float64:
+			if math.IsNaN(x) || math.IsInf(x, 0) || x != math.Trunc(x) || math.Abs(x) >= 1<<63 {
+				return nil
+			}
 			return int64(x)
 		case int64, int:
 			return x
@@ -149,18 +166,27 @@ func cell(kind string, v any) any {
 		}
 		return nil
 	case "decimal":
+		// the kernel's own reader: "NaN" and "0x1p-2" pass ParseFloat and
+		// DuckDB refuses them, which failed every analysis view
 		switch x := v.(type) {
 		case float64:
+			if math.IsNaN(x) || math.IsInf(x, 0) {
+				return nil
+			}
 			return strconv.FormatFloat(x, 'f', -1, 64)
 		case string:
-			if _, err := strconv.ParseFloat(x, 64); err == nil {
-				return x
+			if r, err := core.ParseDecimal(x); err == nil {
+				if c, err := core.CanonicalDecimal(r); err == nil {
+					return c
+				}
 			}
 		}
 		return nil
 	case "date":
 		if s, ok := v.(string); ok && len(s) >= 10 && dateLike.MatchString(s[:10]) {
-			return s[:10]
+			if _, err := time.Parse("2006-01-02", s[:10]); err == nil { // "2026-02-30" looks like a date and is not one
+				return s[:10]
+			}
 		}
 		return nil
 	}

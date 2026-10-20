@@ -15,6 +15,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"rhea/internal/adapter"
 	"rhea/internal/agent"
 	"rhea/internal/core"
@@ -242,6 +244,11 @@ func decodeBody(r *http.Request, v any) error {
 }
 
 func writeErr(w http.ResponseWriter, status int, err error) {
+	// What is not there is 404, whatever door it came through: rejecting an
+	// unknown bundle answered 400 with "no rows in result set".
+	if errors.Is(err, store.ErrNotFound) || errors.Is(err, pgx.ErrNoRows) {
+		status = 404
+	}
 	writeJSON(w, status, map[string]string{"error": err.Error()})
 }
 
@@ -566,9 +573,16 @@ func (s *Server) serveDetail(ctx context.Context, w http.ResponseWriter, vd *cor
 		if json.Unmarshal(ev.Payload, &am) != nil {
 			continue
 		}
+		// each moved value as the typed cell its field renders: money in
+		// the boundary form, a ref by its label — never raw minor units
+		set := map[string]any{}
+		for k, v := range am.Set {
+			fd, _ := objType.Field(k)
+			set[k] = s.typedCell(ctx, v, fd, detailFor)
+		}
 		amendments = append(amendments, map[string]any{
 			"event_id": ev.ID, "rule_id": ev.RuleID, "rule_version": ev.RuleVersion,
-			"occurred_at": ev.OccurredAt, "set": am.Set,
+			"occurred_at": ev.OccurredAt, "set": set,
 		})
 	}
 	writeJSON(w, 200, map[string]any{
@@ -690,7 +704,7 @@ func (s *Server) handleDraft(w http.ResponseWriter, r *http.Request) {
 		SampleEventID int64  `json:"sample_event_id"`
 		ObjectType    string `json:"object_type"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := decodeBody(r, &req); err != nil {
 		writeErr(w, 400, err)
 		return
 	}
@@ -804,7 +818,7 @@ func (s *Server) handleSubmit(w http.ResponseWriter, r *http.Request) {
 		DedupKey   string         `json:"dedup_key"`
 		Actor      string         `json:"actor"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := decodeBody(r, &req); err != nil {
 		writeErr(w, 400, err)
 		return
 	}

@@ -420,6 +420,11 @@ func (s RuleSpec) Validate(target *ObjectType) error {
 		if !scalar(c.Value) {
 			return fmt.Errorf("condition %s %s: the value must be text, a number or yes/no, not %T", c.Path, c.Op, c.Value)
 		}
+		if c.Op == "gt" || c.Op == "lt" {
+			if _, ok := conditionNum(c.Value); !ok {
+				return fmt.Errorf("condition %s %s: the value must read as a number, not %v", c.Path, c.Op, c.Value)
+			}
+		}
 	}
 	effects := 0
 	if s.Effect.Object.Type != "" || len(s.Effect.Object.Fields) > 0 {
@@ -506,6 +511,14 @@ func checkFieldTemplate(target *ObjectType, name, tmpl string) error {
 		return fmt.Errorf("field %q is %s, not a ref", name, fd.Type)
 	case isRef && pt.kind == "ref" && pt.refType != refTarget:
 		return fmt.Errorf("field %q is %s but template resolves a %q", name, fd.Type, pt.refType)
+	}
+	// A literal is checked against its field now, not on every event: a
+	// date written "31.12.2026" would be stored as is and poison later
+	// reads; "abc" on money would fail every event into the worklist.
+	if pt.kind == "literal" {
+		if _, _, err := pt.Evaluate(nil, fd, nil); err != nil {
+			return fmt.Errorf("field %q: %w", name, err)
+		}
 	}
 	if err := pt.Check(nil, nil, fd); err != nil {
 		return fmt.Errorf("field %q: %w", name, err)

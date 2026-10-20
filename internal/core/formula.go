@@ -334,6 +334,10 @@ func (p *parser) and() (*node, error) {
 
 func (p *parser) not() (*node, error) {
 	if p.isWord("not") {
+		if p.depth++; p.depth > maxNesting {
+			return nil, fmt.Errorf("at %d: the formula nests deeper than %d levels", p.peek().pos, maxNesting)
+		}
+		defer func() { p.depth-- }()
 		pos := p.next().pos
 		x, err := p.not()
 		if err != nil {
@@ -395,6 +399,10 @@ func (p *parser) term() (*node, error) {
 
 func (p *parser) unary() (*node, error) {
 	if p.isOp("-") {
+		if p.depth++; p.depth > maxNesting {
+			return nil, fmt.Errorf("at %d: the formula nests deeper than %d levels", p.peek().pos, maxNesting)
+		}
+		defer func() { p.depth-- }()
 		pos := p.next().pos
 		x, err := p.unary()
 		if err != nil {
