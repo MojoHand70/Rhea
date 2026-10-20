@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"rhea/internal/agent"
 	"rhea/internal/core"
@@ -139,12 +138,15 @@ func (s *Server) handleApproveBundle(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		ApprovedBy string `json:"approved_by"`
 	}
-	json.NewDecoder(r.Body).Decode(&req)
+	if err := decodeBody(r, &req); err != nil {
+		writeErr(w, 400, err)
+		return
+	}
 	if req.ApprovedBy == "" {
 		req.ApprovedBy = "human"
 	}
 	b, booked, procErrs, err := s.Exec.ApproveBundle(r.Context(), r.PathValue("id"),
-		req.ApprovedBy, time.Now().Format("2006-01-02"))
+		req.ApprovedBy, s.Clock.TodayUTC())
 	if err != nil {
 		writeErr(w, 400, err)
 		return
@@ -169,7 +171,7 @@ func (s *Server) handleRejectBundle(w http.ResponseWriter, r *http.Request) {
 		req.RejectedBy = "human"
 	}
 	b, err := s.Exec.RejectBundle(r.Context(), r.PathValue("id"), req.Reason,
-		req.RejectedBy, time.Now().Format("2006-01-02"))
+		req.RejectedBy, s.Clock.TodayUTC())
 	if err != nil {
 		writeErr(w, 400, err)
 		return
@@ -265,7 +267,7 @@ func (s *Server) handleDraftBundle(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if effective == "" {
-		effective = time.Now().Format("2006-01-02")
+		effective = s.Clock.TodayUTC()
 	}
 	b, err := StoreBundleDraft(ctx, s.Store, k, bd, "agent:"+agent.Model(), effective, req.Intent, req.After)
 	if err != nil {

@@ -212,11 +212,26 @@ func TestTheMorningByRole(t *testing.T) {
 			View string `json:"view"`
 		} `json:"facts"`
 	}
+	// Speaking is the POST; the view's read then shows the facts and the
+	// last words.
+	speakView := func(view string) {
+		t.Helper()
+		res, err := ts.Client().Post(ts.URL+"/api/speak?view="+view, "application/json", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res.Body.Close()
+		if res.StatusCode != 200 {
+			t.Fatalf("speak %s: %d", view, res.StatusCode)
+		}
+	}
+	speakView("poranek")
 	get("/api/views/poranek", &spoken)
 	if spoken.Said == "" || len(spoken.Facts) != 4 || spoken.Facts[0].View != "poranek-wynik" {
 		t.Fatalf("the owner's morning: %+v", spoken)
 	}
 	spoken.Said, spoken.Facts = "", nil
+	speakView("poranek-ksiegowosc")
 	get("/api/views/poranek-ksiegowosc", &spoken)
 	if spoken.Said == "" || len(spoken.Facts) != 3 || spoken.Facts[0].View != "poranek-otwarte" {
 		t.Fatalf("the accountant's morning: %+v", spoken)

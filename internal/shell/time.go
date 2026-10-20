@@ -54,7 +54,10 @@ func (s *Server) handleTimeCatchUp(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Through string `json:"through"`
 	}
-	json.NewDecoder(r.Body).Decode(&req)
+	if err := decodeBody(r, &req); err != nil {
+		writeErr(w, 400, err)
+		return
+	}
 	res, err := adapter.CatchUpClock(r.Context(), s.Store, s.Exec, s.Clock, req.Through)
 	if err != nil {
 		writeErr(w, 500, err)
@@ -69,7 +72,10 @@ func (s *Server) handleTimeSimulate(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Through string `json:"through"`
 	}
-	json.NewDecoder(r.Body).Decode(&req)
+	if err := decodeBody(r, &req); err != nil {
+		writeErr(w, 400, err)
+		return
+	}
 	ctx := r.Context()
 	diff, days, err := adapter.SimulateCatchUp(ctx, s.Store, s.Exec, s.Clock, req.Through)
 	if err != nil {

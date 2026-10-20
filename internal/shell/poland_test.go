@@ -383,8 +383,15 @@ func TestM3PolandPack(t *testing.T) {
 		} `json:"facts"`
 	}
 	get("/api/views/poranek", &briefing)
-	if !strings.Contains(briefing.Silent, "could not speak") || len(briefing.Facts) != 4 || briefing.Facts[0].View != "poranek-wynik" || briefing.Facts[2].Kind != "analysis" {
+	if briefing.Silent != "" || len(briefing.Facts) != 4 || briefing.Facts[0].View != "poranek-wynik" || briefing.Facts[2].Kind != "analysis" {
 		t.Fatalf("the briefing: %+v", briefing)
+	}
+	var spoken []struct {
+		Silent string `json:"silent"`
+	}
+	post("/api/speak?view=poranek", nil, &spoken)
+	if len(spoken) != 1 || !strings.Contains(spoken[0].Silent, "could not speak") {
+		t.Fatalf("speaking without a host: %+v", spoken)
 	}
 
 	// The VAT register aggregates by month and rate.

@@ -6,7 +6,9 @@ package shell
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -36,6 +38,68 @@ type Server struct {
 	// DuckDB projection and queries it, and two at once collide on the
 	// rebuild ("write-write conflict") or read a table mid-rebuild.
 	duck sync.Mutex
+	// live is the one projection listener, fanning out to every open tab:
+	// a pooled connection per tab exhausted the pool at four tabs.
+	live struct {
+		sync.Mutex
+		running bool
+		cancel  context.CancelFunc
+		subs    map[chan string]struct{}
+	}
+}
+
+// subscribeLive hands out a channel of projection notices, starting the
+// one listener when none runs and stopping it — its connection back in the
+// pool — when the last tab leaves; the listener's end closes every
+// channel, so tabs reconnect and the next subscriber starts it again.
+func (s *Server) subscribeLive() (<-chan string, func(), error) {
+	s.live.Lock()
+	defer s.live.Unlock()
+	if s.live.subs == nil {
+		s.live.subs = map[chan string]struct{}{}
+	}
+	if !s.live.running {
+		ctx, cancel := context.WithCancel(context.Background())
+		notices, err := s.Store.ProjectionNotices(ctx)
+		if err != nil {
+			cancel()
+			return nil, nil, err
+		}
+		s.live.running, s.live.cancel = true, cancel
+		go func() {
+			for p := range notices {
+				s.live.Lock()
+				for ch := range s.live.subs {
+					select {
+					case ch <- p:
+					default: // a slow tab drops a notice; a notice only means "look again"
+					}
+				}
+				s.live.Unlock()
+			}
+			s.live.Lock()
+			s.live.running = false
+			for ch := range s.live.subs {
+				close(ch)
+				delete(s.live.subs, ch)
+			}
+			s.live.Unlock()
+		}()
+	}
+	ch := make(chan string, 16)
+	s.live.subs[ch] = struct{}{}
+	return ch, func() {
+		s.live.Lock()
+		defer s.live.Unlock()
+		if _, ok := s.live.subs[ch]; ok {
+			delete(s.live.subs, ch)
+			close(ch)
+		}
+		if len(s.live.subs) == 0 && s.live.cancel != nil {
+			s.live.cancel() // nobody listens: the listener ends and frees its connection
+			s.live.cancel = nil
+		}
+	}, nil
 }
 
 // knowledge is what Rhea has learned across installations, or nil when no
@@ -149,6 +213,19 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(v)
+}
+
+// decodeBody reads a JSON request body into v; an empty body is no body.
+// A body that does not parse, or one with unknown keys, is an error the
+// door answers with 400 — an approver's name mis-keyed must not silently
+// become "human", since who approved is part of the record.
+func decodeBody(r *http.Request, v any) error {
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(v); err != nil && !errors.Is(err, io.EOF) {
+		return fmt.Errorf("request body: %w", err)
+	}
+	return nil
 }
 
 func writeErr(w http.ResponseWriter, status int, err error) {
@@ -524,11 +601,12 @@ func (s *Server) handleLive(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 500, fmt.Errorf("streaming unsupported"))
 		return
 	}
-	notices, err := s.Store.ProjectionNotices(r.Context())
+	notices, unsubscribe, err := s.subscribeLive()
 	if err != nil {
 		writeErr(w, 500, err)
 		return
 	}
+	defer unsubscribe()
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.WriteHeader(200)
@@ -664,12 +742,15 @@ func (s *Server) handleApprove(w http.ResponseWriter, r *http.Request) {
 		ApprovedBy string `json:"approved_by"`
 		Reason     string `json:"reason"` // why this version replaces the reading before it
 	}
-	json.NewDecoder(r.Body).Decode(&req)
+	if err := decodeBody(r, &req); err != nil {
+		writeErr(w, 400, err)
+		return
+	}
 	if req.ApprovedBy == "" {
 		req.ApprovedBy = "human"
 	}
 	rule, booked, procErrs, err := s.Exec.ApproveRuleWithReason(r.Context(), r.PathValue("id"),
-		req.ApprovedBy, time.Now().Format("2006-01-02"), req.Reason)
+		req.ApprovedBy, s.Clock.TodayUTC(), req.Reason)
 	if err != nil {
 		writeErr(w, 400, err)
 		return

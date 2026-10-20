@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 
 	"rhea/internal/core"
 )
@@ -98,12 +97,15 @@ func (s *Server) handleApproveActivity(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		ApprovedBy string `json:"approved_by"`
 	}
-	json.NewDecoder(r.Body).Decode(&req)
+	if err := decodeBody(r, &req); err != nil {
+		writeErr(w, 400, err)
+		return
+	}
 	if req.ApprovedBy == "" {
 		req.ApprovedBy = "human"
 	}
 	a, booked, procErrs, err := s.Exec.ApproveActivity(r.Context(), r.PathValue("name"),
-		req.ApprovedBy, time.Now().UTC().Format("2006-01-02"))
+		req.ApprovedBy, s.Clock.TodayUTC())
 	if err != nil {
 		writeErr(w, 400, err)
 		return

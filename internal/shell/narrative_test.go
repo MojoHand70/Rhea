@@ -95,23 +95,57 @@ func TestBriefing(t *testing.T) {
 	}
 
 	// 1. The host speaks from the facts; the words are logged by the agent.
-	var d struct {
-		Said      string `json:"said"`
-		SaidEvent int64  `json:"said_event"`
-		Silent    string `json:"silent"`
-		Facts     []struct {
-			As   string `json:"as"`
-			Kind string `json:"kind"`
-			Data struct {
-				Rows [][]struct {
-					V string `json:"v"`
-				} `json:"rows"`
-			} `json:"data"`
-		} `json:"facts"`
+	// Speaking is the POST (/api/speak); a GET of the view reads the facts
+	// and the last words, and never calls the model or appends an event.
+	type fact struct {
+		As   string `json:"as"`
+		Kind string `json:"kind"`
+		Data struct {
+			Rows [][]struct {
+				V string `json:"v"`
+			} `json:"rows"`
+		} `json:"data"`
 	}
-	get("/api/views/briefing", &d)
+	var d struct {
+		Said      string
+		SaidEvent int64
+		Silent    string
+		Facts     []fact
+	}
+	var read struct {
+		Said  string `json:"said"`
+		Facts []fact `json:"facts"`
+	}
+	brief := func() {
+		t.Helper()
+		d.Said, d.SaidEvent, d.Silent, d.Facts = "", 0, "", nil
+		res, err := ts.Client().Post(ts.URL+"/api/speak?view=briefing", "application/json", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+		var out []struct {
+			View, Said, Silent string
+			SaidEvent          int64 `json:"said_event"`
+		}
+		if res.StatusCode != 200 || json.NewDecoder(res.Body).Decode(&out) != nil || len(out) != 1 || out[0].View != "briefing" {
+			t.Fatalf("speak: %d %+v", res.StatusCode, out)
+		}
+		d.Said, d.SaidEvent, d.Silent = out[0].Said, out[0].SaidEvent, out[0].Silent
+		get("/api/views/briefing", &read)
+		d.Facts = read.Facts
+	}
+	brief()
 	if d.Said != words || d.SaidEvent == 0 || d.Silent != "" {
 		t.Fatalf("the briefing: %+v", d)
+	}
+	if read.Said != words {
+		t.Fatalf("a read shows the last words: %q", read.Said)
+	}
+	if before, _ := srvSaid(ctx, s); before != 1 {
+		t.Fatalf("said %d", before)
+	} else if get("/api/views/briefing", &read); func() int { n, _ := srvSaid(ctx, s); return n }() != before {
+		t.Fatal("a read of the briefing spoke")
 	}
 	if len(d.Facts) != 1 || d.Facts[0].As != "the notes" || d.Facts[0].Kind != "analysis" || d.Facts[0].Data.Rows[0][0].V != "2" || d.Facts[0].Data.Rows[0][1].V != "1234.56" {
 		t.Fatalf("the facts: %+v", d.Facts)
@@ -127,19 +161,16 @@ func TestBriefing(t *testing.T) {
 		t.Fatalf("the host's words are never residue: %v", left)
 	}
 
-	fresh := func() { d.Said, d.SaidEvent, d.Silent, d.Facts = "", 0, "", nil }
 	// 2. The next time, the host is told what it said, so it does not repeat itself.
 	words = "Nothing new: the 2 notes still stand at 1234.56 PLN."
-	fresh()
-	get("/api/views/briefing", &d)
+	brief()
 	if !strings.Contains(heard, "What you said before") || !strings.Contains(heard, "worth 1234.56 PLN together") || d.Said != words {
 		t.Fatalf("the host does not know what it said: %s", heard)
 	}
 
 	// 3. A number the facts do not carry is refused: the host never computes.
 	words = "The notes are worth about 1300.00 PLN, roughly 617.28 each."
-	fresh()
-	get("/api/views/briefing", &d)
+	brief()
 	if d.Said != "" || !strings.Contains(d.Silent, "refused") || !strings.Contains(d.Silent, "1300.00") || !strings.Contains(d.Silent, "617.28") {
 		t.Fatalf("computed numbers are refused: %+v", d)
 	}
@@ -151,8 +182,7 @@ func TestBriefing(t *testing.T) {
 	// facts carry. Words without a number clear the first check and fail
 	// the second, and the refusal names the fact and its amounts.
 	words = "A quiet day: nothing was taken and nothing waits."
-	fresh()
-	get("/api/views/briefing", &d)
+	brief()
 	if d.Said != "" || !strings.Contains(d.Silent, "pass over") || !strings.Contains(d.Silent, "the notes (2, 1234.56)") {
 		t.Fatalf("a denied fact is refused: %+v", d)
 	}
@@ -161,8 +191,7 @@ func TestBriefing(t *testing.T) {
 	}
 	// One amount spoken is enough: the count alone names the fact.
 	words = "2 notes today, both booked."
-	fresh()
-	get("/api/views/briefing", &d)
+	brief()
 	if d.Said != words || d.Silent != "" {
 		t.Fatalf("one amount of the fact, spoken, is the fact spoken: %+v", d)
 	}
@@ -175,24 +204,21 @@ func TestBriefing(t *testing.T) {
 		t.Fatal(err)
 	}
 	answers = []string{"Invoice FV7 still waits. 2 notes.", "2 notes stand; nothing else waits."}
-	fresh()
-	get("/api/views/briefing", &d)
+	brief()
 	if d.Said != "2 notes stand; nothing else waits." || !strings.Contains(heard, "refused: they name what the facts do not (FV7)") ||
 		strings.Contains(heard, "- Invoice FV7") || !strings.Contains(heard, "- 2 notes.") {
 		t.Fatalf("one correction: %+v\n%s", d, heard)
 	}
 	// Refused twice, the refusal stands.
 	answers = []string{"About 1300.00 PLN.", "About 1300.00 PLN, I said."}
-	fresh()
-	get("/api/views/briefing", &d)
+	brief()
 	if d.Said != "" || !strings.Contains(d.Silent, "1300.00") || len(answers) != 0 {
 		t.Fatalf("refused twice: %+v", d)
 	}
 
 	// 4. Without a host, the facts speak for themselves.
 	srv.Agent = nil
-	fresh()
-	get("/api/views/briefing", &d)
+	brief()
 	if d.Said != "" || !strings.Contains(d.Silent, "no host") || len(d.Facts) != 1 {
 		t.Fatalf("silent: %+v", d)
 	}

@@ -1,10 +1,8 @@
 package shell
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 )
 
 // handleSimulateBackfill is the dry run of ruled backfill: which past events
@@ -12,7 +10,7 @@ import (
 // closed, rendered as the same field-level diff every approval reads.
 func (s *Server) handleSimulateBackfill(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	plan, err := s.Exec.PlanBackfill(ctx, time.Now().Format("2006-01-02"))
+	plan, err := s.Exec.PlanBackfill(ctx, s.Clock.TodayUTC())
 	if err != nil {
 		writeErr(w, 400, err)
 		return
@@ -31,11 +29,14 @@ func (s *Server) handleApproveBackfill(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		ApprovedBy string `json:"approved_by"`
 	}
-	json.NewDecoder(r.Body).Decode(&req)
+	if err := decodeBody(r, &req); err != nil {
+		writeErr(w, 400, err)
+		return
+	}
 	if req.ApprovedBy == "" {
 		req.ApprovedBy = "human"
 	}
-	n, errs, err := s.Exec.ApproveBackfill(r.Context(), req.ApprovedBy, time.Now().Format("2006-01-02"))
+	n, errs, err := s.Exec.ApproveBackfill(r.Context(), req.ApprovedBy, s.Clock.TodayUTC())
 	if err != nil {
 		writeErr(w, 400, err)
 		return

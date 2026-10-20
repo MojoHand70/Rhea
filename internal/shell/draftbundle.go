@@ -34,6 +34,14 @@ func StoreBundleDraft(ctx context.Context, st *store.Store, k *network.Knowledge
 		}
 		bd.Warrant = &w
 	}
+	// Whole or not at all: types, views, rules, activities and the bundle
+	// land in one transaction, so a rule refused third leaves no orphan
+	// drafts in append-only tables, bundled by nothing.
+	tx, err := st.Pool.Begin(ctx)
+	if err != nil {
+		return core.Bundle{}, err
+	}
+	defer tx.Rollback(ctx)
 	var members []core.Member
 	for _, t := range bd.ObjectTypes {
 		v, err := st.NextObjectTypeVersion(ctx, t.Name)
@@ -41,7 +49,7 @@ func StoreBundleDraft(ctx context.Context, st *store.Store, k *network.Knowledge
 			return core.Bundle{}, err
 		}
 		t.Version = v
-		if err := store.InsertObjectTypeRow(ctx, st.Pool, t, core.StatusDraft); err != nil {
+		if err := store.InsertObjectTypeRow(ctx, tx, t, core.StatusDraft); err != nil {
 			return core.Bundle{}, fmt.Errorf("type %s: %w", t.Name, err)
 		}
 		members = append(members, core.Member{Kind: core.KindObjectType, Name: t.Name, Version: v})
@@ -52,13 +60,13 @@ func StoreBundleDraft(ctx context.Context, st *store.Store, k *network.Knowledge
 			return core.Bundle{}, err
 		}
 		view.Version = v
-		if err := store.InsertViewDefRow(ctx, st.Pool, view, core.StatusDraft); err != nil {
+		if err := store.InsertViewDefRow(ctx, tx, view, core.StatusDraft); err != nil {
 			return core.Bundle{}, fmt.Errorf("view %s: %w", view.ID, err)
 		}
 		members = append(members, core.Member{Kind: core.KindViewDef, Name: view.ID, Version: v})
 	}
 	for _, d := range bd.Rules {
-		r, err := st.InsertRuleVersion(ctx, core.Rule{
+		r, err := store.InsertRuleVersion(ctx, tx, core.Rule{
 			ID: d.RuleID, Status: core.StatusDraft, Priority: d.Priority,
 			EffectiveFrom: effectiveFrom, CreatedBy: createdBy,
 			Description: d.Description, Spec: d.Spec,
@@ -69,7 +77,7 @@ func StoreBundleDraft(ctx context.Context, st *store.Store, k *network.Knowledge
 		members = append(members, core.Member{Kind: core.KindRule, Name: r.ID, Version: r.Version})
 	}
 	for _, ad := range bd.Activities {
-		a, err := st.InsertActivityVersion(ctx, core.Activity{
+		a, err := store.InsertActivityVersion(ctx, tx, core.Activity{
 			Name: ad.Name, Status: core.StatusDraft, Domain: ad.Domain,
 			Description: ad.Description, Spec: ad.Spec, CreatedBy: createdBy,
 		})
@@ -85,6 +93,21 @@ func StoreBundleDraft(ctx context.Context, st *store.Store, k *network.Knowledge
 		}
 		id = fmt.Sprintf("%s-%d", bd.BundleID, n)
 	}
-	return st.InsertBundle(ctx, core.Bundle{ID: id, Description: bd.Description,
-		Members: members, CreatedBy: createdBy, Warrant: bd.Warrant, Question: question, After: after})
+	// The members are this transaction's own fresh drafts: no other bundle
+	// can hold them, so the bundle's guard has nothing to check here.
+	b := core.Bundle{ID: id, Status: core.StatusDraft, Description: bd.Description,
+		Members: members, CreatedBy: createdBy, Warrant: bd.Warrant, Question: question, After: after}
+	if err := b.Validate(); err != nil {
+		return core.Bundle{}, err
+	}
+	if b.Warrant != nil {
+		if err := b.Warrant.ValidateStored(); err != nil {
+			return core.Bundle{}, fmt.Errorf("bundle %s: %w", b.ID, err)
+		}
+	}
+	b, err = store.InsertBundleVersion(ctx, tx, b)
+	if err != nil {
+		return core.Bundle{}, err
+	}
+	return b, tx.Commit(ctx)
 }

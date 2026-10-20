@@ -33,26 +33,36 @@ type narrativeFact struct {
 	Data  interface{} `json:"data"`
 }
 
+// serveNarrative is the read: the facts and what the host last said of
+// this view. It speaks nothing — a GET has no side effects, and a briefing
+// left open while a batch books would otherwise call the model and append
+// a host_said event on every projection notice. POST /api/speak speaks.
 func (s *Server) serveNarrative(ctx context.Context, w http.ResponseWriter, vd *core.ViewDef) {
-	out, status, err := s.narrate(ctx, vd)
+	out, _, status, err := s.narrativeFacts(ctx, vd)
 	if err != nil {
 		writeErr(w, status, err)
 		return
 	}
+	if said, err := s.saidBefore(ctx, vd.ID, 1); err != nil {
+		writeErr(w, 500, err)
+		return
+	} else if len(said) > 0 {
+		out["said"] = said[0]
+	}
 	writeJSON(w, 200, out)
 }
 
-// narrate computes a narrative's facts and asks the host to speak them,
-// under her laws; the words, when they pass, are logged through her door.
-// A failure carries the HTTP status it answers with.
-func (s *Server) narrate(ctx context.Context, vd *core.ViewDef) (map[string]any, int, error) {
+// narrativeFacts computes a narrative's facts: the view, each fact's data
+// and today, with the facts as JSON for the host to read. A failure carries
+// the HTTP status it answers with.
+func (s *Server) narrativeFacts(ctx context.Context, vd *core.ViewDef) (map[string]any, []byte, int, error) {
 	var spec core.NarrativeSpec
 	if err := json.Unmarshal(vd.Spec, &spec); err != nil {
-		return nil, 500, err
+		return nil, nil, 500, err
 	}
 	vds, err := s.effectiveViewDefs(ctx)
 	if err != nil {
-		return nil, 500, err
+		return nil, nil, 500, err
 	}
 	byID := map[string]core.ViewDef{}
 	for _, v := range vds {
@@ -62,7 +72,7 @@ func (s *Server) narrate(ctx context.Context, vd *core.ViewDef) (map[string]any,
 	for _, f := range spec.Facts {
 		fv, ok := byID[f.View]
 		if !ok {
-			return nil, 400, fmt.Errorf("narrative %s: no view %q to draw on", vd.ID, f.View)
+			return nil, nil, 400, fmt.Errorf("narrative %s: no view %q to draw on", vd.ID, f.View)
 		}
 		as := f.As
 		if as == "" {
@@ -73,26 +83,41 @@ func (s *Server) narrate(ctx context.Context, vd *core.ViewDef) (map[string]any,
 		case "analysis":
 			as, err := s.analysisSpec(ctx, fv.Spec)
 			if err != nil {
-				return nil, 500, err
+				return nil, nil, 500, err
 			}
 			cols, rows, _, err := s.analysisData(ctx, as)
 			if err != nil {
-				return nil, 500, err
+				return nil, nil, 500, err
 			}
 			fact.Data = map[string]any{"columns": cols, "rows": rows}
 		case "matching":
 			data, err := s.matchingData(ctx, &fv)
 			if err != nil {
-				return nil, 500, err
+				return nil, nil, 500, err
 			}
 			fact.Data = data
 		default:
-			return nil, 400, fmt.Errorf("narrative %s: a host speaks from analysis views and matching grids, not a %s", vd.ID, fv.Notion)
+			return nil, nil, 400, fmt.Errorf("narrative %s: a host speaks from analysis views and matching grids, not a %s", vd.ID, fv.Notion)
 		}
 		facts = append(facts, fact)
 	}
 	out := map[string]any{"view": vd, "facts": facts, "today": s.Clock.TodayUTC()}
 	factsJSON, _ := json.Marshal(facts)
+	return out, factsJSON, 200, nil
+}
+
+// narrate computes a narrative's facts and asks the host to speak them,
+// under her laws; the words, when they pass, are logged through her door.
+// A failure carries the HTTP status it answers with.
+func (s *Server) narrate(ctx context.Context, vd *core.ViewDef) (map[string]any, int, error) {
+	var spec core.NarrativeSpec
+	if err := json.Unmarshal(vd.Spec, &spec); err != nil {
+		return nil, 500, err
+	}
+	out, factsJSON, status, err := s.narrativeFacts(ctx, vd)
+	if err != nil {
+		return nil, status, err
+	}
 	before, err := s.saidBefore(ctx, vd.ID, 3)
 	if err != nil {
 		return nil, 500, err
@@ -154,10 +179,20 @@ func (s *Server) handleSpeak(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	// ?view=<id> speaks one narrative by its id: a person refreshing the
+	// briefing they are looking at.
+	if v := r.URL.Query().Get("view"); v != "" {
+		if only != "" && only != v {
+			writeErr(w, 400, fmt.Errorf("a view or a person, not both"))
+			return
+		}
+		only = v
+	}
 	type spoken struct {
-		View   string `json:"view"`
-		Said   string `json:"said,omitempty"`
-		Silent string `json:"silent,omitempty"`
+		View      string `json:"view"`
+		Said      string `json:"said,omitempty"`
+		SaidEvent int64  `json:"said_event,omitempty"`
+		Silent    string `json:"silent,omitempty"`
 	}
 	out := []spoken{}
 	for i := range vds {
@@ -172,7 +207,8 @@ func (s *Server) handleSpeak(w http.ResponseWriter, r *http.Request) {
 		}
 		said, _ := res["said"].(string)
 		silent, _ := res["silent"].(string)
-		out = append(out, spoken{View: vd.ID, Said: said, Silent: silent})
+		saidEvent, _ := res["said_event"].(int64)
+		out = append(out, spoken{View: vd.ID, Said: said, SaidEvent: saidEvent, Silent: silent})
 	}
 	writeJSON(w, 200, out)
 }
