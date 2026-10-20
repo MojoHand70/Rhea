@@ -42,6 +42,11 @@ func (x *Executor) objectType(ctx context.Context, name string) (core.ObjectType
 // matches no rule simply stays in the worklist; an event whose matching rule
 // fails to expand is reported (from the final pass) and left in place.
 func (x *Executor) ProcessPending(ctx context.Context) (int, []error) {
+	ctx, release, err := x.serialize(ctx)
+	if err != nil {
+		return 0, []error{err}
+	}
+	defer release()
 	rules, err := x.Store.ActiveRules(ctx)
 	if err != nil {
 		return 0, []error{err}
@@ -1043,6 +1048,11 @@ func vouchRef(fd core.FieldDef, t core.Template, v any, get core.Getter) error {
 // is the whole log's whatever scope the caller runs under: a scoped replay
 // would wipe every company's objects and rebuild one's.
 func (x *Executor) Replay(ctx context.Context) ([]core.Object, error) {
+	ctx, release, err := x.serialize(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer release()
 	ctx = store.WithCompany(ctx, "")
 	derived, err := x.Store.EventsByKind(ctx, core.KindDerived)
 	if err != nil {

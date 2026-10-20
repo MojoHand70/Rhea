@@ -156,6 +156,11 @@ func (x *Executor) learnedProposal(ctx context.Context, rule core.Rule, matched 
 // re-evaluation. dedupKey is the caller's idempotency handle (the CLI's file
 // hash); the approval reactions set their own.
 func (x *Executor) TriggerActivity(ctx context.Context, name string, inputs map[string]any, actor, dedupKey string) (Triggered, error) {
+	ctx, release, err := x.serialize(ctx)
+	if err != nil {
+		return Triggered{}, err
+	}
+	defer release()
 	act, err := x.Store.GetActiveActivity(ctx, name)
 	if err != nil {
 		return Triggered{}, err
