@@ -707,7 +707,11 @@ func main() {
 			fmt.Printf("played %d fact(s) and %d file(s) into this installation\n", played, len(c.Files))
 			wireModelReader()
 			for _, name := range readers {
-				a, _ := adapter.Lookup(name)
+				a, ok := adapter.Lookup(name)
+				if !ok {
+					fmt.Printf("no reader named %q — rhea channels lists what this binary can read\n", name)
+					continue
+				}
 				run, err := adapter.Run(ctx, s, x, a)
 				if err != nil {
 					fmt.Printf("reader %s did not run: %v\n  approve the bundles above in the shell, then: rhea pass %s\n", name, err, name)
@@ -776,7 +780,7 @@ func loadDefinitions(ctx context.Context, s *store.Store, path string) (int, str
 	return len(members), bundle.ID, nil
 }
 
-func today() string { return time.Now().Format("2006-01-02") }
+func today() string { return time.Now().UTC().Format("2006-01-02") }
 
 // actor identifies who runs this CLI: RHEA_ACTOR, or cli:<os user>.
 func actor() string {

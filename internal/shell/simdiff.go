@@ -166,9 +166,9 @@ func (s *Server) renderSimDiff(ctx context.Context, diff exec.SimDiff, drafts ma
 	}
 	return map[string]any{
 		"rule_id": diff.RuleID, "version": diff.Version,
-		"added":   oneSided(diff.Added, true, false),
-		"changed": changed,
-		"removed": oneSided(diff.Removed, false, true),
+		"added":              oneSided(diff.Added, true, false),
+		"changed":            changed,
+		"removed":            oneSided(diff.Removed, false, true),
 		"unexplained_before": len(diff.UnexplainedBefore),
 		"unexplained_after":  len(diff.UnexplainedAfter),
 		"explains":           explains,

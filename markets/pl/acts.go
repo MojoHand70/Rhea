@@ -132,12 +132,12 @@ func fetchAct(ctx context.Context, a statute.Act, dir string) (statute.Act, erro
 	if b, err := json.MarshalIndent(meta, "", " "); err == nil {
 		_ = os.WriteFile(filepath.Join(dir, a.Key+".meta.json"), b, 0o644)
 	}
-	text, err := exec.Command("pdftotext", "-layout", pdfPath, "-").Output()
+	text, err := exec.CommandContext(ctx, "pdftotext", "-layout", pdfPath, "-").Output()
 	if err != nil {
 		return a, fmt.Errorf("pdftotext %s: %w (poppler-utils needed)", pdfPath, err)
 	}
 	a.Basis, a.Articles = ParseAct(string(text))
-	a.Fetched = time.Now().Format("2006-01-02")
+	a.Fetched = time.Now().UTC().Format("2006-01-02")
 	if len(a.Articles) == 0 {
 		return a, errors.New("no articles read from the text")
 	}
@@ -238,7 +238,7 @@ func getJSON(ctx context.Context, url string) (map[string]any, error) {
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/json")
-	res, err := http.DefaultClient.Do(req)
+	res, err := fetchClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -250,12 +250,18 @@ func getJSON(ctx context.Context, url string) (map[string]any, error) {
 	return m, json.NewDecoder(res.Body).Decode(&m)
 }
 
+// fetchClient reads the Ministry's journal and the standards with a
+// deadline; a transfer that stalls ends instead of hanging the command.
+var fetchClient = &http.Client{Timeout: 3 * time.Minute}
+
+// download writes a fetched file whole or not at all: a failed transfer
+// leaves no truncated PDF for the next run to parse as an act.
 func download(ctx context.Context, url, path string) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return err
 	}
-	res, err := http.DefaultClient.Do(req)
+	res, err := fetchClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -266,11 +272,19 @@ func download(ctx context.Context, url, path string) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
-	f, err := os.Create(path)
+	tmp := path + ".part"
+	f, err := os.Create(tmp)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-	_, err = io.Copy(f, res.Body)
-	return err
+	if _, err := io.Copy(f, res.Body); err != nil {
+		f.Close()
+		os.Remove(tmp)
+		return err
+	}
+	if err := f.Close(); err != nil {
+		os.Remove(tmp)
+		return err
+	}
+	return os.Rename(tmp, path)
 }

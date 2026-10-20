@@ -3,6 +3,7 @@ package storetest
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"rhea/internal/store"
@@ -15,6 +16,11 @@ func New(t *testing.T) *store.Store {
 	ctx := context.Background()
 	admin, err := store.Open(ctx, store.DSN())
 	if err != nil {
+		// A box without the container reports most of the kernel untested:
+		// a skip on a laptop, a failure where RHEA_CI says the run counts.
+		if os.Getenv("RHEA_CI") != "" {
+			t.Fatalf("postgres unavailable and RHEA_CI is set: %v", err)
+		}
 		t.Skipf("postgres unavailable: %v", err)
 	}
 	admin.Close()

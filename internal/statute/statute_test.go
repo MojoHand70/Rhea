@@ -8,7 +8,20 @@ func library() *Library {
 		Articles: []Article{{N: "28", Text: "Art. 28. 1. Aktywa i pasywa wycenia się…"}, {N: "28a", Text: "Art. 28a. …"}}})
 	l.Add(Act{Key: "vat", Names: []string{"ustawa o VAT", "ustawa o podatku od towarów i usług"},
 		Articles: []Article{{N: "106e", Text: "Art. 106e. 1. Faktura powinna zawierać…"}}})
+	l.Add(Act{Key: "ksr1", Names: []string{"KSR 1"}, Articles: []Article{{N: "3.1", Text: "3.1. …"}}})
 	return l
+}
+
+// A citation's act is the longest known name it starts with, whole: with
+// KSR 1 loaded and KSR 11 not, "KSR 11 pkt 6.18" is not KSR 1.
+func TestActMatchesWholeNames(t *testing.T) {
+	l := library()
+	if a, ok := l.Act("KSR 1 pkt 3.1"); !ok || a.Key != "ksr1" {
+		t.Fatalf("KSR 1 by its point: %v %v", a, ok)
+	}
+	if a, ok := l.Act("KSR 11 pkt 6.18"); ok {
+		t.Fatalf("KSR 11 resolved to %s", a.Key)
+	}
 }
 
 func TestFindByAnyNameAndArticle(t *testing.T) {

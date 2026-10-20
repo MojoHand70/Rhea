@@ -4193,3 +4193,46 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   over; the slower part is now the person reading the drafts. Next: the review of the
   block I drafts into pack v35 with its story tests, then the same loop block by block
   and paper by paper, each measured the same way.
+
+## 2026-10-20 — Fixing day: the review's fifty-five findings
+
+- KK handed over a read-only review of the tree at 29c85d9 (55 findings, each with a
+  failure scenario and the simplest fix). Confirmed first: the suite was not green —
+  `go test ./...` uncached failed TestBundleRejection every run, hidden by the test cache
+  since d4d243d changed the bundle rule (a rejected bundle frees its drafts) and left the
+  older test asserting the opposite. Then the findings in order of harm, one commit a
+  batch, every fix with a test where one could have teeth.
+- Decided on the way, where the finding asked for a decision:
+  - The `approved` status was a constant never written. A rule goes
+    draft → active → superseded; the approval is the recorded event, not a resting
+    status (invariant 2 says so now in CLAUDE.md and SPEC.md).
+  - A bare number copied into a money field: minor units in a derived payload (the
+    kernel's own convention — an object's state, a match's open amounts), refused in a
+    raw fact, where money crosses as text (invariant 6). The executor marks each fire
+    with its event's kind (`core.Env.Raw`); refusing everywhere broke the matching
+    rules every persona writes (`=$.line.open_after.money`).
+  - Path conditions compare exactly: a number against a number or against money text
+    compares as numbers; two texts compare as text, so an identifier "0100" is not "100".
+  - A door accepts a decimal typed as a JSON number and refuses one that carries the
+    sixteen or seventeen digits only a computed float has.
+  - The executor runs one chain at a time under one Postgres advisory lock, across
+    handlers and processes; a trigger's worklist pass runs under the lock it holds.
+  - Replay is the whole log's whatever company scope it runs under, and `rhea replay`
+    compares the cache before and after (exit non-zero on a difference).
+  - A read of a narrative view speaks nothing; `POST /api/speak` (now also `?view=`)
+    speaks. Three tests that read a briefing to make the host speak were changed.
+  - A market reaches the kernel through a named list of packages (adapter, core,
+    statute, pack, agent, exam); the exam harness pulls the eval and the shell behind
+    it, and moving the Polish exam parts under markets/pl is the debt that shortens the
+    list. The import test scans test binaries too.
+- Assessed and left, with the reason: the client's three unrenderable notions and the
+  hard-coded worklist verb (#33), domain names in the shell's untaught/narrative code
+  (#34), the DuckDB rebuild per analysis request (#35, an accepted cost per CLAUDE.md),
+  the N+1 ref cells (#37), Polish knowledge in the kernel's MT940 and PDF readers (#43 —
+  a hook for markets to register dialects, a session of its own), floats on the
+  projection's money path (#44, numerically safe today), the two long switch functions
+  (#50), the duplicated helpers (#53), signal handling and cwd-relative paths (#54), and
+  `rhea load` without an adopt step (#31's second half). Each is a line in the review,
+  none corrupts state.
+- Running the suite is `go test ./... -count=1`: the cache hid a failing kernel test for
+  a day. storetest fails instead of skipping when RHEA_CI is set; cmd/rhea has a smoke test.

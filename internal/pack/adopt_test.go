@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"rhea/internal/core"
@@ -71,5 +72,49 @@ func TestALoadAdoptsOrphanDrafts(t *testing.T) {
 	}
 	if _, status, err := s.GetObjectTypeVersion(ctx, orphan.Name, orphan.Version); err != nil || status != core.StatusActive {
 		t.Fatalf("the orphan after approval: %s %v", status, err)
+	}
+}
+
+// A pack played again at the same version drafts nothing (idempotent); a
+// pack that changed without a version bump is refused before it drafts a
+// thing, and told to bump.
+func TestPackChangedWithoutBumpIsRefused(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	src := filepath.Join("..", "..", "packs", "common", "people.json")
+	b, err := os.ReadFile(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "people.json")
+	if err := os.WriteFile(path, b, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	first, err := pack.Load(ctx, s, path, "test")
+	if err != nil || first.Bundle == "" {
+		t.Fatalf("first load: %+v %v", first, err)
+	}
+	again, err := pack.Load(ctx, s, path, "test")
+	if err != nil || again.Bundle != "" || again.Types != 0 {
+		t.Fatalf("the same pack again: %+v %v", again, err)
+	}
+	var m pack.Manifest
+	if err := json.Unmarshal(b, &m); err != nil {
+		t.Fatal(err)
+	}
+	m.ObjectTypes = append(m.ObjectTypes, core.ObjectType{Name: "zz_extra", Version: 1, Domain: "people", LabelField: "name",
+		Fields: []core.FieldDef{{Name: "name", Type: "string", Required: true}}})
+	changed, err := json.Marshal(m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, changed, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pack.Load(ctx, s, path, "test"); err == nil || !strings.Contains(err.Error(), "bump") {
+		t.Fatalf("a changed pack at the same version: %v", err)
+	}
+	if _, _, err := s.GetObjectTypeVersion(ctx, "zz_extra", 1); err == nil {
+		t.Fatal("the refused load drafted the new type")
 	}
 }

@@ -900,9 +900,9 @@ func TestEachEffect(t *testing.T) {
 		Effect: core.Effect{Object: core.ObjectTemplate{
 			Type: "stock_movement", Each: "=$.lines[*]",
 			Fields: map[string]string{
-				"grn":      "=$.doc.grn",
-				"item":     "=ref(item, sku, $.line.item)",
-				"location": "=ref(location, code, $.doc.location)",
+				"grn":       "=$.doc.grn",
+				"item":      "=ref(item, sku, $.line.item)",
+				"location":  "=ref(location, code, $.doc.location)",
 				"direction": "in", "qty": "=$.line.qty", "date": "=$.doc.date",
 			}}}}
 

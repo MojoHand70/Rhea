@@ -90,6 +90,9 @@ func (s Submission) Reason() string {
 const (
 	pollFirst = 500 * time.Millisecond
 	pollMax   = 5 * time.Second
+	// ksefDeadline bounds one call's polling: a status stuck in a
+	// processing code would otherwise sleep five seconds forever.
+	ksefDeadline = 5 * time.Minute
 )
 
 func (c *KSeF2) http() *http.Client {
@@ -131,6 +134,8 @@ func (c *KSeF2) logf(format string, args ...any) {
 // pass fails, the next pass retries); a rejected invoice is a Submission
 // with Accepted false, which is evidence, not failure.
 func (c *KSeF2) Submit(ctx context.Context, invoices []Outbound) ([]Submission, error) {
+	ctx, cancel := context.WithTimeout(ctx, ksefDeadline)
+	defer cancel()
 	if len(invoices) == 0 {
 		return nil, nil
 	}
@@ -344,6 +349,8 @@ func (c *KSeF2) finishLogin(ctx context.Context, started authStarted) (string, e
 // Login authenticates as the client is configured — certificate or token —
 // and returns the access token.
 func (c *KSeF2) Login(ctx context.Context) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, ksefDeadline)
+	defer cancel()
 	if c.BaseURL == "" || c.NIP == "" || (c.Token == "" && c.Signer == nil) {
 		return "", errors.New("ksef: the channel is not configured (environment, NIP, and a certificate or a token)")
 	}
@@ -374,6 +381,8 @@ func (c *KSeF2) LoginRequest(ctx context.Context) ([]byte, error) {
 // LoginSigned completes a login with a document a person signed outside
 // Rhea and returns the access token.
 func (c *KSeF2) LoginSigned(ctx context.Context, signed []byte) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, ksefDeadline)
+	defer cancel()
 	var started authStarted
 	if err := c.callXML(ctx, "/auth/xades-signature", signed, &started); err != nil {
 		return "", err

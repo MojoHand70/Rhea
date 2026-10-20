@@ -113,12 +113,12 @@ func fetchStandard(ctx context.Context, n, title, id, dir string) (statute.Act, 
 	if err := download(ctx, "https://www.gov.pl/attachment/"+id, pdfPath); err != nil {
 		return a, err
 	}
-	text, err := exec.Command("pdftotext", "-layout", pdfPath, "-").Output()
+	text, err := exec.CommandContext(ctx, "pdftotext", "-layout", pdfPath, "-").Output()
 	if err != nil {
 		return a, fmt.Errorf("pdftotext %s: %w (poppler-utils needed)", pdfPath, err)
 	}
 	a.Basis, a.Articles = ParseStandard(string(text))
-	a.Fetched = time.Now().Format("2006-01-02")
+	a.Fetched = time.Now().UTC().Format("2006-01-02")
 	if len(a.Articles) == 0 {
 		return a, fmt.Errorf("no points read from the text")
 	}

@@ -202,13 +202,18 @@ func WriteJPKV7M(ctx context.Context, reads adapter.Reads, params map[string]str
 		return adapter.File{}, err
 	}
 	var self map[string]any
+	selves := 0
 	for _, c := range companies {
 		if c["kind"] == "self" {
 			self = c
+			selves++
 		}
 	}
 	if self == nil {
 		return adapter.File{}, fmt.Errorf("jpk_v7m: no company of kind self — whose return is this?")
+	}
+	if selves > 1 {
+		return adapter.File{}, fmt.Errorf("jpk_v7m: %d companies of kind self — whose return is this? one taxpayer per file", selves)
 	}
 	if self["vat_status"] == "exempt" {
 		return adapter.File{}, fmt.Errorf("jpk_v7m: %s is exempt from VAT — an exempt company files no JPK_V7", text(self["name"]))

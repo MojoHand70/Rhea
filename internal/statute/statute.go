@@ -129,11 +129,12 @@ func (l *Library) Act(name string) (*Act, bool) {
 	if a, ok := l.byName[n]; ok {
 		return a, true
 	}
-	// the longest known name the citation starts with
+	// the longest known name the citation starts with, whole: "KSR 11
+	// pkt 6.18" starts with "KSR 1" and is not KSR 1
 	var best *Act
 	bestLen := 0
 	for known, a := range l.byName {
-		if strings.HasPrefix(n, known) && len(known) > bestLen {
+		if strings.HasPrefix(n, known+" ") && len(known) > bestLen {
 			best, bestLen = a, len(known)
 		}
 	}

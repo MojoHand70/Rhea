@@ -227,6 +227,20 @@ func TestParseFA(t *testing.T) {
 	if err != nil || inv.RateCode != "0" || inv.Net != 10000 || inv.VAT != 0 || inv.Gross != 10000 {
 		t.Fatalf("zero-rated FA(3): %+v %v", inv, err)
 	}
+	// The writer spells a zero-rated line "0 KR" (P_12), as KSeF wants; the
+	// reader maps it back to the pack's "0", so the round trip holds and
+	// ref(vat_rate, code, $.vat_rate) finds the rate.
+	inv, err = pl.ParseFA([]byte(strings.Replace(zero, "<P_12>0</P_12>", "<P_12>0 KR</P_12>", 1)))
+	if err != nil || inv.RateCode != "0" {
+		t.Fatalf("a 0 KR line: %+v %v", inv, err)
+	}
+	// Slot 4 is the 4% flat rate, with VAT of its own: never 0% with VAT.
+	flat := strings.Replace(strings.Replace(zero, "<P_13_6_1>100.00</P_13_6_1><P_15>100.00</P_15>",
+		"<P_13_4>100.00</P_13_4><P_14_4>4.00</P_14_4><P_15>104.00</P_15>", 1), "<P_12>0</P_12>", "<P_12>4</P_12>", 1)
+	inv, err = pl.ParseFA([]byte(flat))
+	if err != nil || inv.RateCode != "4" || inv.VAT != 400 || inv.Gross != 10400 {
+		t.Fatalf("the 4%% slot: %+v %v", inv, err)
+	}
 }
 
 func jsonUnmarshal(b []byte, v any) error { return json.Unmarshal(b, v) }

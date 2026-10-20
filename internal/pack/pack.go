@@ -180,6 +180,17 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 		return Summary{}, fmt.Errorf("pack file needs a pack name")
 	}
 	sum := Summary{Pack: m.Pack}
+	// A pack already loaded at this version may be played again (nothing
+	// new drafts, the load is idempotent); one that changed without a
+	// version bump is refused before it drafts a thing.
+	_, loadedErr := s.GetBundle(ctx, BundleID(m.Pack, m.Version))
+	loaded := loadedErr == nil
+	changed := func(what string) error {
+		if !loaded {
+			return nil
+		}
+		return fmt.Errorf("pack %s v%d is already loaded as bundle %s and this file differs from it (%s is new) — bump the pack's version", m.Pack, m.Version, BundleID(m.Pack, m.Version), what)
+	}
 
 	for _, name := range m.Requires {
 		if _, err := s.GetObjectType(ctx, name); err != nil {
@@ -199,6 +210,9 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 			}
 			continue
 		}
+		if err := changed("object type " + t.Name); err != nil {
+			return sum, err
+		}
 		if err := store.InsertObjectTypeRow(ctx, s.Pool, t, core.StatusDraft); err != nil {
 			return sum, fmt.Errorf("object type %s: %w", t.Name, err)
 		}
@@ -213,6 +227,9 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 				sum.Skipped++
 			}
 			continue
+		}
+		if err := changed("view " + v.ID); err != nil {
+			return sum, err
 		}
 		if err := store.InsertViewDefRow(ctx, s.Pool, v, core.StatusDraft); err != nil {
 			return sum, fmt.Errorf("view def %s: %w", v.ID, err)
@@ -271,6 +288,9 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 				return sum, fmt.Errorf("rule %s warrant: %w", r.RuleID, err)
 			}
 		}
+		if err := changed("rule " + r.RuleID); err != nil {
+			return sum, err
+		}
 		rule, err := s.InsertRuleVersion(ctx, core.Rule{
 			ID: r.RuleID, Status: core.StatusDraft, Priority: r.Priority,
 			EffectiveFrom: r.EffectiveFrom, CreatedBy: "pack:" + m.Pack,
@@ -303,6 +323,9 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 				continue
 			}
 			upgrade = true
+		}
+		if err := changed("activity " + a.Name); err != nil {
+			return sum, err
 		}
 		act, err := s.InsertActivityVersion(ctx, core.Activity{
 			Name: a.Name, Status: core.StatusDraft, Domain: a.Domain,

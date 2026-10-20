@@ -71,7 +71,7 @@ func TestLanguageExplainsItself(t *testing.T) {
 			Field    string `json:"field"`
 			ToType   string `json:"to_type"`
 		} `json:"referenced_by"`
-		Instances    int                                        `json:"instances"`
+		Instances int `json:"instances"`
 	}
 	if err := json.NewDecoder(res.Body).Decode(&types); err != nil {
 		t.Fatal(err)

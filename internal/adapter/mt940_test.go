@@ -182,6 +182,18 @@ func TestParseMT940(t *testing.T) {
 	if _, err := adapter.ParseMT940([]byte(strings.Replace(text, "8862,85", "8862,86", 1))); err == nil || !strings.Contains(err.Error(), "contradicts") {
 		t.Fatalf("a wrong closing balance parsed: %v", err)
 	}
+	// A continuation line of free text may start with a colon: it is not a
+	// tag, and the title keeps it.
+	colon := strings.Replace(text, "about FAB/1/2026\r\n", "about FAB/1/2026\r\n:tel. 123\r\n", 1)
+	if sts, err := adapter.ParseMT940([]byte(colon)); err != nil || !strings.Contains(sts[0].Lines[1].Reference, ":tel. 123") {
+		t.Fatalf("a colon in free text: %v %+v", err, sts)
+	}
+	// CP1250, which Polish banks commonly send, is refused with its reason
+	// rather than read as mangled titles.
+	cp1250 := strings.Replace(text, "Hurtownia", "Hurtownia \xb3", 1)
+	if _, err := adapter.ParseMT940([]byte(cp1250)); err == nil || !strings.Contains(err.Error(), "not UTF-8") {
+		t.Fatalf("CP1250 read as UTF-8: %v", err)
+	}
 }
 
 // A real bank's export: a SWIFT header, several statements in one file,

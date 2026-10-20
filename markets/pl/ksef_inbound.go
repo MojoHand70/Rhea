@@ -89,6 +89,7 @@ func (k KSeFInbound) Pass(ctx context.Context, reads adapter.Reads) ([]core.Even
 		}
 		if len(inv.WZ) > 0 {
 			fact["for_document"] = inv.WZ[0]
+			fact["for_documents"] = inv.WZ // every delivery note the invoice settles
 		}
 		if inv.Term != "" {
 			fact["payment_term"] = inv.Term
@@ -258,9 +259,13 @@ func ParseFA(b []byte) (Invoice, error) {
 	if inv.BuyerCountry == "" {
 		inv.BuyerCountry = "PL"
 	}
+	// Slot 4 is the 4% flat rate (taxis) and slot 5 the special procedure
+	// of chapter 6a (OSS), both with VAT of their own: they read under
+	// their own codes, which the pack may teach or leave unreadable — never
+	// as 0% with VAT on it.
 	slots := []struct{ net, vat, code string }{
 		{f.Body.Net1, f.Body.VAT1, "23"}, {f.Body.Net2, f.Body.VAT2, "8"}, {f.Body.Net3, f.Body.VAT3, "5"},
-		{f.Body.Net4, f.Body.VAT4, "0"}, {f.Body.Net5, f.Body.VAT5, "0"}, {f.Body.Net6Home, "", "0"}, {f.Body.Net6EU, "", "0"}, {f.Body.Net6Exp, "", "0"}, {f.Body.Net7, "", "zw"},
+		{f.Body.Net4, f.Body.VAT4, "4"}, {f.Body.Net5, f.Body.VAT5, "oss"}, {f.Body.Net6Home, "", "0"}, {f.Body.Net6EU, "", "0"}, {f.Body.Net6Exp, "", "0"}, {f.Body.Net7, "", "zw"},
 	}
 	used := 0
 	for _, s := range slots {
@@ -305,7 +310,7 @@ func ParseFA(b []byte) (Invoice, error) {
 			return inv, fmt.Errorf("line %q net %q: %w", l.Name, l.Net, err)
 		}
 		linesNet += net
-		rate := strings.TrimSpace(l.Rate)
+		rate := packRate(strings.TrimSpace(l.Rate))
 		if rate != "" {
 			rates[rate] = true
 		}
@@ -320,4 +325,14 @@ func ParseFA(b []byte) (Invoice, error) {
 		}
 	}
 	return inv, nil
+}
+
+// packRate is the pack's code for a line's P_12 spelling: the inverse of
+// faRate, so a zero-rated line ("0 KR", "0 WDT", "0 EX") reads as the
+// pack's "0" and the round trip through the writer and the reader holds.
+func packRate(p12 string) string {
+	if strings.HasPrefix(p12, "0 ") {
+		return "0"
+	}
+	return p12
 }

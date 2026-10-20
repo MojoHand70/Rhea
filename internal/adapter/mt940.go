@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"rhea/internal/core"
 )
@@ -150,8 +151,17 @@ func IsMT940(b []byte) bool {
 // mt940Tags splits a file into its tags with their continuation lines; the
 // first must be :20:. SWIFT block lines ({…}), the "-" terminator and a
 // :940: header carry no statement data and are dropped.
+// mt940TagStart is how a tag line begins: a colon, two digits, an optional
+// letter, a colon.
+var mt940TagStart = regexp.MustCompile(`^:([0-9]{2}[A-Z]?):`)
+
 func mt940Tags(b []byte) ([]mt940Tag, error) {
 	var tags []mt940Tag
+	if !utf8.Valid(b) {
+		// Polish banks commonly send CP1250 or ISO-8859-2: read as UTF-8
+		// the titles would arrive mangled with no warning.
+		return nil, fmt.Errorf("the file is not UTF-8 (banks often send CP1250 or ISO-8859-2) — convert it before reading")
+	}
 	text := strings.ReplaceAll(string(b), "\r\n", "\n")
 	for _, ln := range strings.Split(text, "\n") {
 		ln = strings.TrimRight(ln, " \t")
@@ -161,13 +171,14 @@ func mt940Tags(b []byte) ([]mt940Tag, error) {
 		if len(tags) == 0 && !strings.HasPrefix(ln, ":20:") {
 			return nil, fmt.Errorf("not an MT940 statement: the file starts with %q, not :20:", ln)
 		}
-		if strings.HasPrefix(ln, ":") {
-			end := strings.Index(ln[1:], ":")
-			if end < 0 {
-				return nil, fmt.Errorf("line %q: a tag without its closing colon", ln)
-			}
-			tags = append(tags, mt940Tag{ln[1 : end+1], ln[end+2:]})
+		// A tag is :NN: or :NNa:; a continuation line of free text may start
+		// with a colon too and is not one.
+		if m := mt940TagStart.FindStringSubmatch(ln); m != nil {
+			tags = append(tags, mt940Tag{m[1], ln[len(m[0]):]})
 			continue
+		}
+		if len(tags) == 0 {
+			return nil, fmt.Errorf("line %q: a tag without its closing colon", ln)
 		}
 		tags[len(tags)-1].value += "\n" + ln // a continuation line
 	}

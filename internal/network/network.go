@@ -19,8 +19,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"sort"
 	"slices"
+	"sort"
 	"strings"
 	"time"
 
@@ -61,6 +61,9 @@ func DSN() string {
 }
 
 // Open connects and makes sure the schema exists.
+// networkSchemaLock is the advisory lock the schema runs under.
+const networkSchemaLock = 0x4e455457 // "NETW"
+
 func Open(ctx context.Context, dsn string) (*Network, error) {
 	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
@@ -70,7 +73,24 @@ func Open(ctx context.Context, dsn string) (*Network, error) {
 		pool.Close()
 		return nil, err
 	}
-	if _, err := pool.Exec(ctx, schemaSQL); err != nil {
+	// The schema runs under one advisory lock: two installations opening
+	// at once would otherwise race on the same CREATE ("tuple concurrently
+	// updated").
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		pool.Close()
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock($1)`, networkSchemaLock); err != nil {
+		pool.Close()
+		return nil, err
+	}
+	if _, err := tx.Exec(ctx, schemaSQL); err != nil {
+		pool.Close()
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
 		pool.Close()
 		return nil, err
 	}
@@ -78,6 +98,9 @@ func Open(ctx context.Context, dsn string) (*Network, error) {
 }
 
 func (n *Network) Close() { n.Pool.Close() }
+
+//go:embed publish.sql
+var publishSQL string
 
 //go:embed untaught_note.sql
 var untaughtNoteSQL string
@@ -254,8 +277,7 @@ func (n *Network) Publish(ctx context.Context, installation string, rules []core
 	if err != nil {
 		return 0, err
 	}
-	_, err = n.Pool.Exec(ctx, `INSERT INTO publication (installation, shapes, synthetic) VALUES ($1, $2, $3)`,
-		installation, b, Synthetic(installation))
+	_, err = n.Pool.Exec(ctx, publishSQL, installation, b, Synthetic(installation))
 	return len(shapes), err
 }
 

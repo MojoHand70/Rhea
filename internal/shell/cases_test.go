@@ -170,14 +170,14 @@ func TestCasesArePureData(t *testing.T) {
 		Match: core.Match{EventType: "case.resolved"},
 		Effect: core.Effect{Amend: &core.AmendTemplate{
 			Type: "case", Target: "=$.case",
-			Set:  map[string]string{"status": "resolved", "resolution": "=$.resolution"},
+			Set: map[string]string{"status": "resolved", "resolution": "=$.resolution"},
 		}},
 	})
 	activate("close-on-withdrawal", 400, core.RuleSpec{
 		Match: core.Match{EventType: "complaint.withdrawn"},
 		Effect: core.Effect{Amend: &core.AmendTemplate{
 			Type: "case", Target: "=ref(case, subject_id, $.complaint)",
-			Set:  map[string]string{"status": "resolved", "resolution": "withdrawn by customer"},
+			Set: map[string]string{"status": "resolved", "resolution": "withdrawn by customer"},
 		}},
 	})
 

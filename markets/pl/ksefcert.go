@@ -78,6 +78,8 @@ func (d enrollmentData) subject() pkix.Name {
 // in KSeF's list, with the access token of a signed login. It returns the
 // issued certificate with the key generated for it.
 func (c *KSeF2) EnrollCertificate(ctx context.Context, access, kind, name string) (*CertSigner, error) {
+	ctx, cancel := context.WithTimeout(ctx, ksefDeadline)
+	defer cancel()
 	if kind != CertAuthentication && kind != CertOffline {
 		return nil, fmt.Errorf("ksef certificate: the kind is %s or %s, not %q", CertAuthentication, CertOffline, kind)
 	}

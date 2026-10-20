@@ -22,7 +22,7 @@ type Bundle struct {
 	Members     []Member `json:"members"`
 	// Warrant says why this is the proposal: where the knowledge comes from
 	// (DIRECTION, "Rhea suggests standards"). Nil on hand-made bundles.
-	Warrant   *Warrant  `json:"warrant,omitempty"`
+	Warrant *Warrant `json:"warrant,omitempty"`
 	// The conversation, on the record: Question is the plain-language ask
 	// this bundle answers; After names the rejected bundle it redrafts.
 	Question  string    `json:"question,omitempty"`
