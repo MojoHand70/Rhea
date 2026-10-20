@@ -426,7 +426,75 @@ func TestIsolationInTheDatabase(t *testing.T) {
 	if count(ctx, "object") != 3 {
 		t.Fatal("the scope leaked into the pool")
 	}
-	if s := store.ScopeOf(store.WithScope(ctx, []string{"b", " a ", "b", ""})); fmt.Sprint(s) != "[a b]" {
+	if s, _ := store.ScopeOf(store.WithScope(ctx, []string{"b", " a ", "b", ""})); fmt.Sprint(s) != "[a b]" {
 		t.Fatalf("scope = %v", s)
+	}
+}
+
+// A row's company comes from the data, never the caller: an office acting
+// for no client cannot write (the store and the policy both refuse), a
+// derived event keeps its chain's company under any caller, a company's
+// dedup key is its own, and the installation's scope sees and writes the
+// installation's rows alone.
+func TestCompanyComesFromTheData(t *testing.T) {
+	ctx := context.Background()
+	s := testStore(t)
+	office := store.WithScope(ctx, []string{"PL5250001111", "PL5260001246"})
+	ev := rawEvent("office-1")
+	if _, err := s.AppendEvent(office, ev); err == nil || !strings.Contains(err.Error(), "name the company") {
+		t.Fatalf("an office acting for none wrote a fact: %v", err)
+	}
+	// the data decides within the scope: the desk acting for alfa may
+	// write a fact that says beta (a client of the office), never gamma's
+	ev.Company = "PL5260001246"
+	if _, err := s.AppendEvent(store.ActFor(office, "PL5250001111"), ev); err != nil {
+		t.Fatalf("the office acting for alfa could not write beta's fact: %v", err)
+	}
+	gamma := rawEvent("office-gamma")
+	gamma.Company = "PL7010001111"
+	if _, err := s.AppendEvent(store.ActFor(office, "PL5250001111"), gamma); err == nil {
+		t.Fatal("the office wrote a stranger's fact")
+	}
+	id, err := s.AppendEvent(store.ActFor(office, "PL5260001246"), rawEvent("office-2"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := s.GetEvent(ctx, id); got.Company != "PL5260001246" {
+		t.Fatalf("the office's fact for beta carries %q", got.Company)
+	}
+	// A derived event with no company stays the installation's whatever
+	// scope booked it: its explanation must be visible wherever its object is.
+	alfa := store.WithCompany(ctx, "PL5250001111")
+	root, _ := s.AppendEvent(store.WithOwner(ctx), rawEvent("inst-root"))
+	derived := core.Event{Kind: core.KindDerived, Type: core.EventObjectMaterialized, OccurredAt: "2026-09-01",
+		Payload: []byte(`{"object_id":"x","object_type":"x","type_version":1,"state":{}}`), CauseEventID: &root, RuleID: "r", RuleVersion: 1}
+	if _, err := s.AppendEvent(alfa, derived); err == nil {
+		t.Fatal("alfa's scope wrote an installation row")
+	}
+	did, err := s.AppendEvent(store.WithInstallation(ctx), derived)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := s.GetEvent(ctx, did); got.Company != "" {
+		t.Fatalf("the derived event took a caller's company: %q", got.Company)
+	}
+	// The same key in two companies is two facts; the same key in one is one.
+	beta := store.WithCompany(ctx, "PL5260001246")
+	if _, err := s.AppendEvent(alfa, rawEvent("shared-key")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.AppendEvent(beta, rawEvent("shared-key")); err != nil {
+		t.Fatalf("beta's fact with alfa's key: %v", err)
+	}
+	if _, err := s.AppendEvent(beta, rawEvent("shared-key")); !store.IsDuplicate(err) {
+		t.Fatalf("beta's own key twice: %v", err)
+	}
+	// The installation's scope sees its own rows and none of the companies'.
+	var n int
+	if err := s.Pool.QueryRow(store.WithInstallation(ctx), `SELECT COUNT(*) FROM event WHERE company IS NOT NULL AND company <> ''`).Scan(&n); err != nil || n != 0 {
+		t.Fatalf("the installation's scope sees %d company rows: %v", n, err)
+	}
+	if cs, _ := s.Companies(ctx); fmt.Sprint(cs) != "[PL5250001111 PL5260001246]" {
+		t.Fatalf("companies: %v", cs)
 	}
 }

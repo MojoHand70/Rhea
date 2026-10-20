@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"rhea/internal/core"
-	"rhea/internal/store"
 )
 
 // The parties a business deals with, whose names never leave it: the
@@ -45,7 +44,7 @@ func (s *Server) noteUntaught(ctx context.Context, asked, missing, askedBy, kind
 	}
 	var names []string
 	for _, t := range namedTypes {
-		objs, err := s.Store.ObjectsByType(store.WithCompany(ctx, ""), t)
+		objs, err := s.Store.ObjectsByType(ctx, t) // the caller's scope, never the owner's
 		if err != nil {
 			return noted{}, err
 		}

@@ -357,7 +357,8 @@ func exact(cols, types []string) error {
 func (s *Server) runLocked(ctx context.Context, sql string) ([]string, []string, [][]string, bool, error) {
 	s.duck.Lock() // the rebuild and the read are one step
 	defer s.duck.Unlock()
-	path := project.PathFor(s.DuckPath, store.ScopeOf(ctx)) // the scope's own copy
+	scope, scoped := store.ScopeOf(ctx)
+	path := project.PathFor(s.DuckPath, scope, scoped) // the scope's own copy
 	if _, err := project.Rebuild(ctx, s.Store, path); err != nil {
 		return nil, nil, nil, false, err
 	}

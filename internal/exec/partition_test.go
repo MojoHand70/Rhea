@@ -131,3 +131,66 @@ func TestPartitionKey(t *testing.T) {
 		t.Fatalf("StateDiff misses lost objects: %v", diffs)
 	}
 }
+
+// A chain runs under its event's company whoever runs the executor: two
+// companies each with complaint C-1, and company B's withdrawal — run by
+// the owner, as the clock and the CLI run — closes B's complaint and
+// never A's; their derived facts carry their own companies.
+func TestChainsRunUnderTheEventsCompany(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	x := &exec.Executor{Store: s}
+	lc := &core.LifecycleDef{Field: "status", Transitions: map[string][]string{"open": {"closed"}}}
+	if err := s.InsertObjectType(ctx, core.ObjectType{Name: "complaint", Version: 1, Domain: "sales", LabelField: "number",
+		Fields: []core.FieldDef{{Name: "number", Type: "string", Required: true},
+			{Name: "status", Type: "enum", Values: []string{"open", "closed"}, Required: true}}, Lifecycle: lc}); err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range []struct {
+		id   string
+		spec core.RuleSpec
+	}{
+		{"book-complaint", core.RuleSpec{Match: core.Match{EventType: "complaint.registered"},
+			Effect: core.Effect{Object: core.ObjectTemplate{Type: "complaint", Fields: map[string]string{"number": "=$.number", "status": "open"}}}}},
+		{"withdraw-complaint", core.RuleSpec{Match: core.Match{EventType: "complaint.withdrawn"},
+			Effect: core.Effect{Amend: &core.AmendTemplate{Type: "complaint", Target: "=ref(complaint, number, $.number)", Set: map[string]string{"status": "closed"}}}}},
+	} {
+		if _, err := s.InsertRuleVersion(ctx, core.Rule{ID: r.id, Status: core.StatusActive, Priority: 100,
+			EffectiveFrom: "2026-01-01", CreatedBy: "test", Description: r.id, Spec: r.spec}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	alfa, beta := store.WithCompany(ctx, "PL5250001111"), store.WithCompany(ctx, "PL5260001246")
+	for _, c := range []context.Context{alfa, beta} {
+		if _, err := s.AppendEvent(c, core.Event{Kind: core.KindRaw, Type: "complaint.registered", OccurredAt: "2026-09-01",
+			Payload: []byte(`{"number":"C-1"}`), DedupKey: "c-1"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := s.AppendEvent(beta, core.Event{Kind: core.KindRaw, Type: "complaint.withdrawn", OccurredAt: "2026-09-02",
+		Payload: []byte(`{"number":"C-1"}`), DedupKey: "c-1-w"}); err != nil {
+		t.Fatal(err)
+	}
+	// the owner runs everything, as the clock does
+	if n, errs := x.ProcessPending(store.WithOwner(ctx)); n != 3 || len(errs) != 0 {
+		t.Fatalf("owner's pass: fired %d, %v", n, errs)
+	}
+	status := func(c context.Context) string {
+		t.Helper()
+		objs, err := s.ObjectsByType(c, "complaint")
+		if err != nil || len(objs) != 1 {
+			t.Fatalf("complaints: %v %v", objs, err)
+		}
+		return objs[0].State["status"].(string)
+	}
+	if status(alfa) != "open" || status(beta) != "closed" {
+		t.Fatalf("alfa %s, beta %s", status(alfa), status(beta))
+	}
+	derived, _ := s.EventsByKind(ctx, core.KindDerived)
+	for _, ev := range derived {
+		if ev.Company == "" {
+			t.Fatalf("a derived fact with no company: %+v", ev)
+		}
+	}
+	assertReplayIdentical(t, x)
+}

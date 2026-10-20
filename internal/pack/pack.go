@@ -373,11 +373,15 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 		sum.Bundle = b.ID
 	}
 
+	// A pack's facts are the installation's — the chart of accounts, the
+	// VAT rates — whatever company the loader was run for: appended as the
+	// owner with no company, so every scope sees them once.
+	owner := store.WithOwner(ctx)
 	for _, ev := range m.Events {
 		if ev.DedupKey == "" {
 			return sum, fmt.Errorf("pack event %q has no dedup key — idempotent loading is the contract", ev.EventType)
 		}
-		_, err := s.AppendEvent(ctx, core.Event{
+		_, err := s.AppendEvent(owner, core.Event{
 			Kind: core.KindRaw, Type: ev.EventType, OccurredAt: ev.OccurredAt,
 			Payload: ev.Payload, DedupKey: ev.DedupKey, Actor: actor,
 		})

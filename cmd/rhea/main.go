@@ -87,8 +87,14 @@ func main() {
 		return
 	}
 	// The caller's scope: the company whose facts this run is in
-	// (DIRECTION 2026-10-08, the partition key); empty means the whole log.
-	ctx := store.WithCompany(context.Background(), os.Getenv("RHEA_COMPANY"))
+	// (DIRECTION 2026-10-08, the partition key); empty means the owner's
+	// whole log. The owner's own commands — init, backup, restore, replay,
+	// the pack loader — ignore it: a backup of one company is not a backup.
+	ctx := store.WithOwner(context.Background())
+	if c := os.Getenv("RHEA_COMPANY"); c != "" {
+		ctx = store.WithCompany(ctx, c)
+	}
+	owner := store.WithOwner(ctx)
 	s, err := store.Open(ctx, store.DSN())
 	if err != nil {
 		log.Fatal(err)
@@ -98,7 +104,7 @@ func main() {
 
 	switch os.Args[1] {
 	case "init":
-		if err := s.Init(ctx); err != nil {
+		if err := s.Init(owner); err != nil {
 			log.Fatal(err)
 		}
 		fmt.Println("schema ready; builtin activities seeded (the gate's birth is in the log)")
@@ -120,7 +126,7 @@ func main() {
 		if len(os.Args) < 3 {
 			log.Fatal("usage: rhea pack FILE")
 		}
-		sum, err := pack.Load(ctx, s, os.Args[2], actor())
+		sum, err := pack.Load(owner, s, os.Args[2], actor())
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -269,7 +275,7 @@ func main() {
 			defer f.Close()
 			out = f
 		}
-		counts, err := s.Backup(ctx, out)
+		counts, err := s.Backup(owner, out)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -291,7 +297,7 @@ func main() {
 		if err := s.InitSchema(ctx); err != nil {
 			log.Fatal(err)
 		}
-		counts, err := s.Restore(ctx, f)
+		counts, err := s.Restore(owner, f)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -492,12 +498,12 @@ func main() {
 	case "replay":
 		// The proof, not only the rebuild: the cache before and after must
 		// agree object for object (invariant 4), or the command fails.
-		whole := store.WithCompany(ctx, "")
+		whole := owner
 		before, err := s.AllObjects(whole)
 		if err != nil {
 			log.Fatal(err)
 		}
-		objs, err := x.Replay(ctx)
+		objs, err := x.Replay(owner)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -712,7 +718,7 @@ func main() {
 			// Packs the intake needs are drafted here, never approved: the
 			// approval is the person's, in the shell.
 			for _, pk := range c.Packs {
-				sum, err := pack.Load(ctx, s, filepath.Join(pdir, pk), actor())
+				sum, err := pack.Load(owner, s, filepath.Join(pdir, pk), actor())
 				if err != nil {
 					// A pack built on another's type waits for that approval:
 					// approve in order, then play again — playing is idempotent.

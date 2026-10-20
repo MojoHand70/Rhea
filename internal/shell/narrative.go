@@ -191,29 +191,48 @@ func (s *Server) handleSpeak(w http.ResponseWriter, r *http.Request) {
 	}
 	type spoken struct {
 		View      string `json:"view"`
+		Company   string `json:"company,omitempty"`
 		Said      string `json:"said,omitempty"`
 		SaidEvent int64  `json:"said_event,omitempty"`
 		Silent    string `json:"silent,omitempty"`
 		Error     string `json:"error,omitempty"`
 	}
-	out := []spoken{}
-	for i := range vds {
-		vd := &vds[i]
-		if vd.Notion != "narrative" || (only != "" && vd.ID != only) {
-			continue
-		}
-		// One narrative's failure is its own entry: the words already
-		// spoken for the others are logged, and a retrying alarm would
-		// speak them twice and pay twice.
-		res, _, err := s.narrate(ctx, vd)
+	// The alarm's call names no company: the host speaks for each company
+	// the log holds, each under its own scope, and the words are that
+	// company's — one unscoped briefing summed every company's figures
+	// into words every company read.
+	scopes := []context.Context{ctx}
+	if set, scoped := store.ScopeOf(ctx); scoped && len(set) == 0 {
+		owner := store.WithOwner(ctx)
+		companies, err := s.Store.Companies(owner)
 		if err != nil {
-			out = append(out, spoken{View: vd.ID, Error: err.Error()})
-			continue
+			writeErr(w, 500, err)
+			return
 		}
-		said, _ := res["said"].(string)
-		silent, _ := res["silent"].(string)
-		saidEvent, _ := res["said_event"].(int64)
-		out = append(out, spoken{View: vd.ID, Said: said, SaidEvent: saidEvent, Silent: silent})
+		for _, c := range companies {
+			scopes = append(scopes, store.WithCompany(owner, c))
+		}
+	}
+	out := []spoken{}
+	for _, sctx := range scopes {
+		for i := range vds {
+			vd := &vds[i]
+			if vd.Notion != "narrative" || (only != "" && vd.ID != only) {
+				continue
+			}
+			// One narrative's failure is its own entry: the words already
+			// spoken for the others are logged, and a retrying alarm would
+			// speak them twice and pay twice.
+			res, _, err := s.narrate(sctx, vd)
+			if err != nil {
+				out = append(out, spoken{View: vd.ID, Company: store.CompanyOf(sctx), Error: err.Error()})
+				continue
+			}
+			said, _ := res["said"].(string)
+			silent, _ := res["silent"].(string)
+			saidEvent, _ := res["said_event"].(int64)
+			out = append(out, spoken{View: vd.ID, Company: store.CompanyOf(sctx), Said: said, SaidEvent: saidEvent, Silent: silent})
+		}
 	}
 	if only != "" && len(out) == 0 {
 		writeErr(w, 404, fmt.Errorf("no narrative %q", only))
@@ -536,7 +555,8 @@ func (s *Server) analysisSpec(ctx context.Context, raw json.RawMessage) (core.An
 func (s *Server) analysisData(ctx context.Context, spec core.AnalysisSpec) ([]columnOut, [][]cellOut, [][]string, error) {
 	s.duck.Lock() // the rebuild and the read are one step: no other rebuild between them
 	defer s.duck.Unlock()
-	path := project.PathFor(s.DuckPath, store.ScopeOf(ctx)) // the scope's own copy
+	scope, scoped := store.ScopeOf(ctx)
+	path := project.PathFor(s.DuckPath, scope, scoped) // the scope's own copy
 	if _, err := project.Rebuild(ctx, s.Store, path); err != nil {
 		return nil, nil, nil, err
 	}

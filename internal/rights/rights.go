@@ -161,7 +161,7 @@ type world struct {
 }
 
 func load(ctx context.Context, s *store.Store, today string) (*world, error) {
-	ctx = store.WithCompany(ctx, "") // the kernel's own eyes
+	ctx = store.WithOwner(ctx) // the kernel's own eyes
 	w := &world{persons: map[string]core.Object{}, byHandle: map[string]string{}, roles: map[string][]core.Object{}, today: today}
 	persons, err := s.ObjectsByType(ctx, "person")
 	if err != nil {

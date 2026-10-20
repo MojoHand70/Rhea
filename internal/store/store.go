@@ -202,7 +202,7 @@ func appendEvent(ctx context.Context, q Querier, ev core.Event, skipDuplicate bo
 		INSERT INTO event (kind, event_type, occurred_at, payload, cause_event_id, rule_id, rule_version, dedup_key, actor, activity_name, activity_version, company)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`
 	if skipDuplicate {
-		sql += ` ON CONFLICT (company, dedup_key) DO NOTHING`
+		sql += ` ON CONFLICT (COALESCE(company, ''), dedup_key) WHERE dedup_key IS NOT NULL DO NOTHING`
 	}
 	// The partition key: a raw fact's own, else the company the call acts
 	// for; a derived event always keeps its chain's (the root's), never the

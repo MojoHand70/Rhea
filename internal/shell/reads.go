@@ -9,7 +9,6 @@ import (
 	"strconv"
 
 	"rhea/internal/core"
-	"rhea/internal/store"
 )
 
 // The reads a face needs that the views do not carry (DIRECTION 2026-10-16,
@@ -154,7 +153,10 @@ func approvalKey(ruleID string, version int) string { return fmt.Sprintf("%s/%d"
 // (bundle.approved names the drafts it activated; each became the next
 // version). Definitions are installation-wide, so the whole log is read.
 func (s *Server) ruleApprovals(ctx context.Context) (map[string]approvalOut, error) {
-	evs, err := s.Store.EventsOfTypes(store.WithCompany(ctx, ""), []string{"rule.approved", "bundle.approved"})
+	// read within the caller's scope: another company's approver and the
+	// reason they gave are theirs (an installation-wide approval carries no
+	// company and is every scope's)
+	evs, err := s.Store.EventsOfTypes(ctx, []string{"rule.approved", "bundle.approved"})
 	if err != nil {
 		return nil, err
 	}

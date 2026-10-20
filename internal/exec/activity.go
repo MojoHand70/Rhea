@@ -162,6 +162,7 @@ func (x *Executor) TriggerActivity(ctx context.Context, name string, inputs map[
 		return Triggered{}, err
 	}
 	defer release()
+	caller := ctx // the worklist pass after the fact runs under the caller's scope
 	act, err := x.Store.GetActiveActivity(ctx, name)
 	if err != nil {
 		return Triggered{}, err
@@ -186,7 +187,9 @@ func (x *Executor) TriggerActivity(ctx context.Context, name string, inputs map[
 		inputs = signed
 	}
 	if act.Spec.Installation {
-		ctx = store.ActFor(ctx, "") // the installation's fact, whoever acts for whom
+		// the installation's fact, whoever acts for whom: written under the
+		// installation's own scope, the one that may write such rows
+		ctx = store.WithInstallation(ctx)
 	}
 	built, err := act.BuildEvent(inputs, x.today())
 	if err != nil {
@@ -254,7 +257,7 @@ func (x *Executor) TriggerActivity(ctx context.Context, name string, inputs map[
 		return Triggered{}, err
 	}
 
-	booked, errs := x.ProcessPending(ctx)
+	booked, errs := x.ProcessPending(caller)
 	out.Booked, out.Errors = booked, append(out.Errors, errs...)
 	return out, nil
 }
@@ -263,7 +266,9 @@ func (x *Executor) TriggerActivity(ctx context.Context, name string, inputs map[
 // refused in: who, at which door, why — the audit an owner reads.
 func (x *Executor) RecordRefusal(ctx context.Context, r *rights.ErrRefused) error {
 	payload, _ := json.Marshal(map[string]string{"person": r.Person, "door": r.Door, "company": r.Company, "reason": r.Reason})
-	_, err := x.Store.AppendEvent(ctx, core.Event{
+	// the kernel's own record, written as the owner: it names the company
+	// refused (or none), which the refused person's scope need not reach
+	_, err := x.Store.AppendEvent(store.WithOwner(ctx), core.Event{
 		Kind: core.KindRaw, Type: core.EventAccessRefused, OccurredAt: x.today(),
 		Payload: payload, Actor: "kernel", Company: r.Company,
 	})

@@ -261,7 +261,14 @@ func TestTwoCompaniesAtTheDoors(t *testing.T) {
 		}
 		req, _ := http.NewRequest(method, ts.URL+path, rd)
 		req.Header.Set("Content-Type", "application/json")
-		if company != "" {
+		// "A,B" is an office's desk (X-Rhea-Scope); "A,B>A" the desk acting
+		// for A; a bare key acts for that company.
+		if scope, acting, office := strings.Cut(company, ">"); office || strings.Contains(scope, ",") {
+			req.Header.Set("X-Rhea-Scope", scope)
+			if acting != "" {
+				req.Header.Set("X-Rhea-Company", acting)
+			}
+		} else if company != "" {
 			req.Header.Set("X-Rhea-Company", company)
 		}
 		res, err := ts.Client().Do(req)
@@ -325,8 +332,35 @@ func TestTwoCompaniesAtTheDoors(t *testing.T) {
 	if got := total(alfa + "," + beta); got != "3 notes, 1124.50" {
 		t.Fatalf("the office's analysis sums %s", got)
 	}
-	if got := total(""); got != "3 notes, 1124.50" {
-		t.Fatalf("the unscoped kernel's analysis sums %s", got)
+	// A request naming no company is the installation's rows alone, never
+	// the owner's whole log: it sums nothing of the companies'.
+	if got := total(""); got != "0 notes, " {
+		t.Fatalf("the installation's analysis sums %s", got)
+	}
+	// An office's desk acts for one named client when it writes; for none
+	// it may read but not write, and a fact never lands as everyone's.
+	var trig map[string]any
+	if code := call("POST", alfa+","+beta, "/api/activities/submit_event/trigger", map[string]any{"inputs": map[string]any{
+		"event_type": "note.taken", "occurred_at": "2026-09-02", "payload": map[string]any{"text": "office", "amount": "1.00"}}}, &trig); code == 200 {
+		t.Fatalf("an office acting for no client wrote a fact: %v", trig)
+	}
+	if code := call("POST", alfa+","+beta+">"+beta, "/api/activities/submit_event/trigger", map[string]any{"inputs": map[string]any{
+		"event_type": "note.taken", "occurred_at": "2026-09-02", "payload": map[string]any{"text": "office for beta", "amount": "1.00"}}}, &trig); code != 200 {
+		t.Fatalf("an office acting for beta: %d %v", code, trig)
+	}
+	if got := total(beta); got != "2 notes, 1000.00" {
+		t.Fatalf("beta's analysis after the office wrote for it: %s", got)
+	}
+	if got := total(alfa); got != "2 notes, 125.50" {
+		t.Fatalf("alfa's analysis after the office wrote for beta: %s", got)
+	}
+	// A malformed header fails closed.
+	for _, bad := range []string{alfa + ",", ","} {
+		req, _ := http.NewRequest("GET", ts.URL+"/api/objects?type=note", nil)
+		req.Header.Set("X-Rhea-Company", bad)
+		if res, err := ts.Client().Do(req); err != nil || res.StatusCode != 400 {
+			t.Fatalf("header %q: %v %v", bad, err, res)
+		}
 	}
 	// The object list is the scope's too.
 	var objs struct {

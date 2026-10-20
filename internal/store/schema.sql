@@ -220,8 +220,14 @@ ALTER TABLE activity ADD CONSTRAINT activity_status_check CHECK (status IN ('dra
 -- work: replay, backup, the loader) is a superuser and sees the whole log.
 DO $$
 BEGIN
+    -- roles are cluster-wide and two databases may be born at once: a
+    -- lost race is nothing
     IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'rhea_app') THEN
-        CREATE ROLE rhea_app NOLOGIN;
+        BEGIN
+            CREATE ROLE rhea_app NOLOGIN;
+        EXCEPTION WHEN duplicate_object OR unique_violation THEN
+            NULL;
+        END;
     END IF;
 END;
 $$;
@@ -231,6 +237,16 @@ $$ LANGUAGE sql STABLE;
 CREATE OR REPLACE FUNCTION rhea_in_scope(company TEXT) RETURNS boolean AS $$
     SELECT company IS NULL OR company = '' OR company = ANY (rhea_scope())
 $$ LANGUAGE sql STABLE;
+-- What a scope may write: its own companies' rows; the installation's rows
+-- only from the installation's own scope (rhea.scope set and empty), never
+-- from a company's — an office acting for no client wrote rows every
+-- company saw.
+CREATE OR REPLACE FUNCTION rhea_may_write(company TEXT) RETURNS boolean AS $$
+    SELECT CASE
+        WHEN company IS NULL OR company = '' THEN current_setting('rhea.scope', true) = ''
+        ELSE company = ANY (rhea_scope())
+    END
+$$ LANGUAGE sql STABLE;
 ALTER TABLE event ENABLE ROW LEVEL SECURITY;
 ALTER TABLE object ENABLE ROW LEVEL SECURITY;
 DO $$
@@ -239,9 +255,28 @@ BEGIN
     FOREACH t IN ARRAY ARRAY['event','object'] LOOP
         IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = t AND policyname = t || '_scope') THEN
             EXECUTE format(
-                'CREATE POLICY %I ON %I TO rhea_app USING (rhea_in_scope(company)) WITH CHECK (rhea_in_scope(company))',
+                'CREATE POLICY %I ON %I TO rhea_app USING (rhea_in_scope(company)) WITH CHECK (rhea_may_write(company))',
                 t || '_scope', t);
         END IF;
+        EXECUTE format('ALTER POLICY %I ON %I USING (rhea_in_scope(company)) WITH CHECK (rhea_may_write(company))',
+            t || '_scope', t);
+    END LOOP;
+END;
+$$;
+-- A fact is the same fact within its company: the same file sent to two
+-- clients is two facts, and one company's key never tells another that it
+-- holds the document. NULL companies compare equal here.
+ALTER TABLE event DROP CONSTRAINT IF EXISTS event_dedup_key_key;
+DROP INDEX IF EXISTS event_company_dedup;
+CREATE UNIQUE INDEX IF NOT EXISTS event_company_dedup_key ON event (COALESCE(company, ''), dedup_key) WHERE dedup_key IS NOT NULL;
+-- The append-only triggers fire whatever the session's replication role
+-- says: a superuser's SET session_replication_role = replica bypassed them.
+DO $$
+DECLARE t TEXT;
+BEGIN
+    FOREACH t IN ARRAY ARRAY['event','rule','object_type','view_def','activity','bundle','blob'] LOOP
+        EXECUTE format('ALTER TABLE %I ENABLE ALWAYS TRIGGER %I', t, t || '_append_only');
+        EXECUTE format('ALTER TABLE %I ENABLE ALWAYS TRIGGER %I', t, t || '_no_truncate');
     END LOOP;
 END;
 $$;

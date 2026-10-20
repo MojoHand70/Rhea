@@ -266,7 +266,8 @@ func TestTheCopyIsTheScopes(t *testing.T) {
 	base := filepath.Join(t.TempDir(), "rhea.duckdb")
 	sum := func(ctx context.Context) (string, int) {
 		t.Helper()
-		path := project.PathFor(base, store.ScopeOf(ctx))
+		scope, scoped := store.ScopeOf(ctx)
+		path := project.PathFor(base, scope, scoped)
 		if _, err := project.Rebuild(ctx, s, path); err != nil {
 			t.Fatal(err)
 		}
@@ -290,7 +291,8 @@ func TestTheCopyIsTheScopes(t *testing.T) {
 	if total, n := sum(ctx); total != "1125.50" || n != 4 {
 		t.Fatalf("the kernel's copy: %s over %d rows", total, n)
 	}
-	if project.PathFor(base, nil) != base || project.PathFor(base, []string{"a"}) == base || project.PathFor(base, []string{"a"}) == project.PathFor(base, []string{"b"}) {
+	if project.PathFor(base, nil, false) != base || project.PathFor(base, []string{"a"}, true) == base ||
+		project.PathFor(base, []string{"a"}, true) == project.PathFor(base, []string{"b"}, true) || project.PathFor(base, nil, true) == base {
 		t.Fatal("a scope has a file of its own")
 	}
 }

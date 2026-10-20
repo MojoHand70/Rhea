@@ -9,6 +9,7 @@ import (
 
 	"rhea/internal/core"
 	"rhea/internal/exec"
+	"rhea/internal/store"
 	"rhea/internal/store/storetest"
 )
 
@@ -298,5 +299,41 @@ func TestCadenceArithmeticClamps(t *testing.T) {
 	}
 	if _, err := nextOccurrence("2026-01-01", "fortnightly"); err == nil {
 		t.Error("unknown cadence accepted")
+	}
+}
+
+// A day opens for every company the log holds and for the installation:
+// one time fact per company, each the company's own, so a month-end rule
+// charges each company under its own scope and never as rows every
+// company sees.
+func TestClockOpensADayPerCompany(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	x := &exec.Executor{Store: s}
+	for _, c := range []string{"PL5250001111", "PL5260001246"} {
+		if _, err := s.AppendEvent(store.WithCompany(ctx, c), core.Event{Kind: core.KindRaw, Type: "note.taken", OccurredAt: "2026-09-01",
+			Payload: []byte(`{}`), DedupKey: "n-" + c}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	c := Clock{Now: func() time.Time { return time.Date(2026, 9, 2, 12, 0, 0, 0, time.UTC) }}
+	if _, err := CatchUpClock(store.WithOwner(ctx), s, x, c, "2026-09-02"); err != nil {
+		t.Fatal(err)
+	}
+	days, _ := s.EventsOfTypes(store.WithOwner(ctx), []string{core.EventDayOpened})
+	byCompany := map[string]int{}
+	for _, ev := range days {
+		byCompany[ev.Company]++
+	}
+	if byCompany["PL5250001111"] == 0 || byCompany["PL5260001246"] == 0 || byCompany[""] == 0 ||
+		byCompany["PL5250001111"] != byCompany["PL5260001246"] {
+		t.Fatalf("days opened by company: %v", byCompany)
+	}
+	// each company sees its own days and the installation's, not the other's
+	alfa, _ := s.EventsOfTypes(store.WithCompany(ctx, "PL5250001111"), []string{core.EventDayOpened})
+	for _, ev := range alfa {
+		if ev.Company == "PL5260001246" {
+			t.Fatal("alfa sees beta's day")
+		}
 	}
 }

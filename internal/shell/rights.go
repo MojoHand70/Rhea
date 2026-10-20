@@ -55,12 +55,35 @@ func (s *Server) principalHandler(next http.Handler) http.Handler {
 				writeErr(w, 401, fmt.Errorf("sign in: this kernel serves signed-in persons only"))
 				return
 			}
-			if keys := strings.Split(company, ","); len(keys) > 1 {
-				r = r.WithContext(store.WithScope(r.Context(), keys))
-			} else if company != "" {
-				r = r.WithContext(store.WithCompany(r.Context(), company))
+			// Without a person: X-Rhea-Scope lists the companies seen (an
+			// office's desk), X-Rhea-Company the one acted for, which must
+			// be among them; neither names the installation's rows alone.
+			// A request never runs as the owner.
+			if strings.Contains(company, ",") || (company == "" && r.Header.Get("X-Rhea-Company") != "") {
+				writeErr(w, 400, fmt.Errorf("X-Rhea-Company names one company; X-Rhea-Scope lists the ones seen"))
+				return
 			}
-			next.ServeHTTP(w, r)
+			ctx := store.WithInstallation(r.Context())
+			if sc := r.Header.Get("X-Rhea-Scope"); sc != "" {
+				keys := strings.Split(sc, ",")
+				for _, k := range keys {
+					if strings.TrimSpace(k) == "" {
+						writeErr(w, 400, fmt.Errorf("X-Rhea-Scope: an empty company key"))
+						return
+					}
+				}
+				ctx = store.WithScope(ctx, keys)
+				if company != "" {
+					if set, _ := store.ScopeOf(ctx); !contains(set, company) {
+						writeErr(w, 400, fmt.Errorf("X-Rhea-Company %s is not in X-Rhea-Scope", company))
+						return
+					}
+					ctx = store.ActFor(ctx, company)
+				}
+			} else if company != "" {
+				ctx = store.WithCompany(ctx, company)
+			}
+			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		}
 		ctx := r.Context()
@@ -96,9 +119,10 @@ func (s *Server) principalHandler(next http.Handler) http.Handler {
 			scope = append(scope, company) // a claim in progress: nobody holds it yet
 		}
 		if len(scope) == 0 {
-			scope = []string{rights.NoCompany}
+			ctx = store.WithInstallation(ctx) // a person of no company: the installation's rows alone
+		} else {
+			ctx = store.WithScope(ctx, scope)
 		}
-		ctx = store.WithScope(ctx, scope)
 		if company != "" {
 			ctx = store.ActFor(ctx, company)
 		}
@@ -307,7 +331,8 @@ func (s *Server) handleRights(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleWhoAmI(w http.ResponseWriter, r *http.Request) {
 	p := rights.PrincipalOf(r.Context())
 	if p == nil {
-		writeJSON(w, 200, map[string]any{"person": nil, "scope": store.ScopeOf(r.Context()), "company": store.CompanyOf(r.Context())})
+		scope, _ := store.ScopeOf(r.Context())
+		writeJSON(w, 200, map[string]any{"person": nil, "scope": scope, "company": store.CompanyOf(r.Context())})
 		return
 	}
 	writeJSON(w, 200, map[string]any{"person": p.Handle, "name": p.Name, "person_id": p.PersonID,

@@ -24,6 +24,7 @@ package adapter
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 
@@ -158,6 +159,74 @@ type Result struct {
 // not residue: the whole pass is refused and nothing is appended — and the
 // same holds for any failure inside the batch.
 func Run(ctx context.Context, s *store.Store, x *exec.Executor, a Adapter) (Result, error) {
+	// A pass is one company's. Run as the owner it fans out over every
+	// company the log holds and then the installation's own documents;
+	// run for an office it fans out over the office's clients; each pass
+	// sees and stamps one company — rhea pass without a company stored
+	// company A's bank lines as rows every company saw.
+	set, scoped := store.ScopeOf(ctx)
+	var scopes []context.Context
+	switch {
+	case !scoped:
+		companies, err := s.Companies(ctx)
+		if err != nil {
+			return Result{}, err
+		}
+		for _, c := range companies {
+			scopes = append(scopes, store.WithCompany(ctx, c))
+		}
+		scopes = append(scopes, store.WithInstallation(ctx))
+	case len(set) > 1 && store.CompanyOf(ctx) == "":
+		for _, c := range set {
+			scopes = append(scopes, store.ActFor(ctx, c))
+		}
+	default:
+		return runScoped(ctx, s, x, a)
+	}
+	var total Result
+	for _, sctx := range scopes {
+		res, err := runScoped(sctx, s, x, a)
+		total.Channel, total.Version = res.Channel, res.Version
+		total.Events = append(total.Events, res.Events...)
+		total.Submitted += res.Submitted
+		total.Duplicates += res.Duplicates
+		total.Booked += res.Booked
+		total.Errors = append(total.Errors, res.Errors...)
+		if err != nil {
+			return total, err
+		}
+		if res.PassErr != nil {
+			total.PassErr = errors.Join(total.PassErr, res.PassErr)
+		}
+	}
+	return total, nil
+}
+
+// scopedReads shows an adapter one company's objects: the installation's
+// rows are every scope's to read, but a document is one company's, and a
+// reader seeing it from every company would book it for each.
+type scopedReads struct {
+	Reads
+	company string
+}
+
+func (r scopedReads) ObjectsByType(ctx context.Context, typ string) ([]core.Object, error) {
+	objs, err := r.Reads.ObjectsByType(ctx, typ)
+	if err != nil {
+		return nil, err
+	}
+	out := objs[:0]
+	for _, o := range objs {
+		if o.Company == r.company {
+			out = append(out, o)
+		}
+	}
+	return out, nil
+}
+
+// runScoped is one pass for the company the context acts for (the
+// installation when it acts for none), every event stamped with it.
+func runScoped(ctx context.Context, s *store.Store, x *exec.Executor, a Adapter) (Result, error) {
 	ch, err := Bind(ctx, s, a.Name(), a.CodeVersion())
 	if err != nil {
 		return Result{}, err
@@ -168,7 +237,8 @@ func Run(ctx context.Context, s *store.Store, x *exec.Executor, a Adapter) (Resu
 	if b, ok := a.(interface{ Bound(core.Activity) }); ok {
 		b.Bound(ch)
 	}
-	events, passErr := a.Pass(ctx, s)
+	company := store.CompanyOf(ctx)
+	events, passErr := a.Pass(ctx, scopedReads{Reads: s, company: company})
 	res.PassErr = passErr
 	for _, ev := range events {
 		if !ch.Spec.Allows(ev.Type) {
@@ -180,6 +250,7 @@ func Run(ctx context.Context, s *store.Store, x *exec.Executor, a Adapter) (Resu
 	}
 	for i := range events {
 		events[i].Kind = core.KindRaw
+		events[i].Company = company
 		events[i].Actor = "adapter:" + a.Name()
 		events[i].ActivityName, events[i].ActivityVersion = ch.Name, ch.Version
 		if ch.Spec.Channel.Market != "" {

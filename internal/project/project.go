@@ -397,8 +397,8 @@ func Wipe(duckPath string) error {
 
 // PathFor is the analysis file of a scope: the base path for the unscoped
 // kernel, a file of its own per scope — the copy is what the scope sees.
-func PathFor(base string, scope []string) string {
-	if len(scope) == 0 {
+func PathFor(base string, scope []string, scoped bool) string {
+	if !scoped {
 		return base
 	}
 	sum := sha256.Sum256([]byte(strings.Join(scope, ",")))

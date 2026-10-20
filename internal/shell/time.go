@@ -8,6 +8,7 @@ import (
 
 	"rhea/internal/adapter"
 	"rhea/internal/core"
+	"rhea/internal/store"
 )
 
 // The Time surface: where the system stands against the calendar, and the
@@ -41,7 +42,9 @@ func clockResult(res adapter.ClockResult) map[string]any {
 // handleTimeAdvance is the steady state over HTTP: opens at most one day;
 // a burst comes back gated, untouched.
 func (s *Server) handleTimeAdvance(w http.ResponseWriter, r *http.Request) {
-	res, err := adapter.RunClock(r.Context(), s.Store, s.Exec, s.Clock)
+	// Opening a day is the installation's act over every company: the
+	// clock runs as the owner and fans out per company, deliberately.
+	res, err := adapter.RunClock(store.WithOwner(r.Context()), s.Store, s.Exec, s.Clock)
 	if err != nil {
 		writeErr(w, 500, err)
 		return
@@ -58,7 +61,7 @@ func (s *Server) handleTimeCatchUp(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, err)
 		return
 	}
-	res, err := adapter.CatchUpClock(r.Context(), s.Store, s.Exec, s.Clock, req.Through)
+	res, err := adapter.CatchUpClock(store.WithOwner(r.Context()), s.Store, s.Exec, s.Clock, req.Through)
 	if err != nil {
 		writeErr(w, 500, err)
 		return
@@ -76,7 +79,7 @@ func (s *Server) handleTimeSimulate(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, err)
 		return
 	}
-	ctx := r.Context()
+	ctx := store.WithOwner(r.Context())
 	diff, days, err := adapter.SimulateCatchUp(ctx, s.Store, s.Exec, s.Clock, req.Through)
 	if err != nil {
 		writeErr(w, 500, err)

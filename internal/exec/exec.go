@@ -65,7 +65,11 @@ func (x *Executor) ProcessPending(ctx context.Context) (int, []error) {
 		pass := 0
 		var errs []error
 		for _, ev := range events {
-			fired, err := x.evaluate(ctx, ev, rules)
+			// A chain runs under its event's company, never the caller's:
+			// run by the clock or the CLI as the owner, company B's
+			// withdrawal closed company A's complaint and balances summed
+			// across clients, baked into derived facts replay keeps.
+			fired, err := x.evaluate(scopeFor(ctx, ev.Company), ev, rules)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("event %d: %w", ev.ID, err))
 				continue
@@ -485,6 +489,15 @@ func (x *Executor) today() string {
 		return x.Today()
 	}
 	return time.Now().UTC().Format("2006-01-02")
+}
+
+// scopeFor is the scope a fact's chain runs under: its company's, or the
+// installation's rows alone for a fact with no company.
+func scopeFor(ctx context.Context, company string) context.Context {
+	if company == "" {
+		return store.WithInstallation(ctx)
+	}
+	return store.WithCompany(ctx, company)
 }
 
 // maxChainNodes bounds the consequences of one event: a chain larger than
@@ -1092,7 +1105,7 @@ func (x *Executor) Replay(ctx context.Context) ([]core.Object, error) {
 		return nil, err
 	}
 	defer release()
-	ctx = store.WithCompany(ctx, "")
+	ctx = store.WithOwner(ctx)
 	derived, err := x.Store.EventsByKind(ctx, core.KindDerived)
 	if err != nil {
 		return nil, err

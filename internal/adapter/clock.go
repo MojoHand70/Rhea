@@ -159,14 +159,15 @@ func openDays(ctx context.Context, s *store.Store, x *exec.Executor, lastOpened 
 	if err != nil {
 		return res, err
 	}
-	appendNew := func(ev core.Event) (bool, error) {
+	appendNew := func(sctx context.Context, ev core.Event) (bool, error) {
 		if !ch.Spec.Allows(ev.Type) {
 			return false, fmt.Errorf("channel %s v%d does not declare event type %q", ch.Name, ch.Version, ev.Type)
 		}
 		ev.Kind = core.KindRaw
 		ev.Actor = "adapter:clock"
 		ev.ActivityName, ev.ActivityVersion = ch.Name, ch.Version
-		switch _, err := s.AppendEvent(ctx, ev); {
+		ev.Company = store.CompanyOf(sctx)
+		switch _, err := s.AppendEvent(sctx, ev); {
 		case err == nil:
 			return true, nil
 		case store.IsDuplicate(err):
@@ -175,42 +176,55 @@ func openDays(ctx context.Context, s *store.Store, x *exec.Executor, lastOpened 
 			return false, err
 		}
 	}
+	// A day opens for every company the log holds and for the
+	// installation's own facts: one time fact per company, each chain under
+	// its company — one installation-wide fact charged every company's
+	// depreciation as rows every company saw, or only the first company's.
+	companies, err := s.Companies(store.WithOwner(ctx))
+	if err != nil {
+		return res, err
+	}
+	scopes := []context.Context{store.WithInstallation(ctx)}
+	for _, c := range companies {
+		scopes = append(scopes, store.WithCompany(ctx, c))
+	}
 	prev := lastOpened
 	for _, d := range days {
-		day, _ := json.Marshal(map[string]any{"date": d})
-		if _, err := appendNew(core.Event{Type: core.EventDayOpened, OccurredAt: d,
-			Payload: day, DedupKey: "time/day/" + d}); err != nil {
-			return res, err
-		}
-		if prev == "" || d[:7] != prev[:7] {
-			month, _ := json.Marshal(map[string]any{"month": d[:7], "date": d})
-			if _, err := appendNew(core.Event{Type: core.EventMonthOpened, OccurredAt: d,
-				Payload: month, DedupKey: "time/month/" + d[:7]}); err != nil {
+		for _, sctx := range scopes {
+			day, _ := json.Marshal(map[string]any{"date": d})
+			if _, err := appendNew(sctx, core.Event{Type: core.EventDayOpened, OccurredAt: d,
+				Payload: day, DedupKey: "time/day/" + d}); err != nil {
 				return res, err
+			}
+			if prev == "" || d[:7] != prev[:7] {
+				month, _ := json.Marshal(map[string]any{"month": d[:7], "date": d})
+				if _, err := appendNew(sctx, core.Event{Type: core.EventMonthOpened, OccurredAt: d,
+					Payload: month, DedupKey: "time/month/" + d[:7]}); err != nil {
+					return res, err
+				}
+			}
+			// The due set, read fresh each day within the company: the
+			// advance a rule booked yesterday decides what fires today.
+			scheds, err := s.ObjectsByType(sctx, ScheduleType)
+			if err != nil {
+				return res, err
+			}
+			for _, fired := range dueOccurrences(ownOnly(scheds, store.CompanyOf(sctx)), d) {
+				payload, err := json.Marshal(fired)
+				if err != nil {
+					return res, err
+				}
+				added, err := appendNew(sctx, core.Event{Type: EventScheduleFired, OccurredAt: d,
+					Payload: payload, DedupKey: "time/fired/" + fired.Schedule + "/" + fired.Occurrence})
+				if err != nil {
+					return res, err
+				}
+				if added {
+					res.Fired++
+				}
 			}
 		}
 		prev = d
-
-		// The due set, read fresh each day: the advance a rule booked
-		// yesterday decides what fires today.
-		scheds, err := s.ObjectsByType(ctx, ScheduleType)
-		if err != nil {
-			return res, err
-		}
-		for _, fired := range dueOccurrences(scheds, d) {
-			payload, err := json.Marshal(fired)
-			if err != nil {
-				return res, err
-			}
-			added, err := appendNew(core.Event{Type: EventScheduleFired, OccurredAt: d,
-				Payload: payload, DedupKey: "time/fired/" + fired.Schedule + "/" + fired.Occurrence})
-			if err != nil {
-				return res, err
-			}
-			if added {
-				res.Fired++
-			}
-		}
 
 		booked, errs := x.ProcessPending(ctx)
 		res.Booked += booked
@@ -363,4 +377,17 @@ func SimulateCatchUp(ctx context.Context, s *store.Store, x *exec.Executor, c Cl
 	}
 	diff, err := x.SimulateEvents(ctx, hypo)
 	return diff, days, err
+}
+
+// ownOnly keeps the objects of one company (the installation's when the
+// company is empty): a scope sees the installation's rows too, and a
+// schedule fires for its own company alone.
+func ownOnly(objs []core.Object, company string) []core.Object {
+	out := objs[:0]
+	for _, o := range objs {
+		if o.Company == company {
+			out = append(out, o)
+		}
+	}
+	return out
 }
