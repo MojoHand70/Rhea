@@ -104,6 +104,9 @@ type token struct {
 }
 
 func lex(src string) ([]token, error) {
+	if len(src) > maxFormulaLen {
+		return nil, fmt.Errorf("the formula is %d characters long, the most is %d", len(src), maxFormulaLen)
+	}
 	var toks []token
 	i := 0
 	for i < len(src) {
@@ -245,9 +248,19 @@ type node struct {
 }
 
 type parser struct {
-	toks []token
-	i    int
+	toks  []token
+	i     int
+	depth int // nesting of sub-expressions, capped: a formula is not a stack
 }
+
+// The parser's caps: a formula nested past maxNesting or longer than
+// maxFormulaLen is refused with its reason, never a fatal stack overflow
+// that no recover() can catch — rule JSON reaches the parser from the
+// draft doors.
+const (
+	maxNesting    = 64
+	maxFormulaLen = 1 << 16
+)
 
 func (p *parser) peek() token { return p.toks[p.i] }
 func (p *parser) next() token { t := p.toks[p.i]; p.i++; return t }
@@ -284,6 +297,10 @@ func parseFormula(src string) (*node, error) {
 }
 
 func (p *parser) or() (*node, error) {
+	if p.depth++; p.depth > maxNesting {
+		return nil, fmt.Errorf("at %d: the formula nests deeper than %d levels", p.peek().pos, maxNesting)
+	}
+	defer func() { p.depth-- }()
 	l, err := p.and()
 	if err != nil {
 		return nil, err

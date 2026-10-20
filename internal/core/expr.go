@@ -1,6 +1,7 @@
 package core
 
 import (
+	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
@@ -377,6 +378,8 @@ func EvalCondition(payload any, c Condition) (bool, error) {
 }
 
 // looseEq compares across JSON's habit of making every number a float64.
+// Only scalars compare: an array or an object on either side is false, never
+// a comparison of uncomparable types that would take the kernel down.
 func looseEq(a, b any) bool {
 	if af, ok := asFloat(a); ok {
 		if bf, ok := asFloat(b); ok {
@@ -384,7 +387,20 @@ func looseEq(a, b any) bool {
 		}
 		return false
 	}
+	if !scalar(a) || !scalar(b) {
+		return false
+	}
 	return a == b
+}
+
+// scalar is what a condition may hold and compare: text, a number, yes/no,
+// or nothing.
+func scalar(v any) bool {
+	switch v.(type) {
+	case nil, string, bool, float64, int, int64, json.Number:
+		return true
+	}
+	return false
 }
 
 func asFloat(v any) (float64, bool) {

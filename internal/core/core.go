@@ -408,6 +408,9 @@ func (s RuleSpec) Validate(target *ObjectType) error {
 		if _, err := parsePath(c.Path); err != nil {
 			return fmt.Errorf("condition path %q: %w", c.Path, err)
 		}
+		if !scalar(c.Value) {
+			return fmt.Errorf("condition %s %s: the value must be text, a number or yes/no, not %T", c.Path, c.Op, c.Value)
+		}
 	}
 	effects := 0
 	if s.Effect.Object.Type != "" || len(s.Effect.Object.Fields) > 0 {

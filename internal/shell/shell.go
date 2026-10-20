@@ -71,7 +71,30 @@ func scopedHandler(next http.Handler) http.Handler {
 }
 
 func (s *Server) Handler() http.Handler {
-	return scopedHandler(s.mux())
+	return hardened(scopedHandler(s.mux()))
+}
+
+// maxBody bounds what a door reads: a document through the receive door
+// is a few megabytes of base64 at most; a multi-gigabyte body is refused,
+// not read into memory.
+const maxBody = 32 << 20
+
+// hardened keeps one request from taking the server down: a body is read
+// up to maxBody, and a panic in a handler answers 500 with its reason in
+// the log instead of ending rhea serve.
+func hardened(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Body != nil {
+			r.Body = http.MaxBytesReader(w, r.Body, maxBody)
+		}
+		defer func() {
+			if p := recover(); p != nil {
+				log.Printf("%s %s: panic: %v", r.Method, r.URL.Path, p)
+				writeErr(w, 500, fmt.Errorf("the server failed on this request: %v", p))
+			}
+		}()
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (s *Server) mux() http.Handler {

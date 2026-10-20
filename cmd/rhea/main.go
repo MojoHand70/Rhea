@@ -453,7 +453,12 @@ func main() {
 			log.Printf("channels: %v", err)
 		}
 		log.Printf("rhea shell on http://localhost%s (model %s)", *addr, agent.Model())
-		log.Fatal(http.ListenAndServe(*addr, srv.Handler()))
+		// Header and idle timeouts, so a stalled client does not hold a
+		// goroutine forever; no write timeout, the projection stream is
+		// long-lived by design.
+		server := &http.Server{Addr: *addr, Handler: srv.Handler(),
+			ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 2 * time.Minute}
+		log.Fatal(server.ListenAndServe())
 
 	case "replay":
 		// The proof, not only the rebuild: the cache before and after must

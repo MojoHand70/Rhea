@@ -1,8 +1,9 @@
 package core
 
 import (
-	"math"
 	"encoding/json"
+	"math"
+	"strings"
 	"testing"
 )
 
@@ -371,5 +372,38 @@ func TestPostingsValidate(t *testing.T) {
 	s.Effect.Postings.Currency = ""
 	if err := s.Validate(nil); err == nil {
 		t.Error("missing currency accepted")
+	}
+}
+
+// Rule JSON cannot take the kernel down: a condition value that is not a
+// scalar is refused at validation and compares false at evaluation, never a
+// comparison of uncomparable types; a formula nested past the cap or longer
+// than the cap is refused by the parser with its reason, never a fatal
+// stack overflow.
+func TestRuleJSONCannotPanic(t *testing.T) {
+	array := Condition{Path: "$.a", Op: "eq", Value: []any{"a", "b"}}
+	spec := RuleSpec{Match: Match{EventType: "x", Where: []Condition{array}},
+		Effect: Effect{Object: ObjectTemplate{Type: "t", Fields: map[string]string{"f": "=$.a"}}}}
+	if err := spec.Validate(nil); err == nil || !strings.Contains(err.Error(), "the value must be") {
+		t.Fatalf("array condition value validated: %v", err)
+	}
+	payload := map[string]any{"a": []any{"a", "b"}, "m": map[string]any{"k": 1.0}}
+	for _, c := range []Condition{array, {Path: "$.m", Op: "eq", Value: map[string]any{"k": 1.0}},
+		{Path: "$.a", Op: "ne", Value: []any{"a", "b"}}} {
+		ok, err := EvalCondition(payload, c)
+		if err != nil || (c.Op == "eq" && ok) || (c.Op == "ne" && !ok) {
+			t.Fatalf("%s %s on a non-scalar: %v, %v", c.Path, c.Op, ok, err)
+		}
+	}
+	deep := strings.Repeat("(", 20000) + "1" + strings.Repeat(")", 20000)
+	if _, err := ParseFormula(deep); err == nil || !strings.Contains(err.Error(), "nests deeper") {
+		t.Fatalf("deep formula: %v", err)
+	}
+	long := "1" + strings.Repeat(" + 1", 20000)
+	if _, err := ParseFormula(long); err == nil || !strings.Contains(err.Error(), "the most is") {
+		t.Fatalf("long formula: %v", err)
+	}
+	if _, err := ParseFormula(strings.Repeat("(", 60) + "1" + strings.Repeat(")", 60)); err != nil {
+		t.Fatalf("sixty levels refused: %v", err)
 	}
 }
