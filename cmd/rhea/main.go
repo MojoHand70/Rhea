@@ -66,7 +66,7 @@ import (
 func main() {
 	log.SetFlags(0)
 	if len(os.Args) < 2 {
-		log.Fatal("usage: rhea init|load|pack|submit|intake|pass|file|issue|backup|restore|serve|replay|channels|people|clock|approve|reject|eval|sim|ksef|run")
+		log.Fatal("usage: rhea init|load|pack|approve|reject|backfill|publish|network|backup|restore|file|issue|pass|people|channels|clock|submit|intake|serve|replay|eval|sim|run")
 	}
 	if os.Args[1] == "run" {
 		// A market's tool by name: no log, no store (adapter.Command).
@@ -627,8 +627,10 @@ func main() {
 						cleanup()
 						log.Fatal(err)
 					}
-					name := fmt.Sprintf("eval-%s-%s", iv.c.Name, time.Now().Format("20060102-150405"))
-					if network.Synthetic(iv.c.Name) { // stays marked: never a real client's figure
+					// an eval run is never a real client's figure: marked synthetic
+					// whatever corpus it ran, so two runs are not "2 of 2 installations"
+					name := fmt.Sprintf("%seval-%s-%s", network.SyntheticPrefix, iv.c.Name, time.Now().Format("20060102-150405"))
+					if network.Synthetic(iv.c.Name) {
 						name = fmt.Sprintf("%s-%s-v%d-r%d", iv.c.Name, time.Now().Format("20060102-150405"), iv.voice, run)
 					}
 					if _, err := nw.Publish(ctx, name, rules); err != nil {

@@ -389,6 +389,15 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 		case err == nil:
 			sum.Events++
 		case store.IsDuplicate(err):
+			// the same key with other content is master data that changed
+			// under its key — a VAT percent edited in place — never a skip
+			have, gerr := s.EventByDedupKey(owner, "", ev.DedupKey)
+			if gerr != nil {
+				return sum, gerr
+			}
+			if !sameJSON(json.RawMessage(have.Payload), json.RawMessage(ev.Payload)) {
+				return sum, fmt.Errorf("pack event %s (%s) changed under its key — master data is append-only: give the change a new key", ev.DedupKey, ev.EventType)
+			}
 			sum.Skipped++
 		default:
 			return sum, fmt.Errorf("event %s (%s): %w", ev.DedupKey, ev.EventType, err)

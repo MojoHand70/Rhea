@@ -44,7 +44,7 @@ func (s *Server) bundleViewWith(ctx context.Context, b core.Bundle, k *network.K
 		mv := memberView{Member: m}
 		switch m.Kind {
 		case core.KindRule:
-			r, err := s.Store.GetRule(ctx, m.Name)
+			r, err := s.Store.GetRuleVersion(ctx, m.Name, m.Version) // the member's, not the latest draft's
 			if err != nil {
 				return out, err
 			}
@@ -55,7 +55,7 @@ func (s *Server) bundleViewWith(ctx context.Context, b core.Bundle, k *network.K
 				}
 			}
 		case core.KindActivity:
-			a, err := s.Store.GetActivity(ctx, m.Name)
+			a, err := s.Store.GetActivityVersion(ctx, m.Name, m.Version)
 			if err != nil {
 				return out, err
 			}

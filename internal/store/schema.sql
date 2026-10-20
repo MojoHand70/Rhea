@@ -285,3 +285,13 @@ GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA public TO rhea_app;
 GRANT UPDATE, DELETE ON object TO rhea_app;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO rhea_app;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO rhea_app;
+
+-- A derived event identifies its rule whole: the version too.
+ALTER TABLE event DROP CONSTRAINT IF EXISTS event_check;
+ALTER TABLE event DROP CONSTRAINT IF EXISTS event_derived_provenance;
+ALTER TABLE event ADD CONSTRAINT event_derived_provenance
+    CHECK (kind = 'raw' OR (cause_event_id IS NOT NULL AND rule_id IS NOT NULL AND rule_version IS NOT NULL));
+-- Lookups and balances are keyed reads, never scans: a ref() by type and
+-- field, a balance by account.
+CREATE INDEX IF NOT EXISTS object_type_idx ON object (object_type);
+CREATE INDEX IF NOT EXISTS object_posting_account ON object ((state->>'account')) WHERE object_type = 'posting';

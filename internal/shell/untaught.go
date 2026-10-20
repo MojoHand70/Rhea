@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -97,7 +96,7 @@ func (s *Server) handleNoteUntaught(w http.ResponseWriter, r *http.Request) {
 		AskedBy string `json:"asked_by"`
 		Kind    string `json:"kind"`
 	}
-	if err := json.NewDecoder(io.LimitReader(r.Body, 16<<10)).Decode(&req); err != nil {
+	if err := decodeBody(r, &req); err != nil {
 		writeErr(w, 400, err)
 		return
 	}

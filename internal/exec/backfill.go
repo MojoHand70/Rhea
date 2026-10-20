@@ -2,6 +2,8 @@ package exec
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -43,6 +45,23 @@ type BackfillPlan struct {
 	Chains []BackfillChain `json:"chains"`
 	Diff   SimDiff         `json:"diff"`
 	Errors []string        `json:"errors"`
+	// Fingerprint names this plan — the events and the rules of every
+	// chain — so an approval can say which dry run it read, and a plan
+	// that moved since (another tab approved a rule) is refused.
+	Fingerprint string `json:"plan"`
+}
+
+// fingerprint is a plan's identity: the chains' events and rules, in order.
+func (p *BackfillPlan) fingerprint() string {
+	h := sha256.New()
+	for _, c := range p.Chains {
+		fmt.Fprintf(h, "%d:", c.EventID)
+		for _, n := range c.nodes {
+			fmt.Fprintf(h, "%s/%d;", n.rule.ID, n.rule.Version)
+		}
+		fmt.Fprint(h, "\n")
+	}
+	return hex.EncodeToString(h.Sum(nil))[:16]
 }
 
 // PlanBackfill computes the backfill against the current log and rules.
@@ -147,6 +166,7 @@ func (x *Executor) PlanBackfill(ctx context.Context, date string) (BackfillPlan,
 		plan.Chains = append(plan.Chains, c)
 	}
 	plan.Diff, err = x.backfillDiff(ctx, plan.Chains)
+	plan.Fingerprint = plan.fingerprint()
 	return plan, err
 }
 
@@ -241,9 +261,18 @@ func (x *Executor) backfillDiff(ctx context.Context, chains []BackfillChain) (Si
 // approval is a raw event naming every chain (invariant 2), then the chains
 // book. date is the backfill's business date — where forwarded chains land.
 func (x *Executor) ApproveBackfill(ctx context.Context, approvedBy, date string) (int, []error, error) {
-	t, err := x.TriggerActivity(ctx, "approve_backfill", map[string]any{
-		"approved_by": approvedBy, "occurred_at": date,
-	}, approvedBy, "")
+	return x.ApproveBackfillPlan(ctx, approvedBy, date, "")
+}
+
+// ApproveBackfillPlan approves the plan a person read: plan is the dry
+// run's fingerprint, and a past that moved since is refused; empty skips
+// the check (the CLI's own approval).
+func (x *Executor) ApproveBackfillPlan(ctx context.Context, approvedBy, date, plan string) (int, []error, error) {
+	inputs := map[string]any{"approved_by": approvedBy, "occurred_at": date}
+	if plan != "" {
+		inputs["plan"] = plan
+	}
+	t, err := x.TriggerActivity(ctx, "approve_backfill", inputs, approvedBy, "")
 	if err != nil {
 		return 0, nil, err
 	}

@@ -29,7 +29,7 @@ func (s *Server) handleSimulateBackfill(w http.ResponseWriter, r *http.Request) 
 	if errs == nil {
 		errs = []string{}
 	}
-	writeJSON(w, 200, map[string]any{"date": plan.Date, "chains": chains, "errors": errs, "diff": diff})
+	writeJSON(w, 200, map[string]any{"date": plan.Date, "chains": chains, "errors": errs, "diff": diff, "plan": plan.Fingerprint})
 }
 
 // handleApproveBackfill is the deliberate act: approve_backfill, then the
@@ -37,6 +37,7 @@ func (s *Server) handleSimulateBackfill(w http.ResponseWriter, r *http.Request) 
 func (s *Server) handleApproveBackfill(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		ApprovedBy string `json:"approved_by"`
+		Plan       string `json:"plan"` // the dry run read; a past that moved since is refused
 	}
 	if err := decodeBody(r, &req); err != nil {
 		writeErr(w, 400, err)
@@ -45,7 +46,7 @@ func (s *Server) handleApproveBackfill(w http.ResponseWriter, r *http.Request) {
 	if req.ApprovedBy == "" {
 		req.ApprovedBy = "human"
 	}
-	n, errs, err := s.Exec.ApproveBackfill(r.Context(), req.ApprovedBy, s.Clock.TodayUTC())
+	n, errs, err := s.Exec.ApproveBackfillPlan(r.Context(), req.ApprovedBy, s.Clock.TodayUTC(), req.Plan)
 	if err != nil {
 		writeErr(w, 400, err)
 		return

@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"regexp"
@@ -125,7 +124,7 @@ func (s *Server) handleAnswer(w http.ResponseWriter, r *http.Request) {
 		// when she answers only the nearest thing: the moment is recorded too.
 		Missing string `json:"missing"`
 	}
-	if err := json.NewDecoder(io.LimitReader(r.Body, 16<<10)).Decode(&req); err != nil {
+	if err := decodeBody(r, &req); err != nil {
 		writeErr(w, 400, err)
 		return
 	}
@@ -412,6 +411,16 @@ func (s *Server) handleKeepAnswer(w http.ResponseWriter, r *http.Request) {
 		Description: fmt.Sprintf("Report kept from the question of %s: %s", ev.OccurredAt, p.Question),
 		ViewDefs:    []core.ViewDef{{ID: viewID, Notion: "report", Title: title, Domain: "reports", Function: "report", Spec: spec}},
 		Warrant:     &core.Warrant{Basis: "client", Citations: []string{"asked by " + p.AskedBy + " on " + ev.OccurredAt + ": " + p.Question}, Scope: "this company"},
+	}
+	// kept already: the one decision, the one bundle
+	if b, err := s.Store.GetBundle(ctx, bd.BundleID); err == nil {
+		bv, err := s.bundleView(ctx, b)
+		if err != nil {
+			writeErr(w, 500, err)
+			return
+		}
+		writeJSON(w, 200, bv)
+		return
 	}
 	types, err := s.Store.ListObjectTypes(ctx)
 	if err != nil {

@@ -82,6 +82,10 @@ func (s *Server) subscribeLive() (<-chan string, func(), error) {
 		if err != nil {
 			cancel()
 			s.live.running = false
+			for ch := range s.live.subs { // tabs that joined meanwhile reconnect
+				close(ch)
+				delete(s.live.subs, ch)
+			}
 			s.live.Unlock()
 			return nil, nil, err
 		}

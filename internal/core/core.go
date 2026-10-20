@@ -6,6 +6,7 @@ package core
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -149,6 +150,10 @@ func RefTarget(fieldType string) (string, bool) {
 // Validate checks an object type definition: known field types, enum value
 // sets, syntactically sound ref targets, and a label_field that exists. Ref
 // targets are not checked for existence — definitions may load in any order.
+// fieldName is what a field may be called: what a formula path, a tally and
+// an analysis column can address.
+var fieldName = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
+
 func (t ObjectType) Validate() error {
 	if t.Name == "" {
 		return fmt.Errorf("object type needs a name")
@@ -163,6 +168,9 @@ func (t ObjectType) Validate() error {
 	}
 	seen := map[string]bool{}
 	for _, f := range t.Fields {
+		if !fieldName.MatchString(f.Name) {
+			return fmt.Errorf("object type %q: field %q is not a name a formula or a tally can address (a-z, 0-9, _)", t.Name, f.Name)
+		}
 		if seen[f.Name] {
 			return fmt.Errorf("object type %q: field %q is declared twice", t.Name, f.Name)
 		}

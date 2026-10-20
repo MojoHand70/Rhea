@@ -1,6 +1,7 @@
 package shell
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -13,7 +14,19 @@ func (s *Server) handleBlob(w http.ResponseWriter, r *http.Request) {
 	if !s.allowSystem(w, r, ViewFiles) {
 		return
 	}
-	b, err := s.Store.GetBlob(r.Context(), r.PathValue("hash"))
+	// The store keys files by hash alone; a file is served only when a
+	// document the caller's scope can see names it (invariant 9).
+	hash := r.PathValue("hash")
+	named, err := s.Store.FileNamedInScope(r.Context(), hash)
+	if err != nil {
+		writeErr(w, 500, err)
+		return
+	}
+	if !named {
+		writeErr(w, 404, fmt.Errorf("no document of yours names this file"))
+		return
+	}
+	b, err := s.Store.GetBlob(r.Context(), hash)
 	if err != nil {
 		writeErr(w, 404, err)
 		return

@@ -207,8 +207,11 @@ func (x *Executor) TriggerActivity(ctx context.Context, name string, inputs map[
 	// declaration says — the same courtesy ref() pays at rule expansion.
 	for _, ref := range built.Refs {
 		o, err := x.Store.GetObject(ctx, ref.ObjectID)
-		if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
 			return Triggered{}, fmt.Errorf("activity %s input %s: no object %q", name, ref.Input, ref.ObjectID)
+		}
+		if err != nil {
+			return Triggered{}, err // a store failure is not a missing object
 		}
 		if o.Type != ref.TargetType {
 			return Triggered{}, fmt.Errorf("activity %s input %s: %q is a %s, not a %s", name, ref.Input, ref.ObjectID, o.Type, ref.TargetType)
@@ -425,6 +428,7 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 	case "backfill.approved":
 		var p struct {
 			ApprovedBy string `json:"approved_by"`
+			Plan       string `json:"plan"`
 		}
 		if err := json.Unmarshal(ev.Payload, &p); err != nil {
 			return nil, err
@@ -435,6 +439,9 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 		}
 		if len(plan.Chains) == 0 {
 			return nil, fmt.Errorf("nothing to backfill: every past event is explained as far as the active rules go")
+		}
+		if p.Plan != "" && p.Plan != plan.Fingerprint {
+			return nil, fmt.Errorf("the past moved since the dry run you read (another approval landed) — read it again before approving")
 		}
 		// The approval names exactly what it promotes: every chain, its
 		// rules, and whether it was offered forward out of a closed period.

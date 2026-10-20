@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -29,6 +30,9 @@ func TestWhatSheWasNeverTaught(t *testing.T) {
 	ctx := context.Background()
 	dsn, drop, err := store.ThrowawayDSN(ctx, "rhea_network_untaught")
 	if err != nil {
+		if os.Getenv("RHEA_CI") != "" {
+			t.Fatalf("postgres unavailable and RHEA_CI is set: %v", err)
+		}
 		t.Skipf("postgres unavailable: %v", err)
 	}
 	defer drop()

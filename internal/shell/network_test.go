@@ -3,6 +3,7 @@ package shell_test
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"strings"
 	"testing"
 
@@ -25,6 +26,9 @@ func TestRheaLearnsAcrossInstallations(t *testing.T) {
 	ctx := context.Background()
 	dsn, drop, err := store.ThrowawayDSN(ctx, "rhea_network_test")
 	if err != nil {
+		if os.Getenv("RHEA_CI") != "" {
+			t.Fatalf("postgres unavailable and RHEA_CI is set: %v", err)
+		}
 		t.Skipf("postgres unavailable: %v", err)
 	}
 	defer drop()

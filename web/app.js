@@ -712,7 +712,7 @@ function openBundles() {
             try {
               const res = await api("/api/backfill/approve", {
                 method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ approved_by: "human" }),
+                body: JSON.stringify({ approved_by: "human", plan: p.plan }),
               });
               toast(`Backfilled ${res.backfilled} past event(s).` + (res.errors ? ` Failing: ${res.errors}` : ""));
               refreshActive();

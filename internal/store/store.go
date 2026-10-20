@@ -1042,6 +1042,46 @@ func ScopeOf(ctx context.Context) ([]string, bool) {
 	return v.set, true
 }
 
+// FileNamedInScope says whether a document the context can see names a
+// file by its hash: a received or issued document object, or — before the
+// documents pack explains them — the door's own fact. A file is served
+// only to a scope that has it (invariant 9).
+func (s *Store) FileNamedInScope(ctx context.Context, hash string) (bool, error) {
+	for _, typ := range []string{"received_document", "issued_document"} {
+		ids, err := s.FindObjectIDsByField(ctx, typ, "hash", hash)
+		if err != nil {
+			return false, err
+		}
+		if len(ids) > 0 {
+			return true, nil
+		}
+	}
+	var named bool
+	err := s.Pool.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM event
+		               WHERE event_type IN ($1, $2) AND ($4 = '' OR company = $4 OR COALESCE(company, '') = '')
+		                 AND jsonb_path_exists(payload, '$.** ? (@ == $h)', jsonb_build_object('h', $3::text)))`,
+		core.EventDocumentReceived, core.EventDocumentIssued, hash, CompanyOf(ctx)).Scan(&named)
+	return named, err
+}
+
+// EventByDedupKey is the event a key names within a company (the
+// installation's when empty), or ErrNotFound.
+func (s *Store) EventByDedupKey(ctx context.Context, company, key string) (core.Event, error) {
+	rows, err := s.Pool.Query(ctx, `SELECT `+eventCols+` FROM event WHERE COALESCE(company, '') = $1 AND dedup_key = $2`, company, key)
+	if err != nil {
+		return core.Event{}, err
+	}
+	evs, err := scanEvents(rows)
+	if err != nil {
+		return core.Event{}, err
+	}
+	if len(evs) == 0 {
+		return core.Event{}, fmt.Errorf("event %q: %w", key, ErrNotFound)
+	}
+	return evs[0], nil
+}
+
 // Companies lists the companies the log holds facts for, in key order.
 func (s *Store) Companies(ctx context.Context) ([]string, error) {
 	rows, err := s.Pool.Query(ctx, `SELECT DISTINCT company FROM event WHERE company IS NOT NULL AND company <> '' ORDER BY 1`)

@@ -1,9 +1,7 @@
 package shell
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"sort"
 	"strings"
@@ -90,7 +88,7 @@ func (s *Server) handleNoteLesson(w http.ResponseWriter, r *http.Request) {
 		Note   string `json:"note"`
 		By     string `json:"by"`
 	}
-	if err := json.NewDecoder(io.LimitReader(r.Body, 8<<10)).Decode(&req); err != nil {
+	if err := decodeBody(r, &req); err != nil {
 		writeErr(w, 400, err)
 		return
 	}

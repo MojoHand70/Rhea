@@ -122,6 +122,19 @@ func (m *vm) pop() Value {
 	return v
 }
 
+// readCost is what one store read costs against the step budget: reads
+// cost nothing before, and nested objects() made half a million of them
+// under the executor's lock before the budget tripped.
+const readCost = 100
+
+func (m *vm) charge(n int) error {
+	m.steps += n
+	if m.steps > maxSteps {
+		return fmt.Errorf("formula exceeded %d steps", maxSteps)
+	}
+	return nil
+}
+
 func (m *vm) exec(p *program) (Value, error) {
 	pc := 0
 	for {
@@ -369,6 +382,9 @@ func (m *vm) member(v Value, key string, optional bool) (Value, error) {
 		if m.env.Get == nil {
 			return Value{}, fmt.Errorf("%s.%s: reading through a link needs object state, none available here", v.Origin, key)
 		}
+		if err := m.charge(readCost); err != nil {
+			return Value{}, err
+		}
 		state, ok, err := m.env.Get(v.Str)
 		if err != nil {
 			return Value{}, err
@@ -505,6 +521,9 @@ func (m *vm) objects(typ, field string, v Value) (Value, error) {
 	}
 	ids, err := m.env.Lookup(typ, field, key)
 	if err != nil {
+		return Value{}, err
+	}
+	if err := m.charge(readCost * (1 + len(ids))); err != nil {
 		return Value{}, err
 	}
 	capacity := m.env.MaxCollection
@@ -940,19 +959,28 @@ func compare(op string, a, b Value) (Value, error) {
 			c = 0
 		}
 	case a.Kind.numeric() || b.Kind.numeric():
-		x, _, err := toNum(a)
-		if err != nil {
-			return Value{}, err
-		}
-		y, _, err := toNum(b)
-		if err != nil {
-			return Value{}, err
+		x, _, errA := toNum(a)
+		y, _, errB := toNum(b)
+		if errA != nil || errB != nil {
+			// a number against text that is no number: unequal, as a path
+			// condition says; only an ordering has nothing to say
+			if op == "=" || op == "<>" {
+				return Value{Kind: KBool, Bool: op == "<>"}, nil
+			}
+			if errA != nil {
+				return Value{}, errA
+			}
+			return Value{}, errB
 		}
 		c = x.Cmp(y)
 	case a.Kind == KList || a.Kind == KObject || b.Kind == KList || b.Kind == KObject:
 		return Value{}, fmt.Errorf("cannot compare %s with %s", a.Kind, b.Kind)
 	default:
-		c = compareText(a.Str, b.Str)
+		if op == "=" || op == "<>" {
+			c = strings.Compare(a.Str, b.Str) // texts are equal when spelled the same: "0100" is not "100"
+		} else {
+			c = compareText(a.Str, b.Str)
+		}
 	}
 	var out bool
 	switch op {
@@ -1046,6 +1074,9 @@ func call(name string, args []Value) (Value, error) {
 		n, err := toInt(args[1])
 		if err != nil {
 			return Value{}, err
+		}
+		if n > maxDays/31 || n < -maxDays/31 {
+			return Value{}, fmt.Errorf("add_months takes at most %d months either way, not %d", maxDays/31, n)
 		}
 		// the day clamps to the target month's length: Jan 31 + 1 month is Feb 28
 		first := time.Date(d.Year(), d.Month(), 1, 0, 0, 0, 0, time.UTC).AddDate(0, int(n), 0)
@@ -1243,7 +1274,12 @@ func toField(v Value, fd FieldDef, copy, raw bool) (any, error) {
 		switch v.Kind {
 		case KString, KDate, KRef:
 			return checked(v.Str, fd)
-		case KInt, KDecimal, KMoney:
+		case KMoney:
+			if !fits(v.Num, 2) {
+				return nil, fmt.Errorf("%s does not fit money (two places)", describe(v.Num))
+			}
+			return checked(v.Num.FloatString(2), fd) // "12.50", never "12.5"
+		case KInt, KDecimal:
 			s, err := canonical(v.Num)
 			if err != nil {
 				return nil, err

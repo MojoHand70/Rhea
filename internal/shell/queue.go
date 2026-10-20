@@ -3,12 +3,14 @@ package shell
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"net/http"
 	"sort"
 
 	"rhea/internal/core"
+	"rhea/internal/store"
 )
 
 // The queue notion (DIRECTION 2026-10-10, "The host is a concierge": what to
@@ -182,7 +184,9 @@ func (s *Server) formulaEnv(ctx context.Context, typed map[string]string) *core.
 			}
 			t, err := s.Store.GetObjectType(ctx, name)
 			if err != nil {
-				memo[name] = nil
+				if errors.Is(err, store.ErrNotFound) {
+					memo[name] = nil // a type that is not there; a failure is not memoized
+				}
 				return core.ObjectType{}, false
 			}
 			memo[name] = &t

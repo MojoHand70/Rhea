@@ -237,7 +237,7 @@ func Rebuild(ctx context.Context, s *store.Store, duckPath string) (int, error) 
 // opened read-only, no files, no network, no extensions to install or load,
 // the configuration frozen before any query arrives, bounded memory.
 const locked = "?access_mode=read_only&enable_external_access=false&autoload_known_extensions=false" +
-	"&autoinstall_known_extensions=false&lock_configuration=true&memory_limit=1GB&threads=2"
+	"&autoinstall_known_extensions=false&lock_configuration=true&memory_limit=1GB&threads=2&max_temp_directory_size=256MB"
 
 // Limits on one query in the locked session.
 const (

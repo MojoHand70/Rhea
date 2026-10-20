@@ -468,19 +468,21 @@ func coerceInput(f FieldDef, v any) (any, error) {
 		if !ok {
 			return nil, fmt.Errorf("input %q wants money as a decimal string, got %T", f.Name, v)
 		}
-		if _, err := ParseMoney(s); err != nil {
+		minor, err := ParseMoney(s)
+		if err != nil {
 			return nil, fmt.Errorf("input %q: %w", f.Name, err)
 		}
-		return s, nil // canonical boundary encoding: the string crosses, int64 lives in Go
+		return FormatMoney(minor), nil // canonical: " 01.50" is stored as "1.50", so text joins hold
 	case "decimal":
 		// a rate, a coefficient: exact, as a string across the boundary like
 		// money; a JSON number is accepted and written out exactly
 		switch n := v.(type) {
 		case string:
-			if _, err := parseDecimal(n); err != nil {
+			r, err := parseDecimal(n)
+			if err != nil {
 				return nil, fmt.Errorf("input %q: %q is not a decimal", f.Name, n)
 			}
-			return n, nil
+			return CanonicalDecimal(r)
 		case float64:
 			// A JSON number is what someone typed, written out exactly —
 			// unless it carries the sixteen or seventeen digits only a
@@ -675,6 +677,7 @@ func BuiltinActivities() []Activity {
 				Inputs: []FieldDef{
 					{Name: "approved_by", Type: "string", Required: true},
 					{Name: "occurred_at", Type: "date", Required: true},
+					{Name: "plan", Type: "string"}, // the dry run read, by its fingerprint
 				},
 				Emits: "backfill.approved",
 				Who:   []string{"human"},
