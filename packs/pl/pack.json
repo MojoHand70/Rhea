@@ -1,9 +1,14 @@
 {
   "pack": "pl",
-  "version": 37,
+  "version": 38,
   "stage": "initial",
   "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
   "history": [
+    {
+      "versions": "38",
+      "date": "2026-10-20",
+      "changes": "Pożyczki (lekcja I-15 egzaminu 2025, napisana przez autora i sprawdzona; rejestr EXAM.md 6.1.2 d, 6.1.2 a, 6.1.6): pożyczka otrzymana albo udzielona jest obiektem loan w wartości nominalnej z dnia powstania (art. 28 ust. 11 pkt 2 UoR) — otrzymana Wn 130 / Ma 240 Pożyczki otrzymane, udzielona Wn 030 Udzielone pożyczki / Ma 130; spłata (repay_loan) zmniejsza kwotę wymaganej zapłaty i zamyka pożyczkę, gdy dojdzie do zera, a spłata ponad tę kwotę nie księguje się; odsetki (charge_loan_interest) są przychodem albo kosztem finansowym (art. 42 ust. 3): zapłacone przez rachunek, naliczone dopisane do kwoty wymaganej zapłaty (art. 28 ust. 1 pkt 7 i 8). Konta 030 i 240; widok pozyczki."
+    },
     {
       "versions": "37",
       "date": "2026-10-20",
@@ -2248,6 +2253,87 @@
           "required": true
         }
       ]
+    },
+    {
+      "name": "loan",
+      "version": 1,
+      "domain": "finance",
+      "label_field": "title",
+      "lifecycle": {
+        "field": "status",
+        "transitions": {
+          "open": [
+            "open",
+            "repaid"
+          ]
+        }
+      },
+      "amendable": [
+        "open",
+        "due_date"
+      ],
+      "fields": [
+        {
+          "name": "title",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "counterparty",
+          "type": "ref<company>",
+          "required": false
+        },
+        {
+          "name": "direction",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "received",
+            "granted"
+          ]
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "due_date",
+          "type": "date",
+          "required": false
+        },
+        {
+          "name": "nominal",
+          "type": "money",
+          "required": true,
+          "description": "wartość nominalna z dnia powstania (art. 28 ust. 11 pkt 2)"
+        },
+        {
+          "name": "open",
+          "type": "money",
+          "required": true,
+          "description": "kwota wymaganej zapłaty: nominał plus naliczone odsetki, minus spłaty (art. 28 ust. 1 pkt 7 i 8)"
+        },
+        {
+          "name": "interest_rate",
+          "type": "decimal",
+          "required": false
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "open",
+            "repaid"
+          ]
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ]
     }
   ],
   "view_defs": [
@@ -2660,7 +2746,7 @@
     },
     {
       "view_id": "slownik",
-      "version": 11,
+      "version": 12,
       "notion": "words",
       "title": "Słownik",
       "domain": "finance",
@@ -2901,6 +2987,11 @@
           "asset_advance": {
             "label": "Zaliczka na środek trwały",
             "plural": "Zaliczki na środki trwałe",
+            "shape": "card"
+          },
+          "loan": {
+            "label": "Pożyczka",
+            "plural": "Pożyczki",
             "shape": "card"
           }
         },
@@ -3190,7 +3281,14 @@
           "asset_advance.supplier": "Dostawca",
           "asset_advance.amount_foreign": "Kwota w walucie",
           "asset_advance.amount_pln": "Złote z dnia zapłaty",
-          "asset_advance.settled_on": "Rozliczona"
+          "asset_advance.settled_on": "Rozliczona",
+          "loan.title": "Tytuł",
+          "loan.counterparty": "Kontrahent",
+          "loan.direction": "Kierunek",
+          "loan.due_date": "Termin spłaty",
+          "loan.nominal": "Wartość nominalna",
+          "loan.open": "Kwota wymaganej zapłaty",
+          "loan.interest_rate": "Oprocentowanie"
         },
         "values": {
           "account.type": {
@@ -3478,6 +3576,14 @@
           "asset_advance.status": {
             "open": "otwarta",
             "settled": "rozliczona"
+          },
+          "loan.direction": {
+            "received": "otrzymana",
+            "granted": "udzielona"
+          },
+          "loan.status": {
+            "open": "otwarta",
+            "repaid": "spłacona"
           }
         },
         "events": {
@@ -3543,7 +3649,11 @@
           "inventory.write_down.reversed": "Cofnięcie odpisu zapasów",
           "construction.cost_moved": "Koszt zdjęty z budowy środka trwałego",
           "asset_advance.paid": "Zaliczka na środek trwały",
-          "asset_advance.settled": "Rozliczenie zaliczki na środek trwały"
+          "asset_advance.settled": "Rozliczenie zaliczki na środek trwały",
+          "loan.received": "Pożyczka otrzymana",
+          "loan.granted": "Pożyczka udzielona",
+          "loan.repaid": "Spłata pożyczki",
+          "loan.interest_charged": "Odsetki od pożyczki"
         },
         "doors": {
           "appoint_deputy": "wyznaczenie zastępcy",
@@ -3601,7 +3711,11 @@
           "reverse_inventory_write_down": "cofnięcie odpisu zapasów",
           "move_from_construction": "zdjęcie kosztu z budowy",
           "pay_asset_advance": "zaliczka na środek trwały",
-          "settle_asset_advance": "rozliczenie zaliczki na środek trwały"
+          "settle_asset_advance": "rozliczenie zaliczki na środek trwały",
+          "receive_loan": "pożyczka otrzymana",
+          "grant_loan": "pożyczka udzielona",
+          "repay_loan": "spłata pożyczki",
+          "charge_loan_interest": "odsetki od pożyczki"
         },
         "account_groups": {
           "0": "Aktywa trwałe",
@@ -4378,6 +4492,51 @@
           {
             "field": "settled_on",
             "label": "Zakończony"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "pozyczki",
+      "version": 1,
+      "notion": "list",
+      "title": "Pożyczki",
+      "domain": "finance",
+      "function": "rozrachunki",
+      "spec": {
+        "object_type": "loan",
+        "columns": [
+          {
+            "field": "title",
+            "label": "Tytuł"
+          },
+          {
+            "field": "direction",
+            "label": "Kierunek"
+          },
+          {
+            "field": "counterparty",
+            "label": "Kontrahent"
+          },
+          {
+            "field": "date",
+            "label": "Dzień"
+          },
+          {
+            "field": "due_date",
+            "label": "Termin spłaty"
+          },
+          {
+            "field": "nominal",
+            "label": "Wartość nominalna"
+          },
+          {
+            "field": "open",
+            "label": "Kwota wymaganej zapłaty"
+          },
+          {
+            "field": "status",
+            "label": "Status"
           }
         ]
       }
@@ -8723,6 +8882,499 @@
           "wzorcowy plan kont: 080 Środki trwałe w budowie, 249 Pozostałe rozrachunki, 130 Rachunek bieżący, 761 Pozostałe koszty operacyjne"
         ]
       }
+    },
+    {
+      "rule_id": "pl-record-loan-received",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Zaciągnięta pożyczka staje się obiektem loan w wartości nominalnej z dnia powstania; kwota wymaganej zapłaty zaczyna się od nominału",
+      "spec": {
+        "match": {
+          "event_type": "loan.received",
+          "where": [
+            {
+              "formula": "=$.nominal > 0"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "loan",
+            "fields": {
+              "title": "=$.title",
+              "counterparty": "=$.lender",
+              "direction": "received",
+              "date": "=$.date",
+              "due_date": "=$.due_date",
+              "nominal": "=$.nominal",
+              "open": "=$.nominal",
+              "interest_rate": "=$.interest_rate",
+              "status": "open",
+              "book": "pl-stat"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 28 ust. 11 pkt 2: na dzień nabycia lub powstania ujmuje się w księgach rachunkowych „należności i zobowiązania, w tym również z tytułu pożyczek – według wartości nominalnej” (pytanie I-15 egzaminu 2025: zobowiązania z tytułu pożyczek na dzień ich powstania wycenia się w wartości nominalnej)"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-record-loan-granted",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Udzielona pożyczka staje się obiektem loan w wartości nominalnej z dnia powstania; kwota wymaganej zapłaty zaczyna się od nominału",
+      "spec": {
+        "match": {
+          "event_type": "loan.granted",
+          "where": [
+            {
+              "formula": "=$.nominal > 0"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "loan",
+            "fields": {
+              "title": "=$.title",
+              "counterparty": "=$.borrower",
+              "direction": "granted",
+              "date": "=$.date",
+              "due_date": "=$.due_date",
+              "nominal": "=$.nominal",
+              "open": "=$.nominal",
+              "interest_rate": "=$.interest_rate",
+              "status": "open",
+              "book": "pl-stat"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 28 ust. 11 pkt 2: na dzień nabycia lub powstania ujmuje się w księgach rachunkowych „należności i zobowiązania, w tym również z tytułu pożyczek – według wartości nominalnej” (pytanie I-15 egzaminu 2025: zobowiązania z tytułu pożyczek na dzień ich powstania wycenia się w wartości nominalnej)",
+          "ustawa o rachunkowości art. 3 ust. 1 pkt 17: inwestycje to aktywa posiadane w celu osiągnięcia korzyści ekonomicznych, w tym „uzyskania przychodów w formie odsetek” — udzielona pożyczka jest inwestycją, nie należnością z dostaw"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-loan-received",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Otrzymana pożyczka księguje się w dniu wypłaty w wartości nominalnej: Wn 130 Rachunek bieżący / Ma 240 Pożyczki otrzymane",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "loan"
+            },
+            {
+              "path": "$.state.direction",
+              "op": "eq",
+              "value": "received"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.date",
+            "lines": [
+              {
+                "account": "130",
+                "debit": "=$.state.nominal"
+              },
+              {
+                "account": "240",
+                "credit": "=$.state.nominal"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 28 ust. 11 pkt 2: na dzień nabycia lub powstania ujmuje się w księgach rachunkowych „należności i zobowiązania, w tym również z tytułu pożyczek – według wartości nominalnej” (pytanie I-15 egzaminu 2025: zobowiązania z tytułu pożyczek na dzień ich powstania wycenia się w wartości nominalnej)",
+          "wzorcowy plan kont: 030 Udzielone pożyczki (inwestycje), 130 Rachunek bieżący, 240 Pożyczki otrzymane, 750 Przychody finansowe, 751 Koszty finansowe"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-loan-granted",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Udzielona pożyczka księguje się w dniu wypłaty w wartości nominalnej: Wn 030 Udzielone pożyczki / Ma 130 Rachunek bieżący",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "loan"
+            },
+            {
+              "path": "$.state.direction",
+              "op": "eq",
+              "value": "granted"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.date",
+            "lines": [
+              {
+                "account": "030",
+                "debit": "=$.state.nominal"
+              },
+              {
+                "account": "130",
+                "credit": "=$.state.nominal"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 28 ust. 11 pkt 2: na dzień nabycia lub powstania ujmuje się w księgach rachunkowych „należności i zobowiązania, w tym również z tytułu pożyczek – według wartości nominalnej” (pytanie I-15 egzaminu 2025: zobowiązania z tytułu pożyczek na dzień ich powstania wycenia się w wartości nominalnej)",
+          "ustawa o rachunkowości art. 3 ust. 1 pkt 17: inwestycje to aktywa posiadane w celu osiągnięcia korzyści ekonomicznych, w tym „uzyskania przychodów w formie odsetek” — udzielona pożyczka jest inwestycją, nie należnością z dostaw",
+          "wzorcowy plan kont: 030 Udzielone pożyczki (inwestycje), 130 Rachunek bieżący, 240 Pożyczki otrzymane, 750 Przychody finansowe, 751 Koszty finansowe"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-repay-loan",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Spłata zmniejsza kwotę wymaganej zapłaty; pożyczka spłacona do zera przechodzi w stan repaid; spłata ponad kwotę wymaganej zapłaty nie pasuje do żadnej reguły i nie księguje się",
+      "spec": {
+        "match": {
+          "event_type": "loan.repaid",
+          "where": [
+            {
+              "formula": "=$.amount > 0 and $.amount <= $.loan.open"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "loan",
+            "target": "=$.loan",
+            "set": {
+              "open": "=$.loan.open - $.amount",
+              "status": "=if($.loan.open - $.amount = 0, \"repaid\", \"open\")"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 28 ust. 1 pkt 7: nie rzadziej niż na dzień bilansowy „należności i udzielone pożyczki – w kwocie wymaganej zapłaty, z zachowaniem zasady ostrożności” — naliczone odsetki należne wchodzą w kwotę wymaganej zapłaty",
+          "ustawa o rachunkowości art. 28 ust. 1 pkt 8: nie rzadziej niż na dzień bilansowy „zobowiązania – w kwocie wymagającej zapłaty” — naliczone odsetki do zapłaty wchodzą w kwotę wymagającej zapłaty"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-loan-repayment-received",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Spłata otrzymanej pożyczki: Wn 240 Pożyczki otrzymane / Ma 130, w kwocie spłaty",
+      "spec": {
+        "match": {
+          "event_type": "loan.repaid",
+          "where": [
+            {
+              "formula": "=$.amount > 0 and $.amount <= $.loan.open and $.loan.direction = \"received\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.date",
+            "lines": [
+              {
+                "account": "240",
+                "debit": "=$.amount"
+              },
+              {
+                "account": "130",
+                "credit": "=$.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 28 ust. 1 pkt 8: nie rzadziej niż na dzień bilansowy „zobowiązania – w kwocie wymagającej zapłaty” — naliczone odsetki do zapłaty wchodzą w kwotę wymagającej zapłaty",
+          "wzorcowy plan kont: 030 Udzielone pożyczki (inwestycje), 130 Rachunek bieżący, 240 Pożyczki otrzymane, 750 Przychody finansowe, 751 Koszty finansowe"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-loan-repayment-granted",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Spłata udzielonej pożyczki: Wn 130 / Ma 030 Udzielone pożyczki, w kwocie spłaty",
+      "spec": {
+        "match": {
+          "event_type": "loan.repaid",
+          "where": [
+            {
+              "formula": "=$.amount > 0 and $.amount <= $.loan.open and $.loan.direction = \"granted\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.date",
+            "lines": [
+              {
+                "account": "130",
+                "debit": "=$.amount"
+              },
+              {
+                "account": "030",
+                "credit": "=$.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 28 ust. 1 pkt 7: nie rzadziej niż na dzień bilansowy „należności i udzielone pożyczki – w kwocie wymaganej zapłaty, z zachowaniem zasady ostrożności” — naliczone odsetki należne wchodzą w kwotę wymaganej zapłaty",
+          "wzorcowy plan kont: 030 Udzielone pożyczki (inwestycje), 130 Rachunek bieżący, 240 Pożyczki otrzymane, 750 Przychody finansowe, 751 Koszty finansowe"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-accrue-loan-interest",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Odsetki naliczone, lecz niezapłacone, dopisują się do kwoty wymaganej zapłaty pożyczki",
+      "spec": {
+        "match": {
+          "event_type": "loan.interest_charged",
+          "where": [
+            {
+              "formula": "=$.amount > 0 and $.settlement = \"accrued\""
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "loan",
+            "target": "=$.loan",
+            "set": {
+              "open": "=$.loan.open + $.amount"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 28 ust. 1 pkt 7: nie rzadziej niż na dzień bilansowy „należności i udzielone pożyczki – w kwocie wymaganej zapłaty, z zachowaniem zasady ostrożności” — naliczone odsetki należne wchodzą w kwotę wymaganej zapłaty",
+          "ustawa o rachunkowości art. 28 ust. 1 pkt 8: nie rzadziej niż na dzień bilansowy „zobowiązania – w kwocie wymagającej zapłaty” — naliczone odsetki do zapłaty wchodzą w kwotę wymagającej zapłaty"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-loan-interest-received-accrued",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Odsetki naliczone od otrzymanej pożyczki są kosztem finansowym i zwiększają zobowiązanie: Wn 751 / Ma 240",
+      "spec": {
+        "match": {
+          "event_type": "loan.interest_charged",
+          "where": [
+            {
+              "formula": "=$.amount > 0 and $.settlement = \"accrued\" and $.loan.direction = \"received\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.date",
+            "lines": [
+              {
+                "account": "751",
+                "debit": "=$.amount"
+              },
+              {
+                "account": "240",
+                "credit": "=$.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 42 ust. 3: wynik operacji finansowych stanowi różnicę między przychodami finansowymi, w szczególności z tytułu odsetek, a kosztami finansowymi, w szczególności z tytułu odsetek",
+          "ustawa o rachunkowości art. 28 ust. 1 pkt 8: nie rzadziej niż na dzień bilansowy „zobowiązania – w kwocie wymagającej zapłaty” — naliczone odsetki do zapłaty wchodzą w kwotę wymagającej zapłaty",
+          "wzorcowy plan kont: 030 Udzielone pożyczki (inwestycje), 130 Rachunek bieżący, 240 Pożyczki otrzymane, 750 Przychody finansowe, 751 Koszty finansowe"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-loan-interest-received-paid",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Odsetki zapłacone od otrzymanej pożyczki są kosztem finansowym: Wn 751 / Ma 130",
+      "spec": {
+        "match": {
+          "event_type": "loan.interest_charged",
+          "where": [
+            {
+              "formula": "=$.amount > 0 and $.settlement = \"paid\" and $.loan.direction = \"received\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.date",
+            "lines": [
+              {
+                "account": "751",
+                "debit": "=$.amount"
+              },
+              {
+                "account": "130",
+                "credit": "=$.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 42 ust. 3: wynik operacji finansowych stanowi różnicę między przychodami finansowymi, w szczególności z tytułu odsetek, a kosztami finansowymi, w szczególności z tytułu odsetek",
+          "wzorcowy plan kont: 030 Udzielone pożyczki (inwestycje), 130 Rachunek bieżący, 240 Pożyczki otrzymane, 750 Przychody finansowe, 751 Koszty finansowe"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-loan-interest-granted-accrued",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Odsetki naliczone od udzielonej pożyczki są przychodem finansowym i zwiększają należność: Wn 030 / Ma 750",
+      "spec": {
+        "match": {
+          "event_type": "loan.interest_charged",
+          "where": [
+            {
+              "formula": "=$.amount > 0 and $.settlement = \"accrued\" and $.loan.direction = \"granted\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.date",
+            "lines": [
+              {
+                "account": "030",
+                "debit": "=$.amount"
+              },
+              {
+                "account": "750",
+                "credit": "=$.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 42 ust. 3: wynik operacji finansowych stanowi różnicę między przychodami finansowymi, w szczególności z tytułu odsetek, a kosztami finansowymi, w szczególności z tytułu odsetek",
+          "ustawa o rachunkowości art. 28 ust. 1 pkt 7: nie rzadziej niż na dzień bilansowy „należności i udzielone pożyczki – w kwocie wymaganej zapłaty, z zachowaniem zasady ostrożności” — naliczone odsetki należne wchodzą w kwotę wymaganej zapłaty",
+          "wzorcowy plan kont: 030 Udzielone pożyczki (inwestycje), 130 Rachunek bieżący, 240 Pożyczki otrzymane, 750 Przychody finansowe, 751 Koszty finansowe"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-loan-interest-granted-paid",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Odsetki otrzymane od udzielonej pożyczki są przychodem finansowym: Wn 130 / Ma 750",
+      "spec": {
+        "match": {
+          "event_type": "loan.interest_charged",
+          "where": [
+            {
+              "formula": "=$.amount > 0 and $.settlement = \"paid\" and $.loan.direction = \"granted\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.date",
+            "lines": [
+              {
+                "account": "130",
+                "debit": "=$.amount"
+              },
+              {
+                "account": "750",
+                "credit": "=$.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 42 ust. 3: wynik operacji finansowych stanowi różnicę między przychodami finansowymi, w szczególności z tytułu odsetek, a kosztami finansowymi, w szczególności z tytułu odsetek",
+          "wzorcowy plan kont: 030 Udzielone pożyczki (inwestycje), 130 Rachunek bieżący, 240 Pożyczki otrzymane, 750 Przychody finansowe, 751 Koszty finansowe"
+        ]
+      }
     }
   ],
   "activities": [
@@ -9736,6 +10388,177 @@
           "human"
         ]
       }
+    },
+    {
+      "name": "receive_loan",
+      "domain": "finance",
+      "description": "Firma zaciąga pożyczkę: od kogo, dzień wypłaty, kwota nominalna, termin spłaty, oprocentowanie; księguje się ją w wartości nominalnej w dniu powstania (art. 28 ust. 11 pkt 2 UoR)",
+      "spec": {
+        "inputs": [
+          {
+            "name": "title",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "lender",
+            "type": "ref<company>",
+            "required": false
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "nominal",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "due_date",
+            "type": "date",
+            "required": false
+          },
+          {
+            "name": "interest_rate",
+            "type": "decimal",
+            "required": false
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "loan.received",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "grant_loan",
+      "domain": "finance",
+      "description": "Firma udziela pożyczki: komu, dzień wypłaty, kwota nominalna, termin spłaty, oprocentowanie; należność z pożyczki powstaje w wartości nominalnej (art. 28 ust. 11 pkt 2 UoR)",
+      "spec": {
+        "inputs": [
+          {
+            "name": "title",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "borrower",
+            "type": "ref<company>",
+            "required": false
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "nominal",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "due_date",
+            "type": "date",
+            "required": false
+          },
+          {
+            "name": "interest_rate",
+            "type": "decimal",
+            "required": false
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "loan.granted",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "repay_loan",
+      "domain": "finance",
+      "description": "Spłata pożyczki — otrzymanej albo udzielonej — w kwocie, jaka przeszła przez rachunek; kwota wymaganej zapłaty maleje, a gdy dojdzie do zera, pożyczka jest spłacona; spłata ponad kwotę wymaganej zapłaty nie księguje się",
+      "spec": {
+        "inputs": [
+          {
+            "name": "loan",
+            "type": "ref<loan>",
+            "required": true
+          },
+          {
+            "name": "amount",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "loan.repaid",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "charge_loan_interest",
+      "domain": "finance",
+      "description": "Odsetki od pożyczki za okres: zapłacone przez rachunek albo naliczone (na dzień bilansowy) i dopisane do kwoty wymaganej zapłaty; dla pożyczki otrzymanej koszt finansowy, dla udzielonej przychód finansowy (art. 42 ust. 3 UoR)",
+      "spec": {
+        "inputs": [
+          {
+            "name": "loan",
+            "type": "ref<loan>",
+            "required": true
+          },
+          {
+            "name": "amount",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "settlement",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "accrued",
+              "paid"
+            ]
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "loan.interest_charged",
+        "who": [
+          "human"
+        ]
+      }
     }
   ],
   "events": [
@@ -10390,6 +11213,28 @@
         "code": "349",
         "name": "Odpisy aktualizujące wartość zapasów (konto korygujące)",
         "type": "asset",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.created",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/account/030",
+      "payload": {
+        "code": "030",
+        "name": "Udzielone pożyczki",
+        "type": "asset",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.created",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/account/240",
+      "payload": {
+        "code": "240",
+        "name": "Pożyczki otrzymane",
+        "type": "creditor",
         "market": "pl"
       }
     }

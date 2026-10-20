@@ -4484,3 +4484,71 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
 - Test: `TestExpandLeavesAnOptionalFieldUnsetWhenItsInputIsAbsent` — four optional fields
   of four types unset from an absent input, set when given; the required field and the
   computation refused.
+
+## 2026-10-20 — The third review: a row's company comes from the data
+
+- The third review (67 findings, 3 critical) read the isolation layer built that
+  afternoon and found its seam: a row's company was taken from the caller, not from the
+  data — a derived event fell back to the request's company (replay diverged), every
+  chain ran under the caller's scope (B's withdrawal closed A's complaint when the clock
+  ran as the owner), and an office acting for no client wrote rows every company saw
+  because the policy admitted a blank company. Four commits: the isolation cluster, the
+  highs, the mediums with the cheap lows, and this note.
+- The scope model, final form: `WithOwner` (the kernel's own work: replay, backup, the
+  loader, the clock, refusals the kernel records), `WithInstallation` (the installation's
+  rows alone: a request naming no company, a fact with no company), `WithCompany` (one
+  company), `WithScope` + `ActFor` (an office's set and the client it acts for). A
+  request never runs as the owner; the clock and the adapters fan out per company as the
+  owner. The database's WITH CHECK admits a blank-company row only from the
+  installation's own scope. A fact's dedup key is its company's (a partial unique index
+  on the key, null companies equal; derived events carry none).
+- Decided on the way: a confirmed PDF reading carries the reader's identity key (the
+  same invoice read again and confirmed is one fact); a document with a reading proposed
+  is not read again until a person decides; the confidence gate defaults to 1.00 when a
+  channel gives none or an unreadable one; a cross-site write is refused before any door;
+  the fake KSeF answers only when no environment is named; formula `=`/`<>` compare texts
+  as spelled ("0100" is not "100") and a number against non-numeric text is unequal, not
+  an error; the backfill approval names the dry run it read and refuses a past that moved;
+  a file is served only to a scope that has a document or a fact naming it; a pack's
+  master data that changed under its key is refused, never skipped; store reads cost
+  steps against the formula budget.
+- Assessed and left: the dry run's own balance and matching (#12, carried), the
+  effective date of a forwarded late document (#10, carried), an approval activating a
+  version under a concurrent draft (#13, carried), a derived payload's bare integer (#18,
+  the kernel's convention), the draft check over every template slot and path-condition
+  typos (#26, #27 — the author's gate, next), money above 2^53 through float64 on replay
+  (#36, 90 trillion PLN), a copied link value's Calc (#37), the verb form's dedup key
+  (#15 — the form sends one next), monthly schedules clamping from the clamped date (#53:
+  needs an anchor day on the task_schedule type, a pack change), the tests the review
+  asks for beyond those added (#60 re-running rules into a second database, #61 every GET
+  route with two companies, #62 doors from N goroutines, #64, #65), SQL in Go strings
+  (#50), the exam harness under markets/pl (#54), the stale comments and dead helpers
+  (#67), and `rhea replay`'s snapshot outside the lock (#47).
+
+## 2026-10-20 — Pack v38: loans at their nominal value, repaid and bearing interest
+
+- Lesson I-15 of the author's block I drafts (EXAM.md 6.1.2 d, 6.1.2 a, 6.1.6 a–b, 1.3.6).
+  A loan received or granted is a `loan` at its nominal value on the day it arises (UoR
+  art. 28 ust. 11 pkt 2): received Wn 130 / Ma 240 Pożyczki otrzymane, granted Wn 030
+  Udzielone pożyczki / Ma 130 — a loan granted is an investment (art. 3 ust. 1 pkt 17),
+  not a trade receivable. The author drafted two types and the day of inception only; a
+  loan lives on, so the lesson carries the common path: `repay_loan` brings the amount
+  due down and closes the loan at zero, a repayment past the amount due matches no rule
+  and books nothing; `charge_loan_interest` books interest as financial cost or revenue
+  (art. 42 ust. 3), paid through the account or accrued — and accrued interest joins the
+  amount due, which is the carrying amount the act names (art. 28 ust. 1 pkt 7 and 8,
+  "w kwocie wymaganej zapłaty"). One type with a direction instead of two: the repayment
+  and interest rules read the direction through the link. Accounts 030 and 240; view
+  `pozyczki`.
+- Simplifications said in the history: złoty only (a loan in a foreign currency waits for
+  the balance-date revaluation lesson); one account each side, the long- and short-term
+  split left to presentation; no amortised cost (art. 28 ust. 1 pkt 7a and 8a are an
+  option, not a small company's default); the rate is recorded, the interest amount is
+  the person's.
+- Boundary checklist: the caller's scope only; twice: the caller's dedup key as every
+  door, and the amount due is amended by the loan's id; money: nominal, open, every
+  amount, strings across the boundary.
+- Test: `TestLoans` — 100 000 from a shareholder, 40 000 repaid, 2 000 accrued at the
+  balance date, 70 000 refused, 62 000 closes it; 50 000 to a subsidiary with 1 000 paid
+  and 500 accrued interest, repaid with the interest. Pinned counts: 35 types, 33 views,
+  115 rules, 30 doors, 62 events, 50 accounts.
