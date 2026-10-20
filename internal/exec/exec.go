@@ -233,8 +233,11 @@ func (x *Executor) evaluate(ctx context.Context, ev core.Event, rules []core.Rul
 	}
 	get := func(id string) (map[string]any, bool, error) {
 		o, err := x.Store.GetObject(ctx, id)
+		if errors.Is(err, store.ErrNotFound) {
+			return nil, false, nil // a lookup already vouched for real ids
+		}
 		if err != nil {
-			return nil, false, nil // not found; a lookup already vouched for real ids
+			return nil, false, err // a store failure is not "no object"
 		}
 		return o.State, true, nil
 	}

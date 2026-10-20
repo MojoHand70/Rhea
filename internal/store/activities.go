@@ -61,6 +61,9 @@ func insertActivityVersion(ctx context.Context, q Querier, a core.Activity) (cor
 		RETURNING version, created_at`,
 		a.Name, a.Status, a.Domain, a.Description, spec, a.CreatedBy,
 	).Scan(&a.Version, &a.CreatedAt)
+	if IsDuplicate(err) {
+		return a, fmt.Errorf("activity %s moved while this version was drafted — redraft from the latest: %w", a.Name, err)
+	}
 	return a, err
 }
 

@@ -201,3 +201,89 @@ func TestBackfillLateAmendment(t *testing.T) {
 	}
 	assertReplayIdentical(t, x)
 }
+
+// An in-chain amendment moves the diff's copy of the new object, never the
+// materialization the chain books: the object.materialized event carries
+// the state the materializing rule produced, under that rule's name, and
+// the amendment carries the move under its own (invariant 5), as the live
+// path books them.
+func TestBackfillInChainAmendmentKeepsProvenance(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	x := &exec.Executor{Store: s}
+	lc := &core.LifecycleDef{Field: "status", Transitions: map[string][]string{"open": {"closed"}}}
+	for _, ot := range []core.ObjectType{
+		{Name: "complaint", Version: 1, Domain: "sales", Fields: []core.FieldDef{
+			{Name: "number", Type: "string", Required: true},
+			{Name: "status", Type: "enum", Values: []string{"open", "closed"}, Required: true}}, Lifecycle: lc},
+		{Name: "case", Version: 1, Domain: "work", Fields: []core.FieldDef{
+			{Name: "subject", Type: "string", Required: true},
+			{Name: "status", Type: "enum", Values: []string{"open", "closed"}, Required: true}}, Lifecycle: lc},
+	} {
+		if err := s.InsertObjectType(ctx, ot); err != nil {
+			t.Fatal(err)
+		}
+	}
+	activate := func(id string, prio int, spec core.RuleSpec) {
+		t.Helper()
+		if _, err := s.InsertRuleVersion(ctx, core.Rule{ID: id, Status: core.StatusActive, Priority: prio,
+			EffectiveFrom: "2026-01-01", CreatedBy: "test", Description: id, Spec: spec}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	activate("book-complaint", 100, core.RuleSpec{Match: core.Match{EventType: "complaint.registered"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "complaint",
+			Fields: map[string]string{"number": "=$.number", "status": "open"}}}})
+	if _, err := x.TriggerActivity(ctx, "submit_event", map[string]any{
+		"event_type": "complaint.registered", "occurred_at": "2026-09-27", "payload": map[string]any{"number": "R-1"}}, "test", ""); err != nil {
+		t.Fatal(err)
+	}
+	// Understanding arrives twice at once: a complaint raises a case, and a
+	// case raised this way closes on the spot — one chain, a materialization
+	// and an amendment of the same new object.
+	activate("raise-case", 200, core.RuleSpec{Match: core.Match{EventType: core.EventObjectMaterialized,
+		Where: []core.Condition{{Path: "$.object_type", Op: "eq", Value: "complaint"}}},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "case",
+			Fields: map[string]string{"subject": "=$.state.number", "status": "open"}}}})
+	activate("close-case-at-once", 300, core.RuleSpec{Match: core.Match{EventType: core.EventObjectMaterialized,
+		Where: []core.Condition{{Path: "$.object_type", Op: "eq", Value: "case"}}},
+		Effect: core.Effect{Amend: &core.AmendTemplate{Type: "case",
+			Target: "=ref(case, subject, $.state.subject)", Set: map[string]string{"status": "closed"}}}})
+	plan, err := x.PlanBackfill(ctx, "2026-10-08")
+	if err != nil || len(plan.Chains) != 1 || len(plan.Diff.Added) != 1 || len(plan.Errors) != 0 {
+		t.Fatalf("plan: %+v, %v", plan, err)
+	}
+	if plan.Diff.Added[0].State["status"] != "closed" {
+		t.Fatalf("the diff shows the chain's end state: %v", plan.Diff.Added[0].State)
+	}
+	if _, errs, err := x.ApproveBackfill(ctx, "krzysztof", "2026-10-08"); err != nil || len(errs) != 0 {
+		t.Fatalf("approve: %v, %v", errs, err)
+	}
+	derived, _ := s.EventsByKind(ctx, core.KindDerived)
+	var materialized, amended int
+	for _, ev := range derived {
+		switch ev.Type {
+		case core.EventObjectMaterialized:
+			var m core.MaterializedObject
+			json.Unmarshal(ev.Payload, &m)
+			if m.ObjectType == "case" {
+				materialized++
+				if m.State["status"] != "open" || ev.RuleID != "raise-case" {
+					t.Fatalf("the case's materialization says %v under %s", m.State, ev.RuleID)
+				}
+			}
+		case core.EventObjectAmended:
+			amended++
+			if ev.RuleID != "close-case-at-once" {
+				t.Fatalf("amendment under %s", ev.RuleID)
+			}
+		}
+	}
+	if materialized != 1 || amended != 1 {
+		t.Fatalf("materialized %d, amended %d", materialized, amended)
+	}
+	if cases, _ := s.ObjectsByType(ctx, "case"); len(cases) != 1 || cases[0].State["status"] != "closed" {
+		t.Fatalf("case = %+v", cases)
+	}
+	assertReplayIdentical(t, x)
+}

@@ -25,8 +25,9 @@ do not invent another one.
 ## Invariants (hard — tests must enforce them)
 1. The `event` log is append-only. No UPDATE, no DELETE, anywhere. Same for `rule`,
    `object_type`, `view_def`: changes are new version rows.
-2. Rules follow `draft → approved → active → superseded`; only `active` rules execute;
-   activation requires an explicit human approval activity, itself recorded as an event.
+2. Rules follow `draft → active → superseded`; only `active` rules execute; activation
+   requires an explicit human approval activity, itself recorded as an event — the
+   approval is that event, not a resting status.
 3. The agent never writes state. Its output is data: definitions stored as drafts and
    activated only by a human approval, and read-only queries the kernel runs on the
    analysis copy in a locked session that cannot write, reach files or reach the network.

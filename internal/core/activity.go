@@ -214,7 +214,7 @@ func (a Activity) Validate() error {
 		return fmt.Errorf("activity needs a name")
 	}
 	switch a.Status {
-	case StatusDraft, StatusApproved, StatusActive, StatusSuperseded:
+	case StatusDraft, StatusActive, StatusSuperseded:
 	case "":
 	default:
 		return fmt.Errorf("activity %q: unknown status %q", a.Name, a.Status)

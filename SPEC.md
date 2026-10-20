@@ -68,8 +68,9 @@ emits, who may trigger it. In M0 the only activities are `submit_event` and
 The unit of system behavior: `match` (a predicate over an event) + `effect` (templates
 for derived events / object materialization). Properties:
 - versioned, append-only; a change is a new version, never an edit;
-- lifecycle `draft → approved → active → superseded`; only `active` rules execute;
-  activation is a human approval activity, recorded as an event like everything else;
+- lifecycle `draft → active → superseded`; only `active` rules execute; activation is
+  a human approval activity, recorded as an event like everything else — the approval
+  is that event, never a resting status of its own;
 - effective-dated (`effective_from`, evaluated against the event's business date);
 - authored by the AI layer or by hand — the kernel cannot tell the difference and
   validates both identically.

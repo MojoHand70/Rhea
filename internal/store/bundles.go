@@ -67,6 +67,9 @@ func InsertBundleVersion(ctx context.Context, q Querier, b core.Bundle) (core.Bu
 		RETURNING version, created_at`,
 		b.ID, b.Status, b.Description, members, b.CreatedBy, warrant, b.Question, b.After,
 	).Scan(&b.Version, &b.CreatedAt)
+	if IsDuplicate(err) {
+		return b, fmt.Errorf("bundle %s moved while this version was drafted — redraft from the latest: %w", b.ID, err)
+	}
 	return b, err
 }
 

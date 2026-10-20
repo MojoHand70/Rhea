@@ -156,7 +156,17 @@ func (t ObjectType) Validate() error {
 	if len(t.Fields) == 0 {
 		return fmt.Errorf("object type %q has no fields", t.Name)
 	}
+	// An object id is "<type>-<key>", and the kernel tells a type by that
+	// prefix: a hyphen in a type name would make "a-b-5" pass as an "a".
+	if strings.Contains(t.Name, "-") {
+		return fmt.Errorf("object type %q: a type name takes no hyphen (ids are <type>-<key>)", t.Name)
+	}
+	seen := map[string]bool{}
 	for _, f := range t.Fields {
+		if seen[f.Name] {
+			return fmt.Errorf("object type %q: field %q is declared twice", t.Name, f.Name)
+		}
+		seen[f.Name] = true
 		switch f.Type {
 		case "string", "int", "decimal", "date", "money":
 		case "enum":
@@ -254,7 +264,6 @@ type Rule struct {
 
 const (
 	StatusDraft      = "draft"
-	StatusApproved   = "approved"
 	StatusActive     = "active"
 	StatusSuperseded = "superseded"
 )

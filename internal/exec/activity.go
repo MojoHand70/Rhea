@@ -3,6 +3,7 @@ package exec
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -451,8 +452,11 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 		}
 		get := func(id string) (map[string]any, bool, error) {
 			o, err := x.Store.GetObject(ctx, id)
-			if err != nil {
+			if errors.Is(err, store.ErrNotFound) {
 				return nil, false, nil
+			}
+			if err != nil {
+				return nil, false, err
 			}
 			return o.State, true, nil
 		}
@@ -556,8 +560,11 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 		}
 		get := func(id string) (map[string]any, bool, error) {
 			o, err := x.Store.GetObject(ctx, id)
-			if err != nil {
+			if errors.Is(err, store.ErrNotFound) {
 				return nil, false, nil
+			}
+			if err != nil {
+				return nil, false, err
 			}
 			return o.State, true, nil
 		}

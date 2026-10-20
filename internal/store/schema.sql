@@ -31,6 +31,11 @@ CREATE TABLE IF NOT EXISTS event (
 -- NULL: history from before the key, or a fact appended without a scope.
 ALTER TABLE event ADD COLUMN IF NOT EXISTS company TEXT;
 CREATE INDEX IF NOT EXISTS event_company ON event (company, event_id);
+-- The worklist anti-joins on the cause, chains and object roots walk it, and
+-- an object's explanation reads its amendments by id: indexed, or every
+-- pending pass scans the whole log.
+CREATE INDEX IF NOT EXISTS event_cause ON event (cause_event_id);
+CREATE INDEX IF NOT EXISTS event_amended_object ON event ((payload->>'object_id')) WHERE event_type = 'object.amended';
 
 -- Idempotent migrations for databases created before these columns.
 ALTER TABLE event ADD COLUMN IF NOT EXISTS actor TEXT;
@@ -108,10 +113,19 @@ ALTER TABLE object_type ADD CONSTRAINT object_type_status_check
 ALTER TABLE view_def DROP CONSTRAINT IF EXISTS view_def_status_check;
 ALTER TABLE view_def ADD CONSTRAINT view_def_status_check
     CHECK (status IN ('draft','active','superseded'));
-ALTER TABLE object_type DROP CONSTRAINT IF EXISTS object_type_pkey;
-ALTER TABLE object_type ADD CONSTRAINT object_type_pkey PRIMARY KEY (name, version, status);
-ALTER TABLE view_def DROP CONSTRAINT IF EXISTS view_def_pkey;
-ALTER TABLE view_def ADD CONSTRAINT view_def_pkey PRIMARY KEY (view_id, version, status);
+-- The key gained status once (the gate); rebuilt only where it still lacks
+-- it, not on every start under an exclusive lock.
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'object_type_pkey' AND array_length(conkey, 1) = 3) THEN
+        ALTER TABLE object_type DROP CONSTRAINT IF EXISTS object_type_pkey;
+        ALTER TABLE object_type ADD CONSTRAINT object_type_pkey PRIMARY KEY (name, version, status);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'view_def_pkey' AND array_length(conkey, 1) = 3) THEN
+        ALTER TABLE view_def DROP CONSTRAINT IF EXISTS view_def_pkey;
+        ALTER TABLE view_def ADD CONSTRAINT view_def_pkey PRIMARY KEY (view_id, version, status);
+    END IF;
+END $$;
 
 -- The scope of one approval: draft members activated whole or not at all.
 CREATE TABLE IF NOT EXISTS bundle (

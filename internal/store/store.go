@@ -83,6 +83,10 @@ func (s *Store) Init(ctx context.Context) error {
 	return s.seedBuiltinActivities(ctx)
 }
 
+// ErrNotFound is how a read says the object is not there — distinct from a
+// store failure, which a caller must not read as "no object".
+var ErrNotFound = errors.New("not found")
+
 // IsDuplicate reports a unique-constraint violation — how append-only tables
 // say "already there". Idempotent loaders (packs, adapter retries) treat it
 // as a skip, not an error.
@@ -561,6 +565,11 @@ func InsertRuleVersion(ctx context.Context, q Querier, r core.Rule) (core.Rule, 
 		RETURNING version, created_at`,
 		r.ID, r.Status, r.Priority, r.EffectiveFrom, r.CreatedBy, r.Description, spec, warrant,
 	).Scan(&r.Version, &r.CreatedAt)
+	if IsDuplicate(err) {
+		// MAX(version)+1 is not atomic: two drafts of one rule at the same
+		// moment collide on the key, and the later one is told why.
+		return r, fmt.Errorf("rule %s moved while this version was drafted — redraft from the latest: %w", r.ID, err)
+	}
 	return r, err
 }
 
@@ -994,7 +1003,7 @@ func (s *Store) GetObject(ctx context.Context, id string) (core.Object, error) {
 		return core.Object{}, err
 	}
 	if len(objs) == 0 {
-		return core.Object{}, fmt.Errorf("object %q not found", id)
+		return core.Object{}, fmt.Errorf("object %q: %w", id, ErrNotFound)
 	}
 	return objs[0], nil
 }

@@ -407,3 +407,19 @@ func TestRuleJSONCannotPanic(t *testing.T) {
 		t.Fatalf("sixty levels refused: %v", err)
 	}
 }
+
+// Identity is checked by prefix, so a type name takes no hyphen; a field
+// declared twice would answer by whichever came last.
+func TestObjectTypeNamesAndFields(t *testing.T) {
+	f := []FieldDef{{Name: "a", Type: "string"}}
+	if err := (ObjectType{Name: "a-b", Version: 1, Domain: "x", Fields: f}).Validate(); err == nil || !strings.Contains(err.Error(), "hyphen") {
+		t.Fatalf("hyphenated type validated: %v", err)
+	}
+	twice := []FieldDef{{Name: "a", Type: "string"}, {Name: "a", Type: "int"}}
+	if err := (ObjectType{Name: "ab", Version: 1, Domain: "x", Fields: twice}).Validate(); err == nil || !strings.Contains(err.Error(), "twice") {
+		t.Fatalf("duplicate field validated: %v", err)
+	}
+	if err := (ObjectType{Name: "a_b", Version: 1, Domain: "x", Fields: f}).Validate(); err != nil {
+		t.Fatal(err)
+	}
+}

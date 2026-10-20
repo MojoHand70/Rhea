@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"rhea/internal/core"
+	"rhea/internal/store"
 )
 
 // Ruled backfill (DIRECTION, late understanding; adopted 2026-10-08):
@@ -76,8 +77,11 @@ func (x *Executor) PlanBackfill(ctx context.Context, date string) (BackfillPlan,
 			return st, true, nil
 		}
 		o, err := x.Store.GetObject(ctx, id)
-		if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
 			return nil, false, nil
+		}
+		if err != nil {
+			return nil, false, err
 		}
 		return o.State, true, nil
 	}
@@ -197,8 +201,15 @@ func (x *Executor) backfillDiff(ctx context.Context, chains []BackfillChain) (Si
 			}
 			if n.amend == nil {
 				added[n.mat.ObjectID] = len(diff.Added)
+				// The diff shows the chain's end state, so an in-chain
+				// amendment merges into this copy — never into the
+				// materialization bookTx writes under its own rule's name.
+				state := make(map[string]any, len(n.mat.State))
+				for k, v := range n.mat.State {
+					state[k] = v
+				}
 				diff.Added = append(diff.Added, core.Object{ID: n.mat.ObjectID, Type: n.mat.ObjectType,
-					TypeVersion: n.mat.TypeVersion, State: n.mat.State, SourceEventID: c.EventID,
+					TypeVersion: n.mat.TypeVersion, State: state, SourceEventID: c.EventID,
 					RuleID: n.rule.ID, RuleVersion: n.rule.Version})
 				continue
 			}

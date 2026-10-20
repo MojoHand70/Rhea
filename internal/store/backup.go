@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // Backup and restore (DIRECTION 2026-10-15, "The plan after the statutory
@@ -49,9 +51,16 @@ func (s *Store) Backup(ctx context.Context, w io.Writer) (BackupCounts, error) {
 	if err := enc.Encode(backupLine{Backup: 1, CreatedAt: time.Now().UTC().Format(time.RFC3339)}); err != nil {
 		return nil, err
 	}
+	// One snapshot: every table read at one point in the log, so no event
+	// in the backup names a rule version the backup lacks.
+	tx, err := s.Pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
 	counts := BackupCounts{}
 	for _, t := range backupTables {
-		rows, err := s.Pool.Query(ctx, "SELECT row_to_json(t) FROM "+t.name+" t ORDER BY "+t.order)
+		rows, err := tx.Query(ctx, "SELECT row_to_json(t) FROM "+t.name+" t ORDER BY "+t.order)
 		if err != nil {
 			return nil, fmt.Errorf("backup %s: %w", t.name, err)
 		}
