@@ -926,6 +926,13 @@ func Expand(tmpl core.ObjectTemplate, objType core.ObjectType, payload any, env 
 		}
 		v, c, err := t.Evaluate(payload, fd, env)
 		if err != nil {
+			// An optional field copied from an input the door did not get
+			// stays unset: the template names where the value would come
+			// from, and nothing came. A required field, and a computation
+			// over an absent input, still fail — nothing stands in for them.
+			if !fd.Required && t.CarriesID() && errors.Is(err, core.ErrMissing) {
+				continue
+			}
 			return nil, nil, fmt.Errorf("field %q: %w", name, err)
 		}
 		if err := vouchRef(fd, t, v, env.Get); err != nil {

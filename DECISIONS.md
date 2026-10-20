@@ -4467,3 +4467,20 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   account, 3 000 of a fire's clean-up moved to 761, an advance of 10 000 EUR paid at
   42 569 złoty and settled at 42 569 with 750 and 751 untouched. Pinned counts: 34 types,
   32 views, 103 rules, 26 doors, 60 events, 48 accounts.
+
+## 2026-10-20 — An optional field copied from an input the door did not get stays unset
+
+- Found writing the loans lesson: a door's optional input (a loan's term, its lender, its
+  rate) copied into an optional field by naming it (`=$.due_date`) failed the whole rule
+  when the person left the input out — "$.due_date: missing" — and the loan never
+  materialized. The pack's way for strings was `coalesce($.number, "")`, a stand-in; a
+  date, a ref or a decimal has nothing that could stand in. The v37 advance's optional
+  supplier carried the same latent defect.
+- The kernel's rule now: in an object template, an optional field copied from a path that
+  is not there is left unset (`exec.Expand`, on `core.ErrMissing`); a required field from
+  an absent input still fails, and a computation over an absent input fails whatever the
+  field — nothing stands in for a value a formula needs. Determinism holds: the derived
+  event carries the state as expanded, and replay expands the same.
+- Test: `TestExpandLeavesAnOptionalFieldUnsetWhenItsInputIsAbsent` — four optional fields
+  of four types unset from an absent input, set when given; the required field and the
+  computation refused.

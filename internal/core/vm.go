@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -325,6 +326,12 @@ func (m *vm) walk(cur Value, path []pathSeg, keys string, optional bool) (Value,
 	return cur, nil
 }
 
+// ErrMissing is the read of a field that is not there: a door input the
+// person did not give, a payload key the event does not carry. A formula
+// may say what stands in (coalesce); an object template may leave an
+// optional field unset (exec.Expand); anything else is an error.
+var ErrMissing = errors.New("missing")
+
 // member reads one field: of an object (typed by the catalog when the
 // object's type is known), or of the object behind a ref — the read through
 // a link, which needs state and is itself recorded as an input. A field that
@@ -342,7 +349,7 @@ func (m *vm) member(v Value, key string, optional bool) (Value, error) {
 			if optional {
 				return Value{Kind: KNull, Origin: v.Origin + "." + key}, nil
 			}
-			return Value{}, fmt.Errorf("%s.%s: missing", v.Origin, key)
+			return Value{}, fmt.Errorf("%s.%s: %w", v.Origin, key, ErrMissing)
 		}
 		origin := v.Origin + "." + key
 		if v.Type != "" && m.env.Types != nil {
