@@ -4620,3 +4620,42 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   December and four back on 1 January; a złoty invoice untouched, złoty refused, a
   currency with nothing open books nothing. Pinned counts: 37 types, 35 views, 126
   rules, 33 doors, 64 events, 52 accounts.
+
+## 2026-10-20 — Pack v41: without going concern, a change of policy, development costs and the dividend cap
+
+- The last three of the author's block I drafts (lessons I-1, I-23, I-20; EXAM.md 6.1.1 b,
+  6.1.8 g, 6.1.7 c, 6.1.2 a). Without going concern (UoR art. 29): the author wrote a
+  door for investment property only and booked the write-down to 761; the act names
+  every asset and sends the difference, and the provision for the costs of ceasing, to
+  the revaluation capital (ust. 2a), so `measure_without_going_concern` takes any item
+  with the account that gives the difference, books Wn 813 / Ma account when the net
+  selling price is below the carrying value and nothing when above, with the reason the
+  act lists (ust. 2), and `provide_for_cessation` books Wn 813 / Ma 830. A change of
+  policy (art. 8 ust. 2; KSR 7 pkt 3.12): the author's door changed inventory methods
+  only; `adjust_for_policy_change` takes any balance-sheet account, the side it takes and
+  the amount, and corrects the opening balance against 820 on the first day of the year
+  — the kernel's own rule versions carry the prospective half (6.1.8 g). Development
+  costs (art. 33 ust. 2–3): `capitalise_development_costs` moves the year's costs to 020
+  against 490, `amortise_development_costs` writes them off Wn 401 / Ma 075 and the
+  unamortised part follows; and `pl-distribute-result` v2 refuses a resolution that puts
+  more to dividends than the profit less the unamortised costs, unless the reserve
+  capital covers them (KSH art. 191 § 4, read literally: the blocked amount is the whole
+  unamortised sum, lifted when the reserve equals it). Account 813 Kapitał z aktualizacji
+  wyceny, 020 and 075 join the chart.
+- The year's close gains the clearing accounts: a capitalisation credits 490, and the
+  comparative variant's result is wrong without it — `pl-close-year-clearing` and new
+  versions of the two close postings, the fourth close type beside cost, revenue and tax.
+- Simplifications said in the history: the liquidation measurement is per item through
+  the person, not a sweep of the balance sheet; the cessation provision is a posting, not
+  a `provision` object of v34's kinds; the development costs' write-off is the person's
+  amount, not a schedule; the cap reads the reserve capital on 802 only, not reserve
+  funds; the share company's art. 348 § 1 (own shares, uncovered losses) is cited, not
+  computed.
+- Boundary checklist: the caller's scope only — the cap's folds and balances read the
+  scope's books; twice: the caller's dedup key, the write-off amends by the object's id;
+  money: every amount, strings across the boundary; the useful life a whole number.
+- Test: `TestPoliciesAndResult` — 60 000 capitalised, 12 000 written off, a 100 000 sale
+  closed into a profit of 148 000 with 490 in it, 120 000 to dividends refused and 100 000
+  booked, 5 000 onto goods through 820, 5 000 off the stock and 8 000 provided through
+  813, a price above the carrying value refused. Pinned counts: 41 types, 38 views, 136
+  rules, 38 doors, 67 events, 55 accounts.

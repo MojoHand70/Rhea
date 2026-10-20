@@ -1,9 +1,14 @@
 {
   "pack": "pl",
-  "version": 40,
+  "version": 41,
   "stage": "initial",
   "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
   "history": [
+    {
+      "versions": "41",
+      "date": "2026-10-20",
+      "changes": "Trzy lekcje egzaminu 2025 (I-1, I-23, I-20; rejestr EXAM.md 6.1.1 b, 6.1.8 g, 6.1.7 c): gdy założenie kontynuacji działalności nie jest zasadne, składnik aktywów wycenia się po cenie sprzedaży netto nie wyższej od wartości księgowej (measure_without_going_concern) i tworzy rezerwę na koszty zaniechania (provide_for_cessation), a różnica idzie na kapitał z aktualizacji wyceny 813 (art. 29 ust. 1–2a UoR); zmiana zasad (polityki) rachunkowości koryguje saldo otwarcia przez 820 zysk (strata) z lat ubiegłych (adjust_for_policy_change; art. 8 ust. 2, KSR 7 pkt 3.12); zakończone prace rozwojowe aktywuje się na 020 w korespondencji z 490 i odpisuje przez okres użyteczności, nie dłużej niż 5 lat (art. 33 ust. 2–3), a dopóki nie są odpisane, podział zysku na dywidendy jest ograniczony (KSH art. 191 § 4, art. 348 § 1): pl-distribute-result v2 odmawia uchwały ponad limit. Konta 020, 075, 813."
+    },
     {
       "versions": "40",
       "date": "2026-10-20",
@@ -2529,6 +2534,205 @@
           "required": true
         }
       ]
+    },
+    {
+      "name": "liquidation_measurement",
+      "version": 1,
+      "domain": "finance",
+      "label_field": "item",
+      "fields": [
+        {
+          "name": "item",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "account",
+          "type": "string",
+          "required": true,
+          "description": "konto, które oddaje różnicę: konto składnika albo jego konto korygujące"
+        },
+        {
+          "name": "carrying_value",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "net_selling_price",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "write_down",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "reason",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "liquidation",
+            "bankruptcy",
+            "no_continuation_at_approval",
+            "transfer_division_or_sale"
+          ]
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "policy_adjustment",
+      "version": 1,
+      "domain": "finance",
+      "label_field": "title",
+      "fields": [
+        {
+          "name": "title",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "account",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "side",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "debit",
+            "credit"
+          ],
+          "description": "strona, po której konto bilansowe przyjmuje korektę; 820 bierze drugą"
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "effective_from",
+          "type": "date",
+          "required": true,
+          "description": "pierwszy dzień roku obrotowego, od którego zmiana działa"
+        },
+        {
+          "name": "basis",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "development_costs",
+      "version": 1,
+      "domain": "finance",
+      "label_field": "title",
+      "lifecycle": {
+        "field": "status",
+        "transitions": {
+          "active": [
+            "active",
+            "written_off"
+          ]
+        }
+      },
+      "amendable": [
+        "unamortised"
+      ],
+      "fields": [
+        {
+          "name": "title",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "unamortised",
+          "type": "money",
+          "required": true,
+          "description": "nieodpisana część — ogranicza podział zysku (KSH art. 191 § 4)"
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "useful_life_years",
+          "type": "int",
+          "required": false,
+          "description": "okres ekonomicznej użyteczności; gdy nieznany, odpisy nie dłużej niż 5 lat (art. 33 ust. 3)"
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "active",
+            "written_off"
+          ]
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "year_close_clearing",
+      "domain": "finance",
+      "label_field": "code",
+      "fields": [
+        {
+          "name": "account",
+          "type": "ref<account>",
+          "required": true
+        },
+        {
+          "name": "code",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "year_end",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true,
+          "description": "saldo konta na dzień bilansowy: Wn minus Ma; przechodzi na 860"
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ],
+      "version": 1
     }
   ],
   "view_defs": [
@@ -2941,7 +3145,7 @@
     },
     {
       "view_id": "slownik",
-      "version": 14,
+      "version": 15,
       "notion": "words",
       "title": "Słownik",
       "domain": "finance",
@@ -3197,6 +3401,26 @@
           "fx_revaluation": {
             "label": "Wycena bilansowa walut",
             "plural": "Wyceny bilansowe walut",
+            "shape": "card"
+          },
+          "liquidation_measurement": {
+            "label": "Wycena bez założenia kontynuacji",
+            "plural": "Wyceny bez założenia kontynuacji",
+            "shape": "card"
+          },
+          "policy_adjustment": {
+            "label": "Zmiana zasad rachunkowości",
+            "plural": "Zmiany zasad rachunkowości",
+            "shape": "card"
+          },
+          "development_costs": {
+            "label": "Prace rozwojowe",
+            "plural": "Prace rozwojowe",
+            "shape": "card"
+          },
+          "year_close_clearing": {
+            "label": "Zamknięcie roku – konto rozliczeniowe",
+            "plural": "Zamknięcie roku – konta rozliczeniowe",
             "shape": "card"
           }
         },
@@ -3514,7 +3738,25 @@
           "fx_revaluation.payables_open": "Zobowiązania w walucie",
           "fx_revaluation.payables_booked_pln": "Zobowiązania po kursach dokumentów",
           "fx_revaluation.payables_closing_pln": "Zobowiązania po kursie bilansowym",
-          "fx_revaluation.payables_difference": "Różnica na zobowiązaniach"
+          "fx_revaluation.payables_difference": "Różnica na zobowiązaniach",
+          "liquidation_measurement.item": "Składnik",
+          "liquidation_measurement.account": "Konto",
+          "liquidation_measurement.carrying_value": "Wartość księgowa",
+          "liquidation_measurement.net_selling_price": "Cena sprzedaży netto",
+          "liquidation_measurement.write_down": "Odpis",
+          "liquidation_measurement.reason": "Powód",
+          "policy_adjustment.title": "Tytuł",
+          "policy_adjustment.account": "Konto",
+          "policy_adjustment.side": "Strona",
+          "policy_adjustment.effective_from": "Od dnia",
+          "policy_adjustment.basis": "Podstawa",
+          "development_costs.title": "Tytuł",
+          "development_costs.unamortised": "Nieodpisane",
+          "development_costs.useful_life_years": "Okres użyteczności (lata)",
+          "year_close_clearing.account": "Konto",
+          "year_close_clearing.code": "Nr konta",
+          "year_close_clearing.year_end": "Dzień bilansowy",
+          "year_close_clearing.amount": "Saldo (Wn minus Ma)"
         },
         "values": {
           "account.type": {
@@ -3822,6 +4064,20 @@
           "deferred_tax.status": {
             "open": "otwarta",
             "reversed": "odwrócona"
+          },
+          "liquidation_measurement.reason": {
+            "liquidation": "likwidacja",
+            "bankruptcy": "upadłość",
+            "no_continuation_at_approval": "brak kontynuacji na dzień zatwierdzenia",
+            "transfer_division_or_sale": "przekazanie, podział lub sprzedaż"
+          },
+          "policy_adjustment.side": {
+            "debit": "Wn",
+            "credit": "Ma"
+          },
+          "development_costs.status": {
+            "active": "aktywne",
+            "written_off": "odpisane"
           }
         },
         "events": {
@@ -3894,7 +4150,12 @@
           "loan.interest_charged": "Odsetki od pożyczki",
           "deferred_tax.recognised": "Odroczony podatek ustalony",
           "deferred_tax.reversed": "Odroczony podatek odwrócony",
-          "fx.balances.revalued": "Wycena bilansowa rozrachunków w walucie"
+          "fx.balances.revalued": "Wycena bilansowa rozrachunków w walucie",
+          "going_concern.measured": "Wycena bez założenia kontynuacji",
+          "cessation.provided": "Rezerwa na zaniechanie działalności",
+          "policy.changed": "Zmiana zasad rachunkowości",
+          "development_costs.capitalised": "Aktywowanie prac rozwojowych",
+          "development_costs.amortised": "Odpis prac rozwojowych"
         },
         "doors": {
           "appoint_deputy": "wyznaczenie zastępcy",
@@ -3959,7 +4220,12 @@
           "charge_loan_interest": "odsetki od pożyczki",
           "recognise_deferred_tax": "odroczony podatek dochodowy",
           "reverse_deferred_tax": "odwrócenie odroczonego podatku",
-          "revalue_fx_balances": "wycena bilansowa walut"
+          "revalue_fx_balances": "wycena bilansowa walut",
+          "measure_without_going_concern": "wycena bez założenia kontynuacji",
+          "provide_for_cessation": "rezerwa na zaniechanie działalności",
+          "adjust_for_policy_change": "zmiana zasad rachunkowości",
+          "capitalise_development_costs": "aktywowanie prac rozwojowych",
+          "amortise_development_costs": "odpis prac rozwojowych"
         },
         "account_groups": {
           "0": "Aktywa trwałe",
@@ -4879,6 +5145,121 @@
           {
             "field": "storno_date",
             "label": "Storno"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "prace-rozwojowe",
+      "version": 1,
+      "notion": "list",
+      "title": "Prace rozwojowe",
+      "domain": "finance",
+      "function": "fixed_assets",
+      "spec": {
+        "object_type": "development_costs",
+        "columns": [
+          {
+            "field": "title",
+            "label": "Tytuł"
+          },
+          {
+            "field": "date",
+            "label": "Aktywowane"
+          },
+          {
+            "field": "amount",
+            "label": "Kwota"
+          },
+          {
+            "field": "unamortised",
+            "label": "Nieodpisane"
+          },
+          {
+            "field": "useful_life_years",
+            "label": "Okres (lata)"
+          },
+          {
+            "field": "status",
+            "label": "Status"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "korekty-zasad",
+      "version": 1,
+      "notion": "list",
+      "title": "Zmiany zasad rachunkowości",
+      "domain": "finance",
+      "function": "equity",
+      "spec": {
+        "object_type": "policy_adjustment",
+        "columns": [
+          {
+            "field": "title",
+            "label": "Tytuł"
+          },
+          {
+            "field": "effective_from",
+            "label": "Od dnia"
+          },
+          {
+            "field": "account",
+            "label": "Konto"
+          },
+          {
+            "field": "side",
+            "label": "Strona"
+          },
+          {
+            "field": "amount",
+            "label": "Kwota"
+          },
+          {
+            "field": "basis",
+            "label": "Podstawa"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "wycena-bez-kontynuacji",
+      "version": 1,
+      "notion": "list",
+      "title": "Wycena bez założenia kontynuacji",
+      "domain": "finance",
+      "function": "equity",
+      "spec": {
+        "object_type": "liquidation_measurement",
+        "columns": [
+          {
+            "field": "item",
+            "label": "Składnik"
+          },
+          {
+            "field": "date",
+            "label": "Dzień"
+          },
+          {
+            "field": "reason",
+            "label": "Powód"
+          },
+          {
+            "field": "carrying_value",
+            "label": "Wartość księgowa"
+          },
+          {
+            "field": "net_selling_price",
+            "label": "Cena sprzedaży netto"
+          },
+          {
+            "field": "write_down",
+            "label": "Odpis"
+          },
+          {
+            "field": "account",
+            "label": "Konto"
           }
         ]
       }
@@ -7545,7 +7926,7 @@
           "event_type": "object.materialized",
           "where": [
             {
-              "formula": "=($.object_type = \"year_close_cost\" or $.object_type = \"year_close_revenue\" or $.object_type = \"year_close_tax\") and $.state.amount > 0"
+              "formula": "=($.object_type = \"year_close_cost\" or $.object_type = \"year_close_revenue\" or $.object_type = \"year_close_tax\" or $.object_type = \"year_close_clearing\") and $.state.amount > 0"
             }
           ]
         },
@@ -7586,7 +7967,7 @@
           "event_type": "object.materialized",
           "where": [
             {
-              "formula": "=($.object_type = \"year_close_cost\" or $.object_type = \"year_close_revenue\" or $.object_type = \"year_close_tax\") and $.state.amount < 0"
+              "formula": "=($.object_type = \"year_close_cost\" or $.object_type = \"year_close_revenue\" or $.object_type = \"year_close_tax\" or $.object_type = \"year_close_clearing\") and $.state.amount < 0"
             }
           ]
         },
@@ -7705,10 +8086,15 @@
       "rule_id": "pl-distribute-result",
       "priority": 100,
       "effective_from": "2026-01-01",
-      "description": "Uchwała o podziale zysku albo pokryciu straty staje się obiektem result_distribution: rok, dzień uchwały, kwoty na kapitał zapasowy, na dywidendy i pokrycia straty",
+      "description": "Uchwała o podziale zysku albo pokryciu straty staje się obiektem result_distribution: rok, dzień uchwały, kwoty na kapitał zapasowy, dywidendy i pokrycie straty; uchwała przeznaczająca na dywidendy więcej, niż wolno przy nieodpisanych kosztach prac rozwojowych — zysk do podziału pomniejszony o nieodpisane koszty, chyba że kapitał zapasowy je pokrywa — nie pasuje do żadnej reguły i nie księguje się",
       "spec": {
         "match": {
-          "event_type": "result.distributed"
+          "event_type": "result.distributed",
+          "where": [
+            {
+              "formula": "=$.to_dividends <= 0 or sum(d in objects(development_costs, status, \"active\") : d.unamortised) <= -balance(\"pl-stat\", \"802\", \"2000-01-01\", $.resolution_date) or $.to_dividends <= -balance(\"pl-stat\", \"820\", \"2000-01-01\", $.resolution_date) - sum(d in objects(development_costs, status, \"active\") : d.unamortised)"
+            }
+          ]
         },
         "effect": {
           "object": {
@@ -7730,7 +8116,8 @@
         "citations": [
           "ustawa o rachunkowości art. 53 ust. 4: „Podział lub pokrycie wyniku finansowego netto jednostek niezobowiązanych do poddania badaniu rocznego sprawozdania finansowego może nastąpić po zatwierdzeniu sprawozdania finansowego przez organ zatwierdzający”; ust. 3: w jednostkach badanych — po zatwierdzeniu poprzedzonym opinią biegłego rewidenta, inaczej podział jest nieważny z mocy prawa",
           "Kodeks spółek handlowych art. 191 § 1: „Wspólnik ma prawo do udziału w zysku wynikającym z rocznego sprawozdania finansowego i przeznaczonym do podziału uchwałą zgromadzenia wspólników”; art. 192: kwota do podziału nie może przekraczać zysku za ostatni rok, powiększonego o niepodzielone zyski z lat ubiegłych i kwoty z kapitałów zapasowego i rezerwowych utworzonych z zysku, pomniejszonego o niepokryte straty, udziały własne i kwoty, które z mocy ustawy lub umowy idą na kapitały",
-          "Kodeks spółek handlowych (t.j. Dz. U. z 2024 r. poz. 18) art. 231 § 1–2: zwyczajne zgromadzenie wspólników w terminie sześciu miesięcy po upływie roku obrotowego rozpatruje i zatwierdza sprawozdanie finansowe oraz podejmuje uchwałę o podziale zysku albo pokryciu straty"
+          "Kodeks spółek handlowych (t.j. Dz. U. z 2024 r. poz. 18) art. 231 § 1–2: zwyczajne zgromadzenie wspólników w terminie sześciu miesięcy po upływie roku obrotowego rozpatruje i zatwierdza sprawozdanie finansowe oraz podejmuje uchwałę o podziale zysku albo pokryciu straty",
+          "Kodeks spółek handlowych art. 191 § 4: „W przypadku gdy koszty prac rozwojowych zakwalifikowanych jako aktywa spółki nie zostały całkowicie odpisane, nie można dokonać podziału zysku odpowiadającego równowartości kwoty nieodpisanych kosztów prac rozwojowych, chyba że kwota kapitałów rezerwowych i zapasowych dostępnych do podziału i zysków z lat ubiegłych jest co najmniej równa kwocie kosztów nieodpisanych” (pytanie I-20 egzaminu 2025; art. 348 § 1 KSH dla spółki akcyjnej)"
         ]
       }
     },
@@ -10213,6 +10600,412 @@
           "wzorcowy plan kont: 201 Rozrachunki z odbiorcami, 202 Rozrachunki z dostawcami, 750 Przychody finansowe, 751 Koszty finansowe"
         ]
       }
+    },
+    {
+      "rule_id": "pl-measure-without-going-concern",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Wycena bez założenia kontynuacji staje się obiektem liquidation_measurement, gdy cena sprzedaży netto jest niższa od wartości księgowej; odpis to różnica",
+      "spec": {
+        "match": {
+          "event_type": "going_concern.measured",
+          "where": [
+            {
+              "formula": "=$.net_selling_price < $.carrying_value"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "liquidation_measurement",
+            "fields": {
+              "item": "=$.item",
+              "account": "=$.account",
+              "carrying_value": "=$.carrying_value",
+              "net_selling_price": "=$.net_selling_price",
+              "write_down": "=$.carrying_value - $.net_selling_price",
+              "date": "=$.date",
+              "reason": "=$.reason",
+              "book": "pl-stat"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 29 ust. 1: „Jeżeli założenie kontynuacji działalności […] nie jest zasadne, to wycena aktywów jednostki następuje po cenach sprzedaży netto możliwych do uzyskania, niewyższych od cen ich nabycia albo kosztów wytworzenia, pomniejszonych o dotychczasowe odpisy amortyzacyjne lub umorzeniowe, a także odpisy z tytułu trwałej utraty wartości. W takim przypadku jednostka jest również obowiązana utworzyć rezerwę na przewidywane dodatkowe koszty i straty spowodowane zaniechaniem lub utratą zdolności do kontynuowania działalności” (pytanie I-1 egzaminu 2025)",
+          "ustawa o rachunkowości art. 29 ust. 2: wycena po cenach sprzedaży netto i utworzenie rezerwy następują w szczególności w przeddzień postawienia jednostki w stan likwidacji lub ogłoszenia upadłości, na koniec roku obrotowego, jeżeli na dzień zatwierdzenia sprawozdania jednostka nie będzie kontynuowała działalności, a także w przeddzień przekazania, podziału lub sprzedaży jednostki, jeżeli umowa nie przewiduje wartości kontynuacyjnej"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-measurement-without-going-concern",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Odpis do ceny sprzedaży netto bez założenia kontynuacji: Wn 813 Kapitał z aktualizacji wyceny / Ma konto składnika, w kwocie odpisu",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "liquidation_measurement"
+            },
+            {
+              "formula": "=$.state.write_down > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.date",
+            "lines": [
+              {
+                "account": "813",
+                "debit": "=$.state.write_down"
+              },
+              {
+                "account": "=$.state.account",
+                "credit": "=$.state.write_down"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 29 ust. 2a: „Różnica powstała w wyniku wyceny oraz utworzenia rezerwy, o których mowa w ust. 1, wpływa na kapitał (fundusz) z aktualizacji wyceny” — nie w wynik finansowy; autor lekcji księgował ją w 761, ustawa mówi inaczej",
+          "wzorcowy plan kont: 020 Wartości niematerialne i prawne, 075 Umorzenie wartości niematerialnych i prawnych, 401 Amortyzacja, 490 Rozliczenie kosztów, 813 Kapitał z aktualizacji wyceny, 820 Rozliczenie wyniku finansowego, 830 Rezerwy na zobowiązania"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-cessation-provision",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Rezerwa na koszty i straty zaniechania działalności: Wn 813 Kapitał z aktualizacji wyceny / Ma 830 Rezerwy na zobowiązania",
+      "spec": {
+        "match": {
+          "event_type": "cessation.provided",
+          "where": [
+            {
+              "formula": "=$.amount > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.date",
+            "lines": [
+              {
+                "account": "813",
+                "debit": "=$.amount"
+              },
+              {
+                "account": "830",
+                "credit": "=$.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 29 ust. 1: „Jeżeli założenie kontynuacji działalności […] nie jest zasadne, to wycena aktywów jednostki następuje po cenach sprzedaży netto możliwych do uzyskania, niewyższych od cen ich nabycia albo kosztów wytworzenia, pomniejszonych o dotychczasowe odpisy amortyzacyjne lub umorzeniowe, a także odpisy z tytułu trwałej utraty wartości. W takim przypadku jednostka jest również obowiązana utworzyć rezerwę na przewidywane dodatkowe koszty i straty spowodowane zaniechaniem lub utratą zdolności do kontynuowania działalności” (pytanie I-1 egzaminu 2025)",
+          "ustawa o rachunkowości art. 29 ust. 2a: „Różnica powstała w wyniku wyceny oraz utworzenia rezerwy, o których mowa w ust. 1, wpływa na kapitał (fundusz) z aktualizacji wyceny” — nie w wynik finansowy; autor lekcji księgował ją w 761, ustawa mówi inaczej",
+          "wzorcowy plan kont: 020 Wartości niematerialne i prawne, 075 Umorzenie wartości niematerialnych i prawnych, 401 Amortyzacja, 490 Rozliczenie kosztów, 813 Kapitał z aktualizacji wyceny, 820 Rozliczenie wyniku finansowego, 830 Rezerwy na zobowiązania"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-record-policy-change",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Zmiana zasad rachunkowości staje się obiektem policy_adjustment: konto, strona, kwota, dzień, od którego działa, i podstawa",
+      "spec": {
+        "match": {
+          "event_type": "policy.changed",
+          "where": [
+            {
+              "formula": "=$.amount > 0"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "policy_adjustment",
+            "fields": {
+              "title": "=$.title",
+              "account": "=$.account",
+              "side": "=$.side",
+              "amount": "=$.amount",
+              "effective_from": "=$.effective_from",
+              "basis": "=$.basis",
+              "book": "pl-stat"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 8 ust. 2: jednostka może, „ze skutkiem od pierwszego dnia roku obrotowego, bez względu na datę podjęcia decyzji, zmienić dotychczas stosowane rozwiązania na inne, przewidziane ustawą” (pytanie I-23 egzaminu 2025: zmiana metody wyceny rozchodu zapasów jest zmianą polityki, zmiana stawek odpisów — zmianą szacunku)",
+          "KSR 7 pkt 3.12: zgodnie z pełnym podejściem retrospektywnym jednostka „odnosi skutki zmiany przyjętych zasad (polityki) rachunkowości na kapitał (fundusz) własny, wykazując je na mocy art. 8 ust. 2 ustawy jako zysk (stratę) z lat ubiegłych”"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-policy-change",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Skutek zmiany zasad za lata ubiegłe koryguje saldo otwarcia: Wn konto / Ma 820 albo Wn 820 / Ma konto, pierwszego dnia roku",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "policy_adjustment"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.effective_from",
+            "lines": [
+              {
+                "account": "=if($.state.side = \"debit\", $.state.account, \"820\")",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "=if($.state.side = \"debit\", \"820\", $.state.account)",
+                "credit": "=$.state.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 8 ust. 2: jednostka może, „ze skutkiem od pierwszego dnia roku obrotowego, bez względu na datę podjęcia decyzji, zmienić dotychczas stosowane rozwiązania na inne, przewidziane ustawą” (pytanie I-23 egzaminu 2025: zmiana metody wyceny rozchodu zapasów jest zmianą polityki, zmiana stawek odpisów — zmianą szacunku)",
+          "KSR 7 pkt 3.12: zgodnie z pełnym podejściem retrospektywnym jednostka „odnosi skutki zmiany przyjętych zasad (polityki) rachunkowości na kapitał (fundusz) własny, wykazując je na mocy art. 8 ust. 2 ustawy jako zysk (stratę) z lat ubiegłych”",
+          "wzorcowy plan kont: 020 Wartości niematerialne i prawne, 075 Umorzenie wartości niematerialnych i prawnych, 401 Amortyzacja, 490 Rozliczenie kosztów, 813 Kapitał z aktualizacji wyceny, 820 Rozliczenie wyniku finansowego, 830 Rezerwy na zobowiązania"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-record-development-costs",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Aktywowane prace rozwojowe stają się obiektem development_costs; nieodpisana część zaczyna się od całej kwoty",
+      "spec": {
+        "match": {
+          "event_type": "development_costs.capitalised",
+          "where": [
+            {
+              "formula": "=$.amount > 0"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "development_costs",
+            "fields": {
+              "title": "=$.title",
+              "amount": "=$.amount",
+              "unamortised": "=$.amount",
+              "date": "=$.date",
+              "useful_life_years": "=$.useful_life_years",
+              "status": "active",
+              "book": "pl-stat"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 33 ust. 2: koszty zakończonych prac rozwojowych na własne potrzeby, poniesione przed podjęciem produkcji lub zastosowaniem technologii, zalicza się do wartości niematerialnych i prawnych, jeżeli produkt lub technologia są ściśle ustalone, techniczna przydatność stwierdzona i udokumentowana, a koszty zostaną pokryte przychodami",
+          "ustawa o rachunkowości art. 33 ust. 3: koszty prac rozwojowych odpisuje się przez okres ekonomicznej użyteczności ich rezultatów; gdy nie można go wiarygodnie oszacować, nie dłużej niż 5 lat"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-development-costs",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Aktywowanie prac rozwojowych w wariancie porównawczym: Wn 020 Wartości niematerialne i prawne / Ma 490 Rozliczenie kosztów — koszty rodzajowe roku zostają, 490 je zdejmuje z wyniku",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "development_costs"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.date",
+            "lines": [
+              {
+                "account": "020",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "490",
+                "credit": "=$.state.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 33 ust. 2: koszty zakończonych prac rozwojowych na własne potrzeby, poniesione przed podjęciem produkcji lub zastosowaniem technologii, zalicza się do wartości niematerialnych i prawnych, jeżeli produkt lub technologia są ściśle ustalone, techniczna przydatność stwierdzona i udokumentowana, a koszty zostaną pokryte przychodami",
+          "wzorcowy plan kont: 020 Wartości niematerialne i prawne, 075 Umorzenie wartości niematerialnych i prawnych, 401 Amortyzacja, 490 Rozliczenie kosztów, 813 Kapitał z aktualizacji wyceny, 820 Rozliczenie wyniku finansowego, 830 Rezerwy na zobowiązania"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-amortise-development-costs",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Odpis zmniejsza nieodpisaną część; przy zerze prace rozwojowe są odpisane; odpis ponad nieodpisaną część nie pasuje do żadnej reguły",
+      "spec": {
+        "match": {
+          "event_type": "development_costs.amortised",
+          "where": [
+            {
+              "formula": "=$.amount > 0 and $.amount <= $.development_costs.unamortised"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "development_costs",
+            "target": "=$.development_costs",
+            "set": {
+              "unamortised": "=$.development_costs.unamortised - $.amount",
+              "status": "=if($.development_costs.unamortised - $.amount = 0, \"written_off\", \"active\")"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 33 ust. 3: koszty prac rozwojowych odpisuje się przez okres ekonomicznej użyteczności ich rezultatów; gdy nie można go wiarygodnie oszacować, nie dłużej niż 5 lat"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-development-costs-amortisation",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Odpis prac rozwojowych za okres: Wn 401 Amortyzacja / Ma 075 Umorzenie wartości niematerialnych i prawnych",
+      "spec": {
+        "match": {
+          "event_type": "development_costs.amortised",
+          "where": [
+            {
+              "formula": "=$.amount > 0 and $.amount <= $.development_costs.unamortised"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.date",
+            "lines": [
+              {
+                "account": "401",
+                "debit": "=$.amount"
+              },
+              {
+                "account": "075",
+                "credit": "=$.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 33 ust. 3: koszty prac rozwojowych odpisuje się przez okres ekonomicznej użyteczności ich rezultatów; gdy nie można go wiarygodnie oszacować, nie dłużej niż 5 lat",
+          "wzorcowy plan kont: 020 Wartości niematerialne i prawne, 075 Umorzenie wartości niematerialnych i prawnych, 401 Amortyzacja, 490 Rozliczenie kosztów, 813 Kapitał z aktualizacji wyceny, 820 Rozliczenie wyniku finansowego, 830 Rezerwy na zobowiązania"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-close-year-clearing",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Zamknięcie roku: konto rozliczeniowe (490 Rozliczenie kosztów — koszt wytworzenia na własne potrzeby, zmiana stanu produktów) oddaje swoje saldo na dzień bilansowy do wyniku, jak konta kosztów i przychodów",
+      "spec": {
+        "match": {
+          "event_type": "year.closed",
+          "where": [
+            {
+              "path": "$.book",
+              "op": "eq",
+              "value": "pl-stat"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "year_close_clearing",
+            "each": "=objects(account, type, \"clearing\")",
+            "fields": {
+              "account": "=$.line.object_id",
+              "code": "=$.line.state.code",
+              "year_end": "=$.doc.year_end",
+              "book": "=$.doc.book",
+              "amount": "=balance($.doc.book, $.line.state.code, start_of_year($.doc.year_end), $.doc.year_end)"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 12 ust. 2 pkt 1: „Księgi rachunkowe zamyka się […] na dzień kończący rok obrotowy”; ust. 4: ostateczne zamknięcie i otwarcie ksiąg najpóźniej w ciągu 15 dni od dnia zatwierdzenia sprawozdania",
+          "ustawa o rachunkowości art. 42 ust. 1: na wynik finansowy netto składają się wynik działalności operacyjnej (w tym pozostałe przychody i koszty operacyjne), wynik operacji finansowych i obowiązkowe obciążenia wyniku z tytułu podatku dochodowego — stąd na 860 przechodzą wszystkie konta kosztów, przychodów i podatku dochodowego",
+          "wzorcowy plan kont: 860 Wynik finansowy, 820 Rozliczenie wyniku finansowego, 801 Kapitał podstawowy, 802 Kapitał zapasowy, 241 rozrachunki z właścicielami z tytułu dywidend",
+          "ustawa o rachunkowości art. 33 ust. 2: koszty zakończonych prac rozwojowych na własne potrzeby, poniesione przed podjęciem produkcji lub zastosowaniem technologii, zalicza się do wartości niematerialnych i prawnych, jeżeli produkt lub technologia są ściśle ustalone, techniczna przydatność stwierdzona i udokumentowana, a koszty zostaną pokryte przychodami",
+          "wzorcowy plan kont: 020 Wartości niematerialne i prawne, 075 Umorzenie wartości niematerialnych i prawnych, 401 Amortyzacja, 490 Rozliczenie kosztów, 813 Kapitał z aktualizacji wyceny, 820 Rozliczenie wyniku finansowego, 830 Rezerwy na zobowiązania"
+        ]
+      }
     }
   ],
   "activities": [
@@ -11510,6 +12303,216 @@
           "human"
         ]
       }
+    },
+    {
+      "name": "measure_without_going_concern",
+      "domain": "finance",
+      "description": "Założenie kontynuacji działalności przestało być zasadne — w przeddzień likwidacji albo upadłości, na koniec roku gdy jednostka nie będzie kontynuowała działalności, w przeddzień przekazania, podziału lub sprzedaży bez klauzuli wartości kontynuacyjnej — i składnik aktywów wycenia się po cenie sprzedaży netto możliwej do uzyskania, nie wyższej od jego wartości księgowej; różnica idzie na kapitał z aktualizacji wyceny, nie w wynik (art. 29 ust. 1, 2 i 2a UoR); cena wyższa od wartości księgowej nic nie zmienia",
+      "spec": {
+        "inputs": [
+          {
+            "name": "item",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "account",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "carrying_value",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "net_selling_price",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "reason",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "liquidation",
+              "bankruptcy",
+              "no_continuation_at_approval",
+              "transfer_division_or_sale"
+            ]
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "going_concern.measured",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "provide_for_cessation",
+      "domain": "finance",
+      "description": "Rezerwa na przewidywane dodatkowe koszty i straty spowodowane zaniechaniem lub utratą zdolności do kontynuowania działalności — obowiązkowa, gdy wycena następuje bez założenia kontynuacji; jej utworzenie obciąża kapitał z aktualizacji wyceny (art. 29 ust. 1 i 2a UoR)",
+      "spec": {
+        "inputs": [
+          {
+            "name": "title",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "amount",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "cessation.provided",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "adjust_for_policy_change",
+      "domain": "finance",
+      "description": "Zmiana przyjętych zasad (polityki) rachunkowości — inna metoda wyceny rozchodu zapasów, inna zasada przewidziana ustawą — działa od pierwszego dnia roku obrotowego, a jej skutek za lata ubiegłe koryguje saldo otwarcia konta bilansowego w korespondencji z 820 zysk (strata) z lat ubiegłych (art. 8 ust. 2 UoR, KSR 7 pkt 3.12); zmiana szacunku (stawki odpisów) nie jest zmianą polityki i idzie w wynik bieżący",
+      "spec": {
+        "inputs": [
+          {
+            "name": "title",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "account",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "side",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "debit",
+              "credit"
+            ]
+          },
+          {
+            "name": "amount",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "effective_from",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "basis",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "policy.changed",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "capitalise_development_costs",
+      "domain": "finance",
+      "description": "Zakończone prace rozwojowe na własne potrzeby, których produkt lub technologia są ustalone, przydatność stwierdzona, a koszty mają się pokryć przychodami, przenosi się z kosztów roku do wartości niematerialnych i prawnych (art. 33 ust. 2 UoR): Wn 020 / Ma 490; odpisuje się je przez okres użyteczności, nie dłużej niż 5 lat, gdy nie da się go oszacować (ust. 3)",
+      "spec": {
+        "inputs": [
+          {
+            "name": "title",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "amount",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "useful_life_years",
+            "type": "int",
+            "required": false
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "development_costs.capitalised",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "amortise_development_costs",
+      "domain": "finance",
+      "description": "Odpis kosztów prac rozwojowych za okres: Wn 401 / Ma 075; nieodpisana część maleje, a przy zerze prace są odpisane (art. 33 ust. 3 UoR)",
+      "spec": {
+        "inputs": [
+          {
+            "name": "development_costs",
+            "type": "ref<development_costs>",
+            "required": true
+          },
+          {
+            "name": "amount",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "development_costs.amortised",
+        "who": [
+          "human"
+        ]
+      }
     }
   ],
   "events": [
@@ -12208,6 +13211,39 @@
         "code": "835",
         "name": "Rezerwa z tytułu odroczonego podatku dochodowego",
         "type": "creditor",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.created",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/account/020",
+      "payload": {
+        "code": "020",
+        "name": "Wartości niematerialne i prawne",
+        "type": "asset",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.created",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/account/075",
+      "payload": {
+        "code": "075",
+        "name": "Umorzenie wartości niematerialnych i prawnych",
+        "type": "asset",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.created",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/account/813",
+      "payload": {
+        "code": "813",
+        "name": "Kapitał z aktualizacji wyceny",
+        "type": "equity",
         "market": "pl"
       }
     }
