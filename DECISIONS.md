@@ -4582,3 +4582,41 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   100 000 are assets of 5 700 and 19 000; equal values book nothing and make no object;
   the line's sale reverses its provision, the loss deducted reverses its asset. Pinned
   counts: 36 types, 34 views, 121 rules, 32 doors, 64 events, 52 accounts.
+
+## 2026-10-20 — Pack v40: receivables and payables in foreign currencies at the balance date
+
+- Lesson I-28 of the author's block I drafts, generalised (EXAM.md 6.1.1 c, 6.1.3 a). The
+  question asked about shares bought for a foreign currency; the provision (UoR art. 30
+  ust. 1 pkt 1) names every asset and liability in a foreign currency, and what a small
+  company holds in currencies is receivables and payables — the pack has no shares yet.
+  `revalue_fx_balances`, once per currency at the balance date closing the year, reads
+  the open sales and purchase invoices in that currency as folds, their złoty at the
+  rates of their own days (art. 30 ust. 2) and at the rate in force on the balance date,
+  and books the difference to financial revenue or cost (ust. 4): Wn 201 / Ma 750 when
+  the rate rose on what customers owe, Wn 751 / Ma 201 when it fell, Wn 751 / Ma 202 and
+  Wn 202 / Ma 750 on what the company owes. On the first day of the next year the same
+  rule chain books the storno, so the documents keep their rates and a payment's
+  realised difference is measured from the document as the matching engine does; the
+  year's unrealised difference and the next year's reversal plus the realised difference
+  add up to the whole, each in the year the act puts it. One object per currency, not per
+  invoice: a fold cannot filter an `each`, and one event cannot mint one type from two
+  rules; the per-invoice detail is the invoices' own, the sums are the entry.
+- The rate in force on the balance date: the NBP channel keeps under every day the table
+  of the last working day before it (the rate a document of that day is converted at,
+  art. 30 ust. 2), so the table published on the balance date is the channel's rate under
+  the first day of the next year — the rule reads `fx(currency, "PLN", start_of_year(
+  add_months(balance_date, 1)))`, one date for the closing rate and the storno. The
+  formula language has no "next day", so the balance date is the year end; an interim
+  balance date is a later addition, with `add_days`.
+- Simplifications said in the history: cash in a currency is not revalued — the pack
+  posts every bank line to one 130 and has no złoty balance per currency account; loans
+  are złoty (v38); shares in currency wait for investments.
+- Boundary checklist: the caller's scope only — the folds read the scope's invoices;
+  twice: the caller's dedup key, a second revaluation of the same currency and day is the
+  same event; money: the open amounts in currency and every złoty value, strings across
+  the boundary; the rate a decimal.
+- Test: `TestFXRevaluation` — 1 230 EUR owed at 4,30 and 3 690 EUR due at 4,40 revalued at
+  4,50: a gain of 246 on the receivable, a loss of 369 on the payable, four lines on 31
+  December and four back on 1 January; a złoty invoice untouched, złoty refused, a
+  currency with nothing open books nothing. Pinned counts: 37 types, 35 views, 126
+  rules, 33 doors, 64 events, 52 accounts.
