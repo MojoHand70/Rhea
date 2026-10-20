@@ -23,8 +23,8 @@ register is the curriculum the suite samples from.
 - **Note** — what is missing or what the pack's reading is; "named by the host" marks a
   lesson the host itself named as missing when it abstained on the 2025 paper.
 
-Prepared by AI from the syllabus text and the pack at v31; not yet read by a practising
-auditor. Sector accounting (banks, SKOK, investment firms, insurers, pension funds,
+Prepared by AI from the syllabus text and the pack at v31, the rows refreshed for v32–v37
+on 2026-10-20; not yet read by a practising auditor. Sector accounting (banks, SKOK, investment firms, insurers, pension funds,
 public finance) is marked *host* throughout: the pack serves a small company on full
 books or a sole trader (REVIEW.md), and those sectors are not its first-phase users; the
 2025 papers test them heavily, which is where the bare model and the host alike fail.
@@ -38,12 +38,12 @@ books or a sole trader (REVIEW.md), and those sectors are not its first-phase us
 | 3. Prawo | 65 | 2 | 0 | 2 | 61 | 0 | 7 | 5 | 96 of 108 (88%) passed | 78 of 108 (72%) not passed |
 | 4. Prawo podatkowe I | 34 | 7 | 0 | 0 | 27 | 1 | 6 | 2 | 68 of 80 (85%) passed | 52 of 80 (65%) not passed |
 | 5. Finanse i zarządzanie finansami | 53 | 4 | 0 | 3 | 46 | 1 | 3 | 4 | 82 of 88 (93%) not passed | 74 of 88 (84%) not passed |
-| 6. Rachunkowość finansowa | 54 | 33 | 2 | 0 | 19 | 2 | 17 | 16 | 71 of 98 (72%) not passed | 64 of 98 (65%) not passed |
+| 6. Rachunkowość finansowa | 54 | 33 | 2 | 0 | 19 | 2 | 22 | 11 | 71 of 98 (72%) not passed | 64 of 98 (65%) not passed |
 | 7. Prawo podatkowe II | 58 | 11 | 0 | 2 | 45 | 3 | 8 | 3 | 64 of 100 (64%) not passed | 43 of 100 (43%) not passed |
 | 8. Rachunek kosztów i rachunkowość zarządcza | 23 | 5 | 0 | 5 | 13 | 0 | 5 | 6 | 66 of 72 (91%) passed | 49 of 72 (68%) passed |
 | 9. Sprawozdania finansowe i ich analiza | 43 | 8 | 0 | 9 | 26 | 0 | 9 | 8 | 38 of 50 (76%) not passed | 38 of 50 (76%) not passed |
 | 10. Rewizja finansowa oraz etyka | 27 | 0 | 2 | 0 | 25 | 2 | 2 | 0 | 29 of 44 (65%) passed | 25 of 44 (56%) not passed |
-| **Total** | **421** | **83** | **20** | **28** | **290** | **22** | **77** | **52** | 708 of 858 (82%), 6 papers of 10 | 590 of 858 (68%), 3 of 10; 0 of 429 from a rule |
+| **Total** | **421** | **83** | **20** | **28** | **290** | **22** | **82** | **47** | 708 of 858 (82%), 6 papers of 10 | 590 of 858 (68%), 3 of 10; 0 of 429 from a rule |
 
 **What the numbers say.** Three subjects are the books' own — theory, financial
 accounting, cost accounting — and there the pack covers the bookkeeper's half (documents,
@@ -58,6 +58,15 @@ law, finance of banks and insurers, and the audit profession's own rules are the
 answered from the statute in words, never a rule — and the place where the statute by
 article in front of the host (DECISIONS 2026-10-19) will turn "memory" into "statute".
 
+**2026-10-20, after pack v32–v37.** The auditor's half has begun: fixed assets accepted,
+depreciated and disposed (v32), the year's close, the statement's approval and the
+result's distribution (v33), provisions, accruals and receivable write-downs (v34),
+goods and materials out and inventories written down (v36), construction costs and
+advances for assets (v37) — five rows of financial accounting moved from missing to
+partial and eleven partial rows grew. Still missing in the books' rows: deferred tax,
+impairment of fixed assets, the lessee's postings, financial instruments, loans, equity
+contributions, the cost of manufacture and the cost method from receipts.
+
 ## 1. Teoria i zasady rachunkowości
 
 | Point | The point | Kind | Pack today | Note |
@@ -69,7 +78,7 @@ article in front of the host (DECISIONS 2026-10-19) will turn "memory" into "sta
 | 1.1.5 | Harmonizacja: MSR, dyrektywy UE | host | — | |
 | 1.2.1.1 | Równanie bilansowe | kernel | covered | an entry that does not balance is refused (exam task I-2 proved it live) |
 | 1.2.1.2 | Kryteria kwalifikacji aktywów i zobowiązań | books | partial | `account.type` (asset, liability, equity, revenue, expense); the criteria themselves are the host's |
-| 1.2.1.3 | Wycena początkowa i bilansowa składników bilansu | books | partial | invoices, bank, FX at the NBP rate, prepaid costs; missing: fixed assets, inventories, receivables' write-downs, financial instruments, provisions — see 6.1.1 |
+| 1.2.1.3 | Wycena początkowa i bilansowa składników bilansu | books | partial | invoices, bank, FX at the NBP rate, prepaid costs; fixed assets at cost less depreciation (v32), inventories at the value the document states or the lower net selling price (v36), receivables less write-downs (v34), provisions at their estimate (v34); missing: financial instruments, the cost method from receipts — see 6.1.1 |
 | 1.2.1.4 | Struktura aktywów bilansu | engine | missing | the balance sheet layout of UoR annex 1 as a view over accounts; the 2025 tasks name lines like B.III.1.b |
 | 1.2.1.5 | Struktura pasywów bilansu | engine | missing | as above |
 | 1.2.1.6 | Sporządzanie bilansu, w tym uproszczonego (mała, mikro) | engine | missing | the company's size is declared (`declare_company_form`); the statement writer is not |
@@ -83,7 +92,7 @@ article in front of the host (DECISIONS 2026-10-19) will turn "memory" into "sta
 | 1.3.3 | Kontrola i kwalifikowanie dowodów do ksiąg | kernel | covered | nothing posts without a rule; what no rule explains waits in the worklist; a rejected invoice becomes a task (`pl-ksef-rejection-task`) |
 | 1.3.4 | Zapisy księgowe: treść i struktura | kernel | covered | `posting`: entry, line, book, account, side, amount, currency, date; provenance on each |
 | 1.3.5 | Konto: cechy, rodzaje, konta bilansowe, wynikowe, pozabilansowe | books | partial | balance and result accounts by `account.type`; off-balance accounts missing (the banks' task II-1 needs them) |
-| 1.3.6 | Ewidencja typowych operacji | books | partial | sales, purchases, bank, VAT, CIT advances, RMK, PZ; missing: payroll, fixed assets, inventories out, equity, loans, provisions |
+| 1.3.6 | Ewidencja typowych operacji | books | partial | sales, purchases, bank, VAT, CIT advances, RMK, PZ; fixed assets in, depreciated and out (v32), the year's close and the result's distribution (v33), provisions and write-downs (v34), goods and materials out at the invoice's value (v36), construction costs and advances for assets (v37); missing: payroll, loans, contributions of capital |
 | 1.4.1 | Zakres podmiotowy obowiązku prowadzenia ksiąg | books | partial | the form of books is declared (`pl-declare-company-form`); the thresholds of UoR art. 2 are the host's |
 | 1.4.2 a | Dziennik | kernel | covered | the event log: append-only, chronological, numbered (invariant 1) |
 | 1.4.2 b | Konta księgi głównej, podwójny zapis, otwieranie i zamykanie | kernel | partial | double entry by construction; opening balances and the year-end closing of accounts are missing (todo "import opening balances") |
@@ -303,32 +312,32 @@ article in front of the host (DECISIONS 2026-10-19) will turn "memory" into "sta
 
 | Point | The point | Kind | Pack today | Note |
 |---|---|---|---|---|
-| 6.1.1 a | Wycena przy założeniu kontynuacji działania | books | partial | documents at their amounts, FX at the NBP rate, prepaid costs; missing the valuation rules of UoR art. 28 for fixed assets, inventories, receivables (write-downs), financial instruments (amortised cost, market price), provisions |
+| 6.1.1 a | Wycena przy założeniu kontynuacji działania | books | partial | documents at their amounts, FX at the NBP rate, prepaid costs; fixed assets at cost less depreciation (v32, art. 28 ust. 1 pkt 1), inventories at cost or the lower net selling price (v36, art. 28 ust. 1 pkt 6), receivables less write-downs (v34, art. 35b), provisions at a justified estimate (v34, art. 35d); missing: financial instruments (amortised cost, market price), the cost method from receipts, equity and loans at nominal value as rules |
 | 6.1.1 b | Wycena w warunkach utraty kontynuacji działania | books | missing | art. 29: net realisable value, the reserve for the consequences; the 2025 paper's first question |
 | 6.1.1 c | Wycena składników w walutach obcych | books | partial | initial measurement at the NBP rate of the day before (art. 30 ust. 2) and realised differences are covered; the balance-date revaluation of receivables, payables and cash (art. 30 ust. 1) is missing — exam task I-2 drafted it live |
-| 6.1.2 a | Aktywa trwałe: WNiP, środki trwałe, należności i inwestycje długoterminowe, RMK długoterminowe | books | partial | `fixed_asset`, `vehicle`, `lease_contract` exist; depreciation (KSR 11), improvements, disposals, long-term investments are missing |
-| 6.1.2 b | Aktywa obrotowe: zapasy, należności, inwestycje krótkoterminowe, RMK | books | partial | goods in by PZ at purchase price, receivables with open amounts, prepaid costs; missing: goods out and cost of goods sold, materials and products, write-downs of receivables (named by the host), short-term investments (exam task I-1 drafted the write-down live) |
-| 6.1.2 c | Kapitały własne: podstawowy, zapasowy, z aktualizacji, rezerwowe, wynik, odpisy z zysku | books | missing | no equity rules at all; the 2025 paper asks about called-up contributions (dopłaty) and the revaluation reserve — named by the host |
-| 6.1.2 d | Zobowiązania i rezerwy: rezerwy, zobowiązania długo- i krótkoterminowe, RMK bierne | books | partial | payables with open amounts; provisions, accruals of liabilities (RMK bierne), loans are missing — exam task I-3 drafted a warranty provision live |
+| 6.1.2 a | Aktywa trwałe: WNiP, środki trwałe, należności i inwestycje długoterminowe, RMK długoterminowe | books | partial | `fixed_asset` accepted from 080, depreciated monthly to 071, disposed (v32); a cost that is not building leaves 080 for 761 and an advance for an asset in a foreign currency keeps its payment-day złoty to settlement, no exchange difference (v37, KSR 11 pkt 6.18); `vehicle`, `lease_contract` exist; missing: improvements, long-term investments, the lessee's postings |
+| 6.1.2 b | Aktywa obrotowe: zapasy, należności, inwestycje krótkoterminowe, RMK | books | partial | goods in by PZ at purchase price; goods and materials out at the value the sales invoice states (v36: 731/330, 761/310); stock written down to net selling price against 349 and the write-down reversed (v36); receivables with open amounts and their write-downs (v34); prepaid costs; missing: the cost method from receipts (FIFO, average), products and work in progress, short-term investments (exam task I-1 drafted the write-down live) |
+| 6.1.2 c | Kapitały własne: podstawowy, zapasowy, z aktualizacji, rezerwowe, wynik, odpisy z zysku | books | partial | the result approved from 860 to 820 and distributed to reserve capital, dividends or a loss covered from reserve (v33: 802, 820, 241); missing: share capital and called-up contributions (dopłaty), the revaluation reserve — the 2025 paper asks about both |
+| 6.1.2 d | Zobowiązania i rezerwy: rezerwy, zobowiązania długo- i krótkoterminowe, RMK bierne | books | partial | payables with open amounts; provisions for liabilities (830) and accruals of liabilities (641) created, used and released (v34, art. 35d, art. 39 ust. 2 pkt 2); missing: loans received and granted, the long- and short-term split at presentation — exam task I-3 drafted a warranty provision live |
 | 6.1.3 a | Różnice kursowe | books | partial | realised differences on settlement (`pl-post-fx-difference`, 750/751); unrealised at the balance date missing |
 | 6.1.3 b | Przeszacowanie wartości | books | missing | revaluation of fixed assets by regulation; reclassification to investment property (named by the host) |
 | 6.1.3 c | Wycena w wartości godziwej | books | missing | investment property, financial instruments |
-| 6.1.3 d | Utrata wartości aktywów (KSR 4) | books | missing | impairment of fixed assets and goodwill; write-downs of receivables and inventories |
-| 6.1.3 e | Ostrożna wycena i współmierność | books | partial | prepaid costs (RMK czynne, KSR) and the sale date carry matching; prudence's write-downs are missing |
+| 6.1.3 d | Utrata wartości aktywów (KSR 4) | books | partial | write-downs of receivables (v34, art. 35b) and of inventories to net selling price, reversed when the cause ends (v36, art. 28 ust. 1 pkt 6, art. 34 ust. 5, art. 35c); missing: impairment of fixed assets and goodwill (KSR 4) |
+| 6.1.3 e | Ostrożna wycena i współmierność | books | partial | prepaid costs (RMK czynne, KSR) and the sale date carry matching; prudence: provisions (v34), write-downs of receivables (v34) and inventories (v36); missing: impairment of fixed assets |
 | 6.1.4 a | Przychody ze sprzedaży produktów i usług | books | covered | `pl-book-sales-invoice`, `pl-post-sales-invoice` (sale date, art. 19a; 700/201/222) |
-| 6.1.4 b | Przychody ze sprzedaży towarów | books | covered | as above; the cost of goods sold against them is missing (6.1.2 b) |
+| 6.1.4 b | Przychody ze sprzedaży towarów | books | covered | as above; the cost of goods sold against them at the value the invoice states (v36: 731/330); the automatic cost method from receipts (FIFO, average) is the next inventories lesson (6.1.2 b) |
 | 6.1.4 c | Sprzedaż hurtowa, detaliczna, wysyłkowa, elektroniczna, komisowa, tranzytowa | books | partial | invoiced sales only; retail by receipts (kasa fiskalna), commission and transit sales missing |
 | 6.1.4 d | Reklamacje | books | missing | a complaint and its credit note; the operations corpus has a `complaint` case, the pack does not |
-| 6.1.5 a | Pozostałe przychody operacyjne: dotacje, darowizny, sprzedaż środków trwałych, rozwiązane rezerwy | books | partial | 760 receives overpayment differences; grants, donations, disposals of fixed assets, released provisions missing (the 2025 paper's donation question was the theory paper's unkeyed one) |
-| 6.1.5 b | Pozostałe koszty operacyjne: aktualizacja aktywów niefinansowych, odszkodowania, kary | books | partial | 761 receives underpayment differences; write-downs, penalties, damages missing — exam task I-3 posted a write-off and a destroyed-inventory loss live |
+| 6.1.5 a | Pozostałe przychody operacyjne: dotacje, darowizny, sprzedaż środków trwałych, rozwiązane rezerwy | books | partial | 760 receives overpayment differences, released provisions (v34), reversed inventory write-downs (v36), the sale of materials and of fixed assets (v36, art. 3 ust. 1 pkt 32); missing: grants, donations (the 2025 paper's donation question was the theory paper's unkeyed one) |
+| 6.1.5 b | Pozostałe koszty operacyjne: aktualizacja aktywów niefinansowych, odszkodowania, kary | books | partial | 761 receives underpayment differences, the net value of a disposed asset (v32), write-downs of receivables (v34) and inventories (v36), materials sold (v36), a casualty's cost or idle capacity moved off a construction (v37, art. 3 ust. 1 pkt 32 lit. i); missing: penalties and damages — exam task I-3 posted a write-off and a destroyed-inventory loss live |
 | 6.1.6 a | Przychody finansowe: dywidendy, odsetki, aktualizacja aktywów finansowych, dodatnie różnice kursowe | books | partial | FX gains (750) and bank interest (NINT) covered; dividends received, interest on loans given, reversals of write-downs missing |
 | 6.1.6 b | Koszty finansowe: odsetki, aktualizacja, ujemne różnice kursowe | books | partial | FX losses (751), bank fees; interest on loans and leases, write-downs of financial assets missing (exam task I-1: Dt 751) |
-| 6.1.7 a | Wynik w wariancie porównawczym | books | partial | costs by nature (4xx) are how the pack posts; the change in inventories and the result accounts (860) at year end are missing |
-| 6.1.7 b | Wynik w wariancie kalkulacyjnym | books | missing | costs by function (5xx), cost of goods sold (7xx) |
-| 6.1.7 c | Podział wyniku | books | missing | the resolution, dividends, transfers to reserves, cover of losses — events with postings |
+| 6.1.7 a | Wynik w wariancie porównawczym | books | partial | costs by nature (4xx) are how the pack posts; `close_year` (v33, art. 12 ust. 2 pkt 1) gives every cost, revenue and tax account's balance to 860 on the balance sheet date and `approve_statement` moves it to 820; missing: the change in products (490) |
+| 6.1.7 b | Wynik w wariancie kalkulacyjnym | books | partial | the cost of goods sold on 731 (v36); costs by function (5xx) missing |
+| 6.1.7 c | Podział wyniku | books | partial | `distribute_result` (v33, art. 53 ust. 4; KSH art. 191–192): to reserve capital, to dividends, a loss covered from reserve, the rest undistributed on 820; `pay_dividend` with the 19% withheld (PIT art. 30a); missing: the dividend cap of KSH art. 191 § 4 as a refusal, interim dividends |
 | 6.1.8 a | Umowy długoterminowe (KSR 3) | books | missing | |
 | 6.1.8 b | Leasing (KSR 5) | books | partial | `lease_contract` holds the contract; the lessee's postings (finance lease: asset and liability, interest, depreciation) are missing |
-| 6.1.8 c | Utrata wartości aktywów | books | missing | as 6.1.3 d |
+| 6.1.8 c | Utrata wartości aktywów | books | partial | as 6.1.3 d |
 | 6.1.8 d | Odroczony podatek dochodowy (KSR 2) | books | missing | temporary differences between the tax treatment per account (`pl-set-tax-treatment`) and the books: the data is half there |
 | 6.1.8 e | Dotacje rządowe | books | missing | |
 | 6.1.8 f | Instrumenty finansowe | books | missing | amortised cost, market price, the rozporządzenie on financial instruments; the 2025 paper's task I-1 (short-term investments) |
