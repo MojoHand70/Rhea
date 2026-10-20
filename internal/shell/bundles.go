@@ -90,6 +90,9 @@ func (s *Server) bundleViewWith(ctx context.Context, b core.Bundle, k *network.K
 }
 
 func (s *Server) handleBundles(w http.ResponseWriter, r *http.Request) {
+	if !s.allowSystem(w, r, ViewGate) {
+		return
+	}
 	bundles, err := s.Store.LatestBundles(r.Context())
 	if err != nil {
 		writeErr(w, 500, err)
@@ -298,6 +301,9 @@ type figurePreview struct {
 // 2026-10-17: a drafted figure grouped by an account number and labelled
 // "customer" is plain once its rows are on the card).
 func (s *Server) handlePreviewBundle(w http.ResponseWriter, r *http.Request) {
+	if !s.allowSystem(w, r, ViewGate) {
+		return
+	}
 	ctx := r.Context()
 	b, err := s.Store.GetBundle(ctx, r.PathValue("id"))
 	if err != nil {

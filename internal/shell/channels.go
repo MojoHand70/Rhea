@@ -11,6 +11,9 @@ import (
 // are generic rows the shell renders; neither is a screen for a particular
 // channel.
 func (s *Server) handleChannels(w http.ResponseWriter, r *http.Request) {
+	if !s.allowSystem(w, r, ViewChannels) {
+		return
+	}
 	reg, err := adapter.Registry(r.Context(), s.Store)
 	if err != nil {
 		writeErr(w, 500, err)

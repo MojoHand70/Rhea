@@ -15,7 +15,8 @@
 //	                         advance time: steady state opens one day by itself;
 //	                         a gap waits for -catchup (the burst gate)
 //	rhea submit FILE         submit a raw event (dedup by file content hash)
-//	rhea serve [-addr :8070] run the shell
+//	rhea serve [-addr :8070] [-require-person] run the shell
+//	rhea people register|grant|who   the operator at the people doors (the first owner)
 //	rhea replay              rebuild object cache + DuckDB from the event log
 //	rhea eval [-v] [CORPUS]  measure the agent as an author: draft → simulate →
 //	                         approve over a corpus on a throwaway database;
@@ -54,6 +55,7 @@ import (
 	"rhea/internal/network"
 	"rhea/internal/pack"
 	"rhea/internal/project"
+	"rhea/internal/rights"
 	"rhea/internal/shell"
 	"rhea/internal/sim"
 	"rhea/internal/store"
@@ -64,7 +66,7 @@ import (
 func main() {
 	log.SetFlags(0)
 	if len(os.Args) < 2 {
-		log.Fatal("usage: rhea init|load|pack|submit|intake|pass|file|issue|backup|restore|serve|replay|channels|clock|approve|reject|eval|sim|ksef|run")
+		log.Fatal("usage: rhea init|load|pack|submit|intake|pass|file|issue|backup|restore|serve|replay|channels|people|clock|approve|reject|eval|sim|ksef|run")
 	}
 	if os.Args[1] == "run" {
 		// A market's tool by name: no log, no store (adapter.Command).
@@ -351,6 +353,25 @@ func main() {
 			log.Fatal(run.PassErr)
 		}
 
+	case "people":
+		// The operator's hand at the people doors (DIRECTION 2026-10-19):
+		// the first owner of an installation has nobody to invite them, so
+		// the operator registers them and grants the first membership from
+		// the machine; everyone after that comes in through the face. The
+		// same doors, signed cli:<user>.
+		if len(os.Args) < 3 {
+			log.Fatal("usage: rhea people register -name NAME -handle HANDLE [-role ROLE] | grant -person HANDLE -company KEY -role ROLE [-from DATE] | who -company KEY")
+		}
+		fs := flag.NewFlagSet("people "+os.Args[2], flag.ExitOnError)
+		name := fs.String("name", "", "the person's name")
+		handle := fs.String("handle", "", "the handle their acts are signed with")
+		person := fs.String("person", "", "the person's handle")
+		role := fs.String("role", "owner", "the role")
+		company := fs.String("company", "", "the company key")
+		from := fs.String("from", "", "the first day (default: the books' day)")
+		fs.Parse(os.Args[3:])
+		people(ctx, s, x, os.Args[2], *name, *handle, *person, *role, *company, *from)
+
 	case "channels":
 		// The registry, both lists: what this company has connected, what
 		// this binary can read (DIRECTION 2026-10-10, "Documents in").
@@ -429,8 +450,12 @@ func main() {
 	case "serve":
 		fs := flag.NewFlagSet("serve", flag.ExitOnError)
 		addr := fs.String("addr", ":8070", "listen address")
+		requirePerson := fs.Bool("require-person", os.Getenv("RHEA_REQUIRE_PERSON") != "", "serve signed-in persons only (a face is the only door from outside); also RHEA_REQUIRE_PERSON=1")
 		fs.Parse(os.Args[2:])
-		srv := &shell.Server{Store: s, Exec: x, Agent: agent.New(), DuckPath: project.Path()}
+		srv := &shell.Server{Store: s, Exec: x, Agent: agent.New(), DuckPath: project.Path(), RequirePerson: *requirePerson}
+		if *requirePerson {
+			log.Printf("serving signed-in persons only (X-Rhea-Person from the face)")
+		}
 		x.Today = srv.Clock.TodayUTC // a door whose inputs carry no date takes the books' day
 		// Learning is optional: without a network Rhea runs alone.
 		if nw, err := network.Open(ctx, network.DSN()); err == nil {
@@ -885,5 +910,60 @@ func docSources(documentsIn bool) []string {
 func wireModelReader() {
 	if os.Getenv("ANTHROPIC_API_KEY") != "" {
 		adapter.ModelReader = agent.New().Read
+	}
+}
+
+// people is the operator at the people doors: register a person, grant a
+// membership, list who can do what — through the pack's own doors, so the
+// facts are the same facts the face would write.
+func people(ctx context.Context, s *store.Store, x *exec.Executor, verb, name, handle, person, role, company, from string) {
+	trigger := func(ctx context.Context, door string, inputs map[string]any) {
+		t, err := x.TriggerActivity(ctx, door, inputs, actor(), "")
+		if err != nil {
+			log.Fatal(err)
+		}
+		if len(t.Errors) > 0 {
+			log.Fatalf("%s: event %d booked nothing: %v — is the people pack approved?", door, t.EventID, t.Errors)
+		}
+		fmt.Printf("%s: event %d, booked %d\n", door, t.EventID, t.Booked)
+	}
+	switch verb {
+	case "register":
+		if name == "" || handle == "" {
+			log.Fatal("rhea people register -name NAME -handle HANDLE [-role ROLE]")
+		}
+		trigger(ctx, "register_person", map[string]any{"name": name, "handle": handle, "role": role})
+	case "grant":
+		if person == "" || company == "" {
+			log.Fatal("rhea people grant -person HANDLE -company KEY -role ROLE [-from DATE]")
+		}
+		ids, err := s.FindObjectIDsByField(ctx, "person", "handle", person)
+		if err != nil || len(ids) != 1 {
+			log.Fatalf("no one person signs as %q (%v)", person, err)
+		}
+		if from == "" {
+			from = time.Now().UTC().Format("2006-01-02")
+		}
+		trigger(store.WithCompany(ctx, company), "grant_membership", map[string]any{
+			"person": ids[0], "company": company, "role": role, "from": from, "granted_by": actor()})
+	case "who":
+		if company == "" {
+			log.Fatal("rhea people who -company KEY")
+		}
+		table, err := rights.Table(ctx, s, company, time.Now().UTC().Format("2006-01-02"))
+		if err != nil {
+			log.Fatal(err)
+		}
+		for _, p := range table {
+			for _, g := range p.Grants {
+				rs := make([]string, len(g.Rights))
+				for i, r := range g.Rights {
+					rs[i] = r.String()
+				}
+				fmt.Printf("%-12s %-18s via %-12s %s granted by %s from %s %s\n", p.Handle, g.Role, g.Via, g.Object, g.GrantedBy, g.From, strings.Join(rs, " "))
+			}
+		}
+	default:
+		log.Fatalf("rhea people %s: register, grant or who", verb)
 	}
 }

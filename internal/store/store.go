@@ -155,7 +155,9 @@ func appendEvent(ctx context.Context, q Querier, ev core.Event, skipDuplicate bo
 	// The system-verb namespaces belong to declared doors: a raw rule.* or
 	// activity.* event without an activity stamp would claim a system act
 	// (an approval, a request) that no declared verb performed.
-	if ev.Kind == core.KindRaw && core.ReservedEventType(ev.Type) && ev.ActivityName == "" {
+	// The one exception: a refusal is the kernel's own word, written by no
+	// door — nobody opened one — and signed "kernel".
+	if ev.Kind == core.KindRaw && core.ReservedEventType(ev.Type) && ev.ActivityName == "" && !(ev.Type == core.EventAccessRefused && ev.Actor == "kernel") {
 		return 0, fmt.Errorf("event type %q is a system verb — it enters only through its declared activity", ev.Type)
 	}
 	// The file is the fact: a document.received names files the store holds,
@@ -981,6 +983,13 @@ func WithScope(ctx context.Context, companies []string) context.Context {
 	sort.Strings(scope)
 	ctx = context.WithValue(ctx, companyKey{}, "")
 	return context.WithValue(ctx, scopeKey{}, scope)
+}
+
+// ActFor names the company a scoped context acts for — one of its scope —
+// keeping the scope as it is: an office's person opening one client's
+// books writes that client's facts and still sees every client.
+func ActFor(ctx context.Context, company string) context.Context {
+	return context.WithValue(ctx, companyKey{}, company)
 }
 
 // CompanyOf is the company a context acts for; empty means none (an office

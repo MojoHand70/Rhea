@@ -102,6 +102,9 @@ func (s *Server) handleExplain(w http.ResponseWriter, r *http.Request) {
 		s.explainCell(w, r) // a cell of a view: the objects its row is made of
 		return
 	}
+	if r.URL.Query().Get("event") != "" && !s.allowSystem(w, r, ViewWorklist) {
+		return
+	}
 	ix, err := s.indexChains(ctx)
 	if err != nil {
 		writeErr(w, 500, err)
@@ -117,6 +120,9 @@ func (s *Server) handleExplain(w http.ResponseWriter, r *http.Request) {
 		o, err := s.Store.GetObject(ctx, objID)
 		if err != nil {
 			writeErr(w, 404, err)
+			return
+		}
+		if !s.allowType(w, r, o.Type) {
 			return
 		}
 		evID, ok := ix.matEventOf[objID]

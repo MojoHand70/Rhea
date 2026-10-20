@@ -10,6 +10,9 @@ import (
 // by its hash, with the media type it was received as. The shell links any
 // file fact it renders here; it knows no particular document.
 func (s *Server) handleBlob(w http.ResponseWriter, r *http.Request) {
+	if !s.allowSystem(w, r, ViewFiles) {
+		return
+	}
 	b, err := s.Store.GetBlob(r.Context(), r.PathValue("hash"))
 	if err != nil {
 		writeErr(w, 404, err)

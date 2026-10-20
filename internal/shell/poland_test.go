@@ -90,7 +90,7 @@ func TestM3PolandPack(t *testing.T) {
 	if _, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", "common", "people.json"), "test"); err != nil {
 		t.Fatal(err)
 	}
-	post("/api/bundles/pack-common-people-v2/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-common-people-v3/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	// Periods: the close_period door and the lock rule are common verbs.
 	if _, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", "common", "periods.json"), "test"); err != nil {
 		t.Fatal(err)
@@ -121,7 +121,7 @@ func TestM3PolandPack(t *testing.T) {
 		t.Fatal(err)
 	}
 	if sum.Types != 32 || sum.Views != 32 || sum.Rules != 88 || sum.Activities != 21 || sum.Events != 58 || sum.Skipped != 0 ||
-		sum.Bundle != "pack-pl-v34" {
+		sum.Bundle != "pack-pl-v35" {
 		t.Fatalf("first load: %+v", sum)
 	}
 	// Idempotent: a reload changes nothing.
@@ -149,7 +149,7 @@ func TestM3PolandPack(t *testing.T) {
 	// Approving the pack's bundle IS the installation: its types, views and
 	// rules activate together, and the chart of accounts and the VAT rates
 	// materialize from the waiting events.
-	post("/api/bundles/pack-pl-v34/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-pl-v35/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {
 		t.Fatalf("worklist not cleared after approvals: %d", len(wl))
 	}

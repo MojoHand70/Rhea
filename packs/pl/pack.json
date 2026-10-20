@@ -1,9 +1,14 @@
 {
   "pack": "pl",
-  "version": 34,
+  "version": 35,
   "stage": "initial",
   "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
   "history": [
+    {
+      "versions": "35",
+      "date": "2026-10-20",
+      "changes": "Słownik nazywa po polsku to, co wspólny pakiet osób v3 wnosi (kto co może): rolę, członkostwo, umocowanie biura rachunkowego do prowadzenia ksiąg klienta (podmiot uprawniony w KSeF), zastępstwo i grupę, ich pola, statusy, zdarzenia i drzwi; odmowę dostępu i odnotowane logowanie."
+    },
     {
       "versions": "34",
       "date": "2026-10-19",
@@ -2492,7 +2497,7 @@
     },
     {
       "view_id": "slownik",
-      "version": 8,
+      "version": 9,
       "notion": "words",
       "title": "Słownik",
       "domain": "finance",
@@ -2698,6 +2703,31 @@
           "receivable_write_down": {
             "label": "Odpis aktualizujący należność",
             "plural": "Odpisy aktualizujące należności",
+            "shape": "card"
+          },
+          "role": {
+            "label": "Rola",
+            "plural": "Role",
+            "shape": "card"
+          },
+          "membership": {
+            "label": "Członkostwo",
+            "plural": "Członkostwa",
+            "shape": "card"
+          },
+          "mandate": {
+            "label": "Umocowanie biura",
+            "plural": "Umocowania biur",
+            "shape": "card"
+          },
+          "substitution": {
+            "label": "Zastępstwo",
+            "plural": "Zastępstwa",
+            "shape": "card"
+          },
+          "group": {
+            "label": "Grupa",
+            "plural": "Grupy",
             "shape": "card"
           }
         },
@@ -2946,7 +2976,36 @@
           "receivable_write_down.invoice": "Faktura",
           "receivable_write_down.reason": "Powód",
           "receivable_write_down.deductible": "Koszt podatkowy",
-          "receivable_write_down.settled_on": "Zakończony"
+          "receivable_write_down.settled_on": "Zakończony",
+          "role.name": "Nazwa roli",
+          "rights": "Uprawnienia",
+          "role.description": "Opis roli",
+          "membership.person": "Osoba",
+          "membership.company": "Firma",
+          "membership.role": "Rola",
+          "membership.group": "Grupa",
+          "membership.from": "Od dnia",
+          "membership.to": "Do dnia",
+          "membership.reason": "Powód",
+          "membership.status": "Status",
+          "membership.granted_by": "Nadał(a)",
+          "mandate.office": "Biuro rachunkowe",
+          "mandate.client": "Klient",
+          "mandate.scope": "Zakres uprawnień",
+          "mandate.from": "Od dnia",
+          "mandate.to": "Do dnia",
+          "mandate.status": "Status",
+          "mandate.granted_by": "Nadał(a)",
+          "substitution.person": "Zastępowany",
+          "substitution.deputy": "Zastępca",
+          "substitution.company": "Firma",
+          "substitution.from": "Od dnia",
+          "substitution.to": "Do dnia",
+          "substitution.status": "Status",
+          "substitution.granted_by": "Wyznaczył(a)",
+          "group.name": "Nazwa grupy",
+          "group.company": "Firma",
+          "group.description": "Opis grupy"
         },
         "values": {
           "account.type": {
@@ -3207,6 +3266,18 @@
             "open": "otwarty",
             "reversed": "spłacona — odpis rozwiązany",
             "written_off": "należność odpisana"
+          },
+          "membership.status": {
+            "active": "aktywne",
+            "ended": "zakończone"
+          },
+          "mandate.status": {
+            "active": "aktywne",
+            "ended": "zakończone"
+          },
+          "substitution.status": {
+            "active": "aktywne",
+            "ended": "zakończone"
           }
         },
         "events": {
@@ -3256,7 +3327,18 @@
           "provision.used": "Wykorzystanie rezerwy",
           "provision.released": "Rozwiązanie rezerwy",
           "receivable.written_down": "Odpis aktualizujący należność",
-          "receivable.write_down.settled": "Zakończenie odpisu"
+          "receivable.write_down.settled": "Zakończenie odpisu",
+          "role.declared": "Rola określona",
+          "role.changed": "Rola zmieniona",
+          "membership.granted": "Nadano członkostwo",
+          "membership.ended": "Zakończono członkostwo",
+          "mandate.granted": "Biuro umocowane do prowadzenia ksiąg",
+          "mandate.ended": "Umocowanie biura zakończone",
+          "substitution.appointed": "Wyznaczono zastępstwo",
+          "substitution.ended": "Zastępstwo zakończone",
+          "group.declared": "Grupa określona",
+          "access.refused": "Odmowa dostępu",
+          "access.recorded": "Logowanie odnotowane"
         },
         "doors": {
           "appoint_deputy": "wyznaczenie zastępcy",
@@ -3299,7 +3381,17 @@
           "use_provision": "wykorzystanie rezerwy",
           "release_provision": "rozwiązanie rezerwy",
           "write_down_receivable": "odpis aktualizujący należność",
-          "settle_write_down": "zakończenie odpisu"
+          "settle_write_down": "zakończenie odpisu",
+          "declare_role": "określenie roli",
+          "change_role": "zmiana roli",
+          "grant_membership": "nadanie członkostwa",
+          "end_membership": "zakończenie członkostwa",
+          "grant_mandate": "umocowanie biura",
+          "end_mandate": "zakończenie umocowania biura",
+          "appoint_substitute": "wyznaczenie zastępstwa",
+          "end_substitution": "zakończenie zastępstwa",
+          "declare_group": "określenie grupy",
+          "record_access": "odnotowanie logowania"
         },
         "account_groups": {
           "0": "Aktywa trwałe",

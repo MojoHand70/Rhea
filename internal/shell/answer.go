@@ -54,6 +54,9 @@ func (s *Server) collection(ctx context.Context) ([]agent.CollectionTable, error
 // handleCollection lists the collection: the business's own databases of
 // objects, as a query reads them.
 func (s *Server) handleCollection(w http.ResponseWriter, r *http.Request) {
+	if !s.allowSystem(w, r, ViewAnswer) {
+		return
+	}
 	c, err := s.collection(r.Context())
 	if err != nil {
 		writeErr(w, 500, err)
@@ -107,6 +110,9 @@ type answerColumn struct {
 // the author once, and records what she told the person through the
 // host_answered door. Nothing in the books changes.
 func (s *Server) handleAnswer(w http.ResponseWriter, r *http.Request) {
+	if !s.allowSystem(w, r, ViewAnswer) {
+		return
+	}
 	ctx := r.Context()
 	if s.Agent == nil {
 		writeErr(w, 503, fmt.Errorf("answer: no author is connected"))

@@ -3249,6 +3249,21 @@ pilot — the usability test of the whole ladder.
 - *One person across installations.* Later; today every entity lives on
   one installation and a person's memberships are there.
 
+**What shipped (2026-10-20, the kernel's half).** Steps (1), (2) and (3) of the
+order of work: the notions in the common people pack v3 (role, membership, mandate,
+substitution, group; the pack's roles as master data; the vocabulary of rights with
+`door:*` stopping at the people domain as KSeF's "manage rights" does); enforcement at
+every door and every read (`internal/rights` computes a person's grants from the log on
+the books' day; the shell makes them the request's scope; the executor checks the door's
+Who and the person's grant in the company acted for, signs every `…_by` input with the
+person, and records a refusal as `access.refused`; a company nobody holds is claimed by
+its first grant); and the who-can-do-what view as the `rights` notion, every cell the
+grant that opens it. `rhea serve -require-person` makes the kernel serve signed-in
+persons only; `rhea people` is the operator's hand at the first owner. The decisions are
+in DECISIONS under the day. Next: (4) passkeys and invitations in the face, every
+sign-in reported through `record_access`; (5) the onboarding screens with the GUS and
+white-list channels in `markets/pl`; (6) the house; (7) Novi, then an office.
+
 ## Isolation in the database: a scope is a set of companies (KK, 2026-10-20)
 
 KK, after the two reviews: "We are developing a big ERP and we cannot afford such

@@ -4318,3 +4318,94 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
 - Tests: the database refusing another company's rows and writes under raw SQL
   (store), the copy per scope (project), two companies at the shell's doors with an
   office scope summing both (shell).
+
+## 2026-10-20 — The sign-in step: who may do what, as data, enforced at every door
+
+- KK: "the time has come to tackle the sign-in domain" (DIRECTION 2026-10-19, "People
+  and rights"). Shipped in the kernel: the notions as data, enforcement at every door
+  and every read, the who-can-do-what view. The face's passkeys and screens follow in
+  rheaface; the GUS channel in markets/pl; the house's doors after.
+- The common people pack v3 adds five types in the people domain: `role` (a name and
+  its rights), `membership` (a person in a company with a role from a date, to a date,
+  with a group and a reason, signed by who granted it), `mandate` (an office keeps a
+  client's books within a scope of rights — KSeF's authorised entity), `substitution` (a
+  deputy holds a person's rights between two dates, in one company or all), `group` (a
+  named set of a company's people). Nine doors grant and end them. The pack's roles are
+  master data: owner `*`, chief_accountant `door:* view:* type:* domain:people`,
+  accountant and support `door:* view:* type:*`, reader `view:* type:*`. The person's
+  own doors (register, identify, deputy, status) are installation-wide.
+- The rights vocabulary (`core.Right`): `*`, `domain:<d>`, `door:<name>`, `view:<id>`,
+  `type:<name>`, `state:<type>/<state>` (vocabulary now, enforced with smart documents),
+  `sees:<group>`, `approves:<group>` (the supervisor's two rights, vocabulary now).
+  `door:*` never reaches the people domain — KSeF: managing rights is its own grant,
+  never implied by the right to do the work; `view:*` and `type:*` do (seeing who may do
+  what is not managing it). A role's rights are a space-separated string.
+- Why roles are objects and not Who on the door: definitions are the installation's,
+  roles are a company's (an office's accountant is not its client's), so a company's own
+  role could not live on a door without changing every company's door. `Who` keeps its
+  job — which kind of actor (human, agent, adapter) a door admits — and is now enforced
+  for a signed-in person: the clock is nobody's to move, the host's words are not a
+  person's to forge. One question at every door: Who admits a person, and a grant covers
+  the door in the company acted for.
+- The grants are computed from the log on the books' day (`internal/rights`): a
+  membership gives its role's rights in its company; an office member reaches every
+  client under a current mandate with the role's rights narrowed by the mandate's
+  scope; a deputy holds the substituted person's own grants (never their substitutions,
+  so nothing chains). A company's own role of a name wins over the pack's. Dates decide,
+  not status: an ended membership answers who could do what on the days it held, and
+  to revoke someone now the owner ends it with yesterday as the last day.
+- A person's grants are their scope (invariant 9 made whole): the shell resolves the
+  person named in `X-Rhea-Person`, sets the scope to their companies, and acts for the
+  one named in `X-Rhea-Company` (the only one, when they have one). A person nobody has
+  let in anywhere is scoped to a key no company carries and sees the installation's
+  rows only. On the desk open on all their companies, a read must be theirs in every
+  one; a write names its company.
+- A company nobody holds — no current membership or mandate names it — is open to its
+  first grant, which is its claim: a new owner grants herself, an office grants itself
+  the mandate. A second claimant is refused. In the beta this is enough (invitation
+  only); in public the e-mail is verified, the NIP checked against GUS, and a dispute
+  goes through a KSeF-authenticated step (the brief's standard, not built).
+- A refusal is a fact: `access.refused` under the company refused, signed `kernel`,
+  naming the person, the door and the reason; the one reserved event the kernel appends
+  through no door. Door refusals and company refusals are recorded; a refused read is
+  403 and not a fact (a read is not an act). `access.recorded` is the face's report of
+  sign-ins through the builtin `record_access` door (who: adapter, installation-wide),
+  the audit under the person. Both namespaces are kept out of the worklist.
+- The kernel signs: with a person on the request, every string input named `by` or
+  `…_by` carries the person's handle whatever the caller sent, and the event's actor is
+  the handle. A door with a string input `company` must be acted for that company; a
+  door with a string input `office` (grant_mandate) must be the office's person's too.
+- Reads are gated by the same vocabulary: a view by its id (a list, detail or statement
+  also by its type), objects by their type, and the system surfaces as named system
+  views — worklist, gate (rules, bundles), files, channels, said, answer, learning,
+  untaught — so `view:*`, `domain:system` and `*` grant them all and a role can name
+  one. Nav, types, activities (with `allowed` per door for the person), time and the
+  live stream are definitions, open to any signed-in person.
+- `rhea serve -require-person` (or RHEA_REQUIRE_PERSON=1) answers 401 to a request
+  naming no person, except the machine's own routes: the clock, the morning, the face's
+  sign-in report, the time and live reads. On white01 the face is the only door; on the
+  bench the owner's shell runs unscoped as before.
+- The who-can-do-what view is a notion (`rights`, the pack's `who-can-do-what`, also
+  `GET /api/rights?company=`): rows the persons with rights in a company, columns every
+  door, view and type, each cell the grant that opens it — membership, mandate or
+  substitution — with who granted it, from when, and the grant it rests on. The kernel's
+  web shell renders it; the face renders it its own way.
+- `rhea people register|grant|who` is the operator's hand at the first owner: nobody can
+  invite the first person of an installation, so the operator does it from the machine
+  through the same doors, signed cli:<user>. Everyone after that comes in through the
+  face.
+- Persons are the installation's rows (one human, many workplaces; a name and a handle
+  are not a company's books); memberships, mandates, substitutions and groups are the
+  company's. Owed: hiding persons without a membership in the scope when the first
+  office with strangers' clients needs it (invariant 9, 2026-10-20).
+- The Polish pack v35 names the new notions in its words; the formula language's
+  `coalesce` reads a door's optional strings, and a grant with an optional last day is
+  a rule pair (absent/exists), the pack's existing way.
+- Tests: the vocabulary (core); the pack loads and its roles book (pack); grants through
+  memberships, mandates, substitutions, dates, ending and a company's own role (rights);
+  at the shell: a stranger refused, the grant signed by the owner, a person's facts the
+  installation's, an accountant refused at the people doors with the refusal recorded,
+  the clock refused to a person, allowed doors on the list, reads scoped and refused
+  with the refusal recorded, a reader who reads only, the mandate's reach and its scope,
+  the desk on all companies, the claim and the second claimant, the view's cells opening
+  to the grant, replay identical with the refusals kept; persons-only serving.

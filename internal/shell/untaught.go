@@ -114,6 +114,9 @@ func (s *Server) handleNoteUntaught(w http.ResponseWriter, r *http.Request) {
 // newest first: what the person asked, what she said was missing, and
 // whether it reached the house.
 func (s *Server) handleUntaught(w http.ResponseWriter, r *http.Request) {
+	if !s.allowSystem(w, r, ViewUntaught) {
+		return
+	}
 	n := 20
 	if v := r.URL.Query().Get("n"); v != "" {
 		k, err := strconv.Atoi(v)

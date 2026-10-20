@@ -235,6 +235,7 @@ function openView(viewId, title, objectId) {
       case "matching": return renderMatching(data);
       case "narrative": return renderNarrative(data);
       case "queue": return renderQueue(data);
+      case "rights": return renderRights(data);
       default: return [el("p", { class: "hint" }, `Notion ${data.view.notion} not renderable.`)];
     }
   }, true); // view tabs are live: projections re-render them in place
@@ -1349,6 +1350,40 @@ function renderQueue(d) {
           onclick: () => openVerbForm(v.name, { [v.ref_input]: it.object_id }) }, verbLabel(v.name))))));
   }
   out.push(el("p", { class: "hint" }, `ranked ${d.today}`));
+  return out;
+}
+
+/* Who can do what (DIRECTION 2026-10-19): rows the persons with rights in
+   the company, columns every door, view and type; a cell is the grant that
+   opens it — membership, mandate or substitution — and says who granted it
+   and from when. Every right has a reason, like every entry. */
+function renderRights(d) {
+  const out = [el("h1", {}, `${d.view.title} — ${d.company}`)];
+  if (!(d.rows || []).length) {
+    out.push(el("p", { class: "hint" }, `Nobody holds rights in ${d.company} on ${d.today}.`));
+    return out;
+  }
+  const cols = d.columns || [];
+  const via = (g) => `${g.via} ${g.object}: ${g.role}${g.group ? " (" + g.group + ")" : ""}, granted by ${g.granted_by} from ${g.from}${g.to ? " to " + g.to : ""}${g.through ? ", through " + g.through : ""}${g.reason ? " — " + g.reason : ""}`;
+  for (const kind of ["door", "view", "type"]) {
+    const kcols = cols.filter(c => c.kind === kind);
+    if (!kcols.length) continue;
+    out.push(el("h3", {}, kind === "door" ? "Doors" : kind === "view" ? "Views" : "Types"));
+    const head = el("tr", {}, el("th", {}, "person"), ...kcols.map(c => el("th", { title: c.label }, c.name)));
+    const body = d.rows.map(r => el("tr", {}, el("td", { title: r.name }, r.handle),
+      ...kcols.map(c => {
+        const g = r.cells[`${c.kind}:${c.name}`];
+        return g
+          ? el("td", { class: "num", title: via(g) }, el("a", { href: "#", onclick: (e) => { e.preventDefault(); openView(`derived:detail:${g.object.split("-")[0]}`, "Grant", g.object); } }, "✓"))
+          : el("td", { class: "hint num" }, "·");
+      })));
+    out.push(el("div", { class: "table-wrap" }, el("table", {}, el("thead", {}, head), el("tbody", {}, ...body))));
+  }
+  out.push(el("h3", {}, "Grants"));
+  for (const r of d.rows) {
+    for (const g of r.grants) out.push(el("div", { class: "match-item" }, el("span", {}, `${r.handle}: `), el("span", { class: "hint" }, via(g))));
+  }
+  out.push(el("p", { class: "hint" }, `as of ${d.today}`));
   return out;
 }
 

@@ -14,10 +14,16 @@ import (
 // /api/files lists what this binary can render.
 
 func (s *Server) handleFiles(w http.ResponseWriter, r *http.Request) {
+	if !s.allowSystem(w, r, ViewFiles) {
+		return
+	}
 	writeJSON(w, 200, map[string]any{"writers": adapter.WriterNames()})
 }
 
 func (s *Server) handleFile(w http.ResponseWriter, r *http.Request) {
+	if !s.allowSystem(w, r, ViewFiles) {
+		return
+	}
 	params := map[string]string{}
 	for k, v := range r.URL.Query() {
 		if len(v) > 0 {

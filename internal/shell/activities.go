@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"rhea/internal/core"
+	"rhea/internal/rights"
 )
 
 // The second vocabulary over HTTP (DIRECTION: the replaceable interpreter —
@@ -21,6 +22,9 @@ type activityOut struct {
 	Offered bool `json:"offered"`
 	// EventsEmitted counts the events that entered through this door.
 	EventsEmitted int `json:"events_emitted"`
+	// Allowed says whether the signed-in person may open this door where
+	// they act — what a face renders as offered; nil without a person.
+	Allowed *bool `json:"allowed,omitempty"`
 }
 
 // handleActivities lists the offered verb set plus whatever waits at the
@@ -45,9 +49,20 @@ func (s *Server) handleActivities(w http.ResponseWriter, r *http.Request) {
 	}
 	activeVersion := map[string]int{}
 	out := []activityOut{}
+	p := rights.PrincipalOf(ctx)
 	for _, a := range active {
 		activeVersion[a.Name] = a.Version
-		out = append(out, activityOut{Activity: a, Offered: true, EventsEmitted: counts[a.Name]})
+		row := activityOut{Activity: a, Offered: true, EventsEmitted: counts[a.Name]}
+		if p != nil {
+			ok := a.Spec.Admits(core.ActorHuman)
+			if ok && a.Spec.Installation {
+				_, ok = p.MayAnywhere("door", a.Name, a.Domain)
+			} else if ok {
+				ok = s.may(ctx, p, "door", a.Name, a.Domain)
+			}
+			row.Allowed = &ok
+		}
+		out = append(out, row)
 	}
 	for _, a := range latest {
 		if a.Version == activeVersion[a.Name] {
@@ -73,6 +88,9 @@ func (s *Server) handleTrigger(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.Actor == "" {
 		req.Actor = "shell"
+	}
+	if p := rights.PrincipalOf(r.Context()); p != nil {
+		req.Actor = p.Handle // the server says who, whatever the page sent
 	}
 	t, err := s.Exec.TriggerActivity(r.Context(), r.PathValue("name"), req.Inputs, req.Actor, req.DedupKey)
 	if err != nil {

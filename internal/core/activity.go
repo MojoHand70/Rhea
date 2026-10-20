@@ -45,6 +45,12 @@ type ActivitySpec struct {
 	// Channel makes the activity a channel: a door code triggers instead of
 	// a person. Nil for every ordinary verb.
 	Channel *ChannelSpec `json:"channel,omitempty"`
+	// Installation marks a door whose facts are the installation's, not a
+	// company's: a person registered (one human, many workplaces), a
+	// sign-in recorded. The event is appended with no company whatever
+	// the caller acts for, so every scope sees it; the right to the door is
+	// held in any of the person's companies.
+	Installation bool `json:"installation,omitempty"`
 }
 
 // ChannelSpec is the registry entry of one channel (DIRECTION 2026-10-10,
@@ -183,7 +189,8 @@ func ReservedEventType(t string) bool {
 		t == EventObjectsMatched || t == EventObjectsUnmatched ||
 		strings.HasPrefix(t, "matching.") || strings.HasPrefix(t, "reading.") || strings.HasPrefix(t, "host.") ||
 		strings.HasPrefix(t, "rule.") || strings.HasPrefix(t, "activity.") ||
-		strings.HasPrefix(t, "bundle.") || strings.HasPrefix(t, "backfill.")
+		strings.HasPrefix(t, "bundle.") || strings.HasPrefix(t, "backfill.") ||
+		strings.HasPrefix(t, "access.")
 }
 
 // emitsSource returns the input name a passthrough emits template reads:
@@ -782,6 +789,26 @@ func BuiltinActivities() []Activity {
 				},
 				Emits: EventHostUntaught,
 				Who:   []string{"human"},
+			},
+		},
+		{
+			// The face's report of who came in: a sign-in, a failed one, a
+			// sign-out, an enrolment — the audit trail under the person,
+			// written by the machine that authenticated them (the face is
+			// an adapter here), installation-wide, no rule to explain it.
+			Name: "record_access", Domain: "system",
+			Description: "Record a sign-in, a failed sign-in, a sign-out or an enrolment under the person",
+			Spec: ActivitySpec{
+				Inputs: []FieldDef{
+					{Name: "person", Type: "string", Required: true}, // the handle
+					{Name: "outcome", Type: "enum", Values: []string{"signed_in", "failed", "signed_out", "invited", "enrolled", "recovered"}, Required: true},
+					{Name: "method", Type: "string", Required: true}, // passkey, invitation, …
+					{Name: "detail", Type: "string"},
+					{Name: "occurred_at", Type: "date"},
+				},
+				Emits:        EventAccessRecorded,
+				Who:          []string{"adapter"},
+				Installation: true,
 			},
 		},
 		{

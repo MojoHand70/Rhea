@@ -33,6 +33,9 @@ type learnedOut struct {
 // the house's network, never an installation's books. ?synthetic=1 counts
 // simulated customers too.
 func (s *Server) handleLearning(w http.ResponseWriter, r *http.Request) {
+	if !s.allowSystem(w, r, ViewLearning) {
+		return
+	}
 	ctx := r.Context()
 	synthetic := r.URL.Query().Get("synthetic") == "1"
 	if s.Network == nil {

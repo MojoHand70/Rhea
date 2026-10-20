@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"rhea/internal/core"
 	"rhea/internal/exec"
 	"rhea/internal/pack"
 	"rhea/internal/store/storetest"
@@ -25,11 +26,25 @@ func TestPeoplePack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 1 || sum.Rules != 4 || sum.Activities != 4 || sum.Bundle != "pack-common-people-v2" {
+	// v3 (DIRECTION 2026-10-19, "People and rights"): the person and the
+	// five notions of who may do what, the pack's roles as master data.
+	if sum.Types != 6 || sum.Rules != 15 || sum.Activities != 13 || sum.Views != 1 || sum.Events != 5 || sum.Bundle != "pack-common-people-v3" {
 		t.Fatalf("load: %+v", sum)
 	}
-	if _, _, errs, err := x.ApproveBundle(ctx, sum.Bundle, "krzysztof", "2026-09-01"); err != nil || len(errs) != 0 {
-		t.Fatalf("approve: %v %v", err, errs)
+	if _, booked, errs, err := x.ApproveBundle(ctx, sum.Bundle, "krzysztof", "2026-09-01"); err != nil || len(errs) != 0 || booked != 5 {
+		t.Fatalf("approve: %v %v, booked %d roles", err, errs, booked)
+	}
+	roles, err := s.ObjectsByType(ctx, "role")
+	if err != nil || len(roles) != 5 {
+		t.Fatalf("the pack's roles: %d %v", len(roles), err)
+	}
+	for _, r := range roles {
+		if r.Company != "" {
+			t.Fatalf("the pack's role %v is the installation's, not %q's", r.State["name"], r.Company)
+		}
+		if _, err := core.ParseRights(r.State["rights"].(string)); err != nil {
+			t.Fatalf("role %v: %v", r.State["name"], err)
+		}
 	}
 
 	// Registration goes through the declared door, signed by the actor.

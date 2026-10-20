@@ -33,6 +33,9 @@ func (s *Server) handleObjects(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, fmt.Errorf("objects wants ?type= — /api/types lists them"))
 		return
 	}
+	if !s.allowType(w, r, typ) {
+		return
+	}
 	objs, err := s.Store.ObjectsByType(r.Context(), typ)
 	if err != nil {
 		writeErr(w, 500, err)
@@ -56,6 +59,9 @@ func (s *Server) handleObject(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 404, err)
 		return
 	}
+	if !s.allowType(w, r, o.Type) {
+		return
+	}
 	roots, err := s.Store.ObjectRoots(r.Context(), o.Type)
 	if err != nil {
 		writeErr(w, 500, err)
@@ -70,6 +76,9 @@ func (s *Server) handleObject(w http.ResponseWriter, r *http.Request) {
 // With person=<handle> the view is that person's: the narrative for their
 // role (narrativeFor).
 func (s *Server) handleSaid(w http.ResponseWriter, r *http.Request) {
+	if !s.allowSystem(w, r, ViewSaid) {
+		return
+	}
 	view := r.URL.Query().Get("view")
 	if h := r.URL.Query().Get("person"); h != "" {
 		if view != "" {
@@ -198,6 +207,9 @@ func (s *Server) explainCell(w http.ResponseWriter, r *http.Request) {
 	}
 	if vd == nil || vd.Notion != "analysis" {
 		writeErr(w, 404, fmt.Errorf("explain: no analysis view %q", q.Get("view")))
+		return
+	}
+	if !s.allowView(w, r, vd) {
 		return
 	}
 	spec, err := s.analysisSpec(ctx, vd.Spec)

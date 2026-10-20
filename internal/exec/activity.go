@@ -8,6 +8,7 @@ import (
 
 	"rhea/internal/core"
 	"rhea/internal/match"
+	"rhea/internal/rights"
 	"rhea/internal/store"
 )
 
@@ -165,6 +166,28 @@ func (x *Executor) TriggerActivity(ctx context.Context, name string, inputs map[
 	if err != nil {
 		return Triggered{}, err
 	}
+	// The face says who, the kernel says whether (DIRECTION 2026-10-19,
+	// "People and rights"): a signed-in person is checked against the
+	// door's Who and their grants in the company they act for, the door
+	// signs its "…_by" inputs with them, and a refusal is a recorded fact
+	// before it is an error.
+	if p := rights.PrincipalOf(ctx); p != nil && core.ActorKind(actor) == core.ActorHuman {
+		actor = p.Handle
+		signed, err := rights.Authorize(ctx, x.Store, *p, act, inputs, store.CompanyOf(ctx), x.today())
+		if err != nil {
+			var refused *rights.ErrRefused
+			if errors.As(err, &refused) {
+				if rerr := x.RecordRefusal(ctx, refused); rerr != nil {
+					return Triggered{}, rerr
+				}
+			}
+			return Triggered{}, err
+		}
+		inputs = signed
+	}
+	if act.Spec.Installation {
+		ctx = store.ActFor(ctx, "") // the installation's fact, whoever acts for whom
+	}
 	built, err := act.BuildEvent(inputs, x.today())
 	if err != nil {
 		return Triggered{}, fmt.Errorf("activity %s: %w", name, err)
@@ -234,6 +257,17 @@ func (x *Executor) TriggerActivity(ctx context.Context, name string, inputs map[
 	booked, errs := x.ProcessPending(ctx)
 	out.Booked, out.Errors = booked, append(out.Errors, errs...)
 	return out, nil
+}
+
+// RecordRefusal appends the refusal as a fact under the company it was
+// refused in: who, at which door, why — the audit an owner reads.
+func (x *Executor) RecordRefusal(ctx context.Context, r *rights.ErrRefused) error {
+	payload, _ := json.Marshal(map[string]string{"person": r.Person, "door": r.Door, "company": r.Company, "reason": r.Reason})
+	_, err := x.Store.AppendEvent(ctx, core.Event{
+		Kind: core.KindRaw, Type: core.EventAccessRefused, OccurredAt: x.today(),
+		Payload: payload, Actor: "kernel", Company: r.Company,
+	})
+	return err
 }
 
 // prepareReaction checks a system verb's preconditions before anything is

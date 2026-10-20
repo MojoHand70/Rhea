@@ -16,6 +16,8 @@ WHERE e.kind = 'raw'
   AND e.event_type NOT LIKE 'matching.%'
   AND e.event_type NOT LIKE 'reading.%'
   AND e.event_type NOT LIKE 'host.%'
+  -- who was let in and who was refused: the kernel's own record, never a question
+  AND e.event_type NOT LIKE 'access.%'
   -- time passing is infrastructure: an uneventful day is not a question
   AND e.event_type NOT LIKE 'time.%'
   AND NOT EXISTS (SELECT 1 FROM event d WHERE d.cause_event_id = e.event_id)

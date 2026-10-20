@@ -12,7 +12,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -23,15 +22,21 @@ import (
 	"rhea/internal/core"
 	"rhea/internal/exec"
 	"rhea/internal/network"
+	"rhea/internal/rights"
 	"rhea/internal/store"
 	"rhea/web"
 )
 
 type Server struct {
-	Store    *store.Store
-	Exec     *exec.Executor
-	Agent    *agent.Agent
-	DuckPath string
+	// RequirePerson makes the kernel serve signed-in persons only: a request
+	// naming no person answers 401, except the machine's own routes. Set
+	// where a face is the only door from outside (white01); off on the
+	// bench, where the owner's shell and the tools run unscoped.
+	RequirePerson bool
+	Store         *store.Store
+	Exec          *exec.Executor
+	Agent         *agent.Agent
+	DuckPath      string
 	// Clock serves the Time surface; the zero value reads the wall clock,
 	// tests inject their own day.
 	Clock adapter.Clock
@@ -133,29 +138,8 @@ func (s *Server) knowledge(ctx context.Context) *network.Knowledge {
 	return &k
 }
 
-// scopedHandler takes the caller's company from the request — the
-// X-Rhea-Company header, or ?company= — and puts it on the context every
-// store call carries (DIRECTION 2026-10-08, the partition key). No scope
-// means the whole log, today's behavior; enforcement rides on this later.
-func scopedHandler(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		company := r.Header.Get("X-Rhea-Company")
-		if company == "" {
-			company = r.URL.Query().Get("company")
-		}
-		// One key acts for that company; a comma list is a scope — an
-		// office and its clients — acting for none.
-		if keys := strings.Split(company, ","); len(keys) > 1 {
-			r = r.WithContext(store.WithScope(r.Context(), keys))
-		} else if company != "" {
-			r = r.WithContext(store.WithCompany(r.Context(), company))
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
 func (s *Server) Handler() http.Handler {
-	return hardened(scopedHandler(s.mux()))
+	return hardened(s.principalHandler(s.mux()))
 }
 
 // maxBody bounds what a door reads: a document through the receive door
@@ -219,6 +203,8 @@ func (s *Server) mux() http.Handler {
 	mux.HandleFunc("POST /api/activities/{name}/trigger", s.handleTrigger)
 	mux.HandleFunc("POST /api/activities/{name}/approve", s.handleApproveActivity)
 	mux.HandleFunc("GET /api/channels", s.handleChannels)
+	mux.HandleFunc("GET /api/rights", s.handleRights)
+	mux.HandleFunc("GET /api/whoami", s.handleWhoAmI)
 	mux.HandleFunc("GET /api/blobs/{hash}", s.handleBlob)
 	mux.HandleFunc("GET /api/time", s.handleTime)
 	mux.HandleFunc("POST /api/time/advance", s.handleTimeAdvance)
@@ -253,6 +239,12 @@ func writeErr(w http.ResponseWriter, status int, err error) {
 	// unknown bundle answered 400 with "no rows in result set".
 	if errors.Is(err, store.ErrNotFound) || errors.Is(err, pgx.ErrNoRows) {
 		status = 404
+	}
+	// A refusal is 403 whatever door it came through: the person was
+	// named, the right was not theirs, and the fact is recorded.
+	var refused *rights.ErrRefused
+	if errors.As(err, &refused) {
+		status = 403
 	}
 	writeJSON(w, status, map[string]string{"error": err.Error()})
 }
@@ -369,6 +361,9 @@ func (s *Server) handleView(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 404, fmt.Errorf("view %q not found", r.PathValue("id")))
 		return
 	}
+	if !s.allowView(w, r, vd) {
+		return
+	}
 	switch vd.Notion {
 	case "list":
 		s.serveList(ctx, w, vd)
@@ -390,6 +385,8 @@ func (s *Server) handleView(w http.ResponseWriter, r *http.Request) {
 		s.serveStatement(ctx, w, vd, r.URL.Query().Get("object_id"))
 	case "report":
 		s.serveReport(ctx, w, vd)
+	case "rights":
+		s.serveRights(ctx, w, vd, r.URL.Query().Get("company"))
 	default:
 		writeErr(w, 400, fmt.Errorf("notion %q not renderable", vd.Notion))
 	}
@@ -665,6 +662,9 @@ func (s *Server) handleLive(w http.ResponseWriter, r *http.Request) {
 // --- worklist, rules, actions ---------------------------------------------
 
 func (s *Server) handleWorklist(w http.ResponseWriter, r *http.Request) {
+	if !s.allowSystem(w, r, ViewWorklist) {
+		return
+	}
 	events, err := s.Store.UnmatchedRawEvents(r.Context())
 	if err != nil {
 		writeErr(w, 500, err)
@@ -683,6 +683,9 @@ func (s *Server) handleWorklist(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleRules(w http.ResponseWriter, r *http.Request) {
+	if !s.allowSystem(w, r, ViewGate) {
+		return
+	}
 	rules, err := s.Store.LatestRules(r.Context())
 	if err != nil {
 		writeErr(w, 500, err)
@@ -828,7 +831,10 @@ func (s *Server) handleSubmit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.Actor == "" {
-		req.Actor = "shell" // single-user experiment; identity arrives with auth, never
+		req.Actor = "shell"
+	}
+	if p := rights.PrincipalOf(r.Context()); p != nil {
+		req.Actor = p.Handle // the server says who, whatever the page sent
 	}
 	t, err := s.Exec.TriggerActivity(r.Context(), "submit_event", map[string]any{
 		"event_type": req.EventType, "occurred_at": req.OccurredAt, "payload": req.Payload,
