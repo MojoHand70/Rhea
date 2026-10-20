@@ -896,11 +896,9 @@ const objectCols = `object_id, object_type, type_version, state, source_event_id
 // will key on the same column stays out, as the note says.
 type companyKey struct{}
 
-// WithCompany scopes a context to one company's facts.
+// WithCompany scopes a context to one company's facts; an empty company
+// clears the scope, so a whole-log read inside a scoped call says so.
 func WithCompany(ctx context.Context, company string) context.Context {
-	if company == "" {
-		return ctx
-	}
 	return context.WithValue(ctx, companyKey{}, company)
 }
 

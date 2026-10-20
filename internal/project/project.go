@@ -89,7 +89,8 @@ func Rebuild(ctx context.Context, s *store.Store, duckPath string) (int, error) 
 		return n, nil // the log has not moved: the copy is the log's
 	}
 
-	derived, err := s.EventsByKind(ctx, core.KindDerived)
+	// The copy is the whole log's, whatever scope the caller runs under.
+	derived, err := s.EventsByKind(store.WithCompany(ctx, ""), core.KindDerived)
 	if err != nil {
 		return 0, err
 	}

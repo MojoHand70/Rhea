@@ -107,4 +107,16 @@ func TestPartitionKey(t *testing.T) {
 	if !reflect.DeepEqual(before, after) || after[0].Company == "" {
 		t.Fatal("replay lost the partition key")
 	}
+	// Replay is the whole log's whatever scope it runs under: it wipes the
+	// one cache every company shares, so it rebuilds every company's.
+	if _, err := x.Replay(alfa); err != nil {
+		t.Fatal(err)
+	}
+	again, _ := s.AllObjects(ctx)
+	if diffs := exec.StateDiff(before, again); len(diffs) != 0 {
+		t.Fatalf("replay under one company's scope lost the others: %v", diffs)
+	}
+	if diffs := exec.StateDiff(before, before[:1]); len(diffs) != 2 {
+		t.Fatalf("StateDiff misses lost objects: %v", diffs)
+	}
 }

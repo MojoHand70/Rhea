@@ -1039,8 +1039,11 @@ func vouchRef(fd core.FieldDef, t core.Template, v any, get core.Getter) error {
 
 // Replay rebuilds the object projection cache from the derived events in the
 // log — the determinism invariant made executable. It returns the rebuilt
-// objects in log order.
+// objects in log order. The cache is one table for every company, so replay
+// is the whole log's whatever scope the caller runs under: a scoped replay
+// would wipe every company's objects and rebuild one's.
 func (x *Executor) Replay(ctx context.Context) ([]core.Object, error) {
+	ctx = store.WithCompany(ctx, "")
 	derived, err := x.Store.EventsByKind(ctx, core.KindDerived)
 	if err != nil {
 		return nil, err

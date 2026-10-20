@@ -456,9 +456,26 @@ func main() {
 		log.Fatal(http.ListenAndServe(*addr, srv.Handler()))
 
 	case "replay":
+		// The proof, not only the rebuild: the cache before and after must
+		// agree object for object (invariant 4), or the command fails.
+		whole := store.WithCompany(ctx, "")
+		before, err := s.AllObjects(whole)
+		if err != nil {
+			log.Fatal(err)
+		}
 		objs, err := x.Replay(ctx)
 		if err != nil {
 			log.Fatal(err)
+		}
+		after, err := s.AllObjects(whole)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if diffs := exec.StateDiff(before, after); len(diffs) > 0 {
+			for _, d := range diffs {
+				fmt.Fprintln(os.Stderr, d)
+			}
+			log.Fatalf("replay diverged: %d objects differ from the cache before it", len(diffs))
 		}
 		if err := project.Wipe(project.Path()); err != nil {
 			log.Fatal(err)
@@ -467,7 +484,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("replayed %d objects (postgres cache), %d rows (duckdb)\n", len(objs), n)
+		fmt.Printf("replayed %d objects (postgres cache), %d rows (duckdb) — identical to the cache before\n", len(objs), n)
 
 	case "eval":
 		fs := flag.NewFlagSet("eval", flag.ExitOnError)
