@@ -38,12 +38,12 @@ books or a sole trader (REVIEW.md), and those sectors are not its first-phase us
 | 3. Prawo | 65 | 2 | 0 | 2 | 61 | 0 | 7 | 5 | 96 of 108 (88%) passed | 78 of 108 (72%) not passed |
 | 4. Prawo podatkowe I | 34 | 7 | 0 | 0 | 27 | 1 | 6 | 2 | 68 of 80 (85%) passed | 52 of 80 (65%) not passed |
 | 5. Finanse i zarządzanie finansami | 53 | 4 | 0 | 3 | 46 | 1 | 3 | 4 | 82 of 88 (93%) not passed | 74 of 88 (84%) not passed |
-| 6. Rachunkowość finansowa | 54 | 33 | 2 | 0 | 19 | 2 | 22 | 11 | 71 of 98 (72%) not passed | 64 of 98 (65%) not passed |
+| 6. Rachunkowość finansowa | 54 | 33 | 2 | 0 | 19 | 2 | 23 | 10 | 71 of 98 (72%) not passed | 64 of 98 (65%) not passed |
 | 7. Prawo podatkowe II | 58 | 11 | 0 | 2 | 45 | 3 | 8 | 3 | 64 of 100 (64%) not passed | 43 of 100 (43%) not passed |
 | 8. Rachunek kosztów i rachunkowość zarządcza | 23 | 5 | 0 | 5 | 13 | 0 | 5 | 6 | 66 of 72 (91%) passed | 49 of 72 (68%) passed |
 | 9. Sprawozdania finansowe i ich analiza | 43 | 8 | 0 | 9 | 26 | 0 | 9 | 8 | 38 of 50 (76%) not passed | 38 of 50 (76%) not passed |
 | 10. Rewizja finansowa oraz etyka | 27 | 0 | 2 | 0 | 25 | 2 | 2 | 0 | 29 of 44 (65%) passed | 25 of 44 (56%) not passed |
-| **Total** | **421** | **83** | **20** | **28** | **290** | **22** | **82** | **47** | 708 of 858 (82%), 6 papers of 10 | 590 of 858 (68%), 3 of 10; 0 of 429 from a rule |
+| **Total** | **421** | **83** | **20** | **28** | **290** | **22** | **83** | **46** | 708 of 858 (82%), 6 papers of 10 | 590 of 858 (68%), 3 of 10; 0 of 429 from a rule |
 
 **What the numbers say.** Three subjects are the books' own — theory, financial
 accounting, cost accounting — and there the pack covers the bookkeeper's half (documents,
@@ -78,7 +78,7 @@ contributions, the cost of manufacture and the cost method from receipts.
 | 1.1.5 | Harmonizacja: MSR, dyrektywy UE | host | — | |
 | 1.2.1.1 | Równanie bilansowe | kernel | covered | an entry that does not balance is refused (exam task I-2 proved it live) |
 | 1.2.1.2 | Kryteria kwalifikacji aktywów i zobowiązań | books | partial | `account.type` (asset, liability, equity, revenue, expense); the criteria themselves are the host's |
-| 1.2.1.3 | Wycena początkowa i bilansowa składników bilansu | books | partial | invoices, bank, FX at the NBP rate, prepaid costs; fixed assets at cost less depreciation (v32), inventories at the value the document states or the lower net selling price (v36), receivables less write-downs (v34), provisions at their estimate (v34); missing: financial instruments, the cost method from receipts — see 6.1.1 |
+| 1.2.1.3 | Wycena początkowa i bilansowa składników bilansu | books | partial | invoices, bank, FX at the NBP rate, prepaid costs; fixed assets at cost less depreciation (v32), inventories at the value the document states or the lower net selling price (v36), receivables less write-downs (v34), provisions at their estimate (v34), loans at nominal value (v38), deferred tax at the rate of the year (v39); missing: financial instruments, the cost method from receipts — see 6.1.1 |
 | 1.2.1.4 | Struktura aktywów bilansu | engine | missing | the balance sheet layout of UoR annex 1 as a view over accounts; the 2025 tasks name lines like B.III.1.b |
 | 1.2.1.5 | Struktura pasywów bilansu | engine | missing | as above |
 | 1.2.1.6 | Sporządzanie bilansu, w tym uproszczonego (mała, mikro) | engine | missing | the company's size is declared (`declare_company_form`); the statement writer is not |
@@ -338,7 +338,7 @@ contributions, the cost of manufacture and the cost method from receipts.
 | 6.1.8 a | Umowy długoterminowe (KSR 3) | books | missing | |
 | 6.1.8 b | Leasing (KSR 5) | books | partial | `lease_contract` holds the contract; the lessee's postings (finance lease: asset and liability, interest, depreciation) are missing |
 | 6.1.8 c | Utrata wartości aktywów | books | partial | as 6.1.3 d |
-| 6.1.8 d | Odroczony podatek dochodowy (KSR 2) | books | missing | temporary differences between the tax treatment per account (`pl-set-tax-treatment`) and the books: the data is half there |
+| 6.1.8 d | Odroczony podatek dochodowy (KSR 2) | books | partial | a temporary difference per item, its sign decided as KSR 2 pkt 2.18 has it, a provision on 835 or an asset on 650 through 870, reversed when the difference reverses, a tax loss as an asset (v39, art. 37 ust. 4–6, 8, 10); missing: the netting at presentation (ust. 7), the effect through equity (ust. 9), differences read automatically from the accounts' tax treatment (`pl-set-tax-treatment`) |
 | 6.1.8 e | Dotacje rządowe | books | missing | |
 | 6.1.8 f | Instrumenty finansowe | books | missing | amortised cost, market price, the rozporządzenie on financial instruments; the 2025 paper's task I-1 (short-term investments) |
 | 6.1.8 g | Zmiany zasad rachunkowości (KSR 7) | kernel | partial | a changed rule is a new version from its date, earlier facts keep theirs (DIRECTION, the US register's cause 3); the retrospective restatement of comparatives is not |

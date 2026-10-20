@@ -1,9 +1,14 @@
 {
   "pack": "pl",
-  "version": 38,
+  "version": 39,
   "stage": "initial",
   "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
   "history": [
+    {
+      "versions": "39",
+      "date": "2026-10-20",
+      "changes": "Odroczony podatek dochodowy (lekcja I-22 egzaminu 2025, napisana przez autora i sprawdzona; rejestr EXAM.md 6.1.8 d): różnica przejściowa między wartością bilansową a podatkową składnika aktywów albo pasywów jest obiektem deferred_tax — dodatnia daje rezerwę Wn 870 / Ma 835 (art. 37 ust. 5 UoR), ujemna i strata podatkowa do odliczenia dają aktywa Wn 650 / Ma 870 (art. 37 ust. 4), kwota = różnica × stawka roku, w którym powstanie obowiązek (art. 37 ust. 6); odwrócenie różnicy (reverse_deferred_tax) księguje się przeciwnie; jednostka mikro i mała może od tego odstąpić (art. 37 ust. 10). Konta 650 i 835; widok podatek-odroczony."
+    },
     {
       "versions": "38",
       "date": "2026-10-20",
@@ -2334,6 +2339,106 @@
           "required": true
         }
       ]
+    },
+    {
+      "name": "deferred_tax",
+      "version": 1,
+      "domain": "finance",
+      "label_field": "title",
+      "lifecycle": {
+        "field": "status",
+        "transitions": {
+          "open": [
+            "reversed"
+          ]
+        }
+      },
+      "amendable": [
+        "reversed_on"
+      ],
+      "fields": [
+        {
+          "name": "title",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "item",
+          "type": "string",
+          "required": true,
+          "description": "składnik aktywów albo pasywów, którego dotyczy różnica"
+        },
+        {
+          "name": "side",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "asset",
+            "liability"
+          ]
+        },
+        {
+          "name": "carrying_value",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "tax_value",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "difference",
+          "type": "money",
+          "required": true,
+          "description": "różnica przejściowa, co do wartości"
+        },
+        {
+          "name": "kind",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "liability",
+            "asset"
+          ],
+          "description": "liability = rezerwa (dodatnia różnica), asset = aktywa (ujemna różnica, strata podatkowa)"
+        },
+        {
+          "name": "rate",
+          "type": "decimal",
+          "required": true,
+          "description": "stawka podatku w procentach obowiązująca w roku powstania obowiązku podatkowego (art. 37 ust. 6)"
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "open",
+            "reversed"
+          ]
+        },
+        {
+          "name": "reversed_on",
+          "type": "date",
+          "required": false
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ]
     }
   ],
   "view_defs": [
@@ -2746,7 +2851,7 @@
     },
     {
       "view_id": "slownik",
-      "version": 12,
+      "version": 13,
       "notion": "words",
       "title": "Słownik",
       "domain": "finance",
@@ -2992,6 +3097,11 @@
           "loan": {
             "label": "Pożyczka",
             "plural": "Pożyczki",
+            "shape": "card"
+          },
+          "deferred_tax": {
+            "label": "Odroczony podatek dochodowy",
+            "plural": "Odroczony podatek dochodowy",
             "shape": "card"
           }
         },
@@ -3288,7 +3398,16 @@
           "loan.due_date": "Termin spłaty",
           "loan.nominal": "Wartość nominalna",
           "loan.open": "Kwota wymaganej zapłaty",
-          "loan.interest_rate": "Oprocentowanie"
+          "loan.interest_rate": "Oprocentowanie",
+          "deferred_tax.title": "Tytuł",
+          "deferred_tax.item": "Składnik",
+          "deferred_tax.side": "Strona bilansu",
+          "deferred_tax.carrying_value": "Wartość bilansowa",
+          "deferred_tax.tax_value": "Wartość podatkowa",
+          "deferred_tax.difference": "Różnica przejściowa",
+          "deferred_tax.kind": "Rodzaj",
+          "deferred_tax.rate": "Stawka podatku",
+          "deferred_tax.reversed_on": "Odwrócona"
         },
         "values": {
           "account.type": {
@@ -3584,6 +3703,18 @@
           "loan.status": {
             "open": "otwarta",
             "repaid": "spłacona"
+          },
+          "deferred_tax.side": {
+            "asset": "aktywa",
+            "liability": "pasywa"
+          },
+          "deferred_tax.kind": {
+            "liability": "rezerwa",
+            "asset": "aktywa z tytułu odroczonego podatku"
+          },
+          "deferred_tax.status": {
+            "open": "otwarta",
+            "reversed": "odwrócona"
           }
         },
         "events": {
@@ -3653,7 +3784,9 @@
           "loan.received": "Pożyczka otrzymana",
           "loan.granted": "Pożyczka udzielona",
           "loan.repaid": "Spłata pożyczki",
-          "loan.interest_charged": "Odsetki od pożyczki"
+          "loan.interest_charged": "Odsetki od pożyczki",
+          "deferred_tax.recognised": "Odroczony podatek ustalony",
+          "deferred_tax.reversed": "Odroczony podatek odwrócony"
         },
         "doors": {
           "appoint_deputy": "wyznaczenie zastępcy",
@@ -3715,7 +3848,9 @@
           "receive_loan": "pożyczka otrzymana",
           "grant_loan": "pożyczka udzielona",
           "repay_loan": "spłata pożyczki",
-          "charge_loan_interest": "odsetki od pożyczki"
+          "charge_loan_interest": "odsetki od pożyczki",
+          "recognise_deferred_tax": "odroczony podatek dochodowy",
+          "reverse_deferred_tax": "odwrócenie odroczonego podatku"
         },
         "account_groups": {
           "0": "Aktywa trwałe",
@@ -4533,6 +4668,59 @@
           {
             "field": "open",
             "label": "Kwota wymaganej zapłaty"
+          },
+          {
+            "field": "status",
+            "label": "Status"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "podatek-odroczony",
+      "version": 1,
+      "notion": "list",
+      "title": "Odroczony podatek dochodowy",
+      "domain": "finance",
+      "function": "cit",
+      "spec": {
+        "object_type": "deferred_tax",
+        "columns": [
+          {
+            "field": "title",
+            "label": "Tytuł"
+          },
+          {
+            "field": "item",
+            "label": "Składnik"
+          },
+          {
+            "field": "kind",
+            "label": "Rodzaj"
+          },
+          {
+            "field": "carrying_value",
+            "label": "Wartość bilansowa"
+          },
+          {
+            "field": "tax_value",
+            "label": "Wartość podatkowa"
+          },
+          {
+            "field": "difference",
+            "label": "Różnica"
+          },
+          {
+            "field": "rate",
+            "label": "Stawka"
+          },
+          {
+            "field": "amount",
+            "label": "Kwota"
+          },
+          {
+            "field": "date",
+            "label": "Dzień"
           },
           {
             "field": "status",
@@ -9375,6 +9563,268 @@
           "wzorcowy plan kont: 030 Udzielone pożyczki (inwestycje), 130 Rachunek bieżący, 240 Pożyczki otrzymane, 750 Przychody finansowe, 751 Koszty finansowe"
         ]
       }
+    },
+    {
+      "rule_id": "pl-recognise-deferred-tax",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Różnica przejściowa staje się obiektem deferred_tax: składnik aktywów wart w bilansie więcej niż podatkowo albo składnik pasywów wart mniej to dodatnia różnica i rezerwa; odwrotnie — ujemna różnica i aktywa; kwota to różnica razy stawka, zaokrąglona do grosza",
+      "spec": {
+        "match": {
+          "event_type": "deferred_tax.recognised",
+          "where": [
+            {
+              "formula": "=$.carrying_value <> $.tax_value and $.rate > 0"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "deferred_tax",
+            "fields": {
+              "title": "=$.title",
+              "item": "=$.item",
+              "side": "=$.side",
+              "carrying_value": "=$.carrying_value",
+              "tax_value": "=$.tax_value",
+              "difference": "=abs($.carrying_value - $.tax_value)",
+              "kind": "=if(($.side = \"asset\" and $.carrying_value > $.tax_value) or ($.side = \"liability\" and $.carrying_value < $.tax_value), \"liability\", \"asset\")",
+              "rate": "=$.rate",
+              "amount": "=round(abs($.carrying_value - $.tax_value) * $.rate / 100, 2, half_up)",
+              "date": "=$.date",
+              "status": "open",
+              "book": "pl-stat"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 37 ust. 1: „W związku z przejściowymi różnicami między wykazywaną w księgach rachunkowych wartością aktywów i pasywów a ich wartością podatkową oraz stratą podatkową możliwą do odliczenia w przyszłości, jednostka tworzy rezerwę i ustala aktywa z tytułu odroczonego podatku dochodowego, którego jest podatnikiem”",
+          "ustawa o rachunkowości art. 37 ust. 4: „Aktywa z tytułu odroczonego podatku dochodowego ustala się w wysokości kwoty przewidzianej w przyszłości do odliczenia od podatku dochodowego, w związku z ujemnymi różnicami przejściowymi, które spowodują w przyszłości zmniejszenie podstawy obliczenia podatku dochodowego oraz straty podatkowej możliwej do odliczenia, ustalonej przy uwzględnieniu zasady ostrożności”",
+          "ustawa o rachunkowości art. 37 ust. 5: „Rezerwę z tytułu odroczonego podatku dochodowego tworzy się w wysokości kwoty podatku dochodowego, wymagającej w przyszłości zapłaty, w związku z występowaniem dodatnich różnic przejściowych, to jest różnic, które spowodują zwiększenie podstawy obliczenia podatku dochodowego w przyszłości” (pytanie I-22 egzaminu 2025: linia produkcyjna o wartości bilansowej wyższej niż podatkowa — rezerwa)",
+          "ustawa o rachunkowości art. 37 ust. 6: „Wysokość rezerwy i aktywów z tytułu odroczonego podatku dochodowego ustala się przy uwzględnieniu stawek podatku dochodowego obowiązujących w roku powstania obowiązku podatkowego”",
+          "ustawa o rachunkowości art. 37 ust. 10: „Jednostka mikro i jednostka mała mogą odstąpić od ustalania aktywów i rezerw z tytułu odroczonego podatku dochodowego” — drzwi są wyborem, nie obowiązkiem",
+          "KSR 2 „Podatek dochodowy” pkt 2.18: „Dodatnie różnice przejściowe powstają, gdy wartość bilansowa składnika aktywów jest wyższa niż jego wartość podatkowa albo wartość bilansowa składnika zobowiązań jest niższa niż jego wartość podatkowa. […] Ujemne różnice przejściowe powstają, gdy wartość bilansowa składnika aktywów jest niższa niż jego wartość podatkowa albo wartość bilansowa składnika zobowiązań jest wyższa niż jego wartość podatkowa”"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-deferred-tax-liability",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Rezerwa z tytułu odroczonego podatku księguje się na dzień bilansowy: Wn 870 Podatek dochodowy / Ma 835 Rezerwa z tytułu odroczonego podatku dochodowego",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "deferred_tax"
+            },
+            {
+              "path": "$.state.kind",
+              "op": "eq",
+              "value": "liability"
+            },
+            {
+              "formula": "=$.state.amount > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.date",
+            "lines": [
+              {
+                "account": "870",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "835",
+                "credit": "=$.state.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 37 ust. 5: „Rezerwę z tytułu odroczonego podatku dochodowego tworzy się w wysokości kwoty podatku dochodowego, wymagającej w przyszłości zapłaty, w związku z występowaniem dodatnich różnic przejściowych, to jest różnic, które spowodują zwiększenie podstawy obliczenia podatku dochodowego w przyszłości” (pytanie I-22 egzaminu 2025: linia produkcyjna o wartości bilansowej wyższej niż podatkowa — rezerwa)",
+          "ustawa o rachunkowości art. 37 ust. 8: podatek dochodowy wpływający na wynik finansowy obejmuje część bieżącą i część odroczoną; „część odroczona stanowi różnicę pomiędzy stanem rezerw i aktywów z tytułu podatku odroczonego na koniec i początek okresu sprawozdawczego”",
+          "wzorcowy plan kont: 650 Aktywa z tytułu odroczonego podatku dochodowego, 835 Rezerwa z tytułu odroczonego podatku dochodowego, 870 Podatek dochodowy"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-deferred-tax-asset",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Aktywa z tytułu odroczonego podatku księgują się na dzień bilansowy: Wn 650 Aktywa z tytułu odroczonego podatku dochodowego / Ma 870 Podatek dochodowy",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "deferred_tax"
+            },
+            {
+              "path": "$.state.kind",
+              "op": "eq",
+              "value": "asset"
+            },
+            {
+              "formula": "=$.state.amount > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.date",
+            "lines": [
+              {
+                "account": "650",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "870",
+                "credit": "=$.state.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 37 ust. 4: „Aktywa z tytułu odroczonego podatku dochodowego ustala się w wysokości kwoty przewidzianej w przyszłości do odliczenia od podatku dochodowego, w związku z ujemnymi różnicami przejściowymi, które spowodują w przyszłości zmniejszenie podstawy obliczenia podatku dochodowego oraz straty podatkowej możliwej do odliczenia, ustalonej przy uwzględnieniu zasady ostrożności”",
+          "ustawa o rachunkowości art. 37 ust. 8: podatek dochodowy wpływający na wynik finansowy obejmuje część bieżącą i część odroczoną; „część odroczona stanowi różnicę pomiędzy stanem rezerw i aktywów z tytułu podatku odroczonego na koniec i początek okresu sprawozdawczego”",
+          "wzorcowy plan kont: 650 Aktywa z tytułu odroczonego podatku dochodowego, 835 Rezerwa z tytułu odroczonego podatku dochodowego, 870 Podatek dochodowy"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-reverse-deferred-tax",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Odwrócona różnica przejściowa przechodzi w stan reversed z dniem odwrócenia",
+      "spec": {
+        "match": {
+          "event_type": "deferred_tax.reversed",
+          "where": []
+        },
+        "effect": {
+          "amend": {
+            "type": "deferred_tax",
+            "target": "=$.deferred_tax",
+            "set": {
+              "status": "reversed",
+              "reversed_on": "=$.date"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 37 ust. 8: podatek dochodowy wpływający na wynik finansowy obejmuje część bieżącą i część odroczoną; „część odroczona stanowi różnicę pomiędzy stanem rezerw i aktywów z tytułu podatku odroczonego na koniec i początek okresu sprawozdawczego”"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-deferred-tax-liability-reversal",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Odwrócenie rezerwy z tytułu odroczonego podatku: Wn 835 / Ma 870, w kwocie rezerwy",
+      "spec": {
+        "match": {
+          "event_type": "deferred_tax.reversed",
+          "where": [
+            {
+              "formula": "=$.deferred_tax.kind = \"liability\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.date",
+            "lines": [
+              {
+                "account": "835",
+                "debit": "=$.deferred_tax.amount"
+              },
+              {
+                "account": "870",
+                "credit": "=$.deferred_tax.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 37 ust. 8: podatek dochodowy wpływający na wynik finansowy obejmuje część bieżącą i część odroczoną; „część odroczona stanowi różnicę pomiędzy stanem rezerw i aktywów z tytułu podatku odroczonego na koniec i początek okresu sprawozdawczego”",
+          "wzorcowy plan kont: 650 Aktywa z tytułu odroczonego podatku dochodowego, 835 Rezerwa z tytułu odroczonego podatku dochodowego, 870 Podatek dochodowy"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-deferred-tax-asset-reversal",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Odwrócenie aktywów z tytułu odroczonego podatku: Wn 870 / Ma 650, w kwocie aktywów",
+      "spec": {
+        "match": {
+          "event_type": "deferred_tax.reversed",
+          "where": [
+            {
+              "formula": "=$.deferred_tax.kind = \"asset\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.date",
+            "lines": [
+              {
+                "account": "870",
+                "debit": "=$.deferred_tax.amount"
+              },
+              {
+                "account": "650",
+                "credit": "=$.deferred_tax.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 37 ust. 8: podatek dochodowy wpływający na wynik finansowy obejmuje część bieżącą i część odroczoną; „część odroczona stanowi różnicę pomiędzy stanem rezerw i aktywów z tytułu podatku odroczonego na koniec i początek okresu sprawozdawczego”",
+          "wzorcowy plan kont: 650 Aktywa z tytułu odroczonego podatku dochodowego, 835 Rezerwa z tytułu odroczonego podatku dochodowego, 870 Podatek dochodowy"
+        ]
+      }
     }
   ],
   "activities": [
@@ -10559,6 +11009,91 @@
           "human"
         ]
       }
+    },
+    {
+      "name": "recognise_deferred_tax",
+      "domain": "finance",
+      "description": "Na dzień bilansowy księgowy stwierdza różnicę przejściową między wartością bilansową a podatkową składnika aktywów albo pasywów i podaje stawkę podatku roku, w którym obowiązek powstanie: składnik aktywów wart w bilansie więcej niż podatkowo (albo pasywów mniej) daje rezerwę na odroczony podatek, odwrotnie — aktywa z tytułu odroczonego podatku; stratę podatkową do odliczenia wpisuje się jako składnik aktywów o wartości bilansowej 0 i wartości podatkowej równej stracie; jednostka mikro i mała może od ustalania odroczonego podatku odstąpić (art. 37 ust. 1, 4–6 i 10 UoR)",
+      "spec": {
+        "inputs": [
+          {
+            "name": "title",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "item",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "side",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "asset",
+              "liability"
+            ]
+          },
+          {
+            "name": "carrying_value",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "tax_value",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "rate",
+            "type": "decimal",
+            "required": true
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "deferred_tax.recognised",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "reverse_deferred_tax",
+      "domain": "finance",
+      "description": "Różnica przejściowa odwróciła się — składnik sprzedano, zamortyzowano podatkowo, rezerwę wykorzystano, stratę odliczono — i rezerwa albo aktywa z tytułu odroczonego podatku schodzą z ksiąg w dniu odwrócenia (art. 37 ust. 8 UoR: część odroczona podatku to zmiana stanu rezerw i aktywów)",
+      "spec": {
+        "inputs": [
+          {
+            "name": "deferred_tax",
+            "type": "ref<deferred_tax>",
+            "required": true
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "deferred_tax.reversed",
+        "who": [
+          "human"
+        ]
+      }
     }
   ],
   "events": [
@@ -11234,6 +11769,28 @@
       "payload": {
         "code": "240",
         "name": "Pożyczki otrzymane",
+        "type": "creditor",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.created",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/account/650",
+      "payload": {
+        "code": "650",
+        "name": "Aktywa z tytułu odroczonego podatku dochodowego",
+        "type": "asset",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.created",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/account/835",
+      "payload": {
+        "code": "835",
+        "name": "Rezerwa z tytułu odroczonego podatku dochodowego",
         "type": "creditor",
         "market": "pl"
       }

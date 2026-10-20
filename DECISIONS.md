@@ -4552,3 +4552,33 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   balance date, 70 000 refused, 62 000 closes it; 50 000 to a subsidiary with 1 000 paid
   and 500 accrued interest, repaid with the interest. Pinned counts: 35 types, 33 views,
   115 rules, 30 doors, 62 events, 50 accounts.
+
+## 2026-10-20 — Pack v39: deferred income tax
+
+- Lesson I-22 of the author's block I drafts (EXAM.md 6.1.8 d). A temporary difference
+  between an item's carrying value and its tax value is a `deferred_tax`: the person names
+  the item, its side of the balance sheet, both values and the rate of the year the
+  obligation will arise (UoR art. 37 ust. 6); the rule decides the sign the way KSR 2 pkt
+  2.18 does — an asset worth more in the books than for tax, or a liability worth less,
+  is a positive difference and a provision, Wn 870 / Ma 835 (art. 37 ust. 5); the
+  opposite is a negative difference and a deferred tax asset, Wn 650 / Ma 870 (ust. 4) —
+  and a tax loss to deduct is entered as an asset worth nothing in the books and the loss
+  for tax, which ust. 4 puts beside negative differences. `reverse_deferred_tax` books
+  the opposite on the day the difference reverses. Both sides pass through 870, so the
+  year's close carries the deferred part into the result as art. 37 ust. 8 has it. The
+  author's draft had the provision only and took the values as strings; the lesson takes
+  both sides, money as money, and one type with a computed kind.
+- Simplifications said in the history: one object per difference, recognised and
+  reversed in full — a change in a difference is a reversal and a new recognition, and
+  the period's deferred part is still the change in balances (ust. 8); no netting of the
+  provision and the asset at presentation (ust. 7), no effect through equity (ust. 9); the
+  door is a choice a micro or small entity may not make (ust. 10). The automatic reading
+  of differences from the accounts' tax treatment is a later lesson.
+- Boundary checklist: the caller's scope only; twice: the caller's dedup key, the reversal
+  amends by the object's id; money: carrying value, tax value, difference, amount, strings
+  across the boundary; the rate a decimal in percent.
+- Test: `TestDeferredTax` — a production line 500 000 against 420 000 at 19% is a
+  provision of 15 200; a lawsuit provision of 30 000 with no tax value and a tax loss of
+  100 000 are assets of 5 700 and 19 000; equal values book nothing and make no object;
+  the line's sale reverses its provision, the loss deducted reverses its asset. Pinned
+  counts: 36 types, 34 views, 121 rules, 32 doors, 64 events, 52 accounts.
