@@ -693,7 +693,7 @@ func (x *Executor) refuseMember(ctx context.Context, m core.Member) error {
 	if status == core.StatusDraft {
 		return fmt.Errorf("%s %s v%d belongs to bundle %s — approve the bundle, never part of it", m.Kind, m.Name, m.Version, id)
 	}
-	return fmt.Errorf("%s %s v%d belongs to bundle %s, which is %s — redraft it", m.Kind, m.Name, m.Version, id, status)
+	return fmt.Errorf("%s %s v%d belongs to bundle %s, which is %s — bundle it anew or redraft it", m.Kind, m.Name, m.Version, id, status)
 }
 
 // ApproveRule records a human approval through the approve_rule door: the

@@ -121,15 +121,18 @@ func (s *Store) LatestBundles(ctx context.Context) ([]core.Bundle, error) {
 }
 
 // BundleOf reports the bundle a draft version belongs to, if any, with that
-// bundle's latest status. A draft answers in exactly one bundle for life:
-// the single-definition approval doors refuse it (no partial approval), and
-// after a rejection it stays a rejected draft — a redraft is a new version.
+// bundle's latest status. A draft is spoken for by at most one draft or
+// active bundle at a time: the single-definition approval doors refuse it
+// (no partial approval). A rejected bundle frees its members, so a draft may
+// also sit in superseded bundles; the live one answers first, and among
+// superseded ones the answer is fixed by id.
 func (s *Store) BundleOf(ctx context.Context, m core.Member) (id, status string, ok bool, err error) {
 	probe, _ := json.Marshal([]core.Member{m})
 	err = s.Pool.QueryRow(ctx, `
 		SELECT bundle_id, status FROM (SELECT DISTINCT ON (bundle_id) bundle_id, status, members
 		                               FROM bundle ORDER BY bundle_id, version DESC) b
-		WHERE members @> $1::jsonb LIMIT 1`, probe).Scan(&id, &status)
+		WHERE members @> $1::jsonb
+		ORDER BY (status = $2), bundle_id LIMIT 1`, probe, core.StatusSuperseded).Scan(&id, &status)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", "", false, nil
 	}

@@ -178,9 +178,10 @@ func TestBundleTwoConsequences(t *testing.T) {
 	}
 }
 
-// A rejection supersedes the bundle and keeps the reason on the record; its
-// drafts stay rejected drafts, locked by membership: a redraft is a new
-// version in a new bundle.
+// A rejection supersedes the bundle and keeps the reason on the record. Its
+// drafts are free again: one may join a new bundle and activate through it
+// (d4d243d, the loader adopts orphans), while the single-definition doors
+// still refuse it alone.
 func TestBundleRejection(t *testing.T) {
 	ctx := context.Background()
 	s := storetest.New(t)
@@ -209,14 +210,30 @@ func TestBundleRejection(t *testing.T) {
 		!strings.Contains(err.Error(), "redraft") {
 		t.Fatalf("rejected draft approved alone: %v", err)
 	}
+	// The freed draft joins a second bundle; alone it is still refused, now
+	// because that bundle holds it; the bundle's approval activates it.
 	if _, err := s.InsertBundle(ctx, core.Bundle{ID: "invoices-again", CreatedBy: "agent:test",
-		Description: "same draft", Members: []core.Member{{Kind: core.KindRule, Name: "book-pln-invoice", Version: 1}}}); err == nil {
-		t.Fatal("a rejected draft joined a second bundle")
+		Description: "same draft", Members: []core.Member{{Kind: core.KindRule, Name: "book-pln-invoice", Version: 1}}}); err != nil {
+		t.Fatalf("a rejected draft could not join a second bundle: %v", err)
+	}
+	if id, status, ok, _ := s.BundleOf(ctx, core.Member{Kind: core.KindRule, Name: "book-pln-invoice", Version: 1}); !ok || id != "invoices-again" || status != core.StatusDraft {
+		t.Fatalf("BundleOf answers the superseded bundle: %s %s %v", id, status, ok)
+	}
+	if _, _, _, err := x.ApproveRule(ctx, "book-pln-invoice", "krzysztof", "2026-09-15"); err == nil ||
+		!strings.Contains(err.Error(), "approve the bundle") {
+		t.Fatalf("draft in a pending bundle approved alone: %v", err)
+	}
+	if _, _, _, err := x.ApproveBundle(ctx, "invoices-again", "krzysztof", "2026-09-15"); err != nil {
+		t.Fatal(err)
+	}
+	if active, _ := s.ActiveRules(ctx); len(active) != 1 || active[0].Spec.Match.Where == nil {
+		t.Fatalf("active after the second bundle = %+v", active)
 	}
 	// The redraft: a new version, a new bundle, and it activates.
 	r, _ := s.GetRule(ctx, "book-pln-invoice")
 	r.Description = "Invoices in any currency become Invoice documents"
 	r.Spec.Match.Where = nil
+	r.Status = core.StatusDraft
 	r, err = s.InsertRuleVersion(ctx, r)
 	if err != nil {
 		t.Fatal(err)
