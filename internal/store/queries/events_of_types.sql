@@ -6,5 +6,5 @@ SELECT event_id, kind, event_type, to_char(occurred_at,'YYYY-MM-DD'), recorded_a
        payload, cause_event_id, rule_id, rule_version, dedup_key, actor,
        activity_name, activity_version, company
 FROM event
-WHERE event_type = ANY($1) AND ($2 = '' OR company = $2)
+WHERE event_type = ANY($1) AND ($2 = '' OR company = $2 OR COALESCE(company, '') = '')
 ORDER BY event_id

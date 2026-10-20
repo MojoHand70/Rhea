@@ -1,9 +1,12 @@
 package shell_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"net/http/httptest"
 	"path/filepath"
 	"strings"
@@ -235,4 +238,104 @@ func srvSaid(ctx context.Context, s interface {
 		}
 	}
 	return n, err
+}
+
+// Invariant 9 at the shell's doors: two companies through the same server,
+// each request scoped by its header; a company's list, worklist and
+// analysis view hold that company's facts and the installation's, never
+// the other's — the analysis copy is the scope's own, so the pack's SUM is
+// one company's sum.
+func TestTwoCompaniesAtTheDoors(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	x := &exec.Executor{Store: s}
+	srv := &shell.Server{Store: s, Exec: x, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb")}
+	ts := httptest.NewServer(srv.Handler())
+	defer ts.Close()
+	call := func(method, company, path string, body any, out any) int {
+		t.Helper()
+		var rd io.Reader
+		if body != nil {
+			b, _ := json.Marshal(body)
+			rd = bytes.NewReader(b)
+		}
+		req, _ := http.NewRequest(method, ts.URL+path, rd)
+		req.Header.Set("Content-Type", "application/json")
+		if company != "" {
+			req.Header.Set("X-Rhea-Company", company)
+		}
+		res, err := ts.Client().Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+		if out != nil {
+			json.NewDecoder(res.Body).Decode(out)
+		}
+		return res.StatusCode
+	}
+	if err := s.InsertObjectType(ctx, core.ObjectType{Name: "note", Version: 1, Domain: "work", LabelField: "text",
+		Fields: []core.FieldDef{{Name: "text", Type: "string", Required: true}, {Name: "amount", Type: "money", Required: true}}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.InsertRuleVersion(ctx, core.Rule{ID: "note", Status: core.StatusActive, Priority: 100,
+		EffectiveFrom: "2026-01-01", CreatedBy: "test", Description: "notes", Spec: core.RuleSpec{
+			Match:  core.Match{EventType: "note.taken"},
+			Effect: core.Effect{Object: core.ObjectTemplate{Type: "note", Fields: map[string]string{"text": "=$.text", "amount": "=$.amount"}}}}}); err != nil {
+		t.Fatal(err)
+	}
+	facts, _ := json.Marshal(core.AnalysisSpec{
+		SQL:     `SELECT COUNT(*) AS notes, SUM(CAST(json_extract(state, '$.amount') AS BIGINT)) AS total FROM objects WHERE object_type = 'note'`,
+		Columns: []core.ColumnSpec{{Field: "notes", Label: "Notes", Type: "int"}, {Field: "total", Label: "Total", Type: "money"}}})
+	if err := s.InsertViewDef(ctx, core.ViewDef{ID: "notes-total", Version: 1, Notion: "analysis", Title: "Notes",
+		Domain: "work", Function: "analysis", Spec: facts}); err != nil {
+		t.Fatal(err)
+	}
+	alfa, beta := "PL5250001111", "PL5260001246"
+	note := func(company, text, amount string) {
+		t.Helper()
+		var trig map[string]any
+		if code := call("POST", company, "/api/activities/submit_event/trigger", map[string]any{"inputs": map[string]any{
+			"event_type": "note.taken", "occurred_at": "2026-09-01", "payload": map[string]any{"text": text, "amount": amount}}}, &trig); code != 200 {
+			t.Fatalf("%s's note: %d %v", company, code, trig)
+		}
+	}
+	note(alfa, "alfa 1", "100.00")
+	note(alfa, "alfa 2", "25.50")
+	note(beta, "beta 1", "999.00")
+	var view struct {
+		Rows [][]struct {
+			V string `json:"v"`
+		} `json:"rows"`
+	}
+	total := func(company string) string {
+		t.Helper()
+		view.Rows = nil
+		if code := call("GET", company, "/api/views/notes-total", nil, &view); code != 200 || len(view.Rows) != 1 {
+			t.Fatalf("%q's analysis: %d %+v", company, code, view)
+		}
+		return view.Rows[0][0].V + " notes, " + view.Rows[0][1].V
+	}
+	if got := total(alfa); got != "2 notes, 125.50" {
+		t.Fatalf("alfa's analysis sums %s", got)
+	}
+	if got := total(beta); got != "1 notes, 999.00" {
+		t.Fatalf("beta's analysis sums %s", got)
+	}
+	if got := total(alfa + "," + beta); got != "3 notes, 1124.50" {
+		t.Fatalf("the office's analysis sums %s", got)
+	}
+	if got := total(""); got != "3 notes, 1124.50" {
+		t.Fatalf("the unscoped kernel's analysis sums %s", got)
+	}
+	// The object list is the scope's too.
+	var objs struct {
+		Objects []map[string]any `json:"objects"`
+	}
+	call("GET", beta, "/api/objects?type=note", nil, &objs)
+	for _, o := range objs.Objects {
+		if st, _ := o["state"].(map[string]any); st["text"] == "alfa 1" || st["text"] == "alfa 2" {
+			t.Fatalf("beta's list shows alfa's note: %v", o)
+		}
+	}
 }

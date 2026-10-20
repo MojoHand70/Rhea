@@ -91,8 +91,11 @@ func Rebuild(ctx context.Context, s *store.Store, duckPath string) (int, error) 
 		return n, nil // the log has not moved: the copy is the log's
 	}
 
-	// The copy is the whole log's, whatever scope the caller runs under.
-	derived, err := s.EventsByKind(store.WithCompany(ctx, ""), core.KindDerived)
+	// The copy is built from what the caller's scope sees — under a scope,
+	// the database shows that scope's rows and the installation's — into
+	// that scope's own file (PathFor), so an office's analysis holds its
+	// clients and nothing else, and a pack's SQL needs no filter of its own.
+	derived, err := s.EventsByKind(ctx, core.KindDerived)
 	if err != nil {
 		return 0, err
 	}
@@ -201,7 +204,7 @@ func Rebuild(ctx context.Context, s *store.Store, duckPath string) (int, error) 
 		if _, err := tx.ExecContext(ctx, objectsInsertSQL,
 			r.mat.ObjectID, r.mat.ObjectType, r.mat.TypeVersion, string(state),
 			*r.ev.CauseEventID, r.ev.RuleID, r.ev.RuleVersion, r.ev.OccurredAt,
-			r.root); err != nil {
+			r.root, r.ev.Company); err != nil {
 			return 0, err
 		}
 		if t, ok := byType[r.mat.ObjectType]; ok {
@@ -214,7 +217,7 @@ func Rebuild(ctx context.Context, s *store.Store, duckPath string) (int, error) 
 					vals = append(vals, cell(c.Kind, r.mat.State[c.Field]))
 				}
 			}
-			vals = append(vals, r.mat.TypeVersion, *r.ev.CauseEventID, r.ev.RuleID, r.ev.RuleVersion, r.ev.OccurredAt, r.root, string(state))
+			vals = append(vals, r.mat.TypeVersion, *r.ev.CauseEventID, r.ev.RuleID, r.ev.RuleVersion, r.ev.OccurredAt, r.root, r.ev.Company, string(state))
 			if _, err := inserts[t.Type].ExecContext(ctx, vals...); err != nil {
 				return 0, fmt.Errorf("collection %s.%s, %s: %w", t.Schema, t.Name, r.mat.ObjectID, err)
 			}
@@ -390,4 +393,15 @@ func Wipe(duckPath string) error {
 		}
 	}
 	return nil
+}
+
+// PathFor is the analysis file of a scope: the base path for the unscoped
+// kernel, a file of its own per scope — the copy is what the scope sees.
+func PathFor(base string, scope []string) string {
+	if len(scope) == 0 {
+		return base
+	}
+	sum := sha256.Sum256([]byte(strings.Join(scope, ",")))
+	ext := filepath.Ext(base)
+	return strings.TrimSuffix(base, ext) + "-" + hex.EncodeToString(sum[:6]) + ext
 }

@@ -3,6 +3,7 @@ package store_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -356,5 +357,76 @@ func TestProjectionNotices(t *testing.T) {
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("no notice after commit")
+	}
+}
+
+// Invariant 9, enforced in the database: a scoped connection runs as
+// rhea_app under row-level security and sees its scope's rows and the
+// installation's — never another company's — and cannot write outside its
+// scope, whatever SQL it runs. An office's scope is a set; the kernel's
+// unscoped work sees the whole log.
+func TestIsolationInTheDatabase(t *testing.T) {
+	ctx := context.Background()
+	s := testStore(t)
+	for i, c := range []string{"PL5250001111", "PL5260001246", ""} {
+		ev := rawEvent(fmt.Sprintf("iso-%d", i))
+		ev.Company = c
+		id, err := s.AppendEvent(ctx, ev)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := store.InsertObject(ctx, s.Pool, core.Object{ID: fmt.Sprintf("thing-%d", i), Type: "thing", TypeVersion: 1,
+			State: map[string]any{"n": i}, SourceEventID: id, RuleID: "r", RuleVersion: 1, Company: c}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	count := func(ctx context.Context, table string) int {
+		t.Helper()
+		var n int
+		if err := s.Pool.QueryRow(ctx, "SELECT COUNT(*) FROM "+table).Scan(&n); err != nil {
+			t.Fatalf("%s: %v", table, err)
+		}
+		return n
+	}
+	alfa := store.WithCompany(ctx, "PL5250001111")
+	office := store.WithScope(ctx, []string{"PL5260001246", "PL5250001111"})
+	if count(ctx, "object") != 3 || count(ctx, "event") < 3 {
+		t.Fatal("the unscoped kernel sees the whole log")
+	}
+	if count(alfa, "object") != 2 { // alfa's own and the installation's
+		t.Fatalf("alfa sees %d objects through raw SQL", count(alfa, "object"))
+	}
+	var seen []string
+	rows, _ := s.Pool.Query(alfa, `SELECT COALESCE(company, '') FROM object ORDER BY object_id`)
+	for rows.Next() {
+		var c string
+		rows.Scan(&c)
+		seen = append(seen, c)
+	}
+	rows.Close()
+	if fmt.Sprint(seen) != "[PL5250001111 ]" {
+		t.Fatalf("alfa's rows: %v", seen)
+	}
+	if count(office, "object") != 3 {
+		t.Fatalf("the office sees %d objects of its two clients and the installation", count(office, "object"))
+	}
+	// A scoped connection cannot write another company's fact, through the
+	// store or through raw SQL.
+	beta := rawEvent("iso-beta-by-alfa")
+	beta.Company = "PL5260001246"
+	if _, err := s.AppendEvent(alfa, beta); err == nil {
+		t.Fatal("alfa appended beta's fact")
+	}
+	if _, err := s.Pool.Exec(alfa, `INSERT INTO object (object_id, object_type, type_version, state, source_event_id, rule_id, rule_version, company)
+		VALUES ('thing-x', 'thing', 1, '{}', 1, 'r', 1, 'PL5260001246')`); err == nil {
+		t.Fatal("alfa wrote beta's object through raw SQL")
+	}
+	// The connection comes back to the pool as the owner: the next unscoped
+	// use sees everything again.
+	if count(ctx, "object") != 3 {
+		t.Fatal("the scope leaked into the pool")
+	}
+	if s := store.ScopeOf(store.WithScope(ctx, []string{"b", " a ", "b", ""})); fmt.Sprint(s) != "[a b]" {
+		t.Fatalf("scope = %v", s)
 	}
 }

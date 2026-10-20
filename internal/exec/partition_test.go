@@ -81,8 +81,19 @@ func TestPartitionKey(t *testing.T) {
 	if counts, _ := s.CountObjectsByType(alfa); counts["note"] != 2 {
 		t.Fatalf("alfa's count: %v", counts)
 	}
-	if evs, _ := s.EventsByKind(beta, core.KindRaw); len(evs) != 1 {
-		t.Fatalf("beta's facts: %d", len(evs))
+	// beta's facts, beside the installation's own (the kernel's seeded
+	// verbs carry no company and are every scope's): one note.
+	evs, _ := s.EventsByKind(beta, core.KindRaw)
+	betas := 0
+	for _, ev := range evs {
+		if ev.Company == "PL5260001246" {
+			betas++
+		} else if ev.Company != "" {
+			t.Fatalf("beta's facts hold %s's", ev.Company)
+		}
+	}
+	if betas != 1 {
+		t.Fatalf("beta's facts: %d", betas)
 	}
 
 	// The worklist is scoped too: a fact no rule explains waits in its

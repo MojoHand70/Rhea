@@ -3249,6 +3249,50 @@ pilot — the usability test of the whole ladder.
 - *One person across installations.* Later; today every entity lives on
   one installation and a person's memberships are there.
 
+## Isolation in the database: a scope is a set of companies (KK, 2026-10-20)
+
+KK, after the two reviews: "We are developing a big ERP and we cannot afford such
+things like summing all companies or giving one company data of another company."
+And: "an Accounting Office can see many companies — its clients." Invariant 9.
+
+**Who sees what.** A *scope* is the set of companies a request acts for. A company's
+scope is itself. An accounting office's scope is its clients, every one of them, and
+when it writes a fact it writes it for one named client (the *acting* company, one of
+the set). Rows with no company — the pack's master data (chart of accounts, VAT
+rates), the kernel's own verbs (a rule approved, a bundle rejected) — are the
+installation's and are seen by every scope. Nothing else crosses.
+
+**Where it is enforced.** In the database, the way invariant 1 is: a role every
+scoped request runs as (`rhea_app`, no bypass) with row-level security on `event` and
+`object` — a row is visible, and may be written, when its company is in the request's
+scope or it is the installation's. The pool switches role and sets the scope on every
+connection it hands to a scoped request, and resets both when the connection returns.
+A query that forgets its scope returns nothing. The kernel itself — the executor's
+replay, backup and restore, the pack loader, init — runs unscoped as the owner and
+sees the whole log; a request from a person never does.
+
+**The analysis copy.** The DuckDB file is built per scope from what the scope sees,
+under the same role, so an office's analysis holds its clients and nothing else and a
+pack's SQL needs no filter of its own: `SELECT SUM(amount) FROM finance.posting` is
+the scope's sum. Every projected table also carries `company`, for a pack that wants
+to show its clients side by side. The copy's key is the scope's own mark.
+
+**Until sign-in.** The scope comes from the request today (`X-Rhea-Company`, one key
+or a comma list; the face sets its company's), and a request with none is unscoped —
+the owner's whole log, as before. The people-and-rights session (the sign-in step)
+makes every request carry a principal whose grants are its scope, and an unscoped
+request then sees nothing. That is the day invariant 9 is whole; the database side is
+ready for it now.
+
+**What is owed.** Facts from before the partition key carry no company and read as
+the installation's: a single-company database (rhea_pl, rhea_face) restores with
+`rhea restore -company <key>` stamping what lacks one — the log is append-only, so a
+stamp is a restore, never an UPDATE. The blob store is keyed by hash and carries no
+company; a hash is unguessable and reaches a reader only through that company's
+events, and a company column there follows when files are listed. The office's
+sign-in, its grants per client and the client's view of who may see its books are the
+sign-in session's.
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,

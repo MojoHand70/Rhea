@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Refuses a push when the check is red. Install once per clone:
+#   git config core.hooksPath .githooks
+exec "$(dirname "$0")/../scripts/check.sh"

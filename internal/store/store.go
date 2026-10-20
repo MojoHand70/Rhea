@@ -61,7 +61,33 @@ func DSN() string {
 }
 
 func Open(ctx context.Context, dsn string) (*Store, error) {
-	pool, err := pgxpool.New(ctx, dsn)
+	cfg, err := pgxpool.ParseConfig(dsn)
+	if err != nil {
+		return nil, err
+	}
+	// Invariant 9: a connection handed to a scoped request runs as rhea_app
+	// with the scope set, so row-level security decides what it sees and
+	// may write; it is reset when the connection returns. A failure to set
+	// either discards the connection — the owner's view never leaks into a
+	// scoped request.
+	cfg.BeforeAcquire = func(ctx context.Context, conn *pgx.Conn) bool {
+		scope := ScopeOf(ctx)
+		if len(scope) == 0 {
+			return true
+		}
+		if _, err := conn.Exec(ctx, `SET ROLE rhea_app`); err != nil {
+			return false
+		}
+		if _, err := conn.Exec(ctx, `SELECT set_config('rhea.scope', $1, false)`, strings.Join(scope, ",")); err != nil {
+			return false
+		}
+		return true
+	}
+	cfg.AfterRelease = func(conn *pgx.Conn) bool {
+		_, err := conn.Exec(context.Background(), `RESET ROLE; RESET rhea.scope`)
+		return err == nil
+	}
+	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -341,7 +367,7 @@ const eventCols = `event_id, kind, event_type, to_char(occurred_at,'YYYY-MM-DD')
 
 func (s *Store) EventsByKind(ctx context.Context, kind string) ([]core.Event, error) {
 	rows, err := s.Pool.Query(ctx,
-		`SELECT `+eventCols+` FROM event WHERE kind = $1 AND ($2 = '' OR company = $2) ORDER BY event_id`, kind, CompanyOf(ctx))
+		`SELECT `+eventCols+` FROM event WHERE kind = $1 AND ($2 = '' OR company = $2 OR COALESCE(company, '') = '') ORDER BY event_id`, kind, CompanyOf(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -924,22 +950,56 @@ const objectCols = `object_id, object_type, type_version, state, source_event_id
 // not — the latter is today's whole-log behavior, and the enforcement that
 // will key on the same column stays out, as the note says.
 type companyKey struct{}
+type scopeKey struct{}
 
-// WithCompany scopes a context to one company's facts; an empty company
-// clears the scope, so a whole-log read inside a scoped call says so.
+// WithCompany scopes a context to one company: it acts for that company and
+// sees it (and the installation's rows). An empty company clears both the
+// acting company and the scope, so a whole-log read inside a scoped call
+// says so.
 func WithCompany(ctx context.Context, company string) context.Context {
-	return context.WithValue(ctx, companyKey{}, company)
+	ctx = context.WithValue(ctx, companyKey{}, company)
+	if company == "" {
+		return context.WithValue(ctx, scopeKey{}, []string(nil))
+	}
+	return context.WithValue(ctx, scopeKey{}, []string{company})
 }
 
-// CompanyOf is the scope a context carries; empty means the whole log.
+// WithScope scopes a context to a set of companies it sees — an accounting
+// office and its clients — acting for none until WithCompany names one of
+// them. Keys are sorted and deduplicated; an empty set clears the scope.
+func WithScope(ctx context.Context, companies []string) context.Context {
+	set := map[string]bool{}
+	for _, c := range companies {
+		if c = strings.TrimSpace(c); c != "" {
+			set[c] = true
+		}
+	}
+	scope := make([]string, 0, len(set))
+	for c := range set {
+		scope = append(scope, c)
+	}
+	sort.Strings(scope)
+	ctx = context.WithValue(ctx, companyKey{}, "")
+	return context.WithValue(ctx, scopeKey{}, scope)
+}
+
+// CompanyOf is the company a context acts for; empty means none (an office
+// reading its clients, or the kernel's own unscoped work).
 func CompanyOf(ctx context.Context) string {
 	c, _ := ctx.Value(companyKey{}).(string)
 	return c
 }
 
+// ScopeOf is the set of companies a context sees; nil means unscoped — the
+// owner's whole log, the kernel's own work.
+func ScopeOf(ctx context.Context) []string {
+	s, _ := ctx.Value(scopeKey{}).([]string)
+	return s
+}
+
 func (s *Store) ObjectsByType(ctx context.Context, typ string) ([]core.Object, error) {
 	rows, err := s.Pool.Query(ctx,
-		`SELECT `+objectCols+` FROM object WHERE object_type = $1 AND ($2 = '' OR company = $2) ORDER BY source_event_id, object_id`, typ, CompanyOf(ctx))
+		`SELECT `+objectCols+` FROM object WHERE object_type = $1 AND ($2 = '' OR company = $2 OR COALESCE(company, '') = '') ORDER BY source_event_id, object_id`, typ, CompanyOf(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -951,7 +1011,7 @@ func (s *Store) ObjectsByType(ctx context.Context, typ string) ([]core.Object, e
 // and counting must not mean loading every object.
 func (s *Store) CountObjectsByType(ctx context.Context) (map[string]int, error) {
 	rows, err := s.Pool.Query(ctx,
-		`SELECT object_type, COUNT(*) FROM object WHERE ($1 = '' OR company = $1) GROUP BY object_type`, CompanyOf(ctx))
+		`SELECT object_type, COUNT(*) FROM object WHERE ($1 = '' OR company = $1 OR COALESCE(company, '') = '') GROUP BY object_type`, CompanyOf(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -969,7 +1029,7 @@ func (s *Store) CountObjectsByType(ctx context.Context) (map[string]int, error) 
 }
 
 func (s *Store) AllObjects(ctx context.Context) ([]core.Object, error) {
-	rows, err := s.Pool.Query(ctx, `SELECT `+objectCols+` FROM object WHERE ($1 = '' OR company = $1) ORDER BY object_id`, CompanyOf(ctx))
+	rows, err := s.Pool.Query(ctx, `SELECT `+objectCols+` FROM object WHERE ($1 = '' OR company = $1 OR COALESCE(company, '') = '') ORDER BY object_id`, CompanyOf(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -981,7 +1041,7 @@ func (s *Store) AllObjects(ctx context.Context) ([]core.Object, error) {
 // match; the period lock asks only whether any exist.
 func (s *Store) FindObjectIDsByField(ctx context.Context, typ, field, value string) ([]string, error) {
 	rows, err := s.Pool.Query(ctx,
-		`SELECT object_id FROM object WHERE object_type = $1 AND state->>$2 = $3 AND ($4 = '' OR company = $4) ORDER BY source_event_id, object_id`,
+		`SELECT object_id FROM object WHERE object_type = $1 AND state->>$2 = $3 AND ($4 = '' OR company = $4 OR COALESCE(company, '') = '') ORDER BY source_event_id, object_id`,
 		typ, field, value, CompanyOf(ctx))
 	if err != nil {
 		return nil, err
@@ -1007,7 +1067,7 @@ func (s *Store) AccountBalance(ctx context.Context, book, account, from, to stri
 	err := s.Pool.QueryRow(ctx,
 		`SELECT COALESCE(SUM(CASE WHEN state->>'side' = 'debit' THEN (state->>'amount')::bigint ELSE -(state->>'amount')::bigint END), 0)::bigint
 		 FROM object WHERE object_type = 'posting' AND state->>'account' = $1 AND COALESCE(state->>'book', 'main') = $2
-		   AND state->>'date' >= $3 AND state->>'date' <= $4 AND ($5 = '' OR company = $5)`,
+		   AND state->>'date' >= $3 AND state->>'date' <= $4 AND ($5 = '' OR company = $5 OR COALESCE(company, '') = '')`,
 		account, book, from, to, CompanyOf(ctx)).Scan(&minor)
 	return minor, err
 }

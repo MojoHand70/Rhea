@@ -4291,3 +4291,30 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   thirty statements, mechanical), doubtful PDFs re-read every pass (#47), status codes
   beyond 404 (#41 in part), the remaining small client defects (#42 in part), and the
   MT940 reader's globals (#54 in part).
+
+## 2026-10-20 — THE product, and isolation enforced in the database
+
+- KK: "We are now building THE product. We gathered enough proof to be able to confirm
+  the state change." CLAUDE.md rewritten: what this is, invariants 9 (isolation) and
+  10 (concurrency and idempotency), the working style the two reviews taught (one
+  finding, one failing test, one fix, one commit; the boundary checklist; the check
+  script; an independent review before done), the definition of done for a change.
+- No hosted CI: `./scripts/check.sh` (gofmt, vet, `go test ./... -count=1 -race` with
+  RHEA_CI=1 against the real database) runs on every push through `.githooks/pre-push`
+  (`git config core.hooksPath .githooks`, once per clone). Same protection, no credits.
+- Isolation (DIRECTION, "Isolation in the database"): a scope is a set of companies;
+  an accounting office's scope is its clients, acting for one named client when it
+  writes. Rows with no company are the installation's and every scope's. The database
+  enforces it: role `rhea_app` with row-level security on event and object; the pool
+  switches role and sets the scope on every connection a scoped request gets and
+  resets both on return; a failure to set either discards the connection. The analysis
+  copy is built per scope, under the scope, into the scope's own file, and every
+  projected table carries `company`. The store's own filters admit the installation's
+  rows now, as the policy does (the kernel's seeded verbs are every scope's).
+- Until sign-in, the scope comes from the request header (one key, or a comma list for
+  an office) and an unscoped request is the owner's whole log, as before; the sign-in
+  session makes a scope mandatory. Owed: `rhea restore -company` to stamp facts from
+  before the partition key; a company column on the blob store when files are listed.
+- Tests: the database refusing another company's rows and writes under raw SQL
+  (store), the copy per scope (project), two companies at the shell's doors with an
+  office scope summing both (shell).

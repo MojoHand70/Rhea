@@ -10,5 +10,6 @@ CREATE TABLE objects (
     rule_id         VARCHAR NOT NULL,
     rule_version    INTEGER NOT NULL,
     occurred_at     DATE NOT NULL,
-    root_event_id   BIGINT NOT NULL
+    root_event_id   BIGINT NOT NULL,
+    company         VARCHAR
 )

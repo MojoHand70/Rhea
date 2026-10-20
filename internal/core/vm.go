@@ -1216,7 +1216,6 @@ func toField(v Value, fd FieldDef, copy, raw bool) (any, error) {
 				return nil, err
 			}
 			return CanonicalDecimal(r)
-			return v.Str, nil
 		}
 		r, _, err := toNum(v)
 		if err != nil {

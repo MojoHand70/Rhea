@@ -6,7 +6,7 @@
 WITH RECURSIVE up AS (
     SELECT o.object_id, e.event_id, e.cause_event_id
     FROM object o JOIN event e ON e.event_id = o.source_event_id
-    WHERE o.object_type = $1 AND ($2 = '' OR o.company = $2)
+    WHERE o.object_type = $1 AND ($2 = '' OR o.company = $2 OR COALESCE(o.company, '') = '')
   UNION ALL
     SELECT up.object_id, e.event_id, e.cause_event_id
     FROM up JOIN event e ON e.event_id = up.cause_event_id

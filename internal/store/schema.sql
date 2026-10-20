@@ -211,3 +211,42 @@ ALTER TABLE rule DROP CONSTRAINT IF EXISTS rule_status_check;
 ALTER TABLE rule ADD CONSTRAINT rule_status_check CHECK (status IN ('draft','active','superseded'));
 ALTER TABLE activity DROP CONSTRAINT IF EXISTS activity_status_check;
 ALTER TABLE activity ADD CONSTRAINT activity_status_check CHECK (status IN ('draft','active','superseded'));
+
+-- Invariant 9: isolation, enforced in the database. A scoped request runs as
+-- rhea_app (no bypass) with the scope — a set of company keys — on the
+-- connection; a row of event or object is visible, and may be written, when
+-- its company is in the scope or it is the installation's (no company: the
+-- pack's master data, the kernel's own verbs). The owner (the kernel's own
+-- work: replay, backup, the loader) is a superuser and sees the whole log.
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'rhea_app') THEN
+        CREATE ROLE rhea_app NOLOGIN;
+    END IF;
+END;
+$$;
+CREATE OR REPLACE FUNCTION rhea_scope() RETURNS text[] AS $$
+    SELECT string_to_array(current_setting('rhea.scope', true), ',')
+$$ LANGUAGE sql STABLE;
+CREATE OR REPLACE FUNCTION rhea_in_scope(company TEXT) RETURNS boolean AS $$
+    SELECT company IS NULL OR company = '' OR company = ANY (rhea_scope())
+$$ LANGUAGE sql STABLE;
+ALTER TABLE event ENABLE ROW LEVEL SECURITY;
+ALTER TABLE object ENABLE ROW LEVEL SECURITY;
+DO $$
+DECLARE t TEXT;
+BEGIN
+    FOREACH t IN ARRAY ARRAY['event','object'] LOOP
+        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = t AND policyname = t || '_scope') THEN
+            EXECUTE format(
+                'CREATE POLICY %I ON %I TO rhea_app USING (rhea_in_scope(company)) WITH CHECK (rhea_in_scope(company))',
+                t || '_scope', t);
+        END IF;
+    END LOOP;
+END;
+$$;
+GRANT USAGE ON SCHEMA public TO rhea_app;
+GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA public TO rhea_app;
+GRANT UPDATE, DELETE ON object TO rhea_app;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO rhea_app;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO rhea_app;

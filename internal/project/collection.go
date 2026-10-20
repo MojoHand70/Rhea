@@ -43,6 +43,7 @@ var provenance = []Column{
 	{Name: "_rule_version", SQL: "INTEGER"},
 	{Name: "_occurred_at", SQL: "DATE"},
 	{Name: "_root_event", SQL: "BIGINT"},
+	{Name: "_company", SQL: "VARCHAR"},
 	{Name: "_state", SQL: "VARCHAR"},
 }
 

@@ -11,6 +11,7 @@ import (
 	"rhea/internal/agent"
 	"rhea/internal/core"
 	"rhea/internal/project"
+	"rhea/internal/store"
 )
 
 // The narrative notion (DIRECTION 2026-10-10, "The host is a concierge":
@@ -535,11 +536,12 @@ func (s *Server) analysisSpec(ctx context.Context, raw json.RawMessage) (core.An
 func (s *Server) analysisData(ctx context.Context, spec core.AnalysisSpec) ([]columnOut, [][]cellOut, [][]string, error) {
 	s.duck.Lock() // the rebuild and the read are one step: no other rebuild between them
 	defer s.duck.Unlock()
-	if _, err := project.Rebuild(ctx, s.Store, s.DuckPath); err != nil {
+	path := project.PathFor(s.DuckPath, store.ScopeOf(ctx)) // the scope's own copy
+	if _, err := project.Rebuild(ctx, s.Store, path); err != nil {
 		return nil, nil, nil, err
 	}
 	sql := strings.ReplaceAll(spec.SQL, core.TodayInSQL, "DATE '"+s.Clock.TodayUTC()+"'")
-	cols, rows, err := project.Query(ctx, s.DuckPath, sql)
+	cols, rows, err := project.Query(ctx, path, sql)
 	if err != nil {
 		return nil, nil, nil, err
 	}

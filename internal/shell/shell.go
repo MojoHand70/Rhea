@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -142,7 +143,11 @@ func scopedHandler(next http.Handler) http.Handler {
 		if company == "" {
 			company = r.URL.Query().Get("company")
 		}
-		if company != "" {
+		// One key acts for that company; a comma list is a scope — an
+		// office and its clients — acting for none.
+		if keys := strings.Split(company, ","); len(keys) > 1 {
+			r = r.WithContext(store.WithScope(r.Context(), keys))
+		} else if company != "" {
 			r = r.WithContext(store.WithCompany(r.Context(), company))
 		}
 		next.ServeHTTP(w, r)

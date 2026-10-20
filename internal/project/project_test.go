@@ -166,7 +166,7 @@ func TestTheCollection(t *testing.T) {
 	func() {
 		db, _ := sql.Open("duckdb", duck)
 		defer db.Close()
-		if _, err := db.Exec(`INSERT INTO objects VALUES ('mark', 'x', 1, '{}', 1, 'r', 1, '2026-01-01', 1)`); err != nil {
+		if _, err := db.Exec(`INSERT INTO objects VALUES ('mark', 'x', 1, '{}', 1, 'r', 1, '2026-01-01', 1, '')`); err != nil {
 			t.Fatal(err)
 		}
 	}()
@@ -233,5 +233,64 @@ func TestTheLockedSession(t *testing.T) {
 	}
 	if _, _, err := project.Query(ctx, duck, `SELECT * FROM range(20000)`); err == nil {
 		t.Fatalf("a figure read from part of its rows")
+	}
+}
+
+// The analysis copy is the scope's: built under a company's scope it holds
+// that company's objects and the installation's, in a file of its own, and
+// a pack's SUM over it is that company's sum — never every company's.
+func TestTheCopyIsTheScopes(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	if err := s.InsertObjectType(ctx, core.ObjectType{Name: "note", Version: 1, Domain: "work",
+		Fields: []core.FieldDef{{Name: "amount", Type: "money"}}}); err != nil {
+		t.Fatal(err)
+	}
+	add := func(company, id string, amount int64) {
+		t.Helper()
+		raw, err := s.AppendEvent(ctx, core.Event{Kind: core.KindRaw, Type: "note.taken", OccurredAt: "2026-09-15",
+			Payload: json.RawMessage(`{}`), DedupKey: id, Company: company})
+		if err != nil {
+			t.Fatal(err)
+		}
+		mat, _ := json.Marshal(core.MaterializedObject{ObjectID: id, ObjectType: "note", TypeVersion: 1, State: map[string]any{"amount": amount}})
+		if _, err := s.AppendEvent(ctx, core.Event{Kind: core.KindDerived, Type: core.EventObjectMaterialized, OccurredAt: "2026-09-15",
+			Payload: mat, CauseEventID: &raw, RuleID: "r", RuleVersion: 1, Company: company}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	add("PL5250001111", "note-a1", 10000)
+	add("PL5250001111", "note-a2", 2550)
+	add("PL5260001246", "note-b1", 99900)
+	add("", "note-shared", 100)
+	base := filepath.Join(t.TempDir(), "rhea.duckdb")
+	sum := func(ctx context.Context) (string, int) {
+		t.Helper()
+		path := project.PathFor(base, store.ScopeOf(ctx))
+		if _, err := project.Rebuild(ctx, s, path); err != nil {
+			t.Fatal(err)
+		}
+		_, rows, err := project.Query(ctx, path, `SELECT CAST(SUM(amount) AS VARCHAR), COUNT(*), COUNT(DISTINCT _company) FROM work.note`)
+		if err != nil || len(rows) != 1 {
+			t.Fatal(err, rows)
+		}
+		var n int
+		fmt.Sscan(fmt.Sprint(rows[0][1]), &n)
+		return fmt.Sprint(rows[0][0]), n
+	}
+	if total, n := sum(store.WithCompany(ctx, "PL5250001111")); total != "126.50" || n != 3 {
+		t.Fatalf("alfa's copy: %s over %d rows", total, n)
+	}
+	if total, n := sum(store.WithCompany(ctx, "PL5260001246")); total != "1000.00" || n != 2 {
+		t.Fatalf("beta's copy: %s over %d rows", total, n)
+	}
+	if total, n := sum(store.WithScope(ctx, []string{"PL5250001111", "PL5260001246"})); total != "1125.50" || n != 4 {
+		t.Fatalf("the office's copy: %s over %d rows", total, n)
+	}
+	if total, n := sum(ctx); total != "1125.50" || n != 4 {
+		t.Fatalf("the kernel's copy: %s over %d rows", total, n)
+	}
+	if project.PathFor(base, nil) != base || project.PathFor(base, []string{"a"}) == base || project.PathFor(base, []string{"a"}) == project.PathFor(base, []string{"b"}) {
+		t.Fatal("a scope has a file of its own")
 	}
 }
