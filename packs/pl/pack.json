@@ -1,9 +1,14 @@
 {
   "pack": "pl",
-  "version": 36,
+  "version": 37,
   "stage": "initial",
   "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
   "history": [
+    {
+      "versions": "37",
+      "date": "2026-10-20",
+      "changes": "Budowa środków trwałych (lekcje I-3 i I-14 egzaminu 2025, napisane przez autora i sprawdzone; rejestr EXAM.md 6.1.2 a, 6.1.1 c): drzwi move_from_construction zdejmują z 080 koszt, który nie jest nakładem na środek trwały — strata losowa (pożar w trakcie budowy), niewykorzystane zdolności, inne — w pozostałe koszty operacyjne 761 (art. 28 ust. 3 i ust. 8, art. 3 ust. 1 pkt 32 UoR); drzwi pay_asset_advance księgują zaliczkę na środek trwały (Wn 249 / Ma 130) w złotych z dnia zapłaty, także gdy jest w walucie obcej, i settle_asset_advance przenosi ją na 080 w tej samej kwocie, bez ponownej wyceny (KSR 11 pkt 6.18, art. 28 ust. 1 pkt 2 UoR)."
+    },
     {
       "versions": "36",
       "date": "2026-10-20",
@@ -2173,6 +2178,76 @@
           "required": true
         }
       ]
+    },
+    {
+      "name": "asset_advance",
+      "version": 1,
+      "domain": "finance",
+      "label_field": "title",
+      "lifecycle": {
+        "field": "status",
+        "transitions": {
+          "open": [
+            "settled"
+          ]
+        }
+      },
+      "amendable": [
+        "settled_on"
+      ],
+      "fields": [
+        {
+          "name": "title",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "supplier",
+          "type": "ref<company>",
+          "required": false
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "amount_foreign",
+          "type": "money",
+          "required": true,
+          "description": "kwota w walucie zaliczki (w złotych — ta sama co amount_pln)"
+        },
+        {
+          "name": "amount_pln",
+          "type": "money",
+          "required": true,
+          "description": "złote z dnia zapłaty; nie przelicza się jej ponownie"
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "open",
+            "settled"
+          ]
+        },
+        {
+          "name": "settled_on",
+          "type": "date",
+          "required": false
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ]
     }
   ],
   "view_defs": [
@@ -2585,7 +2660,7 @@
     },
     {
       "view_id": "slownik",
-      "version": 10,
+      "version": 11,
       "notion": "words",
       "title": "Słownik",
       "domain": "finance",
@@ -2821,6 +2896,11 @@
           "inventory_write_down": {
             "label": "Odpis aktualizujący zapasy",
             "plural": "Odpisy aktualizujące zapasy",
+            "shape": "card"
+          },
+          "asset_advance": {
+            "label": "Zaliczka na środek trwały",
+            "plural": "Zaliczki na środki trwałe",
             "shape": "card"
           }
         },
@@ -3105,7 +3185,12 @@
           "inventory_write_down.carrying_value": "Wartość ewidencyjna",
           "inventory_write_down.net_selling_price": "Cena sprzedaży netto",
           "inventory_write_down.amount": "Odpis",
-          "inventory_write_down.reversed_on": "Cofnięty"
+          "inventory_write_down.reversed_on": "Cofnięty",
+          "asset_advance.title": "Tytuł",
+          "asset_advance.supplier": "Dostawca",
+          "asset_advance.amount_foreign": "Kwota w walucie",
+          "asset_advance.amount_pln": "Złote z dnia zapłaty",
+          "asset_advance.settled_on": "Rozliczona"
         },
         "values": {
           "account.type": {
@@ -3389,6 +3474,10 @@
           "inventory_write_down.status": {
             "open": "otwarty",
             "reversed": "cofnięty"
+          },
+          "asset_advance.status": {
+            "open": "otwarta",
+            "settled": "rozliczona"
           }
         },
         "events": {
@@ -3451,7 +3540,10 @@
           "access.refused": "Odmowa dostępu",
           "access.recorded": "Logowanie odnotowane",
           "inventory.written_down": "Odpis aktualizujący zapasy",
-          "inventory.write_down.reversed": "Cofnięcie odpisu zapasów"
+          "inventory.write_down.reversed": "Cofnięcie odpisu zapasów",
+          "construction.cost_moved": "Koszt zdjęty z budowy środka trwałego",
+          "asset_advance.paid": "Zaliczka na środek trwały",
+          "asset_advance.settled": "Rozliczenie zaliczki na środek trwały"
         },
         "doors": {
           "appoint_deputy": "wyznaczenie zastępcy",
@@ -3506,7 +3598,10 @@
           "declare_group": "określenie grupy",
           "record_access": "odnotowanie logowania",
           "write_down_inventory": "odpis aktualizujący zapasy",
-          "reverse_inventory_write_down": "cofnięcie odpisu zapasów"
+          "reverse_inventory_write_down": "cofnięcie odpisu zapasów",
+          "move_from_construction": "zdjęcie kosztu z budowy",
+          "pay_asset_advance": "zaliczka na środek trwały",
+          "settle_asset_advance": "rozliczenie zaliczki na środek trwały"
         },
         "account_groups": {
           "0": "Aktywa trwałe",
@@ -8436,6 +8531,198 @@
           "wzorcowy plan kont: 700 Sprzedaż produktów (usług), 730 Sprzedaż towarów, 731 Wartość sprzedanych towarów w cenie zakupu, 760 Pozostałe przychody operacyjne, 761 Pozostałe koszty operacyjne, 310 Materiały, 330 Towary, 349 Odpisy aktualizujące wartość zapasów"
         ]
       }
+    },
+    {
+      "rule_id": "pl-post-cost-moved-from-construction",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Koszt zdjęty z budowy księguje się w dniu decyzji: Wn 761 Pozostałe koszty operacyjne / Ma 080 Środki trwałe w budowie — strata losowa, niewykorzystane zdolności albo inny koszt, który nie jest nakładem na środek trwały",
+      "spec": {
+        "match": {
+          "event_type": "construction.cost_moved",
+          "where": [
+            {
+              "formula": "=$.amount > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.date",
+            "lines": [
+              {
+                "account": "761",
+                "debit": "=$.amount"
+              },
+              {
+                "account": "080",
+                "credit": "=$.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 28 ust. 3: do kosztu wytworzenia nie zalicza się kosztów będących konsekwencją niewykorzystanych zdolności produkcyjnych i strat produkcyjnych, kosztów ogólnego zarządu, magazynowania i sprzedaży — koszt wytworzenia obejmuje tylko koszty pozostające w bezpośrednim związku z produktem i uzasadnioną część kosztów pośrednich",
+          "ustawa o rachunkowości art. 28 ust. 8: koszt wytworzenia środków trwałych w budowie obejmuje ogół kosztów poniesionych przez jednostkę za okres budowy, montażu, przystosowania i ulepszenia, do dnia bilansowego lub przyjęcia do używania — nakłady na środek trwały, nie koszty zdarzeń losowych w jego trakcie",
+          "ustawa o rachunkowości art. 3 ust. 1 pkt 32 lit. i: pozostałe koszty operacyjne obejmują koszty związane „ze zdarzeniami losowymi” — usuwanie skutków pożaru jest takim kosztem, a nie nakładem na budowę (pytanie I-3 egzaminu 2025: odpowiedź „pozostałe koszty operacyjne”)",
+          "wzorcowy plan kont: 080 Środki trwałe w budowie, 249 Pozostałe rozrachunki, 130 Rachunek bieżący, 761 Pozostałe koszty operacyjne"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-record-asset-advance",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Zaliczka na środek trwały staje się obiektem asset_advance: w walucie i w złotych z dnia zapłaty, otwarta do rozliczenia dostawą",
+      "spec": {
+        "match": {
+          "event_type": "asset_advance.paid",
+          "where": [
+            {
+              "formula": "=$.amount_pln > 0"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "asset_advance",
+            "fields": {
+              "title": "=$.title",
+              "supplier": "=$.supplier",
+              "currency": "=$.currency",
+              "amount_foreign": "=$.amount_foreign",
+              "amount_pln": "=$.amount_pln",
+              "date": "=$.date",
+              "status": "open",
+              "book": "pl-stat"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "KSR 11 „Środki trwałe” pkt 6.18: „Przedpłaty/zaliczki udzielone na poczet pozyskania środka trwałego […] wyrażone w walucie obcej – przelicza się na walutę polską jedynie na moment ich przekazania. Ze względu na ich treść ekonomiczną nie dokonuje się ponownej wyceny przekazanych przedpłat/zaliczek, ani na dzień bilansowy, ani na dzień przeprowadzenia transakcji zakupu (przyjęcia dostawy)”",
+          "ustawa o rachunkowości art. 28 ust. 1 pkt 2: środki trwałe w budowie wycenia się „w wysokości ogółu kosztów pozostających w bezpośrednim związku z ich nabyciem lub wytworzeniem, pomniejszonych o odpisy z tytułu trwałej utraty wartości”"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-asset-advance",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Zapłacona zaliczka na środek trwały księguje się w dniu zapłaty: Wn 249 Pozostałe rozrachunki / Ma 130, w złotych z tego dnia",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "asset_advance"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.date",
+            "lines": [
+              {
+                "account": "249",
+                "debit": "=$.state.amount_pln"
+              },
+              {
+                "account": "130",
+                "credit": "=$.state.amount_pln"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "KSR 11 „Środki trwałe” pkt 6.18: „Przedpłaty/zaliczki udzielone na poczet pozyskania środka trwałego […] wyrażone w walucie obcej – przelicza się na walutę polską jedynie na moment ich przekazania. Ze względu na ich treść ekonomiczną nie dokonuje się ponownej wyceny przekazanych przedpłat/zaliczek, ani na dzień bilansowy, ani na dzień przeprowadzenia transakcji zakupu (przyjęcia dostawy)”",
+          "wzorcowy plan kont: 080 Środki trwałe w budowie, 249 Pozostałe rozrachunki, 130 Rachunek bieżący, 761 Pozostałe koszty operacyjne"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-settle-asset-advance",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Rozliczona zaliczka przechodzi w stan settled z dniem dostawy",
+      "spec": {
+        "match": {
+          "event_type": "asset_advance.settled",
+          "where": []
+        },
+        "effect": {
+          "amend": {
+            "type": "asset_advance",
+            "target": "=$.advance",
+            "set": {
+              "status": "settled",
+              "settled_on": "=$.date"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "KSR 11 „Środki trwałe” pkt 6.18: „Przedpłaty/zaliczki udzielone na poczet pozyskania środka trwałego […] wyrażone w walucie obcej – przelicza się na walutę polską jedynie na moment ich przekazania. Ze względu na ich treść ekonomiczną nie dokonuje się ponownej wyceny przekazanych przedpłat/zaliczek, ani na dzień bilansowy, ani na dzień przeprowadzenia transakcji zakupu (przyjęcia dostawy)”"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-asset-advance-settlement",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Rozliczenie zaliczki przenosi złote z dnia zapłaty na budowę: Wn 080 / Ma 249, w tej samej kwocie — bez różnicy kursowej, bo zaliczka jest pozycją niepieniężną",
+      "spec": {
+        "match": {
+          "event_type": "asset_advance.settled",
+          "where": []
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.date",
+            "lines": [
+              {
+                "account": "080",
+                "debit": "=$.advance.amount_pln"
+              },
+              {
+                "account": "249",
+                "credit": "=$.advance.amount_pln"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "KSR 11 „Środki trwałe” pkt 6.18: „Przedpłaty/zaliczki udzielone na poczet pozyskania środka trwałego […] wyrażone w walucie obcej – przelicza się na walutę polską jedynie na moment ich przekazania. Ze względu na ich treść ekonomiczną nie dokonuje się ponownej wyceny przekazanych przedpłat/zaliczek, ani na dzień bilansowy, ani na dzień przeprowadzenia transakcji zakupu (przyjęcia dostawy)”",
+          "ustawa o rachunkowości art. 28 ust. 1 pkt 2: środki trwałe w budowie wycenia się „w wysokości ogółu kosztów pozostających w bezpośrednim związku z ich nabyciem lub wytworzeniem, pomniejszonych o odpisy z tytułu trwałej utraty wartości”",
+          "wzorcowy plan kont: 080 Środki trwałe w budowie, 249 Pozostałe rozrachunki, 130 Rachunek bieżący, 761 Pozostałe koszty operacyjne"
+        ]
+      }
     }
   ],
   "activities": [
@@ -9326,6 +9613,125 @@
           }
         ],
         "emits": "inventory.write_down.reversed",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "move_from_construction",
+      "domain": "finance",
+      "description": "Koszt zaksięgowany na 080 Środki trwałe w budowie, który nie jest nakładem na środek trwały — usuwanie skutków pożaru albo innej straty losowej w trakcie budowy, koszt niewykorzystanych zdolności, inny koszt pośredni — przechodzi w pozostałe koszty operacyjne (art. 28 ust. 3 i ust. 8 UoR)",
+      "spec": {
+        "inputs": [
+          {
+            "name": "title",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "amount",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "reason",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "casualty",
+              "idle_capacity",
+              "other"
+            ]
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "construction.cost_moved",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "pay_asset_advance",
+      "domain": "finance",
+      "description": "Firma przekazuje dostawcy zaliczkę na zakup albo budowę środka trwałego: tytuł, dostawca, waluta, kwota w walucie i złote, jakie zeszły z rachunku w dniu zapłaty; zaliczka w walucie obcej zostaje w tych złotych — nie wycenia się jej ponownie ani na dzień bilansowy, ani przy dostawie (KSR 11 pkt 6.18)",
+      "spec": {
+        "inputs": [
+          {
+            "name": "title",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "supplier",
+            "type": "ref<company>",
+            "required": false
+          },
+          {
+            "name": "currency",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "amount_foreign",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "amount_pln",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "asset_advance.paid",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "settle_asset_advance",
+      "domain": "finance",
+      "description": "Dostawa przyszła i faktura rozlicza zaliczkę: złote z dnia zapłaty przechodzą z rozrachunków na 080 Środki trwałe w budowie, w tej samej kwocie, bez różnicy kursowej (KSR 11 pkt 6.18)",
+      "spec": {
+        "inputs": [
+          {
+            "name": "advance",
+            "type": "ref<asset_advance>",
+            "required": true
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "asset_advance.settled",
         "who": [
           "human"
         ]

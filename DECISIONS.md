@@ -4441,3 +4441,29 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   a laptop sold, each on its account; a seasonal stock written down 1 200 and the
   write-down reversed; a price above value refused. Pinned counts: 33 types, 32 views,
   98 rules, 23 doors, 60 events, 48 accounts.
+
+## 2026-10-20 — Pack v37: a fixed asset under construction, and an advance for it
+
+- Lessons I-3 and I-14 of the author's block I drafts (EXAM.md 6.1.2 a, 6.1.5 b). Two
+  things the construction account must not keep: a cost that is not building — a fire's
+  clean-up, idle capacity — and an exchange difference on an advance. `move_from_construction`
+  names a cost on 080 that is not part of the asset's cost (UoR art. 28 ust. 8 says what
+  the cost of construction is; ust. 3 keeps idle capacity and production losses out of a
+  cost of manufacture) with its reason (casualty, idle capacity, other) and books it Wn
+  761 / Ma 080 — other operating costs, where art. 3 ust. 1 pkt 32 lit. i puts the
+  consequences of casualties. An advance paid for a fixed asset in a foreign currency is
+  an `asset_advance`: its złoty are the złoty of the day it was paid (`pay_asset_advance`,
+  Wn 249 / Ma 130), and when the asset arrives the advance settles at those same złoty
+  (`settle_asset_advance`, Wn 080 / Ma 249) with no exchange difference — KSR 11 pkt 6.18:
+  an advance for a fixed asset is a non-monetary item, translated once at payment and never
+  revalued, at the balance date or at delivery. The author had the settlement revalue the
+  advance at delivery and post the difference to 750/751; the standard says the opposite
+  and the rule follows the standard.
+- Boundary checklist: the caller's scope only; twice: the caller's dedup key as every
+  door, and a settlement amends an advance by its id so the second settlement of the same
+  advance is the same amendment; money: the amount moved, the advance in foreign currency
+  and in złoty, strings across the boundary.
+- Test: `TestConstructionAndAdvances` — two invoices on 080 through the supplier's cost
+  account, 3 000 of a fire's clean-up moved to 761, an advance of 10 000 EUR paid at
+  42 569 złoty and settled at 42 569 with 750 and 751 untouched. Pinned counts: 34 types,
+  32 views, 103 rules, 26 doors, 60 events, 48 accounts.
