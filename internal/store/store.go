@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -71,9 +72,9 @@ func Open(ctx context.Context, dsn string) (*Store, error) {
 	// either discards the connection — the owner's view never leaks into a
 	// scoped request.
 	cfg.BeforeAcquire = func(ctx context.Context, conn *pgx.Conn) bool {
-		scope := ScopeOf(ctx)
-		if len(scope) == 0 {
-			return true
+		scope, scoped := ScopeOf(ctx)
+		if !scoped {
+			return true // the owner's own work
 		}
 		if _, err := conn.Exec(ctx, `SET ROLE rhea_app`); err != nil {
 			return false
@@ -201,12 +202,18 @@ func appendEvent(ctx context.Context, q Querier, ev core.Event, skipDuplicate bo
 		INSERT INTO event (kind, event_type, occurred_at, payload, cause_event_id, rule_id, rule_version, dedup_key, actor, activity_name, activity_version, company)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`
 	if skipDuplicate {
-		sql += ` ON CONFLICT (dedup_key) DO NOTHING`
+		sql += ` ON CONFLICT (company, dedup_key) DO NOTHING`
 	}
-	// The partition key: the event's own, or the scope the call carries.
+	// The partition key: a raw fact's own, else the company the call acts
+	// for; a derived event always keeps its chain's (the root's), never the
+	// caller's — a request scoped to one company booking installation master
+	// data stamped the explanation with that company, and replay diverged.
 	company := ev.Company
-	if company == "" {
+	if company == "" && ev.Kind == core.KindRaw {
 		company = CompanyOf(ctx)
+		if set, scoped := ScopeOf(ctx); company == "" && scoped && len(set) > 0 {
+			return 0, fmt.Errorf("a scope of several companies acts for none — name the company the fact belongs to")
+		}
 	}
 	var companyKey *string
 	if company != "" {
@@ -954,21 +961,45 @@ const objectCols = `object_id, object_type, type_version, state, source_event_id
 type companyKey struct{}
 type scopeKey struct{}
 
-// WithCompany scopes a context to one company: it acts for that company and
-// sees it (and the installation's rows). An empty company clears both the
-// acting company and the scope, so a whole-log read inside a scoped call
-// says so.
+// scopeVal is a context's scope: the set of companies it sees. A context
+// without one is the owner's — the kernel's own work, the whole log.
+type scopeVal struct{ set []string }
+
+// WithOwner clears a context's scope: the kernel's own eyes — replay,
+// backup, the pack loader, the clock and the adapters fanning out per
+// company. A request from a person never runs as the owner.
+func WithOwner(ctx context.Context) context.Context {
+	ctx = context.WithValue(ctx, companyKey{}, "")
+	return context.WithValue(ctx, scopeKey{}, nil)
+}
+
+// WithInstallation scopes a context to the installation's own rows alone —
+// the pack's master data, the kernel's verbs, facts from before companies
+// existed — acting for no company. A request naming no company runs so.
+func WithInstallation(ctx context.Context) context.Context {
+	ctx = context.WithValue(ctx, companyKey{}, "")
+	return context.WithValue(ctx, scopeKey{}, scopeVal{set: []string{}})
+}
+
+// WithCompany makes a context act for one company and see it (and the
+// installation's rows). Inside a scope that already names the company (an
+// office acting for a client) the scope stays. An empty company is the
+// owner's (WithOwner): the kernel's own work, never a request's.
 func WithCompany(ctx context.Context, company string) context.Context {
-	ctx = context.WithValue(ctx, companyKey{}, company)
 	if company == "" {
-		return context.WithValue(ctx, scopeKey{}, []string(nil))
+		return WithOwner(ctx)
 	}
-	return context.WithValue(ctx, scopeKey{}, []string{company})
+	if set, scoped := ScopeOf(ctx); scoped && slices.Contains(set, company) {
+		return context.WithValue(ctx, companyKey{}, company)
+	}
+	ctx = context.WithValue(ctx, companyKey{}, company)
+	return context.WithValue(ctx, scopeKey{}, scopeVal{set: []string{company}})
 }
 
 // WithScope scopes a context to a set of companies it sees — an accounting
-// office and its clients — acting for none until WithCompany names one of
-// them. Keys are sorted and deduplicated; an empty set clears the scope.
+// office and its clients — acting for none until ActFor names one of them.
+// Keys are sorted and deduplicated; an empty set is the installation's rows
+// alone.
 func WithScope(ctx context.Context, companies []string) context.Context {
 	set := map[string]bool{}
 	for _, c := range companies {
@@ -982,28 +1013,51 @@ func WithScope(ctx context.Context, companies []string) context.Context {
 	}
 	sort.Strings(scope)
 	ctx = context.WithValue(ctx, companyKey{}, "")
-	return context.WithValue(ctx, scopeKey{}, scope)
+	return context.WithValue(ctx, scopeKey{}, scopeVal{set: scope})
 }
 
 // ActFor names the company a scoped context acts for — one of its scope —
 // keeping the scope as it is: an office's person opening one client's
-// books writes that client's facts and still sees every client.
+// books writes that client's facts and still sees every client. An empty
+// company acts for none.
 func ActFor(ctx context.Context, company string) context.Context {
 	return context.WithValue(ctx, companyKey{}, company)
 }
 
 // CompanyOf is the company a context acts for; empty means none (an office
-// reading its clients, or the kernel's own unscoped work).
+// reading its clients, the installation's own work, or the owner).
 func CompanyOf(ctx context.Context) string {
 	c, _ := ctx.Value(companyKey{}).(string)
 	return c
 }
 
-// ScopeOf is the set of companies a context sees; nil means unscoped — the
-// owner's whole log, the kernel's own work.
-func ScopeOf(ctx context.Context) []string {
-	s, _ := ctx.Value(scopeKey{}).([]string)
-	return s
+// ScopeOf is the set of companies a context sees and whether it is scoped
+// at all: unscoped is the owner's whole log; scoped with an empty set is
+// the installation's rows alone.
+func ScopeOf(ctx context.Context) ([]string, bool) {
+	v, ok := ctx.Value(scopeKey{}).(scopeVal)
+	if !ok {
+		return nil, false
+	}
+	return v.set, true
+}
+
+// Companies lists the companies the log holds facts for, in key order.
+func (s *Store) Companies(ctx context.Context) ([]string, error) {
+	rows, err := s.Pool.Query(ctx, `SELECT DISTINCT company FROM event WHERE company IS NOT NULL AND company <> '' ORDER BY 1`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var c string
+		if err := rows.Scan(&c); err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
 }
 
 func (s *Store) ObjectsByType(ctx context.Context, typ string) ([]core.Object, error) {
