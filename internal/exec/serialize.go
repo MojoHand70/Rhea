@@ -2,7 +2,16 @@ package exec
 
 import (
 	"context"
+	"sync"
 )
+
+// executorGate is the in-process half of the lock: one goroutine per
+// process holds a pool connection while waiting on Postgres. Without it,
+// every waiting caller held a connection in pg_advisory_lock, and once the
+// callers outnumbered the pool the holder could not get a connection for
+// its own reads and booking — a deadlock the review reproduced with nine
+// callers on an eight-connection pool.
+var executorGate sync.Mutex
 
 // executorLock is the advisory lock every executor run holds: the kernel
 // evaluates one chain at a time, in this process and across processes — the
@@ -23,12 +32,15 @@ func (x *Executor) serialize(ctx context.Context) (context.Context, func(), erro
 	if ctx.Value(serializedKey{}) != nil {
 		return ctx, func() {}, nil
 	}
+	executorGate.Lock()
 	conn, err := x.Store.Pool.Acquire(ctx)
 	if err != nil {
+		executorGate.Unlock()
 		return ctx, nil, err
 	}
 	if _, err := conn.Exec(ctx, `SELECT pg_advisory_lock($1)`, executorLock); err != nil {
 		conn.Release()
+		executorGate.Unlock()
 		return ctx, nil, err
 	}
 	release := func() {
@@ -36,6 +48,7 @@ func (x *Executor) serialize(ctx context.Context) (context.Context, func(), erro
 		// dies unlocks by itself.
 		_, _ = conn.Exec(context.Background(), `SELECT pg_advisory_unlock($1)`, executorLock)
 		conn.Release()
+		executorGate.Unlock()
 	}
 	return context.WithValue(ctx, serializedKey{}, true), release, nil
 }

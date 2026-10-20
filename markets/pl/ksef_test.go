@@ -448,3 +448,87 @@ func TestFA3Golden(t *testing.T) {
 		t.Fatalf("the FA(3) differs from the schema-validated golden file:\n%s", body)
 	}
 }
+
+// A refusal is not retried day after day: the guard fingerprints the
+// content with the creation time fixed, so the same invoice rendered the
+// next morning is recognised as the one KSeF refused. A changed invoice
+// (a new version of the fact) is sent again.
+func TestKSeFRejectionNotResentNextDay(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	x := &exec.Executor{Store: s}
+	installPoland(t, s, x)
+	append1(t, s, x, "company.registered", "2026-09-01", "self", map[string]any{"name": "Rhea Test sp. z o.o.", "kind": "self",
+		"vat_id": "PL8058083055", "country": "PL", "iban": "PL83101010230000261395100000", "address": "ul. Testowa 1, 00-001 Warszawa"})
+	append1(t, s, x, "company.registered", "2026-09-01", "buyer", map[string]any{"name": "Nabywca S.A.", "kind": "customer",
+		"vat_id": "PL5265877635", "country": "PL", "iban": "PL60102010260000042270201111", "address": "ul. Próbna 2, 00-002 Warszawa"})
+	append1(t, s, x, "sales.invoice.issued", "2026-09-21", "inv-2", map[string]any{
+		"number": "FV/2/2026", "issue_date": "2026-09-21", "seller_nip": "PL8058083055", "buyer_nip": "PL5265877635",
+		"net": "1000.00", "vat": "230.00", "gross": "1230.00", "vat_rate": "23", "currency": "PLN", "intragroup": "no", "market": "pl"})
+	fake := &countingKSeF{FakeKSeF: pl.FakeKSeF{Reject: map[string]string{"FV/2/2026": "Błąd weryfikacji semantyki dokumentu faktury"}}}
+	run, err := adapter.Run(ctx, s, x, pl.KSeF{Client: fake, Today: func() string { return "2026-09-22" }})
+	if err != nil || run.PassErr != nil || run.Submitted != 1 || fake.sent != 1 {
+		t.Fatalf("day one: %+v %v %v", run, err, run.PassErr)
+	}
+	run, err = adapter.Run(ctx, s, x, pl.KSeF{Client: fake, Today: func() string { return "2026-09-23" }})
+	if err != nil || run.PassErr != nil || run.Submitted != 0 || fake.sent != 1 {
+		t.Fatalf("day two resent the refused invoice: %+v %v %v (sent %d)", run, err, run.PassErr, fake.sent)
+	}
+	if subs, _ := s.ObjectsByType(ctx, "ksef_submission"); len(subs) != 1 {
+		t.Fatalf("submissions after day two: %d", len(subs))
+	}
+}
+
+// A session that fails around accepted invoices keeps their evidence: the
+// final results book, the failure is a problem for a person, and an
+// invoice sent without a final word is named rather than resent blindly.
+func TestKSeFPartialSessionKeepsAcceptedInvoices(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	x := &exec.Executor{Store: s}
+	installPoland(t, s, x)
+	append1(t, s, x, "company.registered", "2026-09-01", "self", map[string]any{"name": "Rhea Test sp. z o.o.", "kind": "self",
+		"vat_id": "PL8058083055", "country": "PL", "iban": "PL83101010230000261395100000", "address": "ul. Testowa 1, 00-001 Warszawa"})
+	append1(t, s, x, "company.registered", "2026-09-01", "buyer", map[string]any{"name": "Nabywca S.A.", "kind": "customer",
+		"vat_id": "PL5265877635", "country": "PL", "iban": "PL60102010260000042270201111", "address": "ul. Próbna 2, 00-002 Warszawa"})
+	for i, number := range []string{"FV/1/2026", "FV/2/2026"} {
+		append1(t, s, x, "sales.invoice.issued", "2026-09-21", fmt.Sprintf("inv-%d", i), map[string]any{
+			"number": number, "issue_date": "2026-09-21", "seller_nip": "PL8058083055", "buyer_nip": "PL5265877635",
+			"net": "1000.00", "vat": "230.00", "gross": "1230.00", "vat_rate": "23", "currency": "PLN", "intragroup": "no", "market": "pl"})
+	}
+	run, _ := adapter.Run(ctx, s, x, pl.KSeF{Client: failingAfterFirst{}, Today: func() string { return "2026-09-22" }})
+	if run.Submitted != 1 || run.PassErr == nil || !strings.Contains(run.PassErr.Error(), "session lost") ||
+		!strings.Contains(run.PassErr.Error(), "FV/2/2026 was sent as") {
+		t.Fatalf("partial session: %+v %v", run, run.PassErr)
+	}
+	subs, _ := s.ObjectsByType(ctx, "ksef_submission")
+	if len(subs) != 1 || subs[0].State["status"] != "accepted" {
+		t.Fatalf("the accepted invoice's evidence: %+v", subs)
+	}
+}
+
+// countingKSeF counts the invoices it was asked to send.
+type countingKSeF struct {
+	pl.FakeKSeF
+	sent int
+}
+
+func (c *countingKSeF) Submit(ctx context.Context, invoices []pl.Outbound) ([]pl.Submission, error) {
+	c.sent += len(invoices)
+	return c.FakeKSeF.Submit(ctx, invoices)
+}
+
+// failingAfterFirst accepts the first invoice and loses the session before
+// the second's fate is known.
+type failingAfterFirst struct{}
+
+func (failingAfterFirst) Submit(ctx context.Context, invoices []pl.Outbound) ([]pl.Submission, error) {
+	subs, err := pl.FakeKSeF{}.Submit(ctx, invoices)
+	if err != nil {
+		return subs, err
+	}
+	for i := 1; i < len(subs); i++ {
+		subs[i].Final, subs[i].Accepted, subs[i].UPO, subs[i].KSeFNumber = false, false, "", ""
+	}
+	return subs, fmt.Errorf("session lost while polling")
+}

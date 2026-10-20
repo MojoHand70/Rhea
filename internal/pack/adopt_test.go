@@ -118,3 +118,36 @@ func TestPackChangedWithoutBumpIsRefused(t *testing.T) {
 		t.Fatal("the refused load drafted the new type")
 	}
 }
+
+// A type that changed at the same type version is refused whatever the pack
+// version says: the stored type would never carry the change, and a rule
+// using the new field would be drafted against a type never stored.
+func TestPackTypeChangedAtSameVersionIsRefused(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	src := filepath.Join("..", "..", "packs", "common", "people.json")
+	b, err := os.ReadFile(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "people.json")
+	if err := os.WriteFile(path, b, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pack.Load(ctx, s, path, "test"); err != nil {
+		t.Fatal(err)
+	}
+	var m pack.Manifest
+	if err := json.Unmarshal(b, &m); err != nil {
+		t.Fatal(err)
+	}
+	m.Version++
+	m.ObjectTypes[0].Fields = append(m.ObjectTypes[0].Fields, core.FieldDef{Name: "zz_extra", Type: "string"})
+	changed, _ := json.Marshal(m)
+	if err := os.WriteFile(path, changed, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pack.Load(ctx, s, path, "test"); err == nil || !strings.Contains(err.Error(), "bump the type's version") {
+		t.Fatalf("a changed type at the same version: %v", err)
+	}
+}

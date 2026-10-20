@@ -87,3 +87,21 @@ BEGIN
     END IF;
 END;
 $$;
+
+-- Row triggers never fire on TRUNCATE: statement triggers close the third verb.
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'publication_no_truncate') THEN
+        CREATE TRIGGER publication_no_truncate BEFORE TRUNCATE ON publication
+            FOR EACH STATEMENT EXECUTE FUNCTION forbid_publication_mutation();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'untaught_no_truncate') THEN
+        CREATE TRIGGER untaught_no_truncate BEFORE TRUNCATE ON untaught
+            FOR EACH STATEMENT EXECUTE FUNCTION forbid_untaught_mutation();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'lesson_note_no_truncate') THEN
+        CREATE TRIGGER lesson_note_no_truncate BEFORE TRUNCATE ON lesson_note
+            FOR EACH STATEMENT EXECUTE FUNCTION forbid_lesson_note_mutation();
+    END IF;
+END;
+$$;

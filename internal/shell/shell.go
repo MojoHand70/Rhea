@@ -54,18 +54,29 @@ type Server struct {
 // channel, so tabs reconnect and the next subscriber starts it again.
 func (s *Server) subscribeLive() (<-chan string, func(), error) {
 	s.live.Lock()
-	defer s.live.Unlock()
 	if s.live.subs == nil {
 		s.live.subs = map[chan string]struct{}{}
 	}
-	if !s.live.running {
+	start := !s.live.running
+	if start {
+		s.live.running = true // reserved: the listener is being started
+	}
+	s.live.Unlock()
+	if start {
+		// The listener's connection is acquired outside the lock: with the
+		// pool exhausted, holding the lock here would block every fan-out
+		// and every unsubscribe, so closing tabs could not free connections.
 		ctx, cancel := context.WithCancel(context.Background())
 		notices, err := s.Store.ProjectionNotices(ctx)
+		s.live.Lock()
 		if err != nil {
 			cancel()
+			s.live.running = false
+			s.live.Unlock()
 			return nil, nil, err
 		}
-		s.live.running, s.live.cancel = true, cancel
+		s.live.cancel = cancel
+		s.live.Unlock()
 		go func() {
 			for p := range notices {
 				s.live.Lock()
@@ -86,6 +97,8 @@ func (s *Server) subscribeLive() (<-chan string, func(), error) {
 			s.live.Unlock()
 		}()
 	}
+	s.live.Lock()
+	defer s.live.Unlock()
 	ch := make(chan string, 16)
 	s.live.subs[ch] = struct{}{}
 	return ch, func() {

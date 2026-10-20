@@ -75,26 +75,29 @@ func Open(ctx context.Context, dsn string) (*Network, error) {
 	}
 	// The schema runs under one advisory lock: two installations opening
 	// at once would otherwise race on the same CREATE ("tuple concurrently
-	// updated").
-	tx, err := pool.Begin(ctx)
-	if err != nil {
-		pool.Close()
-		return nil, err
-	}
-	defer tx.Rollback(ctx)
-	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock($1)`, networkSchemaLock); err != nil {
-		pool.Close()
-		return nil, err
-	}
-	if _, err := tx.Exec(ctx, schemaSQL); err != nil {
-		pool.Close()
-		return nil, err
-	}
-	if err := tx.Commit(ctx); err != nil {
+	// updated"). The transaction ends before the pool closes on failure —
+	// pool.Close waits for every connection, and an open transaction holds
+	// one, so the server hung at start when the schema failed.
+	if err := runSchema(ctx, pool); err != nil {
 		pool.Close()
 		return nil, err
 	}
 	return &Network{Pool: pool}, nil
+}
+
+func runSchema(ctx context.Context, pool *pgxpool.Pool) error {
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock($1)`, networkSchemaLock); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, schemaSQL); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
 }
 
 func (n *Network) Close() { n.Pool.Close() }

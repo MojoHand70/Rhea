@@ -81,6 +81,9 @@ func TestAppendOnlyInvariant(t *testing.T) {
 	if _, err := s.Pool.Exec(ctx, `DELETE FROM event WHERE event_id = $1`, id); err == nil {
 		t.Fatal("DELETE on event succeeded — invariant 1 broken")
 	}
+	if _, err := s.Pool.Exec(ctx, `TRUNCATE event CASCADE`); err == nil {
+		t.Fatal("TRUNCATE on event succeeded — invariant 1 broken")
+	}
 	if _, err := s.InsertRuleVersion(ctx, core.Rule{
 		ID: "r1", Status: core.StatusDraft, Priority: 100, EffectiveFrom: "2026-01-01",
 		CreatedBy: "human", Description: "d",
@@ -96,6 +99,9 @@ func TestAppendOnlyInvariant(t *testing.T) {
 	// a new version row, never an edit. Seeded builtins give us rows to poke.
 	if _, err := s.Pool.Exec(ctx, `UPDATE activity SET status = 'superseded'`); err == nil {
 		t.Fatal("UPDATE on activity succeeded — invariant 1 broken")
+	}
+	if _, err := s.Pool.Exec(ctx, `TRUNCATE activity`); err == nil {
+		t.Fatal("TRUNCATE on activity succeeded — invariant 1 broken")
 	}
 	if _, err := s.Pool.Exec(ctx, `DELETE FROM activity`); err == nil {
 		t.Fatal("DELETE on activity succeeded — invariant 1 broken")

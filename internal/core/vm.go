@@ -877,6 +877,18 @@ func dateArith(op string, a, b Value) (Value, error) {
 	return Value{}, fmt.Errorf("dates take + or - whole days, or date - date: not %s", op)
 }
 
+// compareText orders two texts: as numbers when both read as decimals —
+// raw facts carry money as text, and "100.00" is more than "99.00" — else
+// as text (ISO dates order lexically, ids by their spelling).
+func compareText(a, b string) int {
+	if x, err := parseDecimal(a); err == nil {
+		if y, err := parseDecimal(b); err == nil {
+			return x.Cmp(y)
+		}
+	}
+	return strings.Compare(a, b)
+}
+
 func compare(op string, a, b Value) (Value, error) {
 	var c int
 	switch {
@@ -909,8 +921,8 @@ func compare(op string, a, b Value) (Value, error) {
 		c = x.Cmp(y)
 	case a.Kind == KList || a.Kind == KObject || b.Kind == KList || b.Kind == KObject:
 		return Value{}, fmt.Errorf("cannot compare %s with %s", a.Kind, b.Kind)
-	default: // strings, dates, ids: text order (ISO dates order lexically)
-		c = strings.Compare(a.Str, b.Str)
+	default:
+		c = compareText(a.Str, b.Str)
 	}
 	var out bool
 	switch op {

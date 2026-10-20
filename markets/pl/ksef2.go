@@ -58,6 +58,10 @@ type Outbound struct {
 	ID     string
 	Number string
 	XML    []byte
+	// ContentHash fingerprints the invoice with its creation time fixed:
+	// the same content rendered on another day hashes the same, so a
+	// refusal is not retried day after day.
+	ContentHash string
 }
 
 // Submission is what the national system said about one invoice: accepted
@@ -74,6 +78,12 @@ type Submission struct {
 	Session     string
 	Reference   string
 	InvoiceHash string // base64 SHA-256 of the XML sent
+	ContentHash string // the outbound's fingerprint with the creation time fixed
+	// Final says KSeF's word on this invoice is in hand — a rejection, or
+	// an acceptance with its UPO. What is not final was sent and its fate
+	// is unknown; the pass books the final ones even when the session
+	// failed around them.
+	Final bool
 }
 
 // Reason is the rejection in one line, for a task's description.
@@ -156,8 +166,9 @@ func (c *KSeF2) Submit(ctx context.Context, invoices []Outbound) ([]Submission, 
 	}
 	c.logf("session %s open", session)
 	out := make([]Submission, 0, len(invoices))
+	var firstErr error
 	for _, inv := range invoices {
-		sub := Submission{ID: inv.ID, Number: inv.Number, Session: session}
+		sub := Submission{ID: inv.ID, Number: inv.Number, Session: session, ContentHash: inv.ContentHash}
 		plainHash := sha256.Sum256(inv.XML)
 		sub.InvoiceHash = base64.StdEncoding.EncodeToString(plainHash[:])
 		encrypted, err := aesCBCEncrypt(aesKey, iv, inv.XML)
@@ -175,26 +186,38 @@ func (c *KSeF2) Submit(ctx context.Context, invoices []Outbound) ([]Submission, 
 			"encryptedInvoiceSize":    len(encrypted),
 			"encryptedInvoiceContent": base64.StdEncoding.EncodeToString(encrypted),
 		}, &sent); err != nil {
-			return out, fmt.Errorf("send %s: %w", inv.Number, err)
+			firstErr = fmt.Errorf("send %s: %w", inv.Number, err)
+			break // nothing after a failed send is sent; what was sent is polled
 		}
 		sub.Reference = sent.ReferenceNumber
 		c.logf("invoice %s sent as %s", inv.Number, sub.Reference)
 		out = append(out, sub)
 	}
+	// Every invoice sent is polled and, when accepted, its UPO fetched; a
+	// failure on one leaves the others' evidence in hand instead of
+	// throwing away what KSeF already accepted and numbered.
 	for i := range out {
 		if err := c.awaitInvoice(ctx, access, &out[i]); err != nil {
-			return out, err
+			if firstErr == nil {
+				firstErr = err
+			}
+			continue
 		}
-	}
-	for i := range out {
 		if !out[i].Accepted {
+			out[i].Final = true
 			continue
 		}
 		upo, err := c.upo(ctx, access, session, out[i].Reference)
 		if err != nil {
-			return out, err
+			if firstErr == nil {
+				firstErr = err
+			}
+			continue
 		}
-		out[i].UPO = upo
+		out[i].UPO, out[i].Final = upo, true
+	}
+	if firstErr != nil {
+		return out, firstErr
 	}
 	if err := c.call(ctx, "POST", "/sessions/online/"+session+"/close", access, nil, nil); err != nil {
 		// The evidence is already in hand; a session that will not close

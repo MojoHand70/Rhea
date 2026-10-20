@@ -436,6 +436,15 @@ func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []cor
 			return nil, fmt.Errorf("cascade exceeded %d generations — rule %s keeps materializing %s",
 				maxCascadeDepth, last.rule.ID, last.objectID())
 		}
+		// Depth alone does not bound a chain: a rule on its own type with
+		// an each over a few items multiplies every generation, and one
+		// event would hold the executor's lock for minutes on the way to
+		// the depth cap, or exhaust memory before it. Size is capped too.
+		if len(nodes) > maxChainNodes {
+			last := nodes[len(nodes)-1]
+			return nil, fmt.Errorf("cascade grew past %d consequences of one event — rule %s keeps materializing %s objects; the event waits for a person",
+				maxChainNodes, last.rule.ID, last.mat.ObjectType)
+		}
 		visible = hi
 		for i := lo; i < hi; i++ {
 			n := nodes[i]
@@ -464,6 +473,10 @@ func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []cor
 	}
 	return nodes, nil
 }
+
+// maxChainNodes bounds the consequences of one event: a chain larger than
+// this is refused into the worklist, naming the rule.
+const maxChainNodes = 10_000
 
 // matchRule reports whether rule r fires on ev (payload already decoded):
 // event type, effective date, and every where condition — a formula

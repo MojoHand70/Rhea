@@ -12,6 +12,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	_ "time/tzdata" // Polish time for the issue date, wherever the binary runs
 
 	"rhea/internal/adapter"
 	"rhea/internal/core"
@@ -135,24 +136,36 @@ func (k KSeF) Pass(ctx context.Context, reads adapter.Reads) ([]core.Event, erro
 			problems = append(problems, err.Error())
 			continue
 		}
-		sum := sha256.Sum256(body)
-		if rejected[inv.ID] == base64.StdEncoding.EncodeToString(sum[:]) {
-			continue // KSeF refused exactly this; sending it again changes nothing
+		content, err := contentHash(fa)
+		if err != nil {
+			problems = append(problems, err.Error())
+			continue
 		}
-		pending = append(pending, Outbound{ID: inv.ID, Number: fa.Number, XML: body})
+		if rejected[inv.ID] == content {
+			continue // KSeF refused exactly this content; sending it again changes nothing
+		}
+		pending = append(pending, Outbound{ID: inv.ID, Number: fa.Number, XML: body, ContentHash: content})
 	}
 	var out []core.Event
 	if len(pending) > 0 {
 		results, err := k.Client.Submit(ctx, pending)
 		if err != nil {
-			// Nothing of a failed session is evidence; the next pass retries.
-			return nil, fmt.Errorf("ksef: %w", err)
+			// A failed session is still evidence for every invoice whose
+			// fate is final: those book, the failure is a problem for a
+			// person, and what was sent without a final word is named.
+			problems = append(problems, "ksef: "+err.Error())
 		}
 		sent := map[string][]byte{}
 		for _, o := range pending {
 			sent[o.ID] = o.XML
 		}
 		for _, r := range results {
+			if !r.Final {
+				if r.Reference != "" {
+					problems = append(problems, fmt.Sprintf("invoice %s was sent as %s and KSeF has not said its fate — ask KSeF before it is sent again", r.Number, r.Reference))
+				}
+				continue
+			}
 			ev, err := k.evidence(r, sent[r.ID], today)
 			if err != nil {
 				problems = append(problems, err.Error())
@@ -186,25 +199,40 @@ func (k KSeF) evidence(r Submission, sent []byte, today string) (core.Event, err
 		if upo.KSeFNumber != "" && upo.KSeFNumber != r.KSeFNumber {
 			return core.Event{}, fmt.Errorf("invoice %s: the UPO names KSeF number %s, the session said %s — evidence refused", r.Number, upo.KSeFNumber, r.KSeFNumber)
 		}
+		// The legal issue date is the day KSeF received the document, in
+		// Polish time (VAT act, art. 106na): read from the UPO, not from
+		// the clock that ran the pass.
+		date := today
+		if d, ok := polishDate(upo.ReceivedAt); ok {
+			date = d
+		}
 		payload, err := json.Marshal(map[string]any{
 			"number": r.Number, "ksef_ref": r.KSeFNumber, "upo": r.Session, "upo_xml": r.UPO,
 			"invoice_xml": string(sent), "invoice_hash": r.InvoiceHash,
-			"sent_at": upo.ReceivedAt, "accepted_at": upo.NumberedAt, "date": today,
+			"sent_at": upo.ReceivedAt, "accepted_at": upo.NumberedAt, "date": date,
 		})
 		if err != nil {
 			return core.Event{}, err
 		}
-		return core.Event{Type: EventKSeFSubmitted, OccurredAt: today, Payload: payload,
+		return core.Event{Type: EventKSeFSubmitted, OccurredAt: date, Payload: payload,
 			DedupKey: "ksef/submit/" + r.ID}, nil
+	}
+	// A rejection's fingerprint is of the content with the creation time
+	// fixed: the next pass renders the same content again and, seeing the
+	// same fingerprint refused, does not send it day after day. The exact
+	// hash of what was sent rides beside it.
+	content := r.ContentHash
+	if content == "" {
+		content = r.InvoiceHash
 	}
 	payload, err := json.Marshal(map[string]any{
 		"number": r.Number, "code": r.Code, "reason": r.Reason(), "details": r.Details,
-		"date": today, "invoice_hash": r.InvoiceHash,
+		"date": today, "invoice_hash": content, "sent_hash": r.InvoiceHash,
 	})
 	if err != nil {
 		return core.Event{}, err
 	}
-	short := r.InvoiceHash
+	short := content
 	if len(short) > 16 {
 		short = short[:16]
 	}
@@ -347,8 +375,8 @@ func (f FakeKSeF) Submit(_ context.Context, invoices []Outbound) ([]Submission, 
 			return out, fmt.Errorf("fake ksef: %s: %w", inv.Number, err)
 		}
 		sum := sha256.Sum256(inv.XML)
-		sub := Submission{ID: inv.ID, Number: inv.Number, Session: "FAKE-SESSION",
-			Reference: "FAKE-" + inv.ID, InvoiceHash: base64.StdEncoding.EncodeToString(sum[:])}
+		sub := Submission{ID: inv.ID, Number: inv.Number, Session: "FAKE-SESSION", Final: true,
+			Reference: "FAKE-" + inv.ID, InvoiceHash: base64.StdEncoding.EncodeToString(sum[:]), ContentHash: inv.ContentHash}
 		if reason, refused := f.Reject[inv.Number]; refused {
 			sub.Code, sub.Description = 450, reason
 		} else {
@@ -361,4 +389,30 @@ func (f FakeKSeF) Submit(_ context.Context, invoices []Outbound) ([]Submission, 
 		out = append(out, sub)
 	}
 	return out, nil
+}
+
+// contentHash fingerprints an invoice as sent, with its creation time fixed,
+// so the same content rendered on another day hashes the same.
+func contentHash(fa FA3Invoice) (string, error) {
+	fa.Created = "1970-01-01T00:00:00Z"
+	body, err := WriteFA3(fa)
+	if err != nil {
+		return "", err
+	}
+	sum := sha256.Sum256(body)
+	return base64.StdEncoding.EncodeToString(sum[:]), nil
+}
+
+// polishDate is the calendar day of a timestamp in Polish time: the day a
+// structured invoice counts as issued.
+func polishDate(ts string) (string, bool) {
+	t, err := time.Parse(time.RFC3339Nano, ts)
+	if err != nil {
+		return "", false
+	}
+	loc, err := time.LoadLocation("Europe/Warsaw")
+	if err != nil {
+		return "", false
+	}
+	return t.In(loc).Format("2006-01-02"), true
 }

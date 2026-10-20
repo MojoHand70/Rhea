@@ -1,5 +1,5 @@
 -- The executing rule set: the newest ACTIVE version of every rule, in firing
--- order (priority ascending, rule_id tiebreak). A draft or approved version
+-- order (priority ascending, rule_id tiebreak). A draft version
 -- in progress does NOT suspend the running version; only a rule whose very
 -- latest version is superseded is retired.
 SELECT a.rule_id, a.version, a.status, a.priority,

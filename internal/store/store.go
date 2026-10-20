@@ -867,11 +867,6 @@ func AmendObject(ctx context.Context, q Querier, objectID string, set map[string
 	return nil
 }
 
-func (s *Store) WipeObjects(ctx context.Context) error {
-	_, err := s.Pool.Exec(ctx, `DELETE FROM object`)
-	return err
-}
-
 func scanObjects(rows pgx.Rows) ([]core.Object, error) {
 	defer rows.Close()
 	var out []core.Object

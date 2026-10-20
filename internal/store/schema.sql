@@ -45,7 +45,7 @@ ALTER TABLE event ADD COLUMN IF NOT EXISTS activity_version INT;
 CREATE TABLE IF NOT EXISTS rule (
     rule_id        TEXT NOT NULL,
     version        INT NOT NULL,
-    status         TEXT NOT NULL CHECK (status IN ('draft','approved','active','superseded')),
+    status         TEXT NOT NULL CHECK (status IN ('draft','active','superseded')),
     priority       INT NOT NULL DEFAULT 100,
     effective_from DATE NOT NULL,
     created_by     TEXT NOT NULL,
@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS object_type (
 CREATE TABLE IF NOT EXISTS activity (
     name        TEXT NOT NULL,
     version     INT NOT NULL,
-    status      TEXT NOT NULL CHECK (status IN ('draft','approved','active','superseded')),
+    status      TEXT NOT NULL CHECK (status IN ('draft','active','superseded')),
     domain      TEXT NOT NULL,
     description TEXT NOT NULL,
     spec        JSONB NOT NULL,
@@ -191,6 +191,23 @@ BEGIN
                  FOR EACH ROW EXECUTE FUNCTION forbid_mutation()',
                 t || '_append_only', t);
         END IF;
+        -- Row triggers never fire on TRUNCATE: a statement trigger closes
+        -- the third verb.
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_trigger WHERE tgname = t || '_no_truncate'
+        ) THEN
+            EXECUTE format(
+                'CREATE TRIGGER %I BEFORE TRUNCATE ON %I
+                 FOR EACH STATEMENT EXECUTE FUNCTION forbid_mutation()',
+                t || '_no_truncate', t);
+        END IF;
     END LOOP;
 END;
 $$;
+
+-- The approval is the recorded event, never a resting status (DECISIONS
+-- 2026-10-20): databases created before that admit 'approved' no more.
+ALTER TABLE rule DROP CONSTRAINT IF EXISTS rule_status_check;
+ALTER TABLE rule ADD CONSTRAINT rule_status_check CHECK (status IN ('draft','active','superseded'));
+ALTER TABLE activity DROP CONSTRAINT IF EXISTS activity_status_check;
+ALTER TABLE activity ADD CONSTRAINT activity_status_check CHECK (status IN ('draft','active','superseded'));

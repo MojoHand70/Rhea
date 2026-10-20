@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"reflect"
 
 	"rhea/internal/core"
 	"rhea/internal/store"
@@ -202,7 +203,13 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 	packTypes := map[string]core.ObjectType{}
 	for _, t := range m.ObjectTypes {
 		packTypes[t.Name] = t
-		if _, status, err := s.GetObjectTypeVersion(ctx, t.Name, t.Version); err == nil {
+		if have, status, err := s.GetObjectTypeVersion(ctx, t.Name, t.Version); err == nil {
+			// The same name and version with a different spec is a change
+			// the stored type will never carry: a rule using a new field
+			// would be drafted against a type that was never stored.
+			if !sameJSON(have, t) {
+				return sum, fmt.Errorf("object type %s v%d differs from the one stored — bump the type's version", t.Name, t.Version)
+			}
 			if adopted, err := adopt(ctx, s, status, core.Member{Kind: core.KindObjectType, Name: t.Name, Version: t.Version}, &members, &sum); err != nil {
 				return sum, err
 			} else if !adopted {
@@ -220,7 +227,10 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 		sum.Types++
 	}
 	for _, v := range m.ViewDefs {
-		if _, status, err := s.GetViewDefVersion(ctx, v.ID, v.Version); err == nil {
+		if have, status, err := s.GetViewDefVersion(ctx, v.ID, v.Version); err == nil {
+			if !sameJSON(have, v) {
+				return sum, fmt.Errorf("view %s v%d differs from the one stored — bump the view's version", v.ID, v.Version)
+			}
 			if adopted, err := adopt(ctx, s, status, core.Member{Kind: core.KindViewDef, Name: v.ID, Version: v.Version}, &members, &sum); err != nil {
 				return sum, err
 			} else if !adopted {
@@ -381,4 +391,19 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 		}
 	}
 	return sum, nil
+}
+
+// sameJSON compares two definitions through their JSON, so an absent list
+// and an empty one, or a re-spelled spec, read alike.
+func sameJSON(a, b any) bool {
+	ja, errA := json.Marshal(a)
+	jb, errB := json.Marshal(b)
+	if errA != nil || errB != nil {
+		return false
+	}
+	var va, vb any
+	if json.Unmarshal(ja, &va) != nil || json.Unmarshal(jb, &vb) != nil {
+		return false
+	}
+	return reflect.DeepEqual(va, vb)
 }
