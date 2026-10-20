@@ -168,7 +168,7 @@ func cell(kind string, v any) any {
 	case string:
 		return x
 	case float64, int64, int, bool:
-		return fmt.Sprint(x)
+		return core.Text(x)
 	}
 	b, _ := json.Marshal(v)
 	return string(b)

@@ -8,6 +8,8 @@ package exec
 
 import (
 	"fmt"
+	"math/big"
+	"strings"
 	"time"
 
 	"rhea/internal/core"
@@ -149,7 +151,7 @@ func ExpandPostings(p *core.PostingsTemplate, postingType core.ObjectType, ev co
 	// the identity, the fx_rate for (from, to, date) — read at firing time,
 	// so the functional amounts bake into the derived events.
 	bookCurrency, converted := currency, false
-	var mant, div int64
+	var rate *big.Rat
 	if p.Convert != nil {
 		to, err := evalString(p.Convert.To, payload, env)
 		if err != nil {
@@ -176,18 +178,26 @@ func ExpandPostings(p *core.PostingsTemplate, postingType core.ObjectType, ev co
 			if !ok {
 				return nil, fmt.Errorf("fx_rate %s resolved but cannot be read", code)
 			}
-			rate, _ := state["rate"].(string)
-			if mant, div, err = parseRate(rate); err != nil {
+			text, _ := state["rate"].(string)
+			if rate, err = parseRate(text); err != nil {
 				return nil, fmt.Errorf("fx_rate %s: %w", code, err)
 			}
 			converted = true
 		}
 	}
-	functional := func(tx int64) int64 {
+	// Conversion is exact rational arithmetic rounded half up to minor
+	// units, the one admitted method; a product that leaves int64 refuses
+	// instead of wrapping into a negative amount.
+	functional := func(tx int64) (int64, error) {
 		if !converted {
-			return tx
+			return tx, nil
 		}
-		return divHalfUp(tx*mant, div)
+		r := core.RoundDecimal(new(big.Rat).Mul(big.NewRat(tx, 1), rate), 0, "half_up")
+		if !r.IsInt() || !r.Num().IsInt64() {
+			return 0, fmt.Errorf("%s %s converts to %s %s, which overflows money",
+				core.FormatMoney(tx), currency, r.FloatString(2), bookCurrency)
+		}
+		return r.Num().Int64(), nil
 	}
 
 	entry := fmt.Sprintf("entry-%s-%s", idBase, ruleID)
@@ -227,7 +237,10 @@ func ExpandPostings(p *core.PostingsTemplate, postingType core.ObjectType, ev co
 	var fdebits, fcredits int64
 	for i := range lines {
 		l := lines[i]
-		f := functional(l.amount)
+		f, err := functional(l.amount)
+		if err != nil {
+			return nil, fmt.Errorf("line %d: %w", i+1, err)
+		}
 		if l.side == "debit" {
 			fdebits += f
 		} else {
@@ -262,38 +275,20 @@ func ExpandPostings(p *core.PostingsTemplate, postingType core.ObjectType, ev co
 	return out, nil
 }
 
-// parseRate parses a positive decimal string ("4.3215") into mantissa and
-// divisor (43215, 10000) for integer conversion arithmetic. No floats, ever.
-func parseRate(s string) (mant, div int64, err error) {
-	div = 1
-	dot := false
-	for _, r := range s {
-		switch {
-		case r == '.' && !dot:
-			dot = true
-		case r >= '0' && r <= '9':
-			mant = mant*10 + int64(r-'0')
-			if dot {
-				div *= 10
-			}
-		default:
-			return 0, 0, fmt.Errorf("rate %q is not a plain decimal", s)
-		}
+// parseRate reads a positive plain decimal rate ("4.3215") exactly, through
+// the formula language's own decimal reader. No floats, ever.
+func parseRate(s string) (*big.Rat, error) {
+	if strings.HasPrefix(strings.TrimSpace(s), "-") {
+		return nil, fmt.Errorf("rate %q is not positive", s)
 	}
-	if s == "" || mant == 0 {
-		return 0, 0, fmt.Errorf("rate %q is not positive", s)
+	r, err := core.ParseDecimal(s)
+	if err != nil {
+		return nil, fmt.Errorf("rate %q is not a plain decimal", s)
 	}
-	return mant, div, nil
-}
-
-// divHalfUp divides non-negative integers rounding half away from zero —
-// the one admitted rounding method (the stance is declared in the rule).
-func divHalfUp(n, d int64) int64 {
-	q, r := n/d, n%d
-	if 2*r >= d {
-		q++
+	if r.Sign() <= 0 {
+		return nil, fmt.Errorf("rate %q is not positive", s)
 	}
-	return q
+	return r, nil
 }
 
 // PeriodLockedError refuses a posting into a closed (book, month). Typed so

@@ -224,7 +224,7 @@ func (x *Executor) evaluate(ctx context.Context, ev core.Event, rules []core.Rul
 	// resolved ids are baked into the derived events, so replay never
 	// re-resolves and determinism (invariant 4) is untouched.
 	lookup := func(typ, field string, value any) ([]string, error) {
-		return x.Store.FindObjectIDsByField(ctx, typ, field, fmt.Sprintf("%v", value))
+		return x.Store.FindObjectIDsByField(ctx, typ, field, core.Text(value))
 	}
 	get := func(id string) (map[string]any, bool, error) {
 		o, err := x.Store.GetObject(ctx, id)
@@ -299,11 +299,11 @@ func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []cor
 		if err != nil {
 			return nil, err
 		}
-		want := fmt.Sprintf("%v", value)
+		want := core.Text(value)
 		for _, n := range nodes[:visible] {
 			// A replayed prior node is already in the base world: counting
 			// it twice would make every ref to it ambiguous.
-			if n.amend == nil && n.booked == 0 && n.mat.ObjectType == typ && fmt.Sprintf("%v", n.mat.State[field]) == want {
+			if n.amend == nil && n.booked == 0 && n.mat.ObjectType == typ && core.Text(n.mat.State[field]) == want {
 				ids = append(ids, n.mat.ObjectID)
 			}
 		}

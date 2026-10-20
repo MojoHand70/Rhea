@@ -98,7 +98,7 @@ func (x *Executor) readSides(tmpl *core.MatchingTemplate, trigger core.MatchTrig
 			// joined field is not on this side at all.
 			joined := true
 			for cf, tf := range side.Join {
-				if fmt.Sprint(rd.State[cf]) != fmt.Sprint(state[tf]) {
+				if core.Text(rd.State[cf]) != core.Text(state[tf]) {
 					joined = false
 				}
 			}

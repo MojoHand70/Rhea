@@ -356,7 +356,7 @@ func text(v any) string {
 	case []byte:
 		return string(x)
 	}
-	return fmt.Sprintf("%v", v)
+	return core.Text(v)
 }
 
 func decimalText(d duckdb.Decimal) string {

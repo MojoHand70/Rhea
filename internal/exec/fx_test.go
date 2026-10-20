@@ -223,6 +223,34 @@ func TestConvert(t *testing.T) {
 		t.Fatal("the plug line has no transaction-currency counterpart")
 	}
 
+	// A large amount at a rate with eight places: 250 000 000.00 EUR at
+	// 4.32150000 is 1 080 375 000.00 PLN. Integer mantissa arithmetic
+	// overflowed int64 here and booked a negative amount; the conversion is
+	// exact rational arithmetic now, and what leaves int64 refuses.
+	submit("nbp-0924", "fx.rate.published", "2026-09-24",
+		`{"code":"EUR/PLN/2026-09-24","base":"EUR","quote":"PLN","date":"2026-09-24","rate":"4.32150000"}`)
+	submit("sale-big", "sale.recorded", "2026-09-24",
+		`{"date":"2026-09-24","currency":"EUR","net":"203252032.52","vat":"46747967.48","gross":"250000000.00"}`)
+	if n, errs := x.ProcessPending(ctx); n != 2 || len(errs) != 0 {
+		t.Fatalf("big sale: booked %d, errs %v", n, errs)
+	}
+	bigWant := map[string]int64{"201": 108037500000, "700": 87835365854, "222": 20202134146}
+	bigPostings, _ := x.Store.ObjectsByType(ctx, "posting")
+	bigSeen := 0
+	for _, p := range bigPostings {
+		if p.State["date"] != "2026-09-24" {
+			continue
+		}
+		acc, _ := x.Store.GetObject(ctx, p.State["account"].(string))
+		if got := int64(p.State["amount"].(float64)); got != bigWant[acc.State["code"].(string)] {
+			t.Fatalf("sale-big %s: amount %d PLN, want %d", acc.State["code"], got, bigWant[acc.State["code"].(string)])
+		}
+		bigSeen++
+	}
+	if bigSeen != 3 {
+		t.Fatalf("sale-big: %d lines, want 3 and no plug", bigSeen)
+	}
+
 	// Identity conversion: the same rule explains a domestic PLN invoice —
 	// currency does not route, it converts (to itself).
 	submit("sale-pln", "sale.recorded", "2026-09-23",
@@ -251,6 +279,16 @@ func TestConvert(t *testing.T) {
 	if n, errs := x.ProcessPending(ctx); n != 0 || len(errs) == 0 ||
 		!strings.Contains(errs[0].Error(), "no fx_rate with code = EUR/PLN/2026-09-25") {
 		t.Fatalf("missing rate: booked %d, errs %v", n, errs)
+	}
+
+	// A product that leaves int64 refuses into the worklist too, named in
+	// full, instead of wrapping into a negative amount.
+	submit("nbp-0926", "fx.rate.published", "2026-09-26",
+		`{"code":"EUR/PLN/2026-09-26","base":"EUR","quote":"PLN","date":"2026-09-26","rate":"1000000000.0"}`)
+	submit("sale-overflow", "sale.recorded", "2026-09-26",
+		`{"date":"2026-09-26","currency":"EUR","net":"80000000000.00","vat":"18400000000.00","gross":"98400000000.00"}`)
+	if n, errs := x.ProcessPending(ctx); n != 1 || len(errs) != 2 || !strings.Contains(errs[1].Error(), "overflows money") {
+		t.Fatalf("overflowing sale: booked %d, errs %v", n, errs)
 	}
 
 	// Determinism: the conversion is baked into the derived events at

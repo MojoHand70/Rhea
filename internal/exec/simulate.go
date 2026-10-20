@@ -202,11 +202,11 @@ func (x *Executor) simulate(ctx context.Context, rules []core.Rule, extra []core
 	objects := map[string]core.Object{}
 	var order []string
 	lookup := func(typ, field string, value any) ([]string, error) {
-		want := fmt.Sprintf("%v", value)
+		want := core.Text(value)
 		var ids []string
 		for _, id := range order {
 			o := objects[id]
-			if o.Type == typ && fmt.Sprintf("%v", o.State[field]) == want {
+			if o.Type == typ && core.Text(o.State[field]) == want {
 				ids = append(ids, id)
 			}
 		}

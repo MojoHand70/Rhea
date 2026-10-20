@@ -326,7 +326,7 @@ func cellWith(v any, fd core.FieldDef, resolve func(id string) (label, typ strin
 			return cellOut{V: core.FormatMoney(n)}
 		}
 	}
-	return cellOut{V: fmt.Sprintf("%v", v)}
+	return cellOut{V: core.Text(v)}
 }
 
 // refInfo resolves a referenced object to its label and type.

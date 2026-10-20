@@ -167,7 +167,7 @@ func (s *Server) formulaEnv(ctx context.Context, typed map[string]string) *core.
 	memo := map[string]*core.ObjectType{}
 	return &core.Env{
 		Lookup: func(typ, field string, value any) ([]string, error) {
-			return s.Store.FindObjectIDsByField(ctx, typ, field, fmt.Sprintf("%v", value))
+			return s.Store.FindObjectIDsByField(ctx, typ, field, core.Text(value))
 		},
 		Get: func(id string) (map[string]any, bool, error) {
 			o, err := s.Store.GetObject(ctx, id)

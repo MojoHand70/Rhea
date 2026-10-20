@@ -614,7 +614,7 @@ func fromJSON(raw any, origin, typ string) Value {
 		return Value{Kind: KInt, Num: ratInt(n), Origin: origin, untyped: true}
 	}
 	// a float with a fraction: carried as a string so the error names it
-	return Value{Kind: KString, Str: fmt.Sprintf("%v", raw), Origin: origin, untyped: true}
+	return Value{Kind: KString, Str: Text(raw), Origin: origin, untyped: true}
 }
 
 func integral(raw any) (int64, bool) {

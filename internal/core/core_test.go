@@ -1,6 +1,7 @@
 package core
 
 import (
+	"math"
 	"encoding/json"
 	"testing"
 )
@@ -35,13 +36,35 @@ func TestMoney(t *testing.T) {
 			t.Errorf("roundtrip mismatch for %q", s)
 		}
 	}
-	for _, bad := range []string{"1.5", "", "abc", "1.234", "."} {
+	// Garbage is refused, never read up to the first stray character, and a
+	// magnitude past int64 minor units is refused, never wrapped.
+	for _, bad := range []string{"1.5", "", "abc", "1.234", ".", "12abc.00", "5. 1", "1_0.00", "1e3.00", "+1.00",
+		"92233720368547758.08", "99999999999999999.00"} {
 		if _, err := ParseMoney(bad); err == nil {
 			t.Errorf("ParseMoney(%q): want error", bad)
 		}
 	}
+	if got, err := ParseMoney("92233720368547758.07"); err != nil || got != math.MaxInt64 {
+		t.Errorf("ParseMoney(max) = %d, %v", got, err)
+	}
 	if FormatMoney(-705) != "-7.05" || FormatMoney(12345) != "123.45" {
 		t.Error("FormatMoney wrong")
+	}
+	if got := FormatMoney(math.MinInt64); got != "-92233720368547758.08" {
+		t.Errorf("FormatMoney(MinInt64) = %q", got)
+	}
+}
+
+// Text spells a JSON-decoded value as Postgres spells it: a number from a
+// million upward positionally, never 1e+06, so lookups and joins hold.
+func TestText(t *testing.T) {
+	for v, want := range map[any]string{
+		float64(1234567890): "1234567890", float64(1000000): "1000000", 0.5: "0.5", float64(-3): "-3",
+		"abc": "abc", int64(7): "7", true: "true", nil: "",
+	} {
+		if got := Text(v); got != want {
+			t.Errorf("Text(%v) = %q, want %q", v, got, want)
+		}
 	}
 }
 

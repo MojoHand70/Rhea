@@ -82,7 +82,7 @@ func (x *Executor) PlanBackfill(ctx context.Context, date string) (BackfillPlan,
 		return o.State, true, nil
 	}
 	lookup := func(typ, field string, value any) ([]string, error) {
-		ids, err := x.Store.FindObjectIDsByField(ctx, typ, field, fmt.Sprintf("%v", value))
+		ids, err := x.Store.FindObjectIDsByField(ctx, typ, field, core.Text(value))
 		if err != nil {
 			return nil, err
 		}
@@ -304,18 +304,18 @@ func (w *plannedWorld) put(id, typ string, st map[string]any) {
 // whose planned state no longer matches drops out, a planned one that
 // matches joins, after the booked ones — where it will stand once booked.
 func (w *plannedWorld) lookup(stored []string, typ, field string, value any) []string {
-	want := fmt.Sprintf("%v", value)
+	want := core.Text(value)
 	out := make([]string, 0, len(stored))
 	in := map[string]bool{}
 	for _, id := range stored {
 		in[id] = true
-		if st, ok := w.state[id]; ok && stateText(st[field]) != want {
+		if st, ok := w.state[id]; ok && core.Text(st[field]) != want {
 			continue
 		}
 		out = append(out, id)
 	}
 	for _, id := range w.order {
-		if !in[id] && w.typ[id] == typ && stateText(w.state[id][field]) == want {
+		if !in[id] && w.typ[id] == typ && core.Text(w.state[id][field]) == want {
 			out = append(out, id)
 		}
 	}
@@ -327,18 +327,18 @@ func (w *plannedWorld) balance(book, account, from, to string) int64 {
 	var n int64
 	for _, id := range w.order {
 		st := w.state[id]
-		if w.typ[id] != PostingObjectType || stateText(st["account"]) != account {
+		if w.typ[id] != PostingObjectType || core.Text(st["account"]) != account {
 			continue
 		}
-		b := stateText(st["book"])
+		b := core.Text(st["book"])
 		if b == "" {
 			b = "main"
 		}
-		d := stateText(st["date"])
+		d := core.Text(st["date"])
 		if b != book || d < from || d > to {
 			continue
 		}
-		amt, err := strconv.ParseInt(stateText(st["amount"]), 10, 64)
+		amt, err := strconv.ParseInt(core.Text(st["amount"]), 10, 64)
 		if err != nil {
 			continue
 		}
@@ -349,18 +349,4 @@ func (w *plannedWorld) balance(book, account, from, to string) int64 {
 		}
 	}
 	return n
-}
-
-// stateText is a state value as the store compares it: its text, a whole
-// number without an exponent.
-func stateText(v any) string {
-	switch t := v.(type) {
-	case nil:
-		return ""
-	case float64:
-		if t == float64(int64(t)) {
-			return strconv.FormatInt(int64(t), 10)
-		}
-	}
-	return fmt.Sprintf("%v", v)
 }

@@ -442,7 +442,7 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 			return nil, fmt.Errorf("no active matching rule %q", p.Matching)
 		}
 		lookup := func(typ, field string, value any) ([]string, error) {
-			return x.Store.FindObjectIDsByField(ctx, typ, field, fmt.Sprintf("%v", value))
+			return x.Store.FindObjectIDsByField(ctx, typ, field, core.Text(value))
 		}
 		get := func(id string) (map[string]any, bool, error) {
 			o, err := x.Store.GetObject(ctx, id)
@@ -547,7 +547,7 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 			return nil, err
 		}
 		lookup := func(typ, field string, value any) ([]string, error) {
-			return x.Store.FindObjectIDsByField(ctx, typ, field, fmt.Sprintf("%v", value))
+			return x.Store.FindObjectIDsByField(ctx, typ, field, core.Text(value))
 		}
 		get := func(id string) (map[string]any, bool, error) {
 			o, err := x.Store.GetObject(ctx, id)

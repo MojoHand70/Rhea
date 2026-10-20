@@ -260,10 +260,8 @@ func tallyLiteral(v any) (string, error) {
 	switch x := v.(type) {
 	case string:
 		s = x
-	case bool:
-		s = fmt.Sprint(x)
-	case float64, int, int64:
-		s = fmt.Sprint(x)
+	case bool, float64, int, int64:
+		s = Text(x)
 	default:
 		return "", fmt.Errorf("value %v is not a string, number or yes/no", v)
 	}
