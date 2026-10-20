@@ -4409,3 +4409,35 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   with the refusal recorded, a reader who reads only, the mandate's reach and its scope,
   the desk on all companies, the claim and the second claimant, the view's cells opening
   to the grant, replay identical with the refusals kept; persons-only serving.
+
+## 2026-10-20 — Pack v36: inventories — what was sold, and stock written down
+
+- The first of the author's block I drafts reviewed into the pack (lessons I-6 and I-29;
+  EXAM.md 6.1.2 b, 6.1.3 d–e, 6.1.4 b–c). The author had drafted a separate document
+  type for sales of materials; that duplicates the sales invoice, so the lesson became a
+  field: a sales invoice says what was sold (`kind`: services, goods, materials, a fixed
+  asset, other), and the revenue lands by kind — 700 for services as before and when
+  nothing is said, 730 for goods, 760 for the rest (UoR art. 3 ust. 1 pkt 32: the sale
+  of materials and fixed assets is other operating revenue). The value of what was sold
+  comes off the shelf on the day of sale when the invoice states it: goods Wn 731 / Ma
+  330 (art. 42 ust. 2), materials Wn 761 / Ma 310. The author's finished-goods write-down
+  became a write-down of any stock: `write_down_inventory` to the net selling price (art.
+  28 ust. 1 pkt 6, art. 34 ust. 5) against a correcting account 349, so stock stays at
+  cost, and `reverse_inventory_write_down` when the cause ends (art. 35c) back to 760. A
+  price above value is no write-down and books nothing. Accounts 731 and 349 join the
+  chart; sales_invoice v8.
+- Boundary checklist: reads the caller's scope only (doors and events carry the company);
+  twice: the caller's dedup key, as every door; money: net, vat, gross, carrying value,
+  the write-down and its reversal, all money fields, strings across the boundary.
+- Parked from the same batch, with reasons: I-8 (work in progress) and I-19 (idle
+  capacity) need production, which the pack does not have; I-11 (standard prices on
+  goods) is a policy the pack does not use — goods at purchase price; I-5 (trade
+  receivables always short-term) is presentation and belongs to the balance sheet lesson;
+  I-12 (reclassification to investment property) waits for investment property as an
+  object with its fair-value model; I-21, I-24, I-26, I-30 rest on IFRS and are not a
+  small company's pack. The automatic cost method (FIFO, weighted average from receipts)
+  is the next inventories lesson; this version takes the value from the document.
+- Test: `TestInventories` — a service, goods bought for 600 sold for 900, materials sold,
+  a laptop sold, each on its account; a seasonal stock written down 1 200 and the
+  write-down reversed; a price above value refused. Pinned counts: 33 types, 32 views,
+  98 rules, 23 doors, 60 events, 48 accounts.

@@ -1,9 +1,14 @@
 {
   "pack": "pl",
-  "version": 35,
+  "version": 36,
   "stage": "initial",
   "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
   "history": [
+    {
+      "versions": "36",
+      "date": "2026-10-20",
+      "changes": "Zapasy (lekcje z egzaminu na biegłego rewidenta 2025, rachunkowość finansowa I-6 i I-29, napisane przez autora i sprawdzone; rejestr EXAM.md 6.1.2 b, 6.1.3 d–e, 6.1.4 b–c): faktura sprzedaży mówi, co sprzedano (kind: usługi, towary, materiały, środek trwały, inne) — przychód idzie na 700 (usługi), 730 (towary) albo 760 (materiały, środki trwałe, inne; art. 3 ust. 1 pkt 32 UoR), a podana wartość sprzedanych towarów schodzi z 330 na 731, materiałów z 310 na 761 (art. 28 ust. 1 pkt 6 i art. 42 ust. 2 UoR); drzwi write_down_inventory tworzą odpis aktualizujący zapasy do ceny sprzedaży netto (art. 28 ust. 1 pkt 6, art. 34 ust. 5 UoR): Wn 761 / Ma 349 (konto korygujące), reverse_inventory_write_down cofa go, gdy przyczyna ustała (Wn 349 / Ma 760, art. 35c); nowe konta 731 i 349. Bez zmian: faktura bez wskazanego rodzaju to usługi, jak dotąd. Uproszczenie: wartość sprzedanych zapasów podaje dokument; metoda rozchodu (FIFO, średnia ważona) liczona z przyjęć — następna lekcja."
+    },
     {
       "versions": "35",
       "date": "2026-10-20",
@@ -1049,7 +1054,7 @@
     },
     {
       "name": "sales_invoice",
-      "version": 7,
+      "version": 8,
       "domain": "finance",
       "is_document": true,
       "label_field": "number",
@@ -1147,6 +1152,19 @@
           "name": "vat_pln",
           "type": "money",
           "required": false
+        },
+        {
+          "name": "kind",
+          "type": "enum",
+          "required": false,
+          "values": [
+            "services",
+            "goods",
+            "materials",
+            "fixed_asset",
+            "other"
+          ],
+          "description": "co sprzedano: usługi (700), towary (730), materiały, środek trwały albo inne (760)"
         }
       ],
       "lifecycle": {
@@ -2085,6 +2103,76 @@
           "required": true
         }
       ]
+    },
+    {
+      "name": "inventory_write_down",
+      "version": 1,
+      "domain": "finance",
+      "label_field": "title",
+      "lifecycle": {
+        "field": "status",
+        "transitions": {
+          "open": [
+            "reversed"
+          ]
+        }
+      },
+      "amendable": [
+        "reversed_on"
+      ],
+      "fields": [
+        {
+          "name": "title",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "stock_account",
+          "type": "string",
+          "required": true,
+          "description": "konto zapasów, których dotyczy odpis (330 towary, 310 materiały)"
+        },
+        {
+          "name": "carrying_value",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "net_selling_price",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true,
+          "description": "odpis: wartość ewidencyjna minus cena sprzedaży netto"
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "open",
+            "reversed"
+          ]
+        },
+        {
+          "name": "reversed_on",
+          "type": "date",
+          "required": false
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ]
     }
   ],
   "view_defs": [
@@ -2497,7 +2585,7 @@
     },
     {
       "view_id": "slownik",
-      "version": 9,
+      "version": 10,
       "notion": "words",
       "title": "Słownik",
       "domain": "finance",
@@ -2728,6 +2816,11 @@
           "group": {
             "label": "Grupa",
             "plural": "Grupy",
+            "shape": "card"
+          },
+          "inventory_write_down": {
+            "label": "Odpis aktualizujący zapasy",
+            "plural": "Odpisy aktualizujące zapasy",
             "shape": "card"
           }
         },
@@ -3005,7 +3098,14 @@
           "substitution.granted_by": "Wyznaczył(a)",
           "group.name": "Nazwa grupy",
           "group.company": "Firma",
-          "group.description": "Opis grupy"
+          "group.description": "Opis grupy",
+          "sales_invoice.kind": "Co sprzedano",
+          "inventory_write_down.title": "Tytuł",
+          "inventory_write_down.stock_account": "Konto zapasów",
+          "inventory_write_down.carrying_value": "Wartość ewidencyjna",
+          "inventory_write_down.net_selling_price": "Cena sprzedaży netto",
+          "inventory_write_down.amount": "Odpis",
+          "inventory_write_down.reversed_on": "Cofnięty"
         },
         "values": {
           "account.type": {
@@ -3278,6 +3378,17 @@
           "substitution.status": {
             "active": "aktywne",
             "ended": "zakończone"
+          },
+          "sales_invoice.kind": {
+            "services": "usługi",
+            "goods": "towary",
+            "materials": "materiały",
+            "fixed_asset": "środek trwały",
+            "other": "inne"
+          },
+          "inventory_write_down.status": {
+            "open": "otwarty",
+            "reversed": "cofnięty"
           }
         },
         "events": {
@@ -3338,7 +3449,9 @@
           "substitution.ended": "Zastępstwo zakończone",
           "group.declared": "Grupa określona",
           "access.refused": "Odmowa dostępu",
-          "access.recorded": "Logowanie odnotowane"
+          "access.recorded": "Logowanie odnotowane",
+          "inventory.written_down": "Odpis aktualizujący zapasy",
+          "inventory.write_down.reversed": "Cofnięcie odpisu zapasów"
         },
         "doors": {
           "appoint_deputy": "wyznaczenie zastępcy",
@@ -3391,7 +3504,9 @@
           "appoint_substitute": "wyznaczenie zastępstwa",
           "end_substitution": "zakończenie zastępstwa",
           "declare_group": "określenie grupy",
-          "record_access": "odnotowanie logowania"
+          "record_access": "odnotowanie logowania",
+          "write_down_inventory": "odpis aktualizujący zapasy",
+          "reverse_inventory_write_down": "cofnięcie odpisu zapasów"
         },
         "account_groups": {
           "0": "Aktywa trwałe",
@@ -4234,7 +4349,7 @@
       "rule_id": "pl-book-sales-invoice",
       "priority": 100,
       "effective_from": "2026-01-01",
-      "description": "Wystawiona faktura sprzedaży staje się dokumentem sales_invoice; kwota otwarta zaczyna się od brutto, status od open; data sprzedaży to data dostawy lub wykonania usługi, a gdy faktura jej nie podaje — data wystawienia; okres VAT = miesiąc obowiązku podatkowego, czyli miesiąc sprzedaży (nie wystawienia); netto i VAT w złotych po kursie średnim NBP z ostatniego dnia roboczego przed dniem sprzedaży (dla PLN — te same kwoty)",
+      "description": "Wystawiona faktura sprzedaży staje się dokumentem sales_invoice; kwota otwarta zaczyna się od brutto, status od open; data sprzedaży to data dostawy lub wykonania usługi, a gdy faktura jej nie podaje — data wystawienia; okres VAT = miesiąc obowiązku podatkowego, czyli miesiąc sprzedaży (nie wystawienia); netto i VAT w złotych po kursie średnim NBP z ostatniego dnia roboczego przed dniem sprzedaży (dla PLN — te same kwoty); rodzaj sprzedaży (kind) mówi, co sprzedano — bez wskazania: usługi",
       "spec": {
         "match": {
           "event_type": "sales.invoice.issued",
@@ -4267,7 +4382,8 @@
               "vat_period": "=month(coalesce($.sale_date, $.issue_date))",
               "sale_date": "=coalesce($.sale_date, $.issue_date)",
               "net_pln": "=round($.net * fx($.currency, \"PLN\", coalesce($.sale_date, $.issue_date)), 2, half_up)",
-              "vat_pln": "=round($.vat * fx($.currency, \"PLN\", coalesce($.sale_date, $.issue_date)), 2, half_up)"
+              "vat_pln": "=round($.vat * fx($.currency, \"PLN\", coalesce($.sale_date, $.issue_date)), 2, half_up)",
+              "kind": "=coalesce($.kind, \"services\")"
             }
           }
         }
@@ -4292,7 +4408,7 @@
       "rule_id": "pl-post-sales-invoice",
       "priority": 200,
       "effective_from": "2026-01-01",
-      "description": "Faktura sprzedaży z VAT księguje się: 201 brutto / 700 netto, 222 VAT; w walucie obcej — po kursie z dnia sprzedaży, tym samym co VAT w złotych",
+      "description": "Faktura sprzedaży z VAT księguje się: 201 brutto / 700 netto, 222 VAT; w walucie obcej — po kursie z dnia sprzedaży, tym samym co VAT w złotych — gdy sprzedano usługi (faktura bez rodzaju to usługi)",
       "spec": {
         "match": {
           "event_type": "sales.invoice.issued",
@@ -4304,6 +4420,9 @@
             },
             {
               "formula": "=$.vat > 0"
+            },
+            {
+              "formula": "=coalesce($.kind, \"services\") = \"services\""
             }
           ]
         },
@@ -4347,7 +4466,7 @@
       "rule_id": "pl-post-sales-invoice-no-vat",
       "priority": 200,
       "effective_from": "2026-01-01",
-      "description": "Faktura sprzedaży bez VAT (zwolniona, 0%, sprzedawca zwolniony) księguje się: 201 brutto / 700 netto — bez linii VAT, której kwota byłaby zerem; w walucie obcej — po kursie z dnia sprzedaży, tym samym co VAT w złotych",
+      "description": "Faktura sprzedaży bez VAT (zwolniona, 0%, sprzedawca zwolniony) księguje się: 201 brutto / 700 netto — bez linii VAT, której kwota byłaby zerem; w walucie obcej — po kursie z dnia sprzedaży, tym samym co VAT w złotych — gdy sprzedano usługi (faktura bez rodzaju to usługi)",
       "spec": {
         "match": {
           "event_type": "sales.invoice.issued",
@@ -4359,6 +4478,9 @@
             },
             {
               "formula": "=not ($.vat > 0)"
+            },
+            {
+              "formula": "=coalesce($.kind, \"services\") = \"services\""
             }
           ]
         },
@@ -7836,6 +7958,484 @@
           "wzorcowy plan kont: 830 Rezerwy na zobowiązania, 641 Bierne rozliczenia międzyokresowe kosztów, 280 Odpisy aktualizujące należności, 761 / 761-3 Pozostałe koszty operacyjne, 760 Pozostałe przychody operacyjne, 201 Rozrachunki z odbiorcami"
         ]
       }
+    },
+    {
+      "rule_id": "pl-post-sales-invoice-goods",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Faktura sprzedaży towarów z VAT księguje się: 201 brutto / 730 Sprzedaż towarów netto, 222 VAT",
+      "spec": {
+        "match": {
+          "event_type": "sales.invoice.issued",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            },
+            {
+              "formula": "=$.vat > 0"
+            },
+            {
+              "formula": "=coalesce($.kind, \"services\") = \"goods\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "currency": "=$.currency",
+            "lines": [
+              {
+                "account": "201",
+                "debit": "=$.gross"
+              },
+              {
+                "account": "730",
+                "credit": "=$.net"
+              },
+              {
+                "account": "222",
+                "credit": "=$.vat"
+              }
+            ],
+            "book": "pl-stat",
+            "convert": {
+              "to": "PLN",
+              "date": "=coalesce($.sale_date, $.issue_date)",
+              "rounding": "half_up",
+              "rounding_account": "756"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "wzorcowy plan kont: 700 Sprzedaż produktów (usług), 730 Sprzedaż towarów, 731 Wartość sprzedanych towarów w cenie zakupu, 760 Pozostałe przychody operacyjne, 761 Pozostałe koszty operacyjne, 310 Materiały, 330 Towary, 349 Odpisy aktualizujące wartość zapasów",
+          "ustawa o VAT art. 19a ust. 1 i art. 106e: obowiązek podatkowy i treść faktury jak dla każdej sprzedaży"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-sales-invoice-goods-no-vat",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Faktura sprzedaży towarów bez VAT księguje się: 201 brutto / 730 netto — bez linii VAT, której kwota byłaby zerem",
+      "spec": {
+        "match": {
+          "event_type": "sales.invoice.issued",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            },
+            {
+              "formula": "=not ($.vat > 0)"
+            },
+            {
+              "formula": "=coalesce($.kind, \"services\") = \"goods\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "currency": "=$.currency",
+            "lines": [
+              {
+                "account": "201",
+                "debit": "=$.gross"
+              },
+              {
+                "account": "730",
+                "credit": "=$.net"
+              }
+            ],
+            "book": "pl-stat",
+            "convert": {
+              "to": "PLN",
+              "date": "=coalesce($.sale_date, $.issue_date)",
+              "rounding": "half_up",
+              "rounding_account": "756"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "wzorcowy plan kont: 700 Sprzedaż produktów (usług), 730 Sprzedaż towarów, 731 Wartość sprzedanych towarów w cenie zakupu, 760 Pozostałe przychody operacyjne, 761 Pozostałe koszty operacyjne, 310 Materiały, 330 Towary, 349 Odpisy aktualizujące wartość zapasów"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-sales-invoice-other",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Faktura sprzedaży materiałów, środka trwałego albo innego składnika z VAT księguje się: 201 brutto / 760 Pozostałe przychody operacyjne netto, 222 VAT — to nie jest przychód ze sprzedaży produktów ani towarów",
+      "spec": {
+        "match": {
+          "event_type": "sales.invoice.issued",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            },
+            {
+              "formula": "=$.vat > 0"
+            },
+            {
+              "formula": "=coalesce($.kind, \"services\") = \"materials\" or coalesce($.kind, \"services\") = \"fixed_asset\" or coalesce($.kind, \"services\") = \"other\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "currency": "=$.currency",
+            "lines": [
+              {
+                "account": "201",
+                "debit": "=$.gross"
+              },
+              {
+                "account": "760",
+                "credit": "=$.net"
+              },
+              {
+                "account": "222",
+                "credit": "=$.vat"
+              }
+            ],
+            "book": "pl-stat",
+            "convert": {
+              "to": "PLN",
+              "date": "=coalesce($.sale_date, $.issue_date)",
+              "rounding": "half_up",
+              "rounding_account": "756"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 3 ust. 1 pkt 32: pozostałe koszty i przychody operacyjne to koszty i przychody związane pośrednio z działalnością operacyjną, w szczególności z tytułu „zbycia środków trwałych […], a także materiałów” (lit. b) — sprzedaż materiałów i środków trwałych nie jest przychodem ze sprzedaży produktów ani towarów",
+          "wzorcowy plan kont: 700 Sprzedaż produktów (usług), 730 Sprzedaż towarów, 731 Wartość sprzedanych towarów w cenie zakupu, 760 Pozostałe przychody operacyjne, 761 Pozostałe koszty operacyjne, 310 Materiały, 330 Towary, 349 Odpisy aktualizujące wartość zapasów"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-sales-invoice-other-no-vat",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Faktura sprzedaży materiałów, środka trwałego albo innego składnika bez VAT księguje się: 201 brutto / 760 netto",
+      "spec": {
+        "match": {
+          "event_type": "sales.invoice.issued",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            },
+            {
+              "formula": "=not ($.vat > 0)"
+            },
+            {
+              "formula": "=coalesce($.kind, \"services\") = \"materials\" or coalesce($.kind, \"services\") = \"fixed_asset\" or coalesce($.kind, \"services\") = \"other\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "currency": "=$.currency",
+            "lines": [
+              {
+                "account": "201",
+                "debit": "=$.gross"
+              },
+              {
+                "account": "760",
+                "credit": "=$.net"
+              }
+            ],
+            "book": "pl-stat",
+            "convert": {
+              "to": "PLN",
+              "date": "=coalesce($.sale_date, $.issue_date)",
+              "rounding": "half_up",
+              "rounding_account": "756"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 3 ust. 1 pkt 32: pozostałe koszty i przychody operacyjne to koszty i przychody związane pośrednio z działalnością operacyjną, w szczególności z tytułu „zbycia środków trwałych […], a także materiałów” (lit. b) — sprzedaż materiałów i środków trwałych nie jest przychodem ze sprzedaży produktów ani towarów",
+          "wzorcowy plan kont: 700 Sprzedaż produktów (usług), 730 Sprzedaż towarów, 731 Wartość sprzedanych towarów w cenie zakupu, 760 Pozostałe przychody operacyjne, 761 Pozostałe koszty operacyjne, 310 Materiały, 330 Towary, 349 Odpisy aktualizujące wartość zapasów"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-cost-of-goods-sold",
+      "priority": 110,
+      "effective_from": "2026-01-01",
+      "description": "Sprzedane towary schodzą z zapasów w cenie zakupu, którą podaje faktura (carrying_value): Wn 731 Wartość sprzedanych towarów / Ma 330 Towary, w dniu sprzedaży",
+      "spec": {
+        "match": {
+          "event_type": "sales.invoice.issued",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            },
+            {
+              "formula": "=coalesce($.kind, \"services\") = \"goods\""
+            },
+            {
+              "path": "$.carrying_value",
+              "op": "exists"
+            },
+            {
+              "formula": "=$.carrying_value > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=coalesce($.sale_date, $.issue_date)",
+            "lines": [
+              {
+                "account": "731",
+                "debit": "=$.carrying_value"
+              },
+              {
+                "account": "330",
+                "credit": "=$.carrying_value"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 42 ust. 2: wynik działalności operacyjnej to różnica między przychodami netto ze sprzedaży produktów i towarów a wartością sprzedanych produktów i towarów „wycenionych w kosztach wytworzenia albo cenach nabycia, albo zakupu” — wartość sprzedanych towarów schodzi z zapasów, gdy przychód jest rozpoznany",
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 28 ust. 1 pkt 6: „rzeczowe składniki aktywów obrotowych – według cen nabycia lub kosztów wytworzenia nie wyższych od cen ich sprzedaży netto na dzień bilansowy”",
+          "wzorcowy plan kont: 700 Sprzedaż produktów (usług), 730 Sprzedaż towarów, 731 Wartość sprzedanych towarów w cenie zakupu, 760 Pozostałe przychody operacyjne, 761 Pozostałe koszty operacyjne, 310 Materiały, 330 Towary, 349 Odpisy aktualizujące wartość zapasów"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-cost-of-materials-sold",
+      "priority": 110,
+      "effective_from": "2026-01-01",
+      "description": "Sprzedane materiały schodzą z zapasów w cenie nabycia, którą podaje faktura (carrying_value): Wn 761 Pozostałe koszty operacyjne / Ma 310 Materiały, w dniu sprzedaży",
+      "spec": {
+        "match": {
+          "event_type": "sales.invoice.issued",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            },
+            {
+              "formula": "=coalesce($.kind, \"services\") = \"materials\""
+            },
+            {
+              "path": "$.carrying_value",
+              "op": "exists"
+            },
+            {
+              "formula": "=$.carrying_value > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=coalesce($.sale_date, $.issue_date)",
+            "lines": [
+              {
+                "account": "761",
+                "debit": "=$.carrying_value"
+              },
+              {
+                "account": "310",
+                "credit": "=$.carrying_value"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 3 ust. 1 pkt 32: pozostałe koszty i przychody operacyjne to koszty i przychody związane pośrednio z działalnością operacyjną, w szczególności z tytułu „zbycia środków trwałych […], a także materiałów” (lit. b) — sprzedaż materiałów i środków trwałych nie jest przychodem ze sprzedaży produktów ani towarów",
+          "wzorcowy plan kont: 700 Sprzedaż produktów (usług), 730 Sprzedaż towarów, 731 Wartość sprzedanych towarów w cenie zakupu, 760 Pozostałe przychody operacyjne, 761 Pozostałe koszty operacyjne, 310 Materiały, 330 Towary, 349 Odpisy aktualizujące wartość zapasów"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-write-down-inventory",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Odpis aktualizujący zapasy do ceny sprzedaży netto: które zapasy, wartość ewidencyjna, cena sprzedaży netto, dzień; odpis to różnica — tylko gdy cena spadła poniżej wartości",
+      "spec": {
+        "match": {
+          "event_type": "inventory.written_down",
+          "where": [
+            {
+              "formula": "=$.carrying_value > $.net_selling_price"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "inventory_write_down",
+            "fields": {
+              "title": "=$.title",
+              "stock_account": "=$.stock_account",
+              "carrying_value": "=$.carrying_value",
+              "net_selling_price": "=$.net_selling_price",
+              "amount": "=$.carrying_value - $.net_selling_price",
+              "date": "=$.date",
+              "status": "open",
+              "book": "pl-stat"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 28 ust. 1 pkt 6: „rzeczowe składniki aktywów obrotowych – według cen nabycia lub kosztów wytworzenia nie wyższych od cen ich sprzedaży netto na dzień bilansowy”",
+          "ustawa o rachunkowości art. 34 ust. 5: odpisy aktualizujące wartość rzeczowych składników aktywów obrotowych, dokonane w związku z utratą ich wartości oraz wynikające z wyceny według cen sprzedaży netto zamiast według cen nabycia, zalicza się do pozostałych kosztów operacyjnych"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-inventory-write-down",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Odpis aktualizujący zapasy księguje się w dniu odpisu: Wn 761 Pozostałe koszty operacyjne / Ma 349 Odpisy aktualizujące wartość zapasów — konto korygujące, zapasy zostają w cenie nabycia",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "inventory_write_down"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.date",
+            "lines": [
+              {
+                "account": "761",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "349",
+                "credit": "=$.state.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 34 ust. 5: odpisy aktualizujące wartość rzeczowych składników aktywów obrotowych, dokonane w związku z utratą ich wartości oraz wynikające z wyceny według cen sprzedaży netto zamiast według cen nabycia, zalicza się do pozostałych kosztów operacyjnych",
+          "wzorcowy plan kont: 700 Sprzedaż produktów (usług), 730 Sprzedaż towarów, 731 Wartość sprzedanych towarów w cenie zakupu, 760 Pozostałe przychody operacyjne, 761 Pozostałe koszty operacyjne, 310 Materiały, 330 Towary, 349 Odpisy aktualizujące wartość zapasów"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-reverse-inventory-write-down",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Przyczyna odpisu zapasów ustała: odpis przechodzi w stan reversed z dniem",
+      "spec": {
+        "match": {
+          "event_type": "inventory.write_down.reversed",
+          "where": []
+        },
+        "effect": {
+          "amend": {
+            "type": "inventory_write_down",
+            "target": "=$.write_down",
+            "set": {
+              "status": "reversed",
+              "reversed_on": "=$.date"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 35c: „W przypadku ustania przyczyny, dla której dokonano odpisu aktualizującego wartość aktywów […] równowartość całości lub odpowiedniej części uprzednio dokonanego odpisu aktualizującego zwiększa wartość danego składnika aktywów i podlega zaliczeniu odpowiednio do pozostałych przychodów operacyjnych lub przychodów finansowych”"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-inventory-write-down-reversal",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Cofnięty odpis zapasów wraca w pozostałe przychody operacyjne: Wn 349 / Ma 760, w kwocie odpisu",
+      "spec": {
+        "match": {
+          "event_type": "inventory.write_down.reversed",
+          "where": []
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.date",
+            "lines": [
+              {
+                "account": "349",
+                "debit": "=$.write_down.amount"
+              },
+              {
+                "account": "760",
+                "credit": "=$.write_down.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 35c: „W przypadku ustania przyczyny, dla której dokonano odpisu aktualizującego wartość aktywów […] równowartość całości lub odpowiedniej części uprzednio dokonanego odpisu aktualizującego zwiększa wartość danego składnika aktywów i podlega zaliczeniu odpowiednio do pozostałych przychodów operacyjnych lub przychodów finansowych”",
+          "wzorcowy plan kont: 700 Sprzedaż produktów (usług), 730 Sprzedaż towarów, 731 Wartość sprzedanych towarów w cenie zakupu, 760 Pozostałe przychody operacyjne, 761 Pozostałe koszty operacyjne, 310 Materiały, 330 Towary, 349 Odpisy aktualizujące wartość zapasów"
+        ]
+      }
     }
   ],
   "activities": [
@@ -8659,6 +9259,77 @@
           "human"
         ]
       }
+    },
+    {
+      "name": "write_down_inventory",
+      "domain": "finance",
+      "description": "Firma aktualizuje wartość zapasów odpisem, bo na dzień bilansowy cena sprzedaży netto spadła poniżej wartości ewidencyjnej (art. 28 ust. 1 pkt 6 i art. 34 ust. 5 UoR): które zapasy (konto: 330 towary, 310 materiały), wartość ewidencyjna i cena sprzedaży netto; odpis to różnica",
+      "spec": {
+        "inputs": [
+          {
+            "name": "title",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "stock_account",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "carrying_value",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "net_selling_price",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "inventory.written_down",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "reverse_inventory_write_down",
+      "domain": "finance",
+      "description": "Przyczyna odpisu zapasów ustała (cena sprzedaży netto wróciła powyżej wartości ewidencyjnej albo zapasy sprzedano): odpis wraca w pozostałe przychody operacyjne (art. 35c UoR)",
+      "spec": {
+        "inputs": [
+          {
+            "name": "write_down",
+            "type": "ref<inventory_write_down>",
+            "required": true
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "inventory.write_down.reversed",
+        "who": [
+          "human"
+        ]
+      }
     }
   ],
   "events": [
@@ -9291,6 +9962,28 @@
       "payload": {
         "account": "761-3",
         "tax_treatment": "non_deductible",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.created",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/account/731",
+      "payload": {
+        "code": "731",
+        "name": "Wartość sprzedanych towarów w cenie zakupu",
+        "type": "expense",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.created",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/account/349",
+      "payload": {
+        "code": "349",
+        "name": "Odpisy aktualizujące wartość zapasów (konto korygujące)",
+        "type": "asset",
         "market": "pl"
       }
     }
