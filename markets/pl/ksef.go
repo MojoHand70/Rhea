@@ -58,14 +58,23 @@ func init() {
 // misnamed environment, half a certificate or an unreadable one is a client
 // that refuses to send, not a guess.
 func ClientFromEnv() KSeFClient {
-	if os.Getenv("RHEA_KSEF_TOKEN") == "" && os.Getenv("RHEA_KSEF_CERT") == "" && os.Getenv("RHEA_KSEF_KEY") == "" {
-		return FakeKSeF{}
+	env := os.Getenv("RHEA_KSEF_ENV")
+	secrets := os.Getenv("RHEA_KSEF_TOKEN") != "" || os.Getenv("RHEA_KSEF_CERT") != "" || os.Getenv("RHEA_KSEF_KEY") != ""
+	if env == "" || env == "fake" {
+		if secrets {
+			return refusingClient{fmt.Errorf("ksef: secrets are set but RHEA_KSEF_ENV is not (test | demo | prod)")}
+		}
+		return FakeKSeF{} // development: no environment named, no secrets
+	}
+	if !secrets {
+		// a production deploy whose secrets failed to mount must not book
+		// fake acceptances with valid-looking numbers into the JPK
+		return refusingClient{fmt.Errorf("ksef: RHEA_KSEF_ENV=%s but no token or certificate is set — nothing is sent", env)}
 	}
 	c, err := ksef2FromEnv()
 	if err != nil {
 		return refusingClient{err}
 	}
-	env := os.Getenv("RHEA_KSEF_ENV")
 	c.Log = func(format string, args ...any) {
 		log.Printf("ksef (%s, NIP %s): "+format, append([]any{env, c.NIP}, args...)...)
 	}

@@ -3,6 +3,8 @@ package shell
 import (
 	"fmt"
 	"net/http"
+
+	"rhea/internal/exec"
 )
 
 // handleSimulateBackfill is the dry run of ruled backfill: which past events
@@ -20,7 +22,14 @@ func (s *Server) handleSimulateBackfill(w http.ResponseWriter, r *http.Request) 
 		writeErr(w, 500, err)
 		return
 	}
-	writeJSON(w, 200, map[string]any{"date": plan.Date, "chains": plan.Chains, "errors": plan.Errors, "diff": diff})
+	chains, errs := plan.Chains, plan.Errors
+	if chains == nil {
+		chains = []exec.BackfillChain{} // never null: the client counts them
+	}
+	if errs == nil {
+		errs = []string{}
+	}
+	writeJSON(w, 200, map[string]any{"date": plan.Date, "chains": chains, "errors": errs, "diff": diff})
 }
 
 // handleApproveBackfill is the deliberate act: approve_backfill, then the

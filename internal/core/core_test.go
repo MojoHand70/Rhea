@@ -503,3 +503,23 @@ func TestLanguageBoundaries(t *testing.T) {
 		t.Fatal("gt on text passed")
 	}
 }
+
+// A typed read whose type the catalog cannot read is an error, never a raw
+// read: a money field's minor units read raw as major units, a hundredfold.
+func TestTypedReadNeverFallsBackToRaw(t *testing.T) {
+	payload := decode(t, `{"state": {"net": 1250}}`)
+	tm, err := ParseTemplate("=$.state.net * 2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	known := &Env{Typed: map[string]string{"$.state": "invoice"}, Types: func(string) (ObjectType, bool) {
+		return ObjectType{Name: "invoice", Version: 1, Fields: []FieldDef{{Name: "net", Type: "money"}}}, true
+	}}
+	if v, _, err := tm.Evaluate(payload, FieldDef{Name: "f", Type: "money"}, known); err != nil || v != int64(2500) {
+		t.Fatalf("typed: %v %v", v, err)
+	}
+	unknown := &Env{Typed: map[string]string{"$.state": "invoice"}, Types: func(string) (ObjectType, bool) { return ObjectType{}, false }}
+	if _, _, err := tm.Evaluate(payload, FieldDef{Name: "f", Type: "money"}, unknown); err == nil || !strings.Contains(err.Error(), "cannot be read from the catalog") {
+		t.Fatalf("an unreadable type read raw: %v", err)
+	}
+}

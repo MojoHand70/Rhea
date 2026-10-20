@@ -658,6 +658,7 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 			Channel   string          `json:"channel"`
 			EventType string          `json:"event_type"`
 			Payload   json.RawMessage `json:"payload"`
+			DedupKey  string          `json:"dedup_key"` // the reader's identity for the fact
 		}
 		if err := json.Unmarshal(prop.Payload, &proposed); err != nil {
 			return nil, err
@@ -687,7 +688,12 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 		cause := p.Proposal
 		ev.Type, ev.Payload, ev.CauseEventID = proposed.EventType, payload, &cause
 		ev.OccurredAt = prop.OccurredAt
+		// the fact's identity is the reader's: the same invoice read again
+		// and booked meanwhile is the same fact, not a second one
 		ev.DedupKey = fmt.Sprintf("confirm_reading/%d", p.Proposal)
+		if proposed.DedupKey != "" {
+			ev.DedupKey = proposed.DedupKey
+		}
 		read, _ := json.Marshal(map[string]any{"document": proposed.Document, "channel": "confirm_reading", "event_type": proposed.EventType})
 		readEvent := core.Event{Kind: core.KindRaw, Type: "document.read", OccurredAt: prop.OccurredAt, Payload: read,
 			DedupKey: fmt.Sprintf("confirm_reading/read/%d", p.Proposal), Actor: ev.Actor, CauseEventID: &cause,

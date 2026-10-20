@@ -11,7 +11,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -155,6 +157,15 @@ func hardened(next http.Handler) http.Handler {
 		if r.Body != nil {
 			r.Body = http.MaxBytesReader(w, r.Body, maxBody)
 		}
+		// A page on any site could POST text/plain to an approval door and
+		// act as the human: a write is JSON from the shell's own origin or
+		// from no browser at all.
+		if r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodOptions {
+			if err := sameOrigin(r); err != nil {
+				writeErr(w, 403, err)
+				return
+			}
+		}
 		defer func() {
 			if p := recover(); p != nil {
 				log.Printf("%s %s: panic: %v", r.Method, r.URL.Path, p)
@@ -219,6 +230,27 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(v)
+}
+
+// sameOrigin refuses a cross-site write: the body must be JSON, the
+// browser's own word on where the request came from (Sec-Fetch-Site) must
+// be same-origin or absent, and an Origin header must name this host.
+func sameOrigin(r *http.Request) error {
+	if ct := r.Header.Get("Content-Type"); ct != "" && !strings.HasPrefix(strings.ToLower(ct), "application/json") {
+		return fmt.Errorf("a write is application/json, not %s", ct)
+	}
+	switch site := r.Header.Get("Sec-Fetch-Site"); site {
+	case "", "same-origin", "none":
+	default:
+		return fmt.Errorf("a %s request cannot act here", site)
+	}
+	if origin := r.Header.Get("Origin"); origin != "" && origin != "null" {
+		u, err := url.Parse(origin)
+		if err != nil || !strings.EqualFold(u.Host, r.Host) {
+			return fmt.Errorf("origin %s is not this shell", origin)
+		}
+	}
+	return nil
 }
 
 // decodeBody reads a JSON request body into v; an empty body is no body.

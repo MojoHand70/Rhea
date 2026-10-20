@@ -346,10 +346,15 @@ func (m *vm) member(v Value, key string, optional bool) (Value, error) {
 		}
 		origin := v.Origin + "." + key
 		if v.Type != "" && m.env.Types != nil {
-			if ot, ok := m.env.Types(v.Type); ok {
-				if fd, ok := ot.Field(key); ok {
-					return fromTyped(raw, fd, origin)
-				}
+			ot, ok := m.env.Types(v.Type)
+			if !ok {
+				// the catalog cannot say what this is: reading it raw would
+				// turn a money field's minor units into major ones, a
+				// hundredfold, and replay would keep it
+				return Value{}, fmt.Errorf("%s: its type %s cannot be read from the catalog", origin, v.Type)
+			}
+			if fd, ok := ot.Field(key); ok {
+				return fromTyped(raw, fd, origin)
 			}
 		}
 		return fromJSON(raw, origin, ""), nil

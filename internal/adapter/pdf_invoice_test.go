@@ -132,15 +132,32 @@ func TestPDFInvoiceChannel(t *testing.T) {
 	if docs[1].State["status"] != "received" {
 		t.Fatalf("a proposed reading leaves the document unread: %v", docs[1].State)
 	}
+	// A proposed document waits for the person and is not read again: a
+	// surer model on the next pass booked the invoice, and the person's
+	// confirmation of the earlier proposal booked it a second time.
+	sure := func(ctx context.Context, system string, pdf []byte, user string) (string, error) {
+		rd, _ := readTextLayerFor(pdf)
+		rd["confidence"] = "0.99"
+		b, _ := json.Marshal(rd)
+		return string(b), nil
+	}
+	adapter.ModelReader = sure
+	if res, err := adapter.Run(ctx, s, x, reader); err != nil || res.Submitted != 0 {
+		t.Fatalf("a proposed document was read again: %+v %v", res, err)
+	}
 
 	// 3. A person confirms: the typed event, the person its author, the
-	// proposal its cause and gone from the worklist, the document read.
+	// proposal its cause and gone from the worklist, the document read —
+	// under the reader's identity for the fact, so it is the one fact.
 	conf, err := x.TriggerActivity(ctx, "confirm_reading", map[string]any{"proposal": proposalID}, "shell:krzysztof", "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	ev, _ := s.GetEvent(ctx, conf.EventID)
 	json.Unmarshal(ev.Payload, &got)
+	if !strings.HasPrefix(ev.DedupKey, "pdf_invoice/"+fmt.Sprint(got["supplier_nip"])+"/") {
+		t.Fatalf("the confirmed fact's identity is the reader's: %s", ev.DedupKey)
+	}
 	if ev.Type != "purchase.invoice.received" || ev.Actor != "shell:krzysztof" || ev.CauseEventID == nil || *ev.CauseEventID != proposalID ||
 		got["reader"] != "person" || fmt.Sprint(got["confirmed_from"]) != fmt.Sprint(proposalID) || got["number"] != facts.Events[pdfs[1].Events[0]].Payload["number"] {
 		t.Fatalf("the confirmed reading: %+v %v", ev, got)

@@ -96,7 +96,7 @@ func (m MT940) Pass(ctx context.Context, reads Reads) ([]core.Event, error) {
 				// a re-downloaded statement is the same statement: keyed on
 				// the account, the statement number and the line
 				out = append(out, core.Event{Type: "bank.statement.line", OccurredAt: l.Date,
-					Payload: payload, DedupKey: fmt.Sprintf("bank_mt940/%s/%s/%d", st.Account, st.Number, lines)})
+					Payload: payload, DedupKey: fmt.Sprintf("bank_mt940/%s/%s/%d", st.Account, st.Number, l.Seq)})
 			}
 		}
 		read, _ := json.Marshal(map[string]any{
@@ -323,6 +323,9 @@ func parseStatement(tags []mt940Tag, prev *Statement) (Statement, error) {
 	}
 	if st.Account == "" || pages == 0 || pageOpen {
 		return st, fmt.Errorf("a statement needs :25:, :60F: and :62F:")
+	}
+	if st.Number == "" {
+		return st, fmt.Errorf("a statement needs its number (:28C:): a line's identity is the account, the statement and the line")
 	}
 	return st, nil
 }

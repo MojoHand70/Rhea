@@ -373,3 +373,42 @@ func TestTwoCompaniesAtTheDoors(t *testing.T) {
 		}
 	}
 }
+
+// A page on another site cannot act as the human: a write from a
+// cross-site context, with a foreign origin, or as text/plain is refused
+// before any door; the shell's own JSON writes pass.
+func TestCrossSiteWritesAreRefused(t *testing.T) {
+	s := storetest.New(t)
+	srv := &shell.Server{Store: s, Exec: &exec.Executor{Store: s}, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb")}
+	ts := httptest.NewServer(srv.Handler())
+	defer ts.Close()
+	post := func(headers map[string]string) int {
+		t.Helper()
+		req, _ := http.NewRequest("POST", ts.URL+"/api/rules/nothing/approve", strings.NewReader(`{"approved_by":"human"}`))
+		req.Header.Set("Content-Type", "application/json")
+		for k, v := range headers {
+			req.Header.Set(k, v)
+		}
+		res, err := ts.Client().Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res.Body.Close()
+		return res.StatusCode
+	}
+	if code := post(map[string]string{"Origin": "https://evil.example", "Sec-Fetch-Site": "cross-site"}); code != 403 {
+		t.Fatalf("a cross-site write answered %d", code)
+	}
+	if code := post(map[string]string{"Sec-Fetch-Site": "cross-site"}); code != 403 {
+		t.Fatalf("a cross-site write without an origin answered %d", code)
+	}
+	if code := post(map[string]string{"Content-Type": "text/plain"}); code != 403 {
+		t.Fatalf("a text/plain write answered %d", code)
+	}
+	if code := post(map[string]string{"Origin": ts.URL, "Sec-Fetch-Site": "same-origin"}); code == 403 {
+		t.Fatal("the shell's own write was refused")
+	}
+	if code := post(nil); code == 403 {
+		t.Fatal("a write from no browser was refused")
+	}
+}

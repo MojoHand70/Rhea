@@ -146,9 +146,11 @@ func (c ChannelSpec) validate(a Activity) error {
 			return fmt.Errorf("channel %q: an exact reader has no threshold", a.Name)
 		}
 	case ConfidenceModel:
-		t, ok := new(big.Rat).SetString(c.Confidence.Threshold)
-		if !ok || t.Sign() <= 0 || t.Cmp(big.NewRat(1, 1)) > 0 {
-			return fmt.Errorf("channel %q: a model reader wants a threshold in (0, 1], got %q", a.Name, c.Confidence.Threshold)
+		// the same reader the channel's reader uses: ".9", "9/10" and
+		// "9e-1" passed here and failed there, leaving the gate off
+		t, err := parseDecimal(c.Confidence.Threshold)
+		if err != nil || t.Sign() <= 0 || t.Cmp(big.NewRat(1, 1)) > 0 {
+			return fmt.Errorf("channel %q: a model reader wants a threshold in (0, 1] as a plain decimal, got %q", a.Name, c.Confidence.Threshold)
 		}
 	default:
 		return fmt.Errorf("channel %q: confidence policy must be %q or %q", a.Name, ConfidenceExact, ConfidenceModel)

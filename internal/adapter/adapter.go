@@ -210,6 +210,18 @@ type scopedReads struct {
 	company string
 }
 
+// EventsOfTypes is the store's, within the scope, for readers that look at
+// what they proposed before.
+func (r scopedReads) EventsOfTypes(ctx context.Context, types []string) ([]core.Event, error) {
+	er, ok := r.Reads.(interface {
+		EventsOfTypes(ctx context.Context, types []string) ([]core.Event, error)
+	})
+	if !ok {
+		return nil, nil
+	}
+	return er.EventsOfTypes(ctx, types)
+}
+
 func (r scopedReads) ObjectsByType(ctx context.Context, typ string) ([]core.Object, error) {
 	objs, err := r.Reads.ObjectsByType(ctx, typ)
 	if err != nil {

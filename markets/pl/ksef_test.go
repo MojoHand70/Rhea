@@ -532,3 +532,23 @@ func (failingAfterFirst) Submit(ctx context.Context, invoices []pl.Outbound) ([]
 	}
 	return subs, fmt.Errorf("session lost while polling")
 }
+
+// The fake Ministry answers only when no environment is named (or "fake"):
+// a deploy whose secrets failed to mount must not book fake acceptances
+// with valid-looking numbers into the JPK.
+func TestClientFromEnvNeverFakesByAccident(t *testing.T) {
+	for _, v := range []string{"RHEA_KSEF_ENV", "RHEA_KSEF_TOKEN", "RHEA_KSEF_CERT", "RHEA_KSEF_KEY", "RHEA_KSEF_NIP"} {
+		t.Setenv(v, "")
+	}
+	if _, ok := pl.ClientFromEnv().(pl.FakeKSeF); !ok {
+		t.Fatal("no environment named: the fake")
+	}
+	t.Setenv("RHEA_KSEF_ENV", "prod")
+	if _, err := pl.ClientFromEnv().Submit(context.Background(), []pl.Outbound{{ID: "x", Number: "1", XML: []byte("<Faktura/>")}}); err == nil || !strings.Contains(err.Error(), "no token or certificate") {
+		t.Fatalf("prod without secrets must refuse, not fake: %v", err)
+	}
+	t.Setenv("RHEA_KSEF_ENV", "fake")
+	if _, ok := pl.ClientFromEnv().(pl.FakeKSeF); !ok {
+		t.Fatal("fake asked for: the fake")
+	}
+}

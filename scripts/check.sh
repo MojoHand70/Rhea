@@ -5,6 +5,9 @@
 # every push through .githooks/pre-push; no hosted CI, no credits.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+if [ "$(git config core.hooksPath || true)" != ".githooks" ]; then
+  echo "note: the pre-push hook is not wired in this clone — run: git config core.hooksPath .githooks" >&2
+fi
 unformatted=$(gofmt -l cmd internal markets)
 if [ -n "$unformatted" ]; then
   echo "gofmt: $unformatted" >&2

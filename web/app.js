@@ -695,6 +695,7 @@ function openBundles() {
       try {
         const p = await api("/api/backfill/simulate", { method: "POST" });
         const box = el("div", {});
+        p.chains = p.chains || []; p.errors = p.errors || [];
         if (!p.chains.length) {
           box.append(el("p", { class: "hint" }, "The past is explained as far as the active rules go."));
         } else {

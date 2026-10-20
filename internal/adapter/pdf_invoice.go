@@ -53,7 +53,7 @@ var ModelReader func(ctx context.Context, system string, pdf []byte, user string
 func init() {
 	Register(Implemented{Name: "pdf_invoice", CodeVersion: pdfInvoiceCodeVersion,
 		Format: "PDF supplier invoice from the document store, read by the model with a confidence (the text layer without one)"})
-	readers["pdf_invoice"] = func() Adapter { return &PDFInvoice{} }
+	readers["pdf_invoice"] = func() Adapter { return &PDFInvoice{threshold: big.NewRat(1, 1)} }
 }
 
 func (*PDFInvoice) Name() string     { return "pdf_invoice" }
@@ -66,13 +66,41 @@ func (r *PDFInvoice) Bound(ch core.Activity) {
 		return
 	}
 	r.policy = ch.Spec.Channel.Confidence.Policy
+	// The gate is never off: a model reader with no threshold, or one the
+	// decimal reader refuses, asks a person about every reading (1.00) —
+	// a nil threshold booked every reading, at confidence 0.00 too.
+	r.threshold = big.NewRat(1, 1)
 	if t := ch.Spec.Channel.Confidence.Threshold; t != "" {
-		// an unreadable threshold keeps the default: it must never become
-		// "accept every reading"
-		if th, err := core.ParseDecimal(t); err == nil {
+		if th, err := core.ParseDecimal(t); err == nil && th.Sign() > 0 && th.Cmp(big.NewRat(1, 1)) <= 0 {
 			r.threshold = th
 		}
 	}
+}
+
+// proposedDocuments lists the documents a reader has proposed a reading
+// of: left received until a person decides, they are not read again.
+func proposedDocuments(ctx context.Context, reads Reads, channel string) (map[string]bool, error) {
+	er, ok := reads.(interface {
+		EventsOfTypes(ctx context.Context, types []string) ([]core.Event, error)
+	})
+	out := map[string]bool{}
+	if !ok {
+		return out, nil
+	}
+	evs, err := er.EventsOfTypes(ctx, []string{EventDocumentReadingProposed})
+	if err != nil {
+		return nil, err
+	}
+	for _, ev := range evs {
+		var p struct {
+			Document string `json:"document"`
+			Channel  string `json:"channel"`
+		}
+		if json.Unmarshal(ev.Payload, &p) == nil && p.Channel == channel {
+			out[p.Document] = true
+		}
+	}
+	return out, nil
 }
 
 // ReadingSystem is what the model is told before it reads an invoice.
@@ -114,6 +142,13 @@ func (r *PDFInvoice) Pass(ctx context.Context, reads Reads) ([]core.Event, error
 	if err != nil {
 		return nil, err
 	}
+	// A document with a reading proposed waits for the person: read again
+	// each pass, a later reading crossing the threshold booked the invoice,
+	// and the person's confirmation of the earlier proposal booked it twice.
+	proposed, err := proposedDocuments(ctx, reads, r.Name())
+	if err != nil {
+		return nil, err
+	}
 	sort.Slice(docs, func(i, j int) bool { return docs[i].ID < docs[j].ID })
 	var out []core.Event
 	for _, d := range docs {
@@ -121,7 +156,7 @@ func (r *PDFInvoice) Pass(ctx context.Context, reads Reads) ([]core.Event, error
 		media, _ := d.State["media_type"].(string)
 		hash, _ := d.State["hash"].(string)
 		name, _ := d.State["name"].(string)
-		if status != "received" || hash == "" || !strings.Contains(media, "pdf") {
+		if status != "received" || hash == "" || !strings.Contains(media, "pdf") || proposed[hash] {
 			continue
 		}
 		b, err := reads.GetBlob(ctx, hash)
@@ -155,26 +190,29 @@ func (r *PDFInvoice) Pass(ctx context.Context, reads Reads) ([]core.Event, error
 			return out, err
 		}
 		date, _ := fact["invoice_date"].(string)
-		if r.threshold != nil && confidence.Cmp(r.threshold) < 0 {
-			// Doubt goes to the worklist: the reading as proposed, for a
-			// person to confirm through the confirm_reading door.
-			proposed, _ := json.Marshal(map[string]any{
-				"document": hash, "name": name, "channel": r.Name(), "event_type": "purchase.invoice.received",
-				"payload": json.RawMessage(payload), "confidence": confidence.FloatString(2),
-				"reason": fmt.Sprintf("the reader is %s sure; the channel asks for %s", confidence.FloatString(2), r.threshold.FloatString(2)),
-			})
-			out = append(out, core.Event{Type: EventDocumentReadingProposed, OccurredAt: date,
-				Payload: proposed, DedupKey: "pdf_invoice/proposed/" + hash})
-			continue
-		}
-		read, _ := json.Marshal(map[string]any{"document": hash, "channel": r.Name(), "event_type": "purchase.invoice.received"})
-		// a resent scan of the same invoice is the same invoice
+		// a resent scan of the same invoice is the same invoice: the fact's
+		// identity is the supplier and the number, whatever the bytes
 		dedup := "pdf_invoice/" + hash
 		if nip, _ := fact["supplier_nip"].(string); nip != "" {
 			if number, _ := fact["number"].(string); number != "" {
 				dedup = "pdf_invoice/" + nip + "/" + number
 			}
 		}
+		if confidence.Cmp(r.threshold) < 0 {
+			// Doubt goes to the worklist: the reading as proposed, for a
+			// person to confirm through the confirm_reading door — under
+			// the reader's identity key, so a confirmation and a later
+			// reading of the same invoice are one fact.
+			proposal, _ := json.Marshal(map[string]any{
+				"document": hash, "name": name, "channel": r.Name(), "event_type": "purchase.invoice.received",
+				"payload": json.RawMessage(payload), "confidence": confidence.FloatString(2), "dedup_key": dedup,
+				"reason": fmt.Sprintf("the reader is %s sure; the channel asks for %s", confidence.FloatString(2), r.threshold.FloatString(2)),
+			})
+			out = append(out, core.Event{Type: EventDocumentReadingProposed, OccurredAt: date,
+				Payload: proposal, DedupKey: "pdf_invoice/proposed/" + hash})
+			continue
+		}
+		read, _ := json.Marshal(map[string]any{"document": hash, "channel": r.Name(), "event_type": "purchase.invoice.received"})
 		out = append(out,
 			core.Event{Type: "purchase.invoice.received", OccurredAt: date, Payload: payload, DedupKey: dedup},
 			core.Event{Type: EventDocumentRead, OccurredAt: date, Payload: read, DedupKey: "pdf_invoice/read/" + hash})

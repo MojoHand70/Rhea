@@ -201,6 +201,11 @@ func TestParseMT940(t *testing.T) {
 	if sts, err := adapter.ParseMT940([]byte(colon)); err != nil || !strings.Contains(sts[0].Lines[1].Reference, ":tel. 123") {
 		t.Fatalf("a colon in free text: %v %+v", err, sts)
 	}
+	// A statement without its number (:28C:) is refused: a line's identity
+	// is the account, the statement and the line within it.
+	if _, err := adapter.ParseMT940([]byte(strings.Replace(text, ":28C:1/2026\r\n", "", 1))); err == nil || !strings.Contains(err.Error(), ":28C:") {
+		t.Fatalf("a statement without a number parsed: %v", err)
+	}
 	// CP1250, which Polish banks commonly send, is refused with its reason
 	// rather than read as mangled titles.
 	cp1250 := strings.Replace(text, "Hurtownia", "Hurtownia \xb3", 1)
