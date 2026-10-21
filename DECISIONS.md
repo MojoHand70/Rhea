@@ -4684,3 +4684,49 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   books (invariant 9). The owed `rhea restore -company` is therefore the go-live's
   precondition, not a later debt: the facts that are the company's take its key, the
   installation's own (definitions, the pack's master data, persons) stay blank.
+
+## 2026-10-21 — A log from before the company key comes back as one company's books
+
+- `rhea restore -company KEY FILE` (`Store.RestoreFor`): a backup written while every
+  fact acted for no company is restored as if each fact with no company had been written
+  acting for KEY under today's kernel. A door's fact takes the key, unless the door is
+  installation-wide in any version the backup holds (a person registered, a sign-in); a
+  fact through no door is the pack's master data, which the loader writes as the
+  installation's, and a fact signed `kernel` is the kernel's own (the seed's approvals, a
+  refusal) — both stay blank; a derived fact takes its cause's company, as the executor
+  stamps a chain from its root; a fact that names a company keeps it. Nothing is
+  rewritten (invariant 1): the log is appended once, into an empty system of record, with
+  the keys its facts would have carried. The key is one company's; a set is refused.
+- The rule "no door = the loader's" holds for any log since the doors became data
+  (2026-10-05): every person, the CLI and the simulator write through a door. A log older
+  than that would keep its doorless company facts as the installation's.
+- Boundary checklist: which company — the one key named, never a set; two at once and
+  twice — a restore runs in one transaction into an empty system of record and refuses a
+  non-empty one, so a second run is refused; after it, the stamped dedup keys are the
+  company's, so the same door act again is still one fact; money — no amount is touched,
+  the payloads travel as the backup spells them.
+- Rehearsed on the bench's Helios world (rhea_face, 1 078 facts): 954 took the key, 124
+  stayed the installation's (the chart, the VAT rates, the CIT limit and their objects,
+  the kernel's 17 seed approvals); replay rebuilt the same 633 objects; then the new
+  kernel's init and packs, the people pack approved, the owner registered and granted,
+  the kernel serving signed-in persons only: the owner's identify_company, refused on the
+  unstamped books, booked; the owner's approval of the Poland pack v41 activated it; a
+  replay after it reproduced the 657 objects identically.
+- Found on the way, left for its own change (invariant 9, 2026-10-21): the sign-in check
+  refuses a door whose input named `company` differs from the company acted for. The
+  people pack's doors carry the company key there, but the Poland pack's five company
+  doors (identify_company, declare_company_form, set_cost_account,
+  declare_company_accounts, declare_cit_status) carry the company's object id
+  (`ref<company>`), so with a key that is the VAT id every one is refused to a signed-in
+  person. Until the check tells a key from a ref (a ref names an object the scope holds;
+  only a key must equal the company acted for), the key of a company is its company
+  object's id — on white01 Helios's — not the VAT id the 2026-10-13 note named as the
+  convention. Nothing reads a VAT id out of the key: adapters and the clock fan out by
+  key and read the company's objects.
+- Test: `TestRestoreForCompany` — an old world (a note through a door acting for no
+  company, the chart's account through no door, a sign-in through record_access, a second
+  company's note under its key); restored as it is, the company's correction is refused
+  by the database's row-level security; restored for the company, every fact's company
+  follows its root, the counts match the log, the objects are the same with the key, the
+  correction books, the same note through the same door is a duplicate, the other company
+  sees none of it; a set of companies is refused.

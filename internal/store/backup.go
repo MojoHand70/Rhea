@@ -6,9 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"rhea/internal/core"
 )
 
 // Backup and restore (DIRECTION 2026-10-15, "The plan after the statutory
@@ -96,6 +99,109 @@ func (s *Store) InitSchema(ctx context.Context) error {
 // every id and timestamp, and moves the event sequence past the last id
 // so the log continues where it stopped. The caller replays afterwards.
 func (s *Store) Restore(ctx context.Context, r io.Reader) (BackupCounts, error) {
+	return s.restore(ctx, r, nil)
+}
+
+// Stamped says what a restore for one company did with the facts it found
+// carrying no company: how many took a company and how many stayed the
+// installation's.
+type Stamped struct{ Company, Installation int }
+
+// RestoreFor restores a backup written before the company key — every fact
+// acting for no company, so under isolation one company's books are the
+// installation's rows (DECISIONS 2026-10-21) — for the one company whose
+// books they are: each fact with no company comes back as if it had been
+// written acting for that company. A door's fact takes the key, unless the
+// door is installation-wide in any version the backup holds (a person, a
+// sign-in); a fact through no door is the pack's master data, which the
+// loader writes as the installation's, and a fact signed "kernel" is the
+// kernel's own (the seed's approvals, a refusal) — both stay blank; a derived
+// fact takes its cause's company, as the executor stamps a chain from its
+// root. A fact that names a company keeps it. Nothing is rewritten: the log
+// is appended once, into an empty system of record, with the keys its facts
+// would have carried.
+func (s *Store) RestoreFor(ctx context.Context, r io.Reader, company string) (BackupCounts, Stamped, error) {
+	if company == "" || strings.ContainsAny(company, ", \t\r\n") {
+		return nil, Stamped{}, fmt.Errorf("a restore stamps one company's key, not %q", company)
+	}
+	st := &stamper{company: company, installation: map[string]bool{}, of: map[int64]string{}}
+	counts, err := s.restore(ctx, r, st)
+	return counts, st.n, err
+}
+
+// stamper decides, row by row in the backup's order (the doors before the
+// facts, a cause before its effect), whose a fact with no company is.
+type stamper struct {
+	company      string
+	installation map[string]bool  // doors whose facts are the installation's
+	of           map[int64]string // each restored fact's company, for its consequences
+	n            Stamped
+}
+
+func (st *stamper) door(row json.RawMessage) error {
+	var a struct {
+		Name string `json:"name"`
+		Spec struct {
+			Installation bool `json:"installation"`
+		} `json:"spec"`
+	}
+	if err := json.Unmarshal(row, &a); err != nil {
+		return err
+	}
+	if a.Spec.Installation {
+		st.installation[a.Name] = true
+	}
+	return nil
+}
+
+func (st *stamper) fact(row json.RawMessage) (json.RawMessage, error) {
+	var ev struct {
+		ID       int64   `json:"event_id"`
+		Kind     string  `json:"kind"`
+		Cause    *int64  `json:"cause_event_id"`
+		Actor    *string `json:"actor"`
+		Activity *string `json:"activity_name"`
+		Company  *string `json:"company"`
+	}
+	if err := json.Unmarshal(row, &ev); err != nil {
+		return nil, err
+	}
+	if ev.Company != nil && *ev.Company != "" {
+		st.of[ev.ID] = *ev.Company
+		return row, nil
+	}
+	company := ""
+	switch {
+	case ev.Kind == core.KindDerived:
+		if ev.Cause == nil {
+			return nil, fmt.Errorf("derived event %d names no cause", ev.ID)
+		}
+		c, ok := st.of[*ev.Cause]
+		if !ok {
+			return nil, fmt.Errorf("derived event %d: its cause %d is not before it in the backup", ev.ID, *ev.Cause)
+		}
+		company = c
+	case ev.Activity == nil || *ev.Activity == "": // the pack's master data
+	case ev.Actor != nil && *ev.Actor == "kernel": // the kernel's own
+	case st.installation[*ev.Activity]: // an installation-wide door
+	default:
+		company = st.company
+	}
+	st.of[ev.ID] = company
+	if company == "" {
+		st.n.Installation++
+		return row, nil
+	}
+	st.n.Company++
+	var f map[string]json.RawMessage
+	if err := json.Unmarshal(row, &f); err != nil {
+		return nil, err
+	}
+	f["company"], _ = json.Marshal(company)
+	return json.Marshal(f)
+}
+
+func (s *Store) restore(ctx context.Context, r io.Reader, st *stamper) (BackupCounts, error) {
 	var events, defs int
 	if err := s.Pool.QueryRow(ctx, "SELECT count(*) FROM event").Scan(&events); err != nil {
 		return nil, fmt.Errorf("restore wants the schema in place (rhea init without the seed, or restore into a fresh database): %w", err)
@@ -137,6 +243,18 @@ func (s *Store) Restore(ctx context.Context, r io.Reader) (BackupCounts, error) 
 		}
 		if !allowed[l.Table] {
 			return nil, fmt.Errorf("backup names a table a restore does not take: %q", l.Table)
+		}
+		if st != nil {
+			switch l.Table {
+			case "activity":
+				if err := st.door(l.Row); err != nil {
+					return nil, fmt.Errorf("restore activity row %d: %w", counts[l.Table]+1, err)
+				}
+			case "event":
+				if l.Row, err = st.fact(l.Row); err != nil {
+					return nil, fmt.Errorf("restore event row %d: %w", counts[l.Table]+1, err)
+				}
+			}
 		}
 		sql := "INSERT INTO " + l.Table + " SELECT * FROM json_populate_record(NULL::" + l.Table + ", $1)"
 		if l.Table == "event" {

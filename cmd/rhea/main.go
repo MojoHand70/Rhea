@@ -285,11 +285,15 @@ func main() {
 		// Into an empty database: the schema, every row with its id and
 		// time, the sequence moved past the last event, then the replay that
 		// rebuilds the objects — the proof that the log and the definitions
-		// are the whole system.
-		if len(os.Args) < 3 {
-			log.Fatal("usage: rhea restore FILE   (into an empty database)")
+		// are the whole system. With -company, a log from before the company
+		// key comes back as that one company's books (DECISIONS 2026-10-21).
+		fs := flag.NewFlagSet("restore", flag.ExitOnError)
+		company := fs.String("company", "", "the one company whose books a backup from before the company key holds: its facts with no company take this key")
+		fs.Parse(os.Args[2:])
+		if fs.NArg() != 1 {
+			log.Fatal("usage: rhea restore [-company KEY] FILE   (into an empty database)")
 		}
-		f, err := os.Open(os.Args[2])
+		f, err := os.Open(fs.Arg(0))
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -297,7 +301,13 @@ func main() {
 		if err := s.InitSchema(ctx); err != nil {
 			log.Fatal(err)
 		}
-		counts, err := s.Restore(owner, f)
+		var counts store.BackupCounts
+		var stamped store.Stamped
+		if *company != "" {
+			counts, stamped, err = s.RestoreFor(owner, f, *company)
+		} else {
+			counts, err = s.Restore(owner, f)
+		}
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -306,6 +316,10 @@ func main() {
 			log.Fatal(err)
 		}
 		fmt.Printf("restored %v; replay rebuilt %d objects\n", counts, len(objects))
+		if *company != "" {
+			fmt.Printf("of the facts with no company, %d took a company (%s, or their cause's) and %d stay the installation's (the pack's master data, the kernel's own, installation-wide doors)\n",
+				stamped.Company, *company, stamped.Installation)
+		}
 
 	case "file", "issue":
 		// Render a provided writer's file (rhea file WRITER k=v…: to stdout,

@@ -162,3 +162,189 @@ func TestBackupRestore(t *testing.T) {
 	}
 	_ = store.BackupCounts{}
 }
+
+// A log from before the company key (DECISIONS 2026-10-21): every fact was
+// written acting for no company, so under isolation the books are the
+// installation's rows — a signed-in owner sees them, but a door acting for
+// the company that amends one of them is refused by the database, and the
+// next company would see them. Restored for the company, the backup comes
+// back as if every fact had been written acting for it: a door's fact and
+// everything derived from it take the key; the pack's master data (written
+// through no door), the kernel's own facts and an installation-wide door's
+// stay the installation's; a fact that already names a company keeps it.
+// Then the company's amendment books, the same fact twice is still one, and
+// replay rebuilds the same objects under the key.
+func TestRestoreForCompany(t *testing.T) {
+	ctx := context.Background()
+	const alfa, beta = "PL5250001111", "PL5260001246"
+	a := storetest.New(t)
+	xa := &exec.Executor{Store: a}
+	for _, ot := range []core.ObjectType{
+		{Name: "note", Version: 1, Domain: "work", LabelField: "text", Amendable: []string{"amount"},
+			Fields: []core.FieldDef{{Name: "text", Type: "string", Required: true}, {Name: "amount", Type: "money", Required: true}}},
+		{Name: "account", Version: 1, Domain: "finance", LabelField: "number",
+			Fields: []core.FieldDef{{Name: "number", Type: "string", Required: true}}},
+	} {
+		if err := a.InsertObjectType(ctx, ot); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, r := range []core.Rule{
+		{ID: "note", Spec: core.RuleSpec{Match: core.Match{EventType: "note.taken"},
+			Effect: core.Effect{Object: core.ObjectTemplate{Type: "note", Fields: map[string]string{"text": "=$.text", "amount": "=$.amount"}}}}},
+		{ID: "note-corrected", Spec: core.RuleSpec{Match: core.Match{EventType: "note.corrected"},
+			Effect: core.Effect{Amend: &core.AmendTemplate{Type: "note", Target: "=ref(note, text, $.text)", Set: map[string]string{"amount": "=$.amount"}}}}},
+		{ID: "account", Spec: core.RuleSpec{Match: core.Match{EventType: "account.created"},
+			Effect: core.Effect{Object: core.ObjectTemplate{Type: "account", Fields: map[string]string{"number": "=$.number"}}}}},
+	} {
+		r.Status, r.Priority, r.EffectiveFrom, r.CreatedBy, r.Description = core.StatusActive, 100, "2026-01-01", "test", r.ID
+		if _, err := a.InsertRuleVersion(ctx, r); err != nil {
+			t.Fatal(err)
+		}
+	}
+	door := func(x *exec.Executor, scope context.Context, typ, dedup string, payload map[string]any) exec.Triggered {
+		t.Helper()
+		tr, err := x.TriggerActivity(scope, "submit_event", map[string]any{
+			"event_type": typ, "occurred_at": "2026-09-01", "payload": payload}, "krzysztof", dedup)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return tr
+	}
+	// The old world: the books written acting for no company, the pack's
+	// chart as the loader writes it, a sign-in the face reported, and a
+	// second company already under its key.
+	installation := store.WithInstallation(ctx)
+	door(xa, installation, "note.taken", "rent-1", map[string]any{"text": "rent", "amount": "1000.00"})
+	if _, err := a.AppendEvent(store.WithOwner(ctx), core.Event{Kind: core.KindRaw, Type: "account.created", OccurredAt: "2026-01-01",
+		Payload: []byte(`{"number":"201"}`), DedupKey: "pack/test/account/201", Actor: "cli:test"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := xa.TriggerActivity(store.WithCompany(ctx, alfa), "record_access", map[string]any{
+		"person": "krzysztof", "outcome": "signed_in", "method": "passkey"}, "adapter:face", ""); err != nil {
+		t.Fatal(err)
+	}
+	door(xa, store.WithCompany(ctx, beta), "note.taken", "", map[string]any{"text": "beta's", "amount": "5.00"})
+	if _, errs := xa.ProcessPending(ctx); len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	var buf bytes.Buffer
+	if _, err := a.Backup(ctx, &buf); err != nil {
+		t.Fatal(err)
+	}
+	correct := func(x *exec.Executor) exec.Triggered {
+		t.Helper()
+		return door(x, store.WithCompany(ctx, alfa), "note.corrected", "", map[string]any{"text": "rent", "amount": "1200.00"})
+	}
+
+	// Restored as it is, the company's correction is refused by the database.
+	plain := storetest.NewBare(t)
+	if _, err := plain.Restore(ctx, bytes.NewReader(buf.Bytes())); err != nil {
+		t.Fatal(err)
+	}
+	xp := &exec.Executor{Store: plain}
+	if _, err := xp.Replay(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if tr := correct(xp); tr.Booked != 0 || len(tr.Errors) == 0 || !strings.Contains(fmt.Sprint(tr.Errors), "row-level security") {
+		t.Fatalf("the unstamped books under the company's scope: booked %d, %v", tr.Booked, tr.Errors)
+	}
+
+	// Restored for the company: whose each fact is.
+	if _, _, err := storetest.NewBare(t).RestoreFor(ctx, bytes.NewReader(buf.Bytes()), alfa+","+beta); err == nil {
+		t.Fatal("a restore for a set of companies: the key is one company's")
+	}
+	b := storetest.NewBare(t)
+	counts, stamped, err := b.RestoreFor(ctx, bytes.NewReader(buf.Bytes()), alfa)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if counts["event"] == 0 || stamped.Company == 0 || stamped.Installation == 0 {
+		t.Fatalf("restored %v, stamped %+v", counts, stamped)
+	}
+	xb := &exec.Executor{Store: b}
+	if _, err := xb.Replay(ctx); err != nil {
+		t.Fatal(err)
+	}
+	raws, _ := b.EventsByKind(ctx, core.KindRaw)
+	derived, _ := b.EventsByKind(ctx, core.KindDerived)
+	byID := map[int64]core.Event{}
+	for _, ev := range append(raws, derived...) {
+		byID[ev.ID] = ev
+	}
+	rootOf := func(ev core.Event) core.Event {
+		for ev.CauseEventID != nil {
+			ev = byID[*ev.CauseEventID]
+		}
+		return ev
+	}
+	took, kept := 0, 0
+	for _, ev := range append(raws, derived...) {
+		root := rootOf(ev)
+		var want string
+		switch {
+		case root.Type == "note.taken" && strings.Contains(string(root.Payload), "beta's"):
+			want = beta
+		case root.Type == "note.taken":
+			want = alfa
+		case root.Type == "account.created", root.Type == core.EventAccessRecorded, root.Actor == "kernel":
+			want = ""
+		default:
+			t.Fatalf("a fact the test did not write: %s %s", root.Type, root.Actor)
+		}
+		if ev.Company != want {
+			t.Fatalf("event %d %s (root %s): company %q, want %q", ev.ID, ev.Type, root.Type, ev.Company, want)
+		}
+		if want == alfa {
+			took++
+		} else if want == "" {
+			kept++
+		}
+	}
+	if took != stamped.Company || kept != stamped.Installation {
+		t.Fatalf("the count said %+v; the log holds %d stamped, %d kept", stamped, took, kept)
+	}
+	objs, _ := b.AllObjects(ctx)
+	for _, o := range objs {
+		want := map[string]string{"rent": alfa, "beta's": beta}[fmt.Sprint(o.State["text"])]
+		if o.Type == "account" {
+			want = ""
+		}
+		if o.Company != want {
+			t.Fatalf("%s %v: company %q, want %q", o.ID, o.State, o.Company, want)
+		}
+	}
+	// The same objects as before the restore, the key aside.
+	oa, _ := a.AllObjects(ctx)
+	for i := range oa {
+		oa[i].Company = ""
+	}
+	for i := range objs {
+		objs[i].Company = ""
+	}
+	if ja, jb := mustJSON(t, oa), mustJSON(t, objs); ja != jb {
+		t.Fatalf("objects differ after the restore for the company:\n%s\n%s", ja, jb)
+	}
+
+	// The company's correction books now; the same note through the same
+	// door twice is still one fact; the other company's scope sees none of it.
+	if tr := correct(xb); tr.Booked == 0 || len(tr.Errors) > 0 {
+		t.Fatalf("the company's correction after the restore: booked %d, %v", tr.Booked, tr.Errors)
+	}
+	if _, err := xb.TriggerActivity(store.WithCompany(ctx, alfa), "submit_event", map[string]any{
+		"event_type": "note.taken", "occurred_at": "2026-09-01", "payload": map[string]any{"text": "rent", "amount": "1000.00"}}, "krzysztof", "rent-1"); err == nil || !store.IsDuplicate(err) {
+		t.Fatalf("the same fact twice after the restore: %v", err)
+	}
+	if ids, _ := b.FindObjectIDsByField(store.WithCompany(ctx, beta), "note", "text", "rent"); len(ids) != 0 {
+		t.Fatalf("the other company sees the stamped books: %v", ids)
+	}
+}
+
+func mustJSON(t *testing.T, v any) string {
+	t.Helper()
+	j, err := json.Marshal(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(j)
+}
