@@ -4730,3 +4730,31 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   follows its root, the counts match the log, the objects are the same with the key, the
   correction books, the same note through the same door is a duplicate, the other company
   sees none of it; a set of companies is refused.
+
+## 2026-10-21 — Sign-in is live on white01
+
+- KK signs in at app.rhea.plus with a passkey on his phone, and on his PC by the phone's
+  QR code; the kernel serves signed-in persons only (RHEA_REQUIRE_PERSON=1), the machine's
+  own routes aside (clock, morning, the face's sign-in report). His first decision with the
+  key — approving the Poland pack v41 — is a fact under Helios signed by him.
+- The books: the Helios log (1 173 facts, every one without a company) restored for
+  company-95 — Helios's company object's id, per the key note of this morning — 1 023 took
+  the key, 150 stayed the installation's; the old database is kept as
+  rhea_before_stamp_20261021-180705 and its backup in /var/backups. KK registered and
+  owner of company-95, granted by himself through `rhea people` on the machine.
+- Done by KK from WSL with rheaface's tools/deploy-white01.sh (now carrying the shared
+  packs) and tools/signin-white01.sh (--check, the go-live, --lock): production deploys
+  from Claude's session are refused by its permission classifier even with allow rules
+  for the two scripts, so the operator runs them and the session reads --check.
+- What the go-live met, each fixed in rheaface with the failure first: the restore ran as
+  rhea and was handed root's pipe as /dev/stdin (it opens its own copy now); the face's
+  service is sandboxed (ProtectSystem=strict) and could not write its sign-in store
+  (a drop-in grants /opt/rhea/face); the page built an invitation's enrolment as
+  /face/auth/enrol?t=…/begin and reached no route (17047ba, the smoke test checks both
+  shapes); every write through the face was refused by the kernel's cross-site check
+  because the face forwarded the browser's Origin (c35a423: the face holds the same rule
+  for its own origin and forwards none; TestOriginStopsAtTheFace).
+- Open: a second key of KK's own (the PC borrows the phone's); the independent review of
+  the sign-in work and today's changes; the sign-in check telling a company key from a
+  company ref (above); the morning now also speaks for the installation, which holds no
+  books — watched on the first morning.
