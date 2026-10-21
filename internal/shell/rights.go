@@ -2,6 +2,7 @@ package shell
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -18,9 +19,11 @@ import (
 // the kernel resolves their grants from the log, makes those grants the
 // request's scope (invariant 9: a person sees the companies they hold
 // rights in and nothing else), and checks every door and every read
-// against them. On white01 the kernel is bound to the machine and the
-// face's header is enough; a signed token replaces it when other faces
-// exist on the open API.
+// against them. The header is believed only from the face: the face proves
+// itself with a key the two share (X-Rhea-Face, RHEA_FACE_KEY), because on
+// white01 every process on the machine reaches the kernel's port (review
+// 2026-10-21, A7); a signed token replaces it when other faces exist on the
+// open API.
 
 // machineRoutes are the machine's own hands, open without a person even
 // when the kernel serves persons only: the clock the morning timer moves,
@@ -46,6 +49,10 @@ func machineRoute(r *http.Request) bool {
 func (s *Server) principalHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		handle := r.Header.Get("X-Rhea-Person")
+		if handle != "" && (s.RequirePerson || s.FaceKey != "") && !s.fromFace(r) {
+			writeErr(w, 401, fmt.Errorf("a person is named by the face only"))
+			return
+		}
 		company := r.Header.Get("X-Rhea-Company")
 		if company == "" {
 			company = r.URL.Query().Get("company")
@@ -129,6 +136,12 @@ func (s *Server) principalHandler(next http.Handler) http.Handler {
 		ctx = rights.WithPrincipal(ctx, p)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+// fromFace reports whether a request carries the face's key; a kernel that
+// knows none believes no face.
+func (s *Server) fromFace(r *http.Request) bool {
+	return s.FaceKey != "" && subtle.ConstantTimeCompare([]byte(r.Header.Get("X-Rhea-Face")), []byte(s.FaceKey)) == 1
 }
 
 func contains(set []string, x string) bool {

@@ -469,12 +469,16 @@ func main() {
 
 	case "serve":
 		fs := flag.NewFlagSet("serve", flag.ExitOnError)
-		addr := fs.String("addr", ":8070", "listen address")
+		addr := fs.String("addr", "127.0.0.1:8070", "listen address (this machine by default: from outside, the face is the door)")
 		requirePerson := fs.Bool("require-person", os.Getenv("RHEA_REQUIRE_PERSON") != "", "serve signed-in persons only (a face is the only door from outside); also RHEA_REQUIRE_PERSON=1")
 		fs.Parse(os.Args[2:])
-		srv := &shell.Server{Store: s, Exec: x, Agent: agent.New(), DuckPath: project.Path(), RequirePerson: *requirePerson}
+		faceKey := os.Getenv("RHEA_FACE_KEY")
+		if *requirePerson && faceKey == "" {
+			log.Fatal("serving signed-in persons only needs RHEA_FACE_KEY: the key the face proves itself with, the same in the face's settings")
+		}
+		srv := &shell.Server{Store: s, Exec: x, Agent: agent.New(), DuckPath: project.Path(), RequirePerson: *requirePerson, FaceKey: faceKey}
 		if *requirePerson {
-			log.Printf("serving signed-in persons only (X-Rhea-Person from the face)")
+			log.Printf("serving signed-in persons only (X-Rhea-Person from the face, proved by its key)")
 		}
 		x.Today = srv.Clock.TodayUTC // a door whose inputs carry no date takes the books' day
 		// Learning is optional: without a network Rhea runs alone.
@@ -501,7 +505,11 @@ func main() {
 		} else {
 			log.Printf("channels: %v", err)
 		}
-		log.Printf("rhea shell on http://localhost%s (model %s)", *addr, agent.Model())
+		host := *addr
+		if strings.HasPrefix(host, ":") {
+			host = "localhost" + host // every interface: the bench's own browser
+		}
+		log.Printf("rhea shell on http://%s (model %s)", host, agent.Model())
 		// Header and idle timeouts, so a stalled client does not hold a
 		// goroutine forever; no write timeout, the projection stream is
 		// long-lived by design.

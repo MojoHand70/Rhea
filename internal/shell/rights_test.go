@@ -452,6 +452,69 @@ func TestAPersonIsAlwaysChecked(t *testing.T) {
 	}
 }
 
+// The kernel believes a person's name only from the face (review
+// 2026-10-21, A7): on white01 any process on the machine could send
+// X-Rhea-Person naming KK and act as him. A kernel that knows its face's
+// key believes a named person only with it, and one that serves persons
+// only and knows no key believes no person at all; the machine's own
+// routes still need no person.
+func TestTheKernelBelievesOnlyTheFace(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	x := &exec.Executor{Store: s}
+	srv := &shell.Server{Store: s, Exec: x, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb"), RequirePerson: true, FaceKey: "the face's own key"}
+	x.Today = srv.Clock.TodayUTC
+	ts := httptest.NewServer(srv.Handler())
+	defer ts.Close()
+	sum, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", "common", "people.json"), "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, errs, err := x.ApproveBundle(ctx, sum.Bundle, "operator", srv.Clock.TodayUTC()); err != nil || len(errs) != 0 {
+		t.Fatalf("approve: %v %v", err, errs)
+	}
+	if _, err := x.TriggerActivity(ctx, "register_person", map[string]any{"name": "Krzysztof Kowal", "handle": "kk", "role": "owner"}, "operator", ""); err != nil {
+		t.Fatal(err)
+	}
+	whoami := func(url, key string) (int, string) {
+		t.Helper()
+		req, _ := http.NewRequest("GET", url+"/api/whoami", nil)
+		req.Header.Set("X-Rhea-Person", "kk")
+		if key != "" {
+			req.Header.Set("X-Rhea-Face", key)
+		}
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+		var who struct {
+			Person string `json:"person"`
+		}
+		json.NewDecoder(res.Body).Decode(&who)
+		return res.StatusCode, who.Person
+	}
+	if code, _ := whoami(ts.URL, ""); code != 401 {
+		t.Fatalf("a person named without the face's key: %d", code)
+	}
+	if code, _ := whoami(ts.URL, "a guess"); code != 401 {
+		t.Fatalf("a person named with a wrong key: %d", code)
+	}
+	if code, who := whoami(ts.URL, "the face's own key"); code != 200 || who != "kk" {
+		t.Fatalf("a person named by the face: %d %q", code, who)
+	}
+	if res, err := http.Get(ts.URL + "/api/time"); err != nil || res.StatusCode != 200 {
+		t.Fatalf("the machine's clock needs no person: %v %v", err, res)
+	}
+
+	// Serving persons only without a key is believing nobody, never anybody.
+	keyless := httptest.NewServer((&shell.Server{Store: s, Exec: x, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb"), RequirePerson: true}).Handler())
+	defer keyless.Close()
+	if code, _ := whoami(keyless.URL, "the face's own key"); code != 401 {
+		t.Fatalf("a kernel serving persons only with no key: %d", code)
+	}
+}
+
 // A kernel that serves persons only answers 401 to a request naming none —
 // except the machine's own routes: the clock, the morning, the face's
 // report of a sign-in.

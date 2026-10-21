@@ -4773,3 +4773,22 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   register_person, so the people pack keeps its version and a person registered under
   one is inert. A request naming no person (the operator's CLI, the machine's routes)
   still names its own actor: that is step 2, the kernel believing only the face.
+
+## 2026-10-21 — The kernel believes only the face (the whole-tree review, step 2)
+
+- Finding A7: the kernel took the signed-in person from a request header any process on
+  white01 could send — Novi's services beside it included — and an approval in KK's name
+  would have been indistinguishable from his. Now the face proves itself with a key the
+  two share (`RHEA_FACE_KEY`, sent as `X-Rhea-Face`, compared in constant time): a request
+  naming a person is believed only with it whenever the kernel serves persons only or knows
+  a key; serving persons only without a key believes nobody, and `rhea serve` refuses to
+  start that way. `serve` listens on 127.0.0.1 unless told otherwise (`shell.sh` still opens
+  the bench's ports). TestTheKernelBelievesOnlyTheFace.
+- Decided: a shared key over a unix socket or a signed token — one line in each setting,
+  nothing to rotate by hand, and the token stays the plan for other faces on the open API.
+  The key is made once by rheaface's deploy-white01.sh before the restart and kept in both
+  settings; the go-live's lock refuses to run without it.
+- Left for their own steps: the machine's routes (the clock, the morning, the face's
+  sign-in report, the time reads) still answer a local caller naming no person (A6, A9);
+  the CLI's `RHEA_ACTOR` still names the operator's actor — whoever runs it holds the
+  database already.

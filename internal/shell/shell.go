@@ -35,10 +35,15 @@ type Server struct {
 	// where a face is the only door from outside (white01); off on the
 	// bench, where the owner's shell and the tools run unscoped.
 	RequirePerson bool
-	Store         *store.Store
-	Exec          *exec.Executor
-	Agent         *agent.Agent
-	DuckPath      string
+	// FaceKey is the key the face proves itself with (RHEA_FACE_KEY): a
+	// request naming a person is believed only when it carries it
+	// (X-Rhea-Face). A kernel serving persons only must know one; without
+	// it, it believes no person.
+	FaceKey  string
+	Store    *store.Store
+	Exec     *exec.Executor
+	Agent    *agent.Agent
+	DuckPath string
 	// Clock serves the Time surface; the zero value reads the wall clock,
 	// tests inject their own day.
 	Clock adapter.Clock
