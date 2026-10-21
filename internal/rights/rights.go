@@ -126,6 +126,14 @@ func PrincipalOf(ctx context.Context) *Principal {
 	return p
 }
 
+// WithoutPrincipal is the kernel speaking for itself while a person's
+// request runs — the host's words are the agent's, under the person's
+// scope. Only kernel code sets the person aside; nothing a caller sends
+// does.
+func WithoutPrincipal(ctx context.Context) context.Context {
+	return context.WithValue(ctx, principalKey{}, (*Principal)(nil))
+}
+
 // ErrRefused marks a refusal the kernel has recorded: the caller answers
 // 403 and says why, and the fact is already in the log.
 type ErrRefused struct {
@@ -295,6 +303,11 @@ func (w *world) resolve(personID string) []Grant {
 // objects. A handle no person carries, or a person who has left, is not a
 // principal.
 func Resolve(ctx context.Context, s *store.Store, handle, today string) (Principal, error) {
+	// The machine's names are no person's: a person registered as "kernel"
+	// or "agent:…" would sign facts the log reads as the machine's.
+	if core.ActorKind(handle) != core.ActorHuman {
+		return Principal{}, fmt.Errorf("%q is a name the machine signs with, never a person's", handle)
+	}
 	w, err := load(ctx, s, today)
 	if err != nil {
 		return Principal{}, err

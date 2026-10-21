@@ -171,8 +171,13 @@ func (x *Executor) TriggerActivity(ctx context.Context, name string, inputs map[
 	// "People and rights"): a signed-in person is checked against the
 	// door's Who and their grants in the company they act for, the door
 	// signs its "…_by" inputs with them, and a refusal is a recorded fact
-	// before it is an error.
-	if p := rights.PrincipalOf(ctx); p != nil && core.ActorKind(actor) == core.ActorHuman {
+	// before it is an error. A signed-in person is always the one checked
+	// and the one who signs, whatever actor the caller passed: the actor
+	// string is the caller's to write, and "kernel" in a request body once
+	// skipped the check (review 2026-10-21, A1). The kernel speaking for
+	// itself under a person's request sets the person aside in code first
+	// (rights.WithoutPrincipal).
+	if p := rights.PrincipalOf(ctx); p != nil {
 		actor = p.Handle
 		signed, err := rights.Authorize(ctx, x.Store, *p, act, inputs, store.CompanyOf(ctx), x.today())
 		if err != nil {

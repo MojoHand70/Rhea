@@ -4758,3 +4758,18 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   the sign-in work and today's changes; the sign-in check telling a company key from a
   company ref (above); the morning now also speaks for the installation, which holds no
   books — watched on the first morning.
+
+## 2026-10-21 — A person is always the one checked (the whole-tree review, step 1)
+
+- The whole-tree review of 2026-10-21 (63 findings, 14 critical; the order of work starts
+  with A1): whether the kernel checked a signed-in person turned on the actor string, and
+  the caller wrote it — `{"approved_by":"kernel"}` from a reader activated a rule for every
+  company, and a person registered as "kernel" passed every door unchecked. Now a person
+  on the context is always checked and always signs; the host's words, the one place the
+  kernel speaks as the agent inside a person's request, set the person aside in code
+  (`rights.WithoutPrincipal`). TestAPersonIsAlwaysChecked.
+- Decided: the machine's names (kernel, agent:…, adapter:…, channel:…) are refused at
+  sign-in (`rights.Resolve`), the one place every person's request passes — not at
+  register_person, so the people pack keeps its version and a person registered under
+  one is inert. A request naming no person (the operator's CLI, the machine's routes)
+  still names its own actor: that is step 2, the kernel believing only the face.

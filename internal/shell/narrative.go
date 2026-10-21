@@ -11,6 +11,7 @@ import (
 	"rhea/internal/agent"
 	"rhea/internal/core"
 	"rhea/internal/project"
+	"rhea/internal/rights"
 	"rhea/internal/store"
 )
 
@@ -148,8 +149,10 @@ func (s *Server) narrate(ctx context.Context, vd *core.ViewDef) (map[string]any,
 		out["silent"] = "the host's words were refused: " + refused
 		return out, 200, nil
 	}
-	// The words are a fact: logged through the door, by the agent.
-	t, err := s.Exec.TriggerActivity(ctx, "host_said", map[string]any{"view": vd.ID, "text": words}, "agent:"+s.model(), "")
+	// The words are a fact: logged through the door, by the agent — the
+	// kernel speaking, not the person who asked, who is set aside for this
+	// one door and otherwise always signs.
+	t, err := s.Exec.TriggerActivity(rights.WithoutPrincipal(ctx), "host_said", map[string]any{"view": vd.ID, "text": words}, "agent:"+s.model(), "")
 	if err != nil {
 		return nil, 500, err
 	}

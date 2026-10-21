@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"rhea/internal/agent"
 	"rhea/internal/core"
 	"rhea/internal/exec"
 	"rhea/internal/pack"
@@ -284,6 +285,170 @@ func TestPersonsAtTheDoors(t *testing.T) {
 	}
 	if code := call("anna", client, "GET", "/api/objects?type=note", nil, &objs); code != 200 || len(objs.Objects) != 1 {
 		t.Fatalf("after replay anna still reads the client: %d", code)
+	}
+}
+
+// A signed-in person is always the one checked and the one who signs
+// (review 2026-10-21, A1): whether the kernel asked about rights at all
+// turned on the actor string, and the caller wrote it — a reader posting
+// {"approved_by":"kernel"} activated a rule for every company, and a
+// person registered under the handle "kernel" passed every door unchecked.
+// The machine's names are no person's; the host still speaks, as the
+// agent, while a person asks.
+func TestAPersonIsAlwaysChecked(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	x := &exec.Executor{Store: s}
+	srv := &shell.Server{Store: s, Exec: x, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb"),
+		Agent: &agent.Agent{Complete: func(ctx context.Context, system, user string) (string, error) {
+			return "One note was taken, worth 12.50 PLN.", nil
+		}}}
+	x.Today = srv.Clock.TodayUTC
+	ts := httptest.NewServer(srv.Handler())
+	defer ts.Close()
+	today := srv.Clock.TodayUTC()
+
+	call := func(person, company, method, path string, body any, out any) int {
+		t.Helper()
+		var rd io.Reader
+		if body != nil {
+			b, _ := json.Marshal(body)
+			rd = bytes.NewReader(b)
+		}
+		req, _ := http.NewRequest(method, ts.URL+path, rd)
+		req.Header.Set("Content-Type", "application/json")
+		if person != "" {
+			req.Header.Set("X-Rhea-Person", person)
+		}
+		if company != "" {
+			req.Header.Set("X-Rhea-Company", company)
+		}
+		res, err := ts.Client().Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+		if out != nil {
+			json.NewDecoder(res.Body).Decode(out)
+		}
+		return res.StatusCode
+	}
+	mustDoor := func(person, company, name string, inputs map[string]any) {
+		t.Helper()
+		var out map[string]any
+		if code := call(person, company, "POST", "/api/activities/"+name+"/trigger", map[string]any{"inputs": inputs}, &out); code != 200 || out["booked"] != float64(1) {
+			t.Fatalf("%s at %s for %s: %d %v", person, name, company, code, out)
+		}
+	}
+	personID := func(handle string) string {
+		ids, err := s.FindObjectIDsByField(ctx, "person", "handle", handle)
+		if err != nil || len(ids) != 1 {
+			t.Fatalf("%s: %v %v", handle, ids, err)
+		}
+		return ids[0]
+	}
+
+	sum, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", "common", "people.json"), "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, errs, err := x.ApproveBundle(ctx, sum.Bundle, "operator", today); err != nil || len(errs) != 0 {
+		t.Fatalf("approve: %v %v", err, errs)
+	}
+	if err := s.InsertObjectType(ctx, core.ObjectType{Name: "note", Version: 1, Domain: "work", LabelField: "text",
+		Fields: []core.FieldDef{{Name: "text", Type: "string", Required: true}, {Name: "amount", Type: "money", Required: true}}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.InsertRuleVersion(ctx, core.Rule{ID: "note", Status: core.StatusActive, Priority: 100, EffectiveFrom: "2026-01-01",
+		CreatedBy: "test", Description: "notes", Spec: core.RuleSpec{Match: core.Match{EventType: "note.taken"},
+			Effect: core.Effect{Object: core.ObjectTemplate{Type: "note", Fields: map[string]string{"text": "=$.text", "amount": "=$.amount"}}}}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.InsertRuleVersion(ctx, core.Rule{ID: "memo", Status: core.StatusDraft, Priority: 100, EffectiveFrom: "2026-01-01",
+		CreatedBy: "agent:test", Description: "memos as notes", Spec: core.RuleSpec{Match: core.Match{EventType: "memo.taken"},
+			Effect: core.Effect{Object: core.ObjectTemplate{Type: "note", Fields: map[string]string{"text": "=$.text", "amount": "=$.amount"}}}}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.InsertActivityVersion(ctx, core.Activity{Name: "take_note", Status: core.StatusActive, Domain: "work", Description: "note",
+		Spec: core.ActivitySpec{Inputs: []core.FieldDef{{Name: "text", Type: "string", Required: true}, {Name: "amount", Type: "money", Required: true}},
+			Emits: "note.taken", Who: []string{"human"}}}); err != nil {
+		t.Fatal(err)
+	}
+	facts, _ := json.Marshal(core.AnalysisSpec{
+		SQL:     `SELECT COUNT(*) AS notes, SUM(CAST(json_extract(state, '$.amount') AS BIGINT)) AS total FROM objects WHERE object_type = 'note'`,
+		Columns: []core.ColumnSpec{{Field: "notes", Label: "Notes", Type: "int"}, {Field: "total", Label: "Total", Type: "money"}}})
+	if err := s.InsertViewDef(ctx, core.ViewDef{ID: "notes-today", Version: 1, Notion: "analysis", Title: "Notes today",
+		Domain: "work", Function: "analysis", Spec: facts}); err != nil {
+		t.Fatal(err)
+	}
+	narrative, _ := json.Marshal(core.NarrativeSpec{Facts: []core.NarrativeFact{{View: "notes-today", As: "the notes"}}, Voice: "briefly"})
+	if err := s.InsertViewDef(ctx, core.ViewDef{ID: "briefing", Version: 1, Notion: "narrative", Title: "Briefing",
+		Domain: "work", Function: "briefing", Spec: narrative}); err != nil {
+		t.Fatal(err)
+	}
+
+	office := "PL5250001111"
+	mustDoor("", "", "register_person", map[string]any{"name": "Krzysztof Kowal", "handle": "kk", "role": "owner"})
+	mustDoor("", office, "grant_membership", map[string]any{"person": personID("kk"), "company": office, "role": "owner", "from": "2026-01-01", "granted_by": "operator"})
+	mustDoor("", "", "register_person", map[string]any{"name": "Ewa Reader", "handle": "ewa", "role": "reader"})
+	mustDoor("kk", office, "grant_membership", map[string]any{"person": personID("ewa"), "company": office, "role": "reader", "from": today, "granted_by": "kk"})
+	mustDoor("kk", office, "take_note", map[string]any{"text": "the office's note", "amount": "12.50"})
+
+	// A reader cannot approve by naming the machine, or the agent, as the
+	// approver: the door is checked against her, and refused.
+	for _, by := range []string{"kernel", "agent:host", "adapter:face"} {
+		var out map[string]any
+		if code := call("ewa", "", "POST", "/api/rules/memo/approve", map[string]any{"approved_by": by}, &out); code != 403 {
+			t.Fatalf("ewa approving as %q: %d %v", by, code, out)
+		}
+	}
+	if r, err := s.GetRule(ctx, "memo"); err != nil || r.Status != core.StatusDraft {
+		t.Fatalf("the draft stays a draft: %v %+v", err, r.Status)
+	}
+	refusals, err := s.EventsOfTypes(ctx, []string{core.EventAccessRefused})
+	if err != nil || len(refusals) != 3 || !strings.Contains(string(refusals[0].Payload), `"ewa"`) || !strings.Contains(string(refusals[0].Payload), "approve_rule") {
+		t.Fatalf("each refusal names ewa at approve_rule: %v %d", err, len(refusals))
+	}
+
+	// The owner may approve, and the approval is hers whatever the body
+	// named: the approver is the person signed in.
+	if code := call("kk", "", "POST", "/api/rules/memo/approve", map[string]any{"approved_by": "kernel"}, nil); code != 200 {
+		t.Fatalf("kk approving: %d", code)
+	}
+	approvals, err := s.EventsOfTypes(ctx, []string{"rule.approved"})
+	var approval struct {
+		ApprovedBy string `json:"approved_by"`
+	}
+	if err == nil && len(approvals) == 1 {
+		err = json.Unmarshal(approvals[0].Payload, &approval)
+	}
+	if err != nil || len(approvals) != 1 || approvals[0].Actor != "kk" || approval.ApprovedBy != "kk" {
+		t.Fatalf("the approval is kk's: %v %d %+v", err, len(approvals), approval)
+	}
+
+	// The machine's names are no person's: registered under one, nobody
+	// signs in with it.
+	for _, handle := range []string{"kernel", "agent:host", "adapter:face", "channel:ksef"} {
+		mustDoor("", "", "register_person", map[string]any{"name": "Not A Person", "handle": handle, "role": "owner"})
+		if code := call(handle, "", "GET", "/api/whoami", nil, nil); code != 403 {
+			t.Fatalf("signing in as %q: %d", handle, code)
+		}
+	}
+
+	// The host still speaks while a person asks: the words are the agent's,
+	// under the person's company.
+	var spoken []struct {
+		Said      string `json:"said"`
+		SaidEvent int64  `json:"said_event"`
+		Error     string `json:"error"`
+		Silent    string `json:"silent"`
+	}
+	if code := call("kk", "", "POST", "/api/speak?view=briefing", nil, &spoken); code != 200 || len(spoken) != 1 || spoken[0].SaidEvent == 0 {
+		t.Fatalf("the host speaks for kk: %d %+v", code, spoken)
+	}
+	said, err := s.GetEvent(ctx, spoken[0].SaidEvent)
+	if err != nil || !strings.HasPrefix(said.Actor, "agent:") || said.Company != office {
+		t.Fatalf("the words are the agent's, under the office: %v %q %q", err, said.Actor, said.Company)
 	}
 }
 
