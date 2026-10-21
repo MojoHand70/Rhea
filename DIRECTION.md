@@ -3463,6 +3463,21 @@ rhea.plus. The sources — palettes, the logo writer, the three comparison pages
 — live in rheaface `tools/brand`, and the face's colour tokens are written from
 them, never by hand.
 
+**The desk, first build (2026-10-21; rheaface 815a3f0).** Served at
+`/desk.html` beside the phone, built from the face's own code: `openFrom`
+hands every opening to the desk, so each sheet the phone has opens as a tab
+(one artifact, three sizes, in practice). The box answers from an index on the
+page and times itself (on Helios 41 of 191 in 0,1 ms); tabs live in a tree of
+groups, dragged, split, sent to her, popped out; grids come from the pack's
+views (sorted, filtered, only visible rows drawn, totals, rows copied for a
+spreadsheet); a firm's 360 gathers what refers to it; the first flow shows
+sales invoices by where each stands (KSeF's answer, the open amount) and who
+moves it next. Read on the way: a pack view titled in English ("Trial
+balance") shows so on the desk — the pack's words, not the face's; and the
+flow's "after 30 days" counts from issue, as the books have no payment term.
+Still owed by this section's order: the component gallery and the checks,
+before the next screen; KK's Qalcwise flows into the flow shape.
+
 **Consistency and speed are checks, not promises.** Several sessions build the
 face, and none remembers the last; a promise to reuse does not survive that.
 (1) One living gallery page shows every component in every state, light and
