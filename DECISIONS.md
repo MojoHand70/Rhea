@@ -4659,3 +4659,28 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   booked, 5 000 onto goods through 820, 5 000 off the stock and 8 000 provided through
   813, a price above the carrying value refused. Pinned counts: 41 types, 38 views, 136
   rules, 38 doors, 67 events, 55 accounts.
+
+## 2026-10-21 — The sign-in step's open points, settled; the live books carry no company
+
+- KK confirmed the seven proposals the brief left open (DIRECTION 2026-10-19, "People and
+  rights"), as the kernel half and the face already have them: invitation only in the
+  beta, self-registration only at the top (a new office or company) when the street
+  opens; claiming a company is KK's link in the beta, and in public an e-mail verified,
+  the NIP checked against GUS and a dispute through a KSeF-authenticated step; passkeys
+  only, no passwords; a supervisor is two rights on a group (sees the work of, approves
+  for), not a role; suppliers, customers and partners stay contractors, a guest login
+  arriving only with the smart document that needs it; the house has no standing access
+  to any company's books, only timed support access its owner grants, and the exceptions
+  as house doors with reasons; an office employee sees of a client what the mandate's
+  scope grants, nothing by default.
+- Found while preparing the go-live on white01, before anything moved there: the Helios
+  world was built before the company key, and every one of its facts and objects carries
+  no company (the bench copy: 1 078 events, 633 objects, all blank). Under the new kernel
+  they are the installation's rows: a signed-in owner sees them, but any door acting for
+  the company that amends one of them is refused by the database (a company's scope may
+  not write an installation row — reproduced on a copy: identify_company signed by the
+  owner, the fact recorded under the company, booked 0, "new row violates row-level
+  security policy for table object"), and the first second company would see Helios's
+  books (invariant 9). The owed `rhea restore -company` is therefore the go-live's
+  precondition, not a later debt: the facts that are the company's take its key, the
+  installation's own (definitions, the pack's master data, persons) stay blank.
