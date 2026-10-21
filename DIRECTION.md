@@ -3445,6 +3445,24 @@ stricter than Alpha: the faintest captions reach 3.5:1. Every palette, both
 themes, passes. The palette is the person's setting; until sign-in carries it,
 the browser keeps it, as in Alpha.
 
+**The mark, chosen the same day: Orbit.** Rhea is a moon of Saturn: her gold
+moon on its orbit round the kernel, something in motion, the way she works
+while the owner is away. Of four directions (Orbit, Total — a coin over the
+double rule under a final total, R. — the initial with a gold full stop, and
+the face's old ring, which read as a radio button) KK took Orbit. The brand's
+colours do not move with the palette (Alpha's rule): a navy tile, paper lines,
+a champagne moon; bare on light paper the moon takes a deeper gold, or
+champagne would vanish. The ring has a real gap where the moon passes, so the
+mark needs no halo and sits on any ground. The word beside it is "Rhea" in
+Schibsted Grotesk SemiBold, "AI Resource Planning" under it in Martian Mono;
+the logo files carry both as outlines. The brand went into all three places at
+once: the face (palettes after Alpha's model with Ink the default, chosen by
+the person in "Co o Tobie pamiętam"; the mark in the tab bar and as the app's
+icon), the kernel's own shell (tokens.css, its fonts, the logo files) and
+rhea.plus. The sources — palettes, the logo writer, the three comparison pages
+— live in rheaface `tools/brand`, and the face's colour tokens are written from
+them, never by hand.
+
 **Consistency and speed are checks, not promises.** Several sessions build the
 face, and none remembers the last; a promise to reuse does not survive that.
 (1) One living gallery page shows every component in every state, light and

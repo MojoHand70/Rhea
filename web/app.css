@@ -11,17 +11,14 @@ body { margin: 0; background: var(--bg); color: var(--text);
                 border-right: 1px solid var(--border); display: flex;
                 flex-direction: column; align-items: center;
                 padding-top: var(--space-2); gap: var(--space-1); }
-/* the mark: inline SVG riding the semantic tokens; --muted/--glow are the
-   mark's own hooks, bridged here to the shell's vocabulary (aliases, not
-   literals — the colors still live in tokens.css). */
-#logo { width: 36px; height: 36px; flex: none; margin: var(--space-1) 0 var(--space-2);
-        --muted: var(--text-muted); --glow: var(--accent); }
+/* the mark: inline SVG riding --mark-line and --mark-gold from tokens.css */
+#logo { width: 32px; height: 32px; flex: none; margin: var(--space-1) 0 var(--space-2); }
 
 .activity { width: 38px; height: 38px; border-radius: var(--radius-md);
             display: grid; place-items: center; font-weight: var(--weight-bold);
             font-size: 16px; color: var(--text-muted); cursor: pointer;
             border: 1px solid transparent; text-transform: uppercase; }
-.activity.active, .activity:hover { color: var(--accent); background: var(--surface-raised);
+.activity.active, .activity:hover { color: var(--accent-text); background: var(--surface-raised);
                                     border-color: var(--border); }
 
 #submenu { width: var(--size-submenu); background: var(--surface);
@@ -79,7 +76,7 @@ tr.clickable:hover td { background: var(--surface-raised); }
 .provenance { margin-top: var(--space-4); color: var(--text-muted);
               font-size: var(--text-sm); font-style: italic; }
 
-a { color: var(--accent); text-decoration: none; }
+a { color: var(--accent-text); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
 /* .chip is the generic enum rendering; .status is the rules table's chip
@@ -93,8 +90,8 @@ a:hover { text-decoration: underline; }
 button { background: var(--surface-raised); color: var(--text);
          border: 1px solid var(--border); border-radius: var(--radius-sm);
          padding: 5px var(--space-3); cursor: pointer; font: inherit; }
-button:hover { border-color: var(--accent); color: var(--accent); }
-button.primary { background: var(--accent); border-color: var(--accent);
+button:hover { border-color: var(--accent); color: var(--accent-text); }
+button.primary { background: var(--accent-fill); border-color: var(--accent-fill);
                  color: var(--on-accent); }
 button.primary:hover { filter: brightness(1.1); color: var(--on-accent); }
 textarea, select, input { background: var(--bg); color: var(--text);
@@ -109,7 +106,7 @@ textarea { min-height: 70px; resize: vertical; }
 .row { display: flex; gap: var(--space-2); align-items: center; }
 pre { background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--radius-sm); padding: var(--space-2); overflow-x: auto;
-      font-family: var(--font-mono); font-size: var(--text-sm);
+      font-family: var(--font-mono); font-stretch: var(--mono-stretch); font-size: var(--text-sm);
       max-width: var(--measure-table); }
 details { margin: var(--space-1) 0; }
 summary { cursor: pointer; color: var(--text-muted); }
@@ -155,7 +152,7 @@ tr.diff-changed .k { color: var(--warn); }
                 letter-spacing: var(--tracking-wide); color: var(--text-muted);
                 margin: 0 0 var(--space-1); }
 .sched-day.sched-past h3 { color: var(--warn); }
-.sched-day.sched-today h3 { color: var(--accent); }
+.sched-day.sched-today h3 { color: var(--accent-text); }
 .sched-item { display: flex; gap: var(--space-2); align-items: center;
               padding: var(--space-1) 0; }
 
@@ -174,8 +171,8 @@ tr.diff-changed .k { color: var(--warn); }
 .omni-entry { display: flex; gap: var(--space-2); align-items: center;
               padding: var(--space-2) var(--space-3); cursor: pointer; }
 .omni-entry:hover { background: var(--surface-raised); }
-.omni-kind { color: var(--accent); font-weight: var(--weight-bold); }
+.omni-kind { color: var(--accent-text); font-weight: var(--weight-bold); }
 
 /* the formula walk: computed values show their arithmetic */
-.explain-calc { font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.85em; }
+.explain-calc { font-family: var(--font-mono, ui-monospace, monospace); font-stretch: var(--mono-stretch); font-size: 0.85em; }
 .explain-formula { color: var(--fg-strong, inherit); }
