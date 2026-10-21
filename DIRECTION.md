@@ -3427,6 +3427,24 @@ the open part and the face keep one look. The face took them the same day
 (rheaface 7590dcf), served from its own files and from no third party; the
 kernel's shell and rhea.plus follow with the colour and the mark.
 
+**The colour, chosen the same day.** KK: take Alpha's schemes. Alpha's model
+carries over whole: two settings, light or dark and a *palette*, and a palette
+is only the paper and the greys; the accent is defined once and every palette
+inherits it; one palette, Classic, moves the accent on purpose (VS Code's blue)
+and says so; every colour step is measured against the paper it sits on. Six
+palettes: **Ink**, the default (blue-black ink on cool blue-grey paper, deep
+navy in the dark — KK: blue with gold rather than today's green), Ledger
+(today's green), Paper (Alpha's warm Tylko neutrals), Neutral, Steel (NoviUI's
+graphite) and Classic, whose dark greys carry a hint of cool because pure grey
+read brown beside the blue. Her gold works by role: **champagne** fills buttons
+and her mark, with navy text and no border (KK: the deeper gold with dark text
+looked muddy, and the edge was not wanted — the label carries the button); a
+deeper gold draws thin lines, 3:1 on every paper; the deepest carries small
+text, 4.5:1, on its own wash too — which today's brass failed. One rule
+stricter than Alpha: the faintest captions reach 3.5:1. Every palette, both
+themes, passes. The palette is the person's setting; until sign-in carries it,
+the browser keeps it, as in Alpha.
+
 **Consistency and speed are checks, not promises.** Several sessions build the
 face, and none remembers the last; a promise to reuse does not survive that.
 (1) One living gallery page shows every component in every state, light and
