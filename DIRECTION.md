@@ -3417,6 +3417,16 @@ Munich court in 2022, a consent problem in Germany). Then the colour, then the
 mark and the wordmark in the chosen face; the kernel's shell and rhea.plus
 follow.
 
+**The type, chosen the same day.** KK, on the comparison page (Rhea's own
+screens with Helios's books): *Schibsted Grotesk* for words and *Martian Mono*
+in its narrow cut (width 87.5) for figures, the figures at 88 % of the word
+size — exactly Schibsted's x-height over Martian's, so one line keeps one
+x-height; Martian's zero carries its mark by default. Both are under the Open
+Font License, so nothing is bought and the open kernel can ship the same files:
+the open part and the face keep one look. The face took them the same day
+(rheaface 7590dcf), served from its own files and from no third party; the
+kernel's shell and rhea.plus follow with the colour and the mark.
+
 **Consistency and speed are checks, not promises.** Several sessions build the
 face, and none remembers the last; a promise to reuse does not survive that.
 (1) One living gallery page shows every component in every state, light and
