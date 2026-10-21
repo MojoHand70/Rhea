@@ -3308,6 +3308,142 @@ events, and a company column there follows when files are listed. The office's
 sign-in, its grants per client and the client's view of who may see its books are the
 sign-in session's.
 
+## The face, whole: one box, one conversation, many tabs (KK, 2026-10-21)
+
+KK: *"it is finally time to approach the real Rhea UI."* Rhea is AI first —
+using her should feel like Claude in VS Code or Claude Desktop — and at the
+same time a business system that opens data-heavy grids, documents that look
+like documents, 360s of one customer, flows and timelines. Artifacts open in
+tabs like a browser's or VS Code's, and also sit in the conversation as a quick
+proof. The face follows intent and learns the person's preferences the way
+Winston learns a guest's habits. It must be elegant, recognizable, modern but
+not too much, and above all consistent — *"every time we add a new object or
+presentation, you have to check if such components, like pickers, toggles,
+buttons, already exist"* — and fast: any change suspected to touch speed is
+measured and optimised. Conversations are kept, named so they are recognized,
+and grouped. Tabs rearrange by dragging, as in VS Code, from the very
+beginning. The face must hold Rhea Apps built on smart-document flows (KK
+designed all of Qalcwise's flows and will bring them) and, later, the
+enterprise domains and the custom apps of clients' own business models
+(`targetRhea.md` lists fifteen). Alpha's shell is the start; KK: *"I love the
+Omnisearch… it is faster than AI. No thinking, just millisecond access."*
+
+**The formula: one box, one conversation, many tabs, and every artifact in
+three sizes.** *One box*: the omnisearch is the front door to everything —
+objects, views, actions, past conversations — answered in milliseconds from
+an index on the page, no model involved; only Tab, or no match, sends the same
+words to her. The fast path never waits for the model: she is the second row
+in the box, never a gate in front of it. *One conversation*: she is always
+there — a panel on the right at the desk, the home screen on the phone. *Many
+tabs*: whatever is opened lives in a tab with its own address; tabs survive a
+reload, travel as a link, and the tab in front is what she looks at when asked
+"why is this so high?". *Three sizes*: one artifact, one set of data, one
+component — inline in the conversation (a card, five rows, one figure), as a
+tab (the whole working surface), pinned on Today (a live figure every
+morning). "Open in tab" grows it; dragging a tab into the conversation hands it
+to her. Nothing is drawn twice, so nothing can disagree. Two arrangements one
+key apart: the conversation in the middle with the artifact beside it (Claude
+Desktop), or the tabs in the middle with the conversation on the right (VS
+Code); the owner on the phone lives in the first, an accountant with forty
+clients in the second. Her answers are drawn, not written — the rule the face
+already keeps, now everywhere: *she chooses what to show, the books compute
+what is shown*; a figure is an artifact from the books with "why?" under it,
+and her words frame it and carry none of their own.
+
+**Tab groups.** VS Code's editor groups and floating windows, in the face from
+the first build. The arrangement is a tree — splits, each holding a group,
+each group holding tabs, each tab an address — never a flat row with splits
+bolted on later. Drag to reorder, to an edge to split, between groups, into
+the conversation (context for her), out of the window (a second monitor, kept
+in step with the first); every gesture has a key and a menu entry, because
+dragging is slow for experts. The arrangement is the person's, remembered per
+device; named arrangements follow ("month end": trial balance, VAT register
+and bank side by side), she notices which one a job uses and offers it, and
+"put the bank statement next to the open invoices" is an arrangement she
+proposes and the books fill. On the phone the groups fold into one stack over
+the same tree. Hidden tabs are not drawn: thirty open must feel like one.
+Written in the face's own plain JavaScript, so the component gallery and the
+speed budgets cover it.
+
+**Shapes for every domain.** Fifteen domains and clients' own apps cannot be
+fifteen sets of hand-made screens — that is how large systems become
+incoherent. The six shapes (card, paper, ledger, statement, buckets, chain)
+grow by what enterprise work needs, into a closed set: *grid* (the data-heavy
+table, keyboard-complete, pasting to and from a spreadsheet — where an
+accountant lives), *360* (one party with everything around it), *timeline*,
+*board* (a smart document's instances by state), *flow* (its states, where this
+instance stands, who moves it next), *calendar*, *chart and dashboard*. A Rhea
+App declares which shapes show its documents; a client's custom app is a new
+composition, never a new screen; a new shape is rare and reviewed like a new
+kernel primitive. KK's Qalcwise flows decide what board, flow and the paper
+with its state bar must hold.
+
+**Learning without moving the furniture.** Interfaces that rearrange
+themselves destroy the muscle memory that makes an expert fast; predictability
+beats cleverness. Winston remembers the coffee; he does not move the lobby. The
+frame never moves by itself. What is learned lands in places made for it: the
+box's ranking (what this person opens, and when), Today's shortcuts and
+figures, defaults in forms, a "usually next" after a step. Said preferences
+are kept where the person sees them ("what I remember about you") and undone
+there; a habit becomes a change only after she asks once ("you open the ageing
+every Monday — shall I put it on Monday's Today?").
+
+**Conversations.** All kept, as the person's facts. She names each one and
+renames it when it ends, so the title is the outcome, not the question ("why
+is Nordwind's balance off?" becomes "Nordwind: double payment, refund
+asked"). No folders she invents — they drift and lose trust; the company
+already files itself by its parties, its months and its processes, so a
+conversation about an invoice lives on that invoice, in the supplier's 360 and
+in its month, beside the person's own pins and folders. The box finds them all.
+
+**Type and the brand, fixed now.** The brand was never fixed and two looks
+exist: the kernel's shell and rhea.plus (teal, the glowing kernel mark, the
+wordmark in IBM Plex Serif) and the face (ledger-paper green-grey, green-black
+ink, brass for her, a ring-and-disc icon). They become one now, before the
+desk is built. The serif of her voice reads as Claude's and goes. The type is
+KK's Novi.fm idea: one face for words, a monospace for figures — tables are
+mostly columns of numbers, and a monospaced column aligns by itself. It also
+says something: *monospace is a fact from the books* — every amount, date,
+document number, account and tax id in mono, inside her sentences too, and
+every one of them opens "why?". The narrative face carries the interface and
+her voice; the mono is chosen as its partner (x-height and weight that sit
+together in one line), digits first (a 1 that is not a 7, a 0 that is not an
+O, good at 13 px), Polish drawn properly (ogonki and ł), German, the rest of
+Latin Europe later. Chosen by looking at Rhea's own screens, not specimen
+sheets; bought from the foundry with a licence for the web app and for the
+wordmark, not from a subscription marketplace; one variable file per family,
+served by the face itself (fonts from Google's servers are slower and, after a
+Munich court in 2022, a consent problem in Germany). Then the colour, then the
+mark and the wordmark in the chosen face; the kernel's shell and rhea.plus
+follow.
+
+**Consistency and speed are checks, not promises.** Several sessions build the
+face, and none remembers the last; a promise to reuse does not survive that.
+(1) One living gallery page shows every component in every state, light and
+dark, phone and desk; a new component lands there first. (2) The face's check
+fails on a colour, size or font outside the tokens, and on a component not in
+the gallery. (3) The face's CLAUDE.md: before any new screen, look in the
+gallery; reuse or extend, never fork. (4) Speed budgets are tests: the box
+answers within one frame (16 ms) on a large company's index; a first screen
+in under a second on a middling phone; a 100 000-row grid scrolls smoothly
+because only visible rows are drawn; a cap on what the page downloads, set
+from the first measurement. A broken budget is red like a broken test. Plain
+JavaScript and no framework stay — the biggest speed asset there is.
+
+**Order of work** (KK: "we are fine to start"). (1) The brand: the type
+comparison on Rhea's own screens, then colour, then mark and wordmark. (2) The
+desk, first, as the face's second density — not a second product; the kernel's
+shell stays a developer's tool. A clickable desk on Helios: the box, tab
+groups, the conversation with an inline card that grows into a tab, a grid, a
+360, one flow. (3) The gallery and the checks before the second screen. (4)
+KK's Qalcwise flows into board, flow and the paper with its state bar.
+
+One line: *one box that answers before she thinks, one conversation, tabs in
+groups as VS Code has them, every artifact inline, in a tab or pinned; she
+chooses, the books compute; a closed set of shapes for every domain and every
+client's app; the frame never moves, the learning lands in its places;
+monospace is a fact from the books; consistency and speed are tests.*
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
