@@ -167,6 +167,12 @@ func (s *Server) narrate(ctx context.Context, vd *core.ViewDef) (map[string]any,
 // there are none.
 func (s *Server) handleSpeak(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	// A person with no company has nobody's morning to hear, and the host
+	// is not asked (a model call each) for words nobody may read.
+	if p := rights.PrincipalOf(ctx); p != nil && len(p.Companies()) == 0 {
+		writeErr(w, 403, fmt.Errorf("refused: %s holds no company to speak for", p.Handle))
+		return
+	}
 	vds, err := s.effectiveViewDefs(ctx)
 	if err != nil {
 		writeErr(w, 500, err)
@@ -200,12 +206,12 @@ func (s *Server) handleSpeak(w http.ResponseWriter, r *http.Request) {
 		Silent    string `json:"silent,omitempty"`
 		Error     string `json:"error,omitempty"`
 	}
-	// The alarm's call names no company: the host speaks for each company
+	// The alarm's call names no person and no company: the host speaks for each company
 	// the log holds, each under its own scope, and the words are that
 	// company's — one unscoped briefing summed every company's figures
 	// into words every company read.
 	scopes := []context.Context{ctx}
-	if set, scoped := store.ScopeOf(ctx); scoped && len(set) == 0 {
+	if set, scoped := store.ScopeOf(ctx); scoped && len(set) == 0 && rights.PrincipalOf(ctx) == nil {
 		owner := store.WithOwner(ctx)
 		companies, err := s.Store.Companies(owner)
 		if err != nil {

@@ -4792,3 +4792,11 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   sign-in report, the time reads) still answer a local caller naming no person (A6, A9);
   the CLI's `RHEA_ACTOR` still names the operator's actor — whoever runs it holds the
   database already.
+
+## 2026-10-22 — Grants reach only the company they name (the whole-tree review, step 3)
+
+- A6: a signed-in person with no current grant now acts in `rights.NoCompany`'s scope (a key
+  no company carries: the installation's rows read, none written) instead of the
+  installation's own, and the host speaks for every company only on the machine's call,
+  which names no person; a person with no company asking her to speak is refused before
+  any model call. TestAPersonOfNoCompanyHearsNothing.

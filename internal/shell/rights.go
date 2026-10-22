@@ -126,7 +126,11 @@ func (s *Server) principalHandler(next http.Handler) http.Handler {
 			scope = append(scope, company) // a claim in progress: nobody holds it yet
 		}
 		if len(scope) == 0 {
-			ctx = store.WithInstallation(ctx) // a person of no company: the installation's rows alone
+			// A person nobody lets in anywhere today: a key no company
+			// carries, so the installation's rows are read and none written.
+			// The installation's own scope here once made an ex-member's
+			// tap the morning alarm (review 2026-10-21, A6).
+			ctx = store.WithScope(ctx, []string{rights.NoCompany})
 		} else {
 			ctx = store.WithScope(ctx, scope)
 		}
