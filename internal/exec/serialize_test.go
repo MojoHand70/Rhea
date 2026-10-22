@@ -2,6 +2,7 @@ package exec_test
 
 import (
 	"context"
+	"errors"
 	"runtime"
 	"strings"
 	"sync"
@@ -130,5 +131,67 @@ func TestCascadeBoundedBySize(t *testing.T) {
 	}
 	if time.Since(start) > 20*time.Second {
 		t.Fatalf("the size cap took %s", time.Since(start))
+	}
+}
+
+// A wait for the executor ends (review 2026-10-21, G5): the in-process half
+// of the lock was a plain mutex — a caller queued behind a long run (a
+// replay, a backfill, a slow chain) waited there whatever became of its
+// request, and requests piled up while every door froze. Now the wait
+// gives way to the caller's context, and an executor given a limit
+// answers "busy" when it passes.
+func TestAWaitForTheExecutorEnds(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	x := &exec.Executor{Store: s}
+	// Someone else holds the books: the lock taken from another session.
+	held, err := s.Pool.Acquire(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := held.Exec(ctx, `SELECT pg_advisory_lock($1)`, 0x52484541); err != nil {
+		t.Fatal(err)
+	}
+	var freed sync.Once
+	free := func() {
+		freed.Do(func() {
+			_, _ = held.Exec(ctx, `SELECT pg_advisory_unlock($1)`, 0x52484541)
+			held.Release()
+		})
+	}
+	t.Cleanup(free) // a failing test frees the books before its database goes
+	// One caller waits on that session's lock, holding the process's turn.
+	first := make(chan error, 1)
+	go func() {
+		_, errs := x.ProcessPending(ctx)
+		first <- errors.Join(errs...)
+	}()
+	time.Sleep(200 * time.Millisecond)
+
+	// A caller whose request is gone stops waiting.
+	gone, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
+	defer cancel()
+	done := make(chan error, 1)
+	go func() {
+		_, errs := x.ProcessPending(gone)
+		done <- errors.Join(errs...)
+	}()
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Fatal("a caller behind a held lock booked")
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("a caller whose request was gone still waited")
+	}
+	// An executor with a limit answers busy when it passes.
+	limited := &exec.Executor{Store: s, LockWait: 300 * time.Millisecond}
+	if _, err := limited.TriggerActivity(ctx, "submit_event", map[string]any{"event_type": "note.taken", "occurred_at": "2026-10-22", "payload": map[string]any{}}, "test", ""); err == nil || !strings.Contains(err.Error(), "busy") {
+		t.Fatalf("past its limit: %v", err)
+	}
+	// The books freed, the first caller goes on.
+	free()
+	if err := <-first; err != nil {
+		t.Fatalf("the first caller: %v", err)
 	}
 }

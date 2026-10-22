@@ -520,6 +520,19 @@ func main() {
 			log.Printf("serving signed-in persons only (X-Rhea-Person from the face, proved by its key)")
 		}
 		x.Today = srv.Clock.TodayUTC // a door whose inputs carry no date takes the books' day
+		// A request waits for the books at most this long, then hears they
+		// are busy (503) instead of queueing behind a replay or a backfill
+		// (review 2026-10-21, G5).
+		x.LockWait = 30 * time.Second
+		// A door's fact commits before its chain books: one that a crash
+		// or a restart left unbooked is booked now, not at the clock's next
+		// day (G5).
+		go func() {
+			booked, errs := x.ProcessPending(store.WithOwner(ctx))
+			if booked > 0 || len(errs) > 0 {
+				log.Printf("at start: %d booked, %d wait in the worklist", booked, len(errs))
+			}
+		}()
 		// Learning is optional: without a network Rhea runs alone.
 		if nw, err := network.Open(ctx, network.DSN()); err == nil {
 			defer nw.Close()

@@ -288,6 +288,10 @@ func writeErr(w http.ResponseWriter, status int, err error) {
 	if errors.As(err, &refused) {
 		status = 403
 	}
+	// Busy books are a wait, not a fault: try again (G5).
+	if errors.Is(err, exec.ErrBusy) {
+		status = 503
+	}
 	writeJSON(w, status, map[string]string{"error": err.Error()})
 }
 

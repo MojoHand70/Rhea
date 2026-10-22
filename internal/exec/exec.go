@@ -300,7 +300,7 @@ type lockWorldKey struct{}
 
 func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []core.Rule, payload any, base core.Lookup, baseGet core.Getter, prior Prior, seed *chainNode) ([]chainNode, error) {
 	ctx = context.WithValue(ctx, lockWorldKey{}, base)
-	rules = forCompany(rules, root.Company)
+	rules = forCompany(rules, root.Company, root.OccurredAt)
 	var nodes []chainNode
 	// A seed is a first node the root already carries — a person's
 	// pairing, run by the kernel before the rules — from which the
@@ -509,15 +509,23 @@ func scopeFor(ctx context.Context, company string) context.Context {
 // this is refused into the worklist, naming the rule.
 const maxChainNodes = 10_000
 
-// forCompany is the rule set that may fire in a chain of the company's fact:
-// Rhea's rules, which book for every company, and the company's own. Another
-// company's rule never fires on it, whoever runs the chain — the owner's
-// clock and CLI load every rule (KK, 2026-10-22: company rules and Rhea's
-// global rules). The firing order is kept.
-func forCompany(rules []core.Rule, company string) []core.Rule {
+// forCompany is the rule set that may fire in a chain of the company's fact
+// dated date: Rhea's rules, which book for every company, and the company's
+// own. Another company's rule never fires on it, whoever runs the chain —
+// the owner's clock and CLI load every rule (KK, 2026-10-22: company rules
+// and Rhea's global rules). A company rule that replaces one of Rhea's sets
+// it aside from its own effective date, so the two never both book; a fact
+// dated before keeps Rhea's. The firing order is kept.
+func forCompany(rules []core.Rule, company, date string) []core.Rule {
+	replaced := map[string]bool{}
+	for _, r := range rules {
+		if company != "" && r.Company == company && r.Replaces != "" && r.EffectiveFrom <= date {
+			replaced[r.Replaces] = true
+		}
+	}
 	out := make([]core.Rule, 0, len(rules))
 	for _, r := range rules {
-		if r.Company == "" || r.Company == company {
+		if (r.Company == "" && !replaced[r.ID]) || (r.Company != "" && r.Company == company) {
 			out = append(out, r)
 		}
 	}

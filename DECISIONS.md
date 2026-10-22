@@ -4999,3 +4999,12 @@ run of accepted proposals the office sets, twenty by default, none overruled, an
 overrule sends it back to proposing; a client's owner sees the lessons that book their
 company and may switch one off for it, the office seeing that it was; an accountant is
 credited in the public library of lessons only by opting in, and a client is never named.
+
+## 2026-10-23 — A server that speaks, waits within reason and stops cleanly (the whole-tree review, G3, G5, G6)
+
+- G5: the executor's in-process gate is a one-place channel, so a wait on it gives way to
+  the caller's context; an executor given `LockWait` (rhea serve: 30 s) answers busy (503)
+  past it instead of queueing behind a replay or a backfill; and rhea serve books, once at
+  start, what a crash or a restart left unbooked. The operator's tools wait as long as their
+  context lets them. A statement timeout inside a chain is left until a chain is measured
+  to hang. TestAWaitForTheExecutorEnds.
