@@ -3623,6 +3623,148 @@ The GUS and white-list channels, then Załóż konto and Dodaj klienta. Each in 
 first, checked as the face's check asks. Apart, to design first with case management and
 the smart documents: the office's worklist over its clients and who answers for whom.
 
+## The learning process: a lesson in words, taught once for many clients (KK, 2026-10-22)
+
+KK, in the talk about the MVP: the one key that opens an accounting office is automation
+that lets its accountant keep more clients with the same effort — any automation toward
+that is the key. And: "We still need to implement the learning process real good. What
+we have today is machine language." With it, a community around "a self-learning AI
+system", perhaps sharing "Rhea's useful prompts". The buyer is the office, with sole
+traders and companies in one system (KK, the same day).
+
+**What she learns today, and how it reads.** Five ways, all real:
+
+- *Rules drafted by the author* from what waits in the worklist, approved by a person.
+  The card shows the rule's description and its warrant — prose the author wrote beside
+  the rule, not read back from it, so it can say more or less than the rule does — and
+  the formula "as the rule wrote it" (rheaface `web/app.js`, the why panel). That is
+  the machine language.
+- *Facts said through doors*: which account a supplier's invoices go to
+  (`set_cost_account`), whether an account is a tax cost (`set_tax_treatment`), what a
+  bank line is (`classify_bank_operation`), the company's tax and ZUS accounts.
+- *What a person does*: after two pairings of the same kind, she drafts the matching
+  rule herself (`internal/shell/activities.go`, `proposed`). Only matching learns this
+  way.
+- *Corrections*: an overruled reading never returns (`internal/agent`, `Corrections`;
+  "The host remembers").
+- *Figures taught on request* and *what she was never taught* reaching the house (the
+  Learning Centre); the network counts rule shapes across installations above a floor
+  of two (`internal/network`).
+
+**What is wrong with it for an office.**
+
+1. The person who approves a lesson cannot read it.
+2. The reach is wrong both ways. A rule has no company (`rule` in the store has no such
+   column): once active it books for every company of the installation, whoever
+   approved it. A fact said through a door is one company's: an office with eighty
+   clients says eighty times that Orlen is fuel. Neither is "this office's clients".
+3. She learns from what people do only in matching.
+4. A lesson has no record — how many documents it booked, how often it was overruled —
+   so trust cannot grow lesson by lesson: every model reading of a PDF waits (the gate
+   at 1.00) and every active rule books unconditionally.
+
+**The lesson, proposed.** What she was taught, as a person reads it:
+
+- *The sentence* — Polish, read back from the definition itself by the kernel (a
+  template per kind of effect, the warrant's source quoted), never written beside it.
+  A model may smooth it under the host's laws: every number and name it says must be
+  the rule's, and every condition of the rule must be spoken (the second law, applied
+  to lessons). So she cannot claim to have learned more, or less, than she will do.
+- *The examples* — the documents it would have changed, with the amounts before and
+  after: the simulation the kernel already runs for a bundle.
+- *The reach* — this client; the office's clients (the companies under its mandates);
+  every installation through the network (the shape only, no data, as today).
+- *The origin* — who taught it, when, from which document or which words.
+- *The record* — documents it booked, times it was overruled, the last of each.
+- *The trust* — it *proposes* (each result waits for one tap) or it *books* (results go
+  straight through and are listed afterwards). A lesson starts by proposing and books
+  once its record says so; a person may move it either way; an overrule moves it back.
+
+The formula stays one tap behind the sentence, for the one who wants it.
+
+**Three ways she learns, one card.** (1) *From what the accountant does*: the same
+correction twice — a supplier's invoices moved from 409 to 402, a bank line classified
+the same way — and she drafts the lesson, the two corrections its examples; matching's
+two pairings, generalised to every door that corrects a booking. (2) *From what the
+accountant says*: "Orlen to zawsze paliwo" in her box; the author drafts, the card is
+the same. (3) *From other offices*: shapes approved by at least the floor of
+installations come as priors, the card saying how many approved them — real counts,
+never estimates.
+
+**What the invariants demand.**
+
+- *A lesson is a definition*: drafted, approved by a person, versioned. The sentence is
+  shown; the definition runs (invariant 3).
+- *Reach and isolation* (invariant 9): a lesson for the office's clients is one
+  definition firing in each client's own scope; a firing for client A never reads
+  client B. A rule gains a reach — a set of companies, or the installation — checked at
+  firing.
+- *One chart, or roles*: "Orlen → 402" across clients holds only where 402 means the
+  same in every client's chart. Lessons across clients need the smart documents'
+  account roles (book to "fuel and energy", the client's chart maps the role), or they
+  stay per client until those land.
+- *Earlier documents keep their version*: a lesson changed in June books May's late
+  invoice under May's version — the smart documents' first question, the same fix.
+- *The record is derived*: counted from the log (facts booked by a rule version,
+  overrule events), never kept as state of its own. The switch between proposing and
+  booking is an event, so replay through the same events gives the same books
+  (invariant 4).
+- *The boundary checklist*. Which company: the event's, and the lesson's reach is
+  checked at firing. Two at once: two accountants teaching the same lesson make two
+  drafts; approving the second offers it as the next version of the first, the lesson
+  keyed by what it explains and its reach, never by its text. Twice: the same
+  correction recorded twice proposes once. Money: an amount a lesson fixes (50% of a
+  car's VAT) is an exact fraction in the formula language, and the sentence prints it
+  from the rule.
+
+**Proofs, in order.**
+
+1. *The sentence*: every rule of the Poland pack read back in Polish; a test that each
+   sentence names every condition and every amount of its rule, and that a changed rule
+   changes its sentence. The card shows the sentence and the examples; the formula sits
+   behind "szczegóły".
+2. *Taught once, for the office*: a test world of an office with three clients. "Orlen →
+   fuel" taught on client A with the office's reach books client C's next Orlen
+   invoice; client B's owner switches it off for B, and B's next one waits; no read
+   crosses a scope; replay is identical.
+3. *Learned from doing*: two alike corrections on any client bring the card; accepted,
+   the third document books by itself.
+4. *Trust earned*: a lesson proposes, earns booking, is overruled once and proposes
+   again; the record shows it all.
+5. *Measured*: the business generator runs a quarter of an office's mixed clients with
+   lessons on and off. The number is the accountant's touches per document, month by
+   month — the learning curve — with wrong amounts at zero. It is the figure for the
+   offices and for the community.
+
+**The community.** Prompts are the on-ramp: questions that work, published on rhea.plus
+and LinkedIn, each checked before it goes out, never a client's data. The face already
+keeps her questions per kind of thing (rheaface 7e71db9), so "the most asked" is
+counted, not guessed. The lasting asset is the library of lessons: the network's lessons
+in their Polish sentences, each with its legal source, how many offices approved it,
+and — with consent — the accountant who taught it first. An accountant's name on a
+lesson five hundred firms use is advertising for their office, a reason to join that
+prompts do not give. This is the pack workspace (DIRECTION 2026-10-18) opened to the
+profession; the Learning Centre is its back room.
+
+**Open for KK**, each with the standard proposed:
+
+- *When a lesson earns booking.* Proposed: a run of accepted proposals the office sets,
+  twenty by default, none overruled — a number to tune on the generator, not a claim.
+- *The client's veto.* Proposed: yes. A client's owner sees the lessons that book
+  their company and may switch one off for it; the office sees that it was.
+- *Who approves a lesson for all the office's clients.* Proposed: a person of the office
+  holding the right "approve lessons" (a right in the people pack), recorded once per
+  client it reaches.
+- *Credit in the library.* Proposed: the accountant opts in; a client is never named.
+
+**Order of work**, after documents come in by themselves — without documents arriving
+there is nothing to learn from: (1) the sentence and the card; (2) reach, the office
+first; (3) learning from doing beyond matching; (4) trust earned; (5) the measure in the
+generator; (6) the library on rhea.plus.
+
+One line: *a lesson is a sentence she can be held to, taught once for the office, earned
+into automation by its record, and shared as the profession's library.*
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
