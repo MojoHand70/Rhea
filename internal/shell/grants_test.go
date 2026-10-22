@@ -58,7 +58,7 @@ func newGrantsWorld(t *testing.T) *grantsWorld {
 	if _, _, errs, err := w.x.ApproveBundle(w.ctx, sum.Bundle, "operator", w.today); err != nil || len(errs) != 0 {
 		t.Fatalf("approve: %v %v", err, errs)
 	}
-	if err := w.s.InsertObjectType(w.ctx, core.ObjectType{Name: "note", Version: 1, Domain: "work", LabelField: "text",
+	if err := w.s.InsertObjectType(w.ctx, core.ObjectType{Name: "note", Version: 1, Domain: "work", LabelField: "text", Amendable: []string{"text"},
 		Fields: []core.FieldDef{{Name: "text", Type: "string", Required: true}, {Name: "amount", Type: "money", Required: true}}}); err != nil {
 		t.Fatal(err)
 	}
@@ -395,5 +395,59 @@ func TestWhatRunsEverywhereIsApprovedEverywhere(t *testing.T) {
 	}
 	if code := w.call("kk", a, "POST", keep, nil, nil); code != 200 {
 		t.Fatalf("the owner keeping it: %d", code)
+	}
+}
+
+// Acting for one client reaches that client alone (review 2026-10-21, B1):
+// an office's person acting for client A ran with the whole desk in view —
+// every client of the office — and a door or a read naming an object by
+// its id reached client B's rows on rights held in A: B's note read, and
+// struck, by someone whose mandate from B lets them only read. Now acting
+// for a company sees and changes that company and the installation's rows;
+// the desk acting for none still reads every client it may.
+func TestActingForAClientReachesThatClientAlone(t *testing.T) {
+	w := newGrantsWorld(t)
+	office, a, b := "PL5250001111", "PL5260001246", "PL7010001234"
+	w.person("Krzysztof Kowal", "kk", office, "owner")
+	w.person("Alfa Owner", "alfa", a, "owner")
+	w.person("Beta Owner", "beta", b, "owner")
+	w.person("Anna Nowak", "anna", office, "accountant")
+	w.mustDoor("", a, "grant_mandate", map[string]any{"office": office, "client": a, "scope": "door:* view:* type:*", "from": "2026-01-01", "granted_by": "operator"})
+	w.mustDoor("", b, "grant_mandate", map[string]any{"office": office, "client": b, "scope": "view:* type:*", "from": "2026-01-01", "granted_by": "operator"})
+	if _, err := w.s.InsertActivityVersion(w.ctx, core.Activity{Name: "strike_note", Status: core.StatusActive, Domain: "work", Description: "strike a note",
+		Spec: core.ActivitySpec{Inputs: []core.FieldDef{{Name: "note", Type: "ref<note>", Required: true}}, Emits: "note.struck", Who: []string{"human"}}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := w.s.InsertRuleVersion(w.ctx, core.Rule{ID: "strike-note", Status: core.StatusActive, Priority: 100, EffectiveFrom: "2026-01-01",
+		CreatedBy: "test", Description: "a struck note", Spec: core.RuleSpec{Match: core.Match{EventType: "note.struck"},
+			Effect: core.Effect{Amend: &core.AmendTemplate{Type: "note", Target: "=$.note", Set: map[string]string{"text": "struck"}}}}}); err != nil {
+		t.Fatal(err)
+	}
+	note := func(company, text string) string {
+		t.Helper()
+		w.mustDoor("", company, "take_note", map[string]any{"text": text, "amount": "1.00"})
+		ids, err := w.s.FindObjectIDsByField(w.ctx, "note", "text", text)
+		if err != nil || len(ids) != 1 {
+			t.Fatalf("%s: %v %v", text, ids, err)
+		}
+		return ids[0]
+	}
+	noteA, noteB := note(a, "alfa's note"), note(b, "beta's note")
+
+	if code := w.call("anna", "", "GET", "/api/objects/"+noteB, nil, nil); code != 200 {
+		t.Fatalf("anna's desk reads beta's note under beta's mandate: %d", code)
+	}
+	if code := w.call("anna", a, "GET", "/api/objects/"+noteB, nil, nil); code != 404 {
+		t.Fatalf("anna acting for alfa reads beta's note: %d", code)
+	}
+	if code, out := w.door("anna", a, "strike_note", map[string]any{"note": noteB}); code == 200 {
+		t.Fatalf("anna acting for alfa struck beta's note: %v", out)
+	}
+	if o, err := w.s.GetObject(w.ctx, noteB); err != nil || o.State["text"] != "beta's note" {
+		t.Fatalf("beta's note untouched: %v %v", err, o.State)
+	}
+	w.mustDoor("anna", a, "strike_note", map[string]any{"note": noteA})
+	if o, err := w.s.GetObject(w.ctx, noteA); err != nil || o.State["text"] != "struck" {
+		t.Fatalf("alfa's note struck: %v %v", err, o.State)
 	}
 }

@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -981,16 +980,14 @@ func WithInstallation(ctx context.Context) context.Context {
 	return context.WithValue(ctx, scopeKey{}, scopeVal{set: []string{}})
 }
 
-// WithCompany makes a context act for one company and see it (and the
-// installation's rows). Inside a scope that already names the company (an
-// office acting for a client) the scope stays. An empty company is the
-// owner's (WithOwner): the kernel's own work, never a request's.
+// WithCompany makes a context act for one company and see it alone (and
+// the installation's rows), whatever it saw before: keeping an office's
+// whole desk in view let a chain acting for one client read and amend
+// another's rows (review 2026-10-21, B1). An empty company is the owner's
+// (WithOwner): the kernel's own work, never a request's.
 func WithCompany(ctx context.Context, company string) context.Context {
 	if company == "" {
 		return WithOwner(ctx)
-	}
-	if set, scoped := ScopeOf(ctx); scoped && slices.Contains(set, company) {
-		return context.WithValue(ctx, companyKey{}, company)
 	}
 	ctx = context.WithValue(ctx, companyKey{}, company)
 	return context.WithValue(ctx, scopeKey{}, scopeVal{set: []string{company}})

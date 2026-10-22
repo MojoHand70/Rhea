@@ -4829,3 +4829,13 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   and an approval's fact is filed under the approver's company, so another company's list
   of rules does not show who approved them — both need a company on drafts and the house's
   own facts, part of the same design step. TestWhatRunsEverywhereIsApprovedEverywhere.
+
+## 2026-10-22 — Acting for one company is seeing that company (the whole-tree review, step 4)
+
+- B1: a signed-in person acting for a company now runs with that company alone in view
+  (and the installation's rows); acting for none, the desk still reads every company of
+  theirs and writes nothing; `store.WithCompany` always narrows to its company, so a chain
+  runs with its own company alone whoever started it. `ActFor` keeps its meaning for the
+  operator's own desk (no person: the caller declares its scope, and the store test pins
+  that a desk acting for one client may write a fact the data gives to another of its
+  clients). TestActingForAClientReachesThatClientAlone.

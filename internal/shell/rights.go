@@ -129,17 +129,21 @@ func (s *Server) principalHandler(next http.Handler) http.Handler {
 			}
 			scope = append(scope, company) // a claim in progress: nobody was ever let in
 		}
-		if len(scope) == 0 {
+		switch {
+		case company != "":
+			// Acting for a company is seeing that company alone (and the
+			// installation's rows): with the whole desk in view, a door or a
+			// read naming an object by its id reached another client's rows
+			// on rights held in this one (review 2026-10-21, B1).
+			ctx = store.WithCompany(ctx, company)
+		case len(scope) == 0:
 			// A person nobody lets in anywhere today: a key no company
 			// carries, so the installation's rows are read and none written.
 			// The installation's own scope here once made an ex-member's
 			// tap the morning alarm (review 2026-10-21, A6).
 			ctx = store.WithScope(ctx, []string{rights.NoCompany})
-		} else {
-			ctx = store.WithScope(ctx, scope)
-		}
-		if company != "" {
-			ctx = store.ActFor(ctx, company)
+		default:
+			ctx = store.WithScope(ctx, scope) // the desk: every company of theirs, acting for none
 		}
 		ctx = rights.WithPrincipal(ctx, p)
 		next.ServeHTTP(w, r.WithContext(ctx))
