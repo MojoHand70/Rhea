@@ -3614,7 +3614,10 @@ time is the rule in all of them; the switch is always in the same place, at the 
 
 **Order of work.** (1) The drawer by kind, with the Poland pack's Polish titles — the
 fastest relief (done the same day: Rhea 68182f2, pack v42, rheaface e4cc52b). (2) The
-company switch, on a test world of an office with two clients. (3) Ludzie, from the
+company switch, on a test world of an office with two clients (done the same day: Rhea
+d1614b9 names the companies in whoami, rheaface 5c2a471 the switch; checked on a stubbed
+person of three companies and the kernel's two-company test, not yet walked on a live
+office). (3) Ludzie, from the
 phone's screens and the rights view. (4)
 The GUS and white-list channels, then Załóż konto and Dodaj klienta. Each in the gallery
 first, checked as the face's check asks. Apart, to design first with case management and
