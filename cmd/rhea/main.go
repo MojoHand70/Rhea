@@ -36,15 +36,18 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"os/user"
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 
 	"rhea/internal/adapter"
@@ -542,7 +545,7 @@ func main() {
 		if nw, err := network.Open(ctx, network.DSN()); err == nil {
 			defer nw.Close()
 			srv.Network = nw
-			log.Printf("network: %s", network.DSN())
+			log.Printf("network: %s", store.RedactDSN(network.DSN()))
 		} else {
 			log.Printf("network unavailable, running alone: %v", err)
 		}
@@ -572,7 +575,29 @@ func main() {
 		// long-lived by design.
 		server := &http.Server{Addr: *addr, Handler: srv.Handler(),
 			ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 2 * time.Minute}
-		log.Fatal(server.ListenAndServe())
+		// A restart lets what is in flight finish — an approval, a model's
+		// answer — for up to 30 seconds; the live streams end at once, as
+		// a stream never finishes. Killed outright, a deploy cut requests
+		// mid-way (review 2026-10-21, G6).
+		stopping, stopSignals := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
+		defer stopSignals()
+		server.RegisterOnShutdown(srv.Drain)
+		stopped := make(chan struct{})
+		go func() {
+			defer close(stopped)
+			<-stopping.Done()
+			log.Printf("stopping: requests in flight have 30 s to finish")
+			drain, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			if err := server.Shutdown(drain); err != nil {
+				log.Printf("stopping: %v", err)
+			}
+		}()
+		if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+			log.Fatal(err)
+		}
+		<-stopped
+		log.Printf("stopped")
 
 	case "replay":
 		// The proof, not only the rebuild: the cache before and after must

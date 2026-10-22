@@ -93,7 +93,7 @@ func Open(ctx context.Context, dsn string) (*Store, error) {
 	}
 	if err := pool.Ping(ctx); err != nil {
 		pool.Close()
-		return nil, fmt.Errorf("postgres not reachable at %s: %w", dsn, err)
+		return nil, fmt.Errorf("postgres not reachable at %s: %w", RedactDSN(dsn), err)
 	}
 	return &Store{Pool: pool}, nil
 }

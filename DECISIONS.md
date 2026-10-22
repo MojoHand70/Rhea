@@ -5014,3 +5014,10 @@ credited in the public library of lessons only by opting in, and a client is nev
   books' day is open, 503 when more than today's day waits; `rhea pass` exits 2 when facts
   stay in the worklist. Alerting by mail is left until there is a channel to send it; the
   deploy's --check reads the health and the timers' results. TestFailuresSpeak.
+- G6: rhea serve stops on SIGTERM by letting requests in flight finish for up to 30 s,
+  ending the live streams at once; each request is one log line (method, path, status,
+  time, the person and company named); a panic or the server's own failure (5xx, busy
+  aside) and any raw database error answer "the server failed on this request" with the
+  detail in the log — a duplicate keeps its words, "done already" being the person's
+  answer; database addresses are logged with their password masked (`store.RedactDSN`).
+  TestFailuresStayInsideAndRequestsLeaveALine, TestADatabasesPasswordStaysOutOfErrors.

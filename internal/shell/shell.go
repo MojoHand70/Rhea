@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"runtime/debug"
 	"slices"
 	"strconv"
 	"strings"
@@ -19,6 +20,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"rhea/internal/adapter"
 	"rhea/internal/agent"
@@ -151,8 +153,52 @@ func (s *Server) knowledge(ctx context.Context) *network.Knowledge {
 }
 
 func (s *Server) Handler() http.Handler {
-	return hardened(s.principalHandler(s.mux()))
+	return logged(hardened(s.principalHandler(s.mux())))
 }
+
+// Drain ends the live streams, so a stopping server waits only for the
+// requests that finish — a stream never does (review 2026-10-21, G6).
+func (s *Server) Drain() {
+	s.live.Lock()
+	cancel := s.live.cancel
+	s.live.Unlock()
+	if cancel != nil {
+		cancel()
+	}
+}
+
+// logged writes one line per request — method, path, status, time taken,
+// and the person and company the request named: the server kept no trace
+// of what it served (review 2026-10-21, G6).
+func logged(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		rec := &statusRecorder{ResponseWriter: w, status: 200}
+		next.ServeHTTP(rec, r)
+		log.Printf("%s %s %d %dms person=%q company=%q", r.Method, r.URL.Path, rec.status,
+			time.Since(start).Milliseconds(), r.Header.Get("X-Rhea-Person"), r.Header.Get("X-Rhea-Company"))
+	})
+}
+
+// statusRecorder notes the status a handler wrote; it flushes, so the
+// live stream still streams.
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+func (r *statusRecorder) WriteHeader(code int) {
+	r.status = code
+	r.ResponseWriter.WriteHeader(code)
+}
+
+func (r *statusRecorder) Flush() {
+	if f, ok := r.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
+func (r *statusRecorder) Unwrap() http.ResponseWriter { return r.ResponseWriter }
 
 // maxBody bounds what a door reads: a document through the receive door
 // is a few megabytes of base64 at most; a multi-gigabyte body is refused,
@@ -178,8 +224,9 @@ func hardened(next http.Handler) http.Handler {
 		}
 		defer func() {
 			if p := recover(); p != nil {
-				log.Printf("%s %s: panic: %v", r.Method, r.URL.Path, p)
-				writeErr(w, 500, fmt.Errorf("the server failed on this request: %v", p))
+				// the panic's own words go to the log, never to the client (G6)
+				log.Printf("%s %s: panic: %v\n%s", r.Method, r.URL.Path, p, debug.Stack())
+				writeErr(w, 500, fmt.Errorf("panic: %v", p))
 			}
 		}()
 		next.ServeHTTP(w, r)
@@ -292,6 +339,16 @@ func writeErr(w http.ResponseWriter, status int, err error) {
 	// Busy books are a wait, not a fault: try again (G5).
 	if errors.Is(err, exec.ErrBusy) {
 		status = 503
+	}
+	// The server's own failures, and anything the database said as it said
+	// it, stay in the log: the face got Postgres's words — tables, columns,
+	// constraints — and a panic's text (review 2026-10-21, G6). A duplicate
+	// keeps its words: "done already" is the person's answer.
+	var pgErr *pgconn.PgError
+	if (status >= 500 && !errors.Is(err, exec.ErrBusy)) || (errors.As(err, &pgErr) && pgErr.Code != "23505") {
+		log.Printf("%d: %v", status, err)
+		status = max(status, 500)
+		err = errors.New("the server failed on this request — what happened is in its log")
 	}
 	writeJSON(w, status, map[string]string{"error": err.Error()})
 }
