@@ -177,8 +177,13 @@ func load(ctx context.Context, s *store.Store, today string) (*world, error) {
 	}
 	for _, p := range persons {
 		w.persons[p.ID] = p
+		// a handle is the first person's: persons come in log order, and a
+		// later one registered under it never shadows them (review
+		// 2026-10-21, A3)
 		if h, _ := p.State["handle"].(string); h != "" {
-			w.byHandle[h] = p.ID
+			if _, taken := w.byHandle[h]; !taken {
+				w.byHandle[h] = p.ID
+			}
 		}
 	}
 	roles, err := s.ObjectsByType(ctx, "role")
@@ -378,8 +383,9 @@ func Table(ctx context.Context, s *store.Store, company, today string) ([]Princi
 }
 
 // Authorize decides a door for a signed-in person: the door must admit a
-// person, and the person must hold its right — in any of their companies
-// for an installation door, in the company they act for otherwise, where a
+// person, and the person must hold its right — for an installation door in
+// every company a person it acts on is let into (and a handle it registers
+// is nobody's yet), in the company they act for otherwise, where a
 // company nobody was ever let into is open to its first claim alone. A
 // door that names an office (grant_mandate) is the office's act too. The
 // inputs come back signed: every "…_by" input carries the person, whatever
@@ -394,6 +400,32 @@ func Authorize(ctx context.Context, s *store.Store, p Principal, act core.Activi
 	if act.Spec.Installation {
 		if _, ok := p.MayAnywhere("door", act.Name, act.Domain); !ok {
 			return nil, refuse("no role of yours opens this door")
+		}
+		// An installation door acts on a person wherever they are let in, so
+		// its right is needed in every company the person holds a grant in:
+		// a right in any one company let an owner anywhere mark KK as left
+		// for good (review 2026-10-21, A3). And a handle is one person's.
+		w, err := load(ctx, s, today)
+		if err != nil {
+			return nil, err
+		}
+		for _, f := range act.Spec.Inputs {
+			id, _ := inputs[f.Name].(string)
+			if f.Type != "ref<person>" || id == "" {
+				continue
+			}
+			var theirs []string
+			for _, g := range w.resolve(id) {
+				theirs = append(theirs, g.Company)
+			}
+			if !p.MayEverywhere(theirs, "door", act.Name, act.Domain) {
+				return nil, refuse("no role of yours opens this door everywhere this person is let in")
+			}
+		}
+		if h, _ := inputs["handle"].(string); h != "" {
+			if _, taken := w.byHandle[h]; taken {
+				return nil, refuse(fmt.Sprintf("%s is another person's handle", h))
+			}
 		}
 	} else {
 		if acting == "" {

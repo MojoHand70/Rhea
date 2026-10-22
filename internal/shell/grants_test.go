@@ -291,3 +291,56 @@ func TestAGrantReachesOnlyItsCompany(t *testing.T) {
 		t.Fatalf("piotr stands in for kk at %s: %v", held, got)
 	}
 }
+
+// A person is changed only by someone who may act for them everywhere they
+// are let in (review 2026-10-21, A3): the installation's people doors asked
+// for the right in any one company and acted on every person — the owner
+// of a company claimed a minute ago marked KK as left, for good, rewrote a
+// sole trader's name and birth date, and registered a second "kk" whom
+// KK's key then signed in as. Now a door acting on a person needs its
+// right in every company the person is let into, a handle is one person's,
+// and a duplicate the operator's tools write never shadows the first.
+func TestAPersonIsChangedOnlyWhereTheyAreLetIn(t *testing.T) {
+	w := newGrantsWorld(t)
+	held, own := "PL5250001111", "PL1110000001"
+	kk := w.person("Krzysztof Kowal", "kk", held, "owner")
+	mallory := w.person("Mallory Mal", "mallory", own, "owner")
+	whoami := func(handle string) (int, string) {
+		t.Helper()
+		var who struct {
+			PersonID string `json:"person_id"`
+		}
+		code := w.call(handle, "", "GET", "/api/whoami", nil, &who)
+		return code, who.PersonID
+	}
+
+	for _, d := range []struct {
+		name   string
+		inputs map[string]any
+	}{
+		{"set_person_status", map[string]any{"person": kk, "status": "left"}},
+		{"identify_person", map[string]any{"person": kk, "given_name": "Krzysztof", "family_name": "Mallory", "birth_date": "1970-01-01"}},
+		{"appoint_deputy", map[string]any{"person": kk, "deputy": mallory}},
+		{"register_person", map[string]any{"name": "Krzysztof Kowal", "handle": "kk", "role": "owner"}},
+	} {
+		if code, out := w.door("mallory", "", d.name, d.inputs); code != 403 {
+			t.Fatalf("mallory at %s: %d %v", d.name, code, out)
+		}
+	}
+	if code, id := whoami("kk"); code != 200 || id != kk {
+		t.Fatalf("kk still signs in as himself: %d %q", code, id)
+	}
+	w.mustDoor("", "", "register_person", map[string]any{"name": "Krzysztof Kopia", "handle": "kk", "role": "owner"})
+	if code, id := whoami("kk"); code != 200 || id != kk {
+		t.Fatalf("a duplicate the operator wrote shadows kk: %d %q", code, id)
+	}
+
+	// The owner changes a person let in only at his company — and not one
+	// let in elsewhere as well.
+	anna := w.person("Anna Nowak", "anna", held, "accountant")
+	w.mustDoor("kk", "", "identify_person", map[string]any{"person": anna, "given_name": "Anna", "family_name": "Nowak", "birth_date": "1990-05-04"})
+	w.mustDoor("", own, "grant_membership", map[string]any{"person": anna, "company": own, "role": "accountant", "from": "2026-01-01", "granted_by": "operator"})
+	if code, out := w.door("kk", "", "set_person_status", map[string]any{"person": anna, "status": "left"}); code != 403 {
+		t.Fatalf("kk marking anna, let in at mallory's too, as left: %d %v", code, out)
+	}
+}

@@ -4809,3 +4809,10 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   given none acts in the company acted for (only appoint_substitute's is optional). A
   substitution the operator's tools write without a company still reaches every company of
   its person — the operator holds the database. TestAGrantReachesOnlyItsCompany.
+- A3: an installation door acting on a person (each `ref<person>` input) needs its right in
+  every company that person is let into today, so a person let in nowhere is changed only
+  by the operator's tools; a handle a person's door registers must be nobody's yet; and a
+  duplicate the operator's tools write never shadows the first person (objects come in log
+  order, the first keeps the handle). A person let in at two companies is changed by
+  someone who may act in both — status, identity and deputy are the whole person's.
+  TestAPersonIsChangedOnlyWhereTheyAreLetIn.
