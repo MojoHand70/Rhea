@@ -4991,3 +4991,11 @@ with its four points settled the same day:
   only to a listener whose scope sees that company (or the installation's), so the face's
   screens still hear their own bookings and refresh. A replay's notice is everyone's.
   TestTheLiveStreamIsTheListenersOwn.
+
+## 2026-10-22 — The learning brief's three open points (KK)
+
+Agreed as proposed (DIRECTION, "The learning process"): a lesson books on its own after a
+run of accepted proposals the office sets, twenty by default, none overruled, and an
+overrule sends it back to proposing; a client's owner sees the lessons that book their
+company and may switch one off for it, the office seeing that it was; an accountant is
+credited in the public library of lessons only by opting in, and a client is never named.

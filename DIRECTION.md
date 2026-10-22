@@ -3758,13 +3758,13 @@ lesson five hundred firms use is advertising for their office, a reason to join 
 prompts do not give. This is the pack workspace (DIRECTION 2026-10-18) opened to the
 profession; the Learning Centre is its back room.
 
-**Open for KK**, each with the standard proposed:
+**Settled by KK (2026-10-22)**, as proposed:
 
-- *When a lesson earns booking.* Proposed: a run of accepted proposals the office sets,
-  twenty by default, none overruled — a number to tune on the generator, not a claim.
-- *The client's veto.* Proposed: yes. A client's owner sees the lessons that book
-  their company and may switch one off for it; the office sees that it was.
-- *Credit in the library.* Proposed: the accountant opts in; a client is never named.
+- *When a lesson earns booking*: a run of accepted proposals the office sets, twenty by
+  default, none overruled — a number to tune on the generator, not a claim.
+- *The client's veto*: a client's owner sees the lessons that book their company and may
+  switch one off for it; the office sees that it was.
+- *Credit in the library*: the accountant opts in; a client is never named.
 
 **Order of work**, after documents come in by themselves — without documents arriving
 there is nothing to learn from — except the two kinds of rules, which come first of all,
