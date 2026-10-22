@@ -4908,3 +4908,11 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   written earlier in its own chain. On a live installation the new door waits in the pack's
   upgrade bundle until a person approves it. Reopening a month, when it comes, is its own
   door. TestAMonthIsClosedOnce.
+
+## 2026-10-22 — One rounding for money (the whole-tree review, step 8)
+
+- E1: the matching engine rounds an item's open amount, converted into the trigger's
+  currency, once, where it converts — to whole minor units, as the structure declares
+  (`Converter.Round`). Every amount derived from a converted item (its equivalent, the rate
+  difference, the payment's remainder) is then whole grosze, and a match settling an item
+  whole bakes. TestConverterSettlesInWholeGrosze.

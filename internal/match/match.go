@@ -262,7 +262,11 @@ func (p *Problem) convert() (map[string]Item, error) {
 			if err != nil {
 				return nil, err
 			}
-			sides[si].Items[ii] = Item{ID: it.ID, Open: map[string]*big.Rat{m: new(big.Rat).Mul(it.Open[m], rate)},
+			// worth whole minor units of the trigger's currency, rounded as
+			// the structure declares: unrounded, 1234.56 EUR at 4.3215 was
+			// 5335.15104 PLN, and that fraction reached every amount a whole
+			// settlement baked (review 2026-10-21, E1)
+			sides[si].Items[ii] = Item{ID: it.ID, Open: map[string]*big.Rat{m: p.Convert.Round(new(big.Rat).Mul(it.Open[m], rate))},
 				Compare: it.Compare, Currency: p.Trigger.Currency, Date: it.Date, Reference: it.Reference, Seq: it.Seq}
 		}
 	}

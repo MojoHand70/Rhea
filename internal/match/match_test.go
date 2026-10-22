@@ -357,6 +357,57 @@ func TestConverter(t *testing.T) {
 	}
 }
 
+// A converted item is worth whole grosze (review 2026-10-21, E1): an item's
+// open amount was converted into the trigger's currency unrounded — 1234.56
+// EUR at 4.3215 is 5335.15104 PLN — so a match settling it whole carried
+// that fraction into the equivalent, the rate difference and the payment's
+// remainder, and the kernel refused to bake an amount money cannot hold:
+// the whole chain, the bank line's own booking with it, stayed pending on
+// every pass. Now the conversion is rounded as the structure declares,
+// once, where it happens.
+func TestConverterSettlesInWholeGrosze(t *testing.T) {
+	rates := map[string]string{"EUR/PLN/2026-09-02": "4.30", "EUR/PLN/2026-09-21": "4.3215"}
+	conv := &Converter{Functional: "PLN", DateSide: "payment", RateUpAccount: "750", RateDownAccount: "755",
+		Rate: func(from, to, date string) (*big.Rat, error) {
+			if r, ok := rates[from+"/"+to+"/"+date]; ok {
+				return rat(r), nil
+			}
+			return nil, fmt.Errorf("no rate %s/%s on %s", from, to, date)
+		},
+		Round: func(r *big.Rat) *big.Rat { return roundHalfUp(r) }}
+	invoice := item("FV/E2", "2026-09-02", "1234.56", "", 1)
+	invoice.Currency = "EUR"
+	whole := func(r *big.Rat) bool { return new(big.Rat).Mul(r, big.NewRat(100, 1)).IsInt() }
+	problem := func(paid string) Problem {
+		return Problem{TriggerSide: "payment", Trigger: item("L", "2026-09-21", paid, "", 9),
+			Sides:    []Side{{Name: "invoice", Items: []Item{invoice}}},
+			Measures: []Measure{money("money")}, Policy: []Step{{Strategy: Exact}, {Strategy: OldestFirst}}, Convert: conv}
+	}
+
+	// Paid to the grosz: 1234.56 EUR is 5335.15 PLN on the payment's day.
+	r, ok := solve(t, problem("5335.15"))
+	if !ok || r.Strategy != Exact {
+		t.Fatalf("5335.15 PLN settles 1234.56 EUR exactly: %v %v", ok, r.Tried)
+	}
+	// Paid more: the invoice settles whole, and every amount is whole grosze.
+	r, ok = solve(t, problem("5400.00"))
+	if !ok {
+		t.Fatalf("5400.00 PLN: %v", r.Tried)
+	}
+	inv := r.Sides["invoice"][0]
+	if inv.OpenAfter["money"].Sign() != 0 || !whole(inv.Equivalent["money"]) || inv.Equivalent["money"].FloatString(2) != "5335.15" {
+		t.Fatalf("the invoice settles whole, worth whole grosze: %+v", inv)
+	}
+	pay := r.Sides["payment"][0]
+	if !whole(pay.Allocated["money"]) || !whole(pay.OpenAfter["money"]) || pay.OpenAfter["money"].FloatString(2) != "64.85" {
+		t.Fatalf("the payment's remainder in whole grosze: %+v", pay)
+	}
+	// Booked at 4.30 (5308.61), settled at 5335.15: the rate went up by 26.54.
+	if len(r.Differences) != 1 || !whole(r.Differences[0].Amount) || r.Differences[0].Amount.FloatString(2) != "26.54" {
+		t.Fatalf("the rate difference in whole grosze: %+v", r.Differences)
+	}
+}
+
 func roundHalfUp(r *big.Rat) *big.Rat {
 	scaled := new(big.Rat).Mul(r, big.NewRat(100, 1))
 	q := new(big.Int).Quo(scaled.Num(), scaled.Denom())
