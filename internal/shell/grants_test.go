@@ -249,3 +249,45 @@ func TestALapsedCompanyIsNoOnesToClaim(t *testing.T) {
 	}
 	w.mustDoor("mallory", fresh, "take_note", map[string]any{"text": "after the claim", "amount": "1.00"})
 }
+
+// A grant reaches only the company it is made in (review 2026-10-21, A2):
+// the door checked only inputs called company and office against the
+// company acted for, while grants are placed by what the payload says — a
+// stranger acting for her own company granted her office a mandate over
+// any client she named, and a substitution naming no company handed her
+// every grant its person held, in every company. Now a mandate's client is
+// the company acted for, and a door that takes a company and was given
+// none acts in that one.
+func TestAGrantReachesOnlyItsCompany(t *testing.T) {
+	w := newGrantsWorld(t)
+	held, own := "PL5250001111", "PL1110000001"
+	kk := w.person("Krzysztof Kowal", "kk", held, "owner")
+	mallory := w.person("Mallory Mal", "mallory", own, "owner")
+	companies := func(handle string) []string {
+		t.Helper()
+		var who struct {
+			Companies []string `json:"companies"`
+		}
+		if code := w.call(handle, "", "GET", "/api/whoami", nil, &who); code != 200 {
+			t.Fatalf("whoami %s: %d", handle, code)
+		}
+		return who.Companies
+	}
+
+	for _, client := range []string{held, held + "," + own} {
+		if code, out := w.door("mallory", own, "grant_mandate", map[string]any{"office": own, "client": client, "scope": "*", "from": w.today, "granted_by": "mallory"}); code != 403 {
+			t.Fatalf("her office's mandate over %q: %d %v", client, code, out)
+		}
+	}
+	w.mustDoor("mallory", own, "appoint_substitute", map[string]any{"person": kk, "deputy": mallory, "from": w.today, "to": w.dayFrom(30), "granted_by": "mallory"})
+	if got := companies("mallory"); len(got) != 1 || got[0] != own {
+		t.Fatalf("mallory reaches only her own company: %v", got)
+	}
+
+	// The owner's substitution naming no company holds where he made it.
+	piotr := w.person("Piotr Zastępca", "piotr", "", "accountant")
+	w.mustDoor("kk", held, "appoint_substitute", map[string]any{"person": kk, "deputy": piotr, "from": w.today, "to": w.dayFrom(30), "granted_by": "kk"})
+	if got := companies("piotr"); len(got) != 1 || got[0] != held {
+		t.Fatalf("piotr stands in for kk at %s: %v", held, got)
+	}
+}

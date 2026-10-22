@@ -4804,3 +4804,8 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   whatever its dates); while a company is truly unclaimed only a door writing a grant into
   it (membership.granted, mandate.granted) is open; the company a request names is trimmed
   once at the door. TestALapsedCompanyIsNoOnesToClaim.
+- A2: every input naming the company a grant lands in (`company`, a mandate's `client`)
+  must be the company acted for; a company door that takes a string `company` and was
+  given none acts in the company acted for (only appoint_substitute's is optional). A
+  substitution the operator's tools write without a company still reaches every company of
+  its person — the operator holds the database. TestAGrantReachesOnlyItsCompany.

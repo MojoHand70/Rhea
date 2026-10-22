@@ -380,9 +380,10 @@ func Table(ctx context.Context, s *store.Store, company, today string) ([]Princi
 // Authorize decides a door for a signed-in person: the door must admit a
 // person, and the person must hold its right — in any of their companies
 // for an installation door, in the company they act for otherwise, where a
-// company nobody holds yet is open to its first claim. A door that names
-// an office (grant_mandate) is the office's act too. The inputs come back
-// signed: every "…_by" input carries the person, whatever was sent.
+// company nobody was ever let into is open to its first claim alone. A
+// door that names an office (grant_mandate) is the office's act too. The
+// inputs come back signed: every "…_by" input carries the person, whatever
+// was sent, and a company input left empty names the company acted for.
 func Authorize(ctx context.Context, s *store.Store, p Principal, act core.Activity, inputs map[string]any, acting, today string) (map[string]any, error) {
 	refuse := func(reason string) error {
 		return &ErrRefused{Person: p.Handle, Door: act.Name, Company: acting, Reason: reason}
@@ -398,8 +399,13 @@ func Authorize(ctx context.Context, s *store.Store, p Principal, act core.Activi
 		if acting == "" {
 			return nil, refuse("name the company you act for")
 		}
-		if named, ok := inputs["company"].(string); ok && named != "" && named != acting {
-			return nil, refuse(fmt.Sprintf("this names %s — act for %s to do it there", named, named))
+		// Every input that names the company a grant lands in names the one
+		// acted for — a mandate's client too: unchecked, it put a stranger's
+		// office into any company she named (review 2026-10-21, A2).
+		for _, f := range []string{"company", "client"} {
+			if named, ok := inputs[f].(string); ok && named != "" && named != acting {
+				return nil, refuse(fmt.Sprintf("this names %s — act for %s to do it there", named, named))
+			}
 		}
 		if _, ok := p.May(acting, "door", act.Name, act.Domain); !ok {
 			claimed, err := Claimed(ctx, s, acting, today)
@@ -426,6 +432,14 @@ func Authorize(ctx context.Context, s *store.Store, p Principal, act core.Activi
 	for _, f := range act.Spec.Inputs {
 		if core.SignedInput(f) {
 			signed[f.Name] = p.Handle
+		}
+		// A company door that takes a company and was given none acts in
+		// the one acted for: a substitution naming none handed the deputy
+		// every grant its person held, in every company (A2).
+		if f.Name == "company" && f.Type == "string" && !act.Spec.Installation {
+			if named, _ := signed["company"].(string); named == "" {
+				signed["company"] = acting
+			}
 		}
 	}
 	return signed, nil
