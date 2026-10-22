@@ -4938,3 +4938,39 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   pre-claim a channel's fact. Keys the kernel computes (a file's hash, a declared identity,
   a reaction's own key) stay as they are, so files received before keep their identity.
   TestACallersKeyClaimsNoChannelsFact.
+
+## 2026-10-22 — Company rules and Rhea's global rules (KK)
+
+The risk found writing the learning brief: a rule has no company, so an approved rule
+books for every company of the installation, whoever approved it. No read crosses a
+scope, but one company's approval could change another company's books. KK's decision,
+with its four points settled the same day:
+
+- **Two kinds of rules.** A *company rule* is approved inside its company, by a person
+  that company's rights admit (its owner, or an office's accountant under the mandate),
+  and books only that company's facts. A *global rule* is approved by Rhea staff (the
+  house) and books for every company.
+- **Promotion.** Only Rhea staff promote a company rule to global, and only on proof that
+  it happens with many companies: the same rule held by at least ten companies kept by at
+  least three offices or installations, counted by the network from the rules alone,
+  simulated companies excluded. Staff may also ask an external biegły rewident for an
+  opinion, kept with the promotion. Why ten and three: below ten a pattern can still be
+  one firm's own business; three offices show it is not one accountant's habit.
+- **A global rule reaches every company at once**, from its date, announced to each with
+  what it means for it. No company waits on its own approval of it.
+- **An office teaches once.** It approves a lesson once for the clients it picks, and each
+  gets it as its own company rule, seen by that client's owner. No third kind of rule.
+- **The company's own rule wins.** A company rule answering what a global rule answers
+  names the global rule it replaces for that company. The company's rule books, with a
+  warning on its card and on the office's desk where the global rule rests on a statute.
+  Named, so the two never both book.
+- **What it answers.** The open question of the 2026-10-21 review, who approves once a
+  second owner joins: a company's rules by that company's people, global rules by staff
+  alone.
+- **Not built.** Today every rule is the installation's (the `rule` table has no company),
+  and on white01 only KK approves. Pack rules become global rules. A rule drafted for one
+  company (an answer to its question, a worklist draft) becomes that company's when the
+  kernel learns the two kinds; the migration classifies each by where it was drafted.
+  Must land before a second owner or an office is admitted on any installation
+  (invariant 9: a company's books are that company's). Order of work: DIRECTION, "The
+  learning process".

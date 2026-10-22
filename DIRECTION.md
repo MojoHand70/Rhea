@@ -3672,8 +3672,14 @@ traders and companies in one system (KK, the same day).
   to lessons). So she cannot claim to have learned more, or less, than she will do.
 - *The examples* — the documents it would have changed, with the amounts before and
   after: the simulation the kernel already runs for a bundle.
-- *The reach* — this client; the office's clients (the companies under its mandates);
-  every installation through the network (the shape only, no data, as today).
+- *The reach* — two kinds of rules (KK, 2026-10-22; DECISIONS). A *company rule* is
+  approved inside its company and books only there. A *global rule* is approved by Rhea
+  staff and books for every company from its date, announced to each with what it means
+  for them. An office teaching its clients approves once, and each client it picks gets
+  the lesson as its own company rule. Only staff promote a company rule to global, and
+  only on proof: the same rule held by at least ten companies kept by at least three
+  offices or installations, counted by the network from the rules alone (simulated
+  companies excluded), optionally with an external biegły rewident's opinion.
 - *The origin* — who taught it, when, from which document or which words.
 - *The record* — documents it booked, times it was overruled, the last of each.
 - *The trust* — it *proposes* (each result waits for one tap) or it *books* (results go
@@ -3695,10 +3701,13 @@ never estimates.
 
 - *A lesson is a definition*: drafted, approved by a person, versioned. The sentence is
   shown; the definition runs (invariant 3).
-- *Reach and isolation* (invariant 9): a lesson for the office's clients is one
-  definition firing in each client's own scope; a firing for client A never reads
-  client B. A rule gains a reach — a set of companies, or the installation — checked at
-  firing.
+- *Reach and isolation* (invariant 9): a rule gains its company, blank for a global
+  rule. A company rule fires only on its company's facts, is seen only in a scope that
+  names its company, and never reads another; a firing for client A never reads client
+  B. A company rule that answers what a global rule answers names the global rule it
+  replaces for that company: the company's reading books, with a warning on its card
+  and on the office's desk where the global rule rests on a statute, and the two never
+  both book — that would be a double booking.
 - *One chart, or roles*: "Orlen → 402" across clients holds only where 402 means the
   same in every client's chart. Lessons across clients need the smart documents'
   account roles (book to "fuel and energy", the client's chart maps the role), or they
@@ -3723,10 +3732,13 @@ never estimates.
    sentence names every condition and every amount of its rule, and that a changed rule
    changes its sentence. The card shows the sentence and the examples; the formula sits
    behind "szczegóły".
-2. *Taught once, for the office*: a test world of an office with three clients. "Orlen →
-   fuel" taught on client A with the office's reach books client C's next Orlen
-   invoice; client B's owner switches it off for B, and B's next one waits; no read
-   crosses a scope; replay is identical.
+2. *Two kinds of rules, taught once for the office*: a test world of two offices and
+   four clients. A company rule approved in client A books A's documents and no one
+   else's. The office approves "Orlen → fuel" once for A and C, and each gets its own
+   company rule; B, not picked, still waits. A global rule books for all four; C's own
+   rule replacing it books for C with the warning, and the two never both book.
+   Promotion is refused to anyone but staff and below ten companies in three offices.
+   No read crosses a scope; replay is identical.
 3. *Learned from doing*: two alike corrections on any client bring the card; accepted,
    the third document books by itself.
 4. *Trust earned*: a lesson proposes, earns booking, is overruled once and proposes
@@ -3752,14 +3764,12 @@ profession; the Learning Centre is its back room.
   twenty by default, none overruled — a number to tune on the generator, not a claim.
 - *The client's veto.* Proposed: yes. A client's owner sees the lessons that book
   their company and may switch one off for it; the office sees that it was.
-- *Who approves a lesson for all the office's clients.* Proposed: a person of the office
-  holding the right "approve lessons" (a right in the people pack), recorded once per
-  client it reaches.
 - *Credit in the library.* Proposed: the accountant opts in; a client is never named.
 
 **Order of work**, after documents come in by themselves — without documents arriving
-there is nothing to learn from: (1) the sentence and the card; (2) reach, the office
-first; (3) learning from doing beyond matching; (4) trust earned; (5) the measure in the
+there is nothing to learn from — except the two kinds of rules, which come first of all,
+before a second owner or an office is admitted anywhere: (1) the sentence and the card;
+(2) the office teaching many clients at once; (3) learning from doing beyond matching; (4) trust earned; (5) the measure in the
 generator; (6) the library on rhea.plus.
 
 One line: *a lesson is a sentence she can be held to, taught once for the office, earned
