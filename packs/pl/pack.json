@@ -1,9 +1,14 @@
 {
   "pack": "pl",
-  "version": 41,
+  "version": 42,
   "stage": "initial",
   "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
   "history": [
+    {
+      "versions": "42",
+      "date": "2026-10-22",
+      "changes": "Słownik mówi, czym jest każda rzecz w księgach — dokument, zapis albo kartoteka — żeby biurko układało listy w trzy szuflady; i daje polskie tytuły raportom i listom, które przyszły z innych pakietów po angielsku."
+    },
     {
       "versions": "41",
       "date": "2026-10-20",
@@ -3145,7 +3150,7 @@
     },
     {
       "view_id": "slownik",
-      "version": 15,
+      "version": 16,
       "notion": "words",
       "title": "Słownik",
       "domain": "finance",
@@ -3156,272 +3161,326 @@
           "account": {
             "label": "Konto",
             "plural": "Konta",
-            "shape": "ledger"
+            "shape": "ledger",
+            "kind": "master"
           },
           "bank_account": {
             "label": "Rachunek bankowy",
             "plural": "Rachunki bankowe",
-            "shape": "card"
+            "shape": "card",
+            "kind": "master"
           },
           "bank_operation": {
             "label": "Pozycja wyciągu",
             "plural": "Pozycje wyciągu",
-            "shape": "paper"
+            "shape": "paper",
+            "kind": "entry"
           },
           "company": {
             "label": "Firma",
             "plural": "Firmy",
-            "shape": "card"
+            "shape": "card",
+            "kind": "master"
           },
           "contractor": {
             "label": "Kontrahent",
             "plural": "Kontrahenci",
-            "shape": "card"
+            "shape": "card",
+            "kind": "master"
           },
           "fixed_asset": {
             "label": "Środek trwały",
             "plural": "Środki trwałe",
-            "shape": "card"
+            "shape": "card",
+            "kind": "master"
           },
           "fx_rate": {
             "label": "Kurs waluty",
             "plural": "Kursy walut",
-            "shape": "card"
+            "shape": "card",
+            "kind": "master"
           },
           "invoice": {
             "label": "Faktura",
             "plural": "Faktury",
-            "shape": "paper"
+            "shape": "paper",
+            "kind": "document"
           },
           "issued_document": {
             "label": "Dokument wydany",
             "plural": "Dokumenty wydane",
-            "shape": "card"
+            "shape": "card",
+            "kind": "document"
           },
           "ksef_submission": {
             "label": "Wysyłka do KSeF",
             "plural": "Wysyłki do KSeF",
-            "shape": "card"
+            "shape": "card",
+            "kind": "entry"
           },
           "lease_contract": {
             "label": "Umowa leasingu",
             "plural": "Umowy leasingu",
-            "shape": "card"
+            "shape": "card",
+            "kind": "master"
           },
           "matching_difference": {
             "label": "Różnica rozliczenia",
             "plural": "Różnice rozliczeń",
-            "shape": "card"
+            "shape": "card",
+            "kind": "entry"
           },
           "mileage_entry": {
             "label": "Wpis ewidencji przebiegu",
             "plural": "Ewidencja przebiegu",
-            "shape": "card"
+            "shape": "card",
+            "kind": "entry"
           },
           "period_lock": {
             "label": "Zamknięcie miesiąca",
             "plural": "Zamknięte miesiące",
-            "shape": "card"
+            "shape": "card",
+            "kind": "entry"
           },
           "person": {
             "label": "Osoba",
             "plural": "Osoby",
-            "shape": "card"
+            "shape": "card",
+            "kind": "master"
           },
           "posting": {
             "label": "Zapis księgowy",
             "plural": "Zapisy księgowe",
-            "shape": "card"
+            "shape": "card",
+            "kind": "entry"
           },
           "purchase_invoice": {
             "label": "Faktura zakupu",
             "plural": "Faktury zakupu",
-            "shape": "paper"
+            "shape": "paper",
+            "kind": "document"
           },
           "received_document": {
             "label": "Dokument przyjęty",
             "plural": "Dokumenty przyjęte",
-            "shape": "card"
+            "shape": "card",
+            "kind": "document"
           },
           "recurring_invoice_template": {
             "label": "Szablon faktury cyklicznej",
             "plural": "Szablony faktur cyklicznych",
-            "shape": "card"
+            "shape": "card",
+            "kind": "master"
           },
           "sales_invoice": {
             "label": "Faktura sprzedaży",
             "plural": "Faktury sprzedaży",
-            "shape": "paper"
+            "shape": "paper",
+            "kind": "document"
           },
           "settlement": {
             "label": "Rozliczenie",
             "plural": "Rozliczenia",
-            "shape": "card"
+            "shape": "card",
+            "kind": "entry"
           },
           "stocktake": {
             "label": "Inwentaryzacja",
             "plural": "Inwentaryzacje",
-            "shape": "card"
+            "shape": "card",
+            "kind": "entry"
           },
           "task": {
             "label": "Zadanie",
             "plural": "Zadania",
-            "shape": "card"
+            "shape": "card",
+            "kind": "entry"
           },
           "task_schedule": {
             "label": "Harmonogram zadań",
             "plural": "Harmonogramy zadań",
-            "shape": "card"
+            "shape": "card",
+            "kind": "master"
           },
           "tax_declaration": {
             "label": "Deklaracja podatkowa",
             "plural": "Deklaracje podatkowe",
-            "shape": "card"
+            "shape": "card",
+            "kind": "document"
           },
           "vat_rate": {
             "label": "Stawka VAT",
             "plural": "Stawki VAT",
-            "shape": "card"
+            "shape": "card",
+            "kind": "master"
           },
           "vat_settlement": {
             "label": "Rozliczenie VAT",
             "plural": "Rozliczenia VAT",
-            "shape": "statement"
+            "shape": "statement",
+            "kind": "entry"
           },
           "vehicle": {
             "label": "Pojazd",
             "plural": "Pojazdy",
-            "shape": "card"
+            "shape": "card",
+            "kind": "master"
           },
           "cit_advance": {
             "label": "Zaliczka na CIT",
             "plural": "Zaliczki na CIT",
-            "shape": "statement"
+            "shape": "statement",
+            "kind": "entry"
           },
           "cit_status": {
             "label": "Status CIT na rok",
             "plural": "Statusy CIT",
-            "shape": "card"
+            "shape": "card",
+            "kind": "master"
           },
           "cit_limit": {
             "label": "Limity CIT na rok",
             "plural": "Limity CIT",
-            "shape": "card"
+            "shape": "card",
+            "kind": "master"
           },
           "prepaid_cost": {
             "label": "Koszt rozliczany w czasie (RMK)",
             "plural": "Koszty rozliczane w czasie (RMK)",
-            "shape": "card"
+            "shape": "card",
+            "kind": "master"
           },
           "prepaid_release": {
             "label": "Część RMK za miesiąc",
             "plural": "Części RMK za miesiące",
-            "shape": "card"
+            "shape": "card",
+            "kind": "entry"
           },
           "depreciation_charge": {
             "label": "Odpis amortyzacyjny za miesiąc",
             "plural": "Odpisy amortyzacyjne",
-            "shape": "card"
+            "shape": "card",
+            "kind": "entry"
           },
           "result_distribution": {
             "label": "Podział wyniku",
             "plural": "Podziały wyniku",
-            "shape": "card"
+            "shape": "card",
+            "kind": "entry"
           },
           "year_close_cost": {
             "label": "Zamknięcie roku – konto kosztów",
             "plural": "Zamknięcie roku – konta kosztów",
-            "shape": "card"
+            "shape": "card",
+            "kind": "entry"
           },
           "year_close_revenue": {
             "label": "Zamknięcie roku – konto przychodów",
             "plural": "Zamknięcie roku – konta przychodów",
-            "shape": "card"
+            "shape": "card",
+            "kind": "entry"
           },
           "year_close_tax": {
             "label": "Zamknięcie roku – podatek dochodowy",
             "plural": "Zamknięcie roku – podatek dochodowy",
-            "shape": "card"
+            "shape": "card",
+            "kind": "entry"
           },
           "provision": {
             "label": "Rezerwa",
             "plural": "Rezerwy",
-            "shape": "card"
+            "shape": "card",
+            "kind": "entry"
           },
           "receivable_write_down": {
             "label": "Odpis aktualizujący należność",
             "plural": "Odpisy aktualizujące należności",
-            "shape": "card"
+            "shape": "card",
+            "kind": "entry"
           },
           "role": {
             "label": "Rola",
             "plural": "Role",
-            "shape": "card"
+            "shape": "card",
+            "kind": "master"
           },
           "membership": {
             "label": "Członkostwo",
             "plural": "Członkostwa",
-            "shape": "card"
+            "shape": "card",
+            "kind": "master"
           },
           "mandate": {
             "label": "Umocowanie biura",
             "plural": "Umocowania biur",
-            "shape": "card"
+            "shape": "card",
+            "kind": "master"
           },
           "substitution": {
             "label": "Zastępstwo",
             "plural": "Zastępstwa",
-            "shape": "card"
+            "shape": "card",
+            "kind": "master"
           },
           "group": {
             "label": "Grupa",
             "plural": "Grupy",
-            "shape": "card"
+            "shape": "card",
+            "kind": "master"
           },
           "inventory_write_down": {
             "label": "Odpis aktualizujący zapasy",
             "plural": "Odpisy aktualizujące zapasy",
-            "shape": "card"
+            "shape": "card",
+            "kind": "entry"
           },
           "asset_advance": {
             "label": "Zaliczka na środek trwały",
             "plural": "Zaliczki na środki trwałe",
-            "shape": "card"
+            "shape": "card",
+            "kind": "entry"
           },
           "loan": {
             "label": "Pożyczka",
             "plural": "Pożyczki",
-            "shape": "card"
+            "shape": "card",
+            "kind": "master"
           },
           "deferred_tax": {
             "label": "Odroczony podatek dochodowy",
             "plural": "Odroczony podatek dochodowy",
-            "shape": "card"
+            "shape": "card",
+            "kind": "entry"
           },
           "fx_revaluation": {
             "label": "Wycena bilansowa walut",
             "plural": "Wyceny bilansowe walut",
-            "shape": "card"
+            "shape": "card",
+            "kind": "entry"
           },
           "liquidation_measurement": {
             "label": "Wycena bez założenia kontynuacji",
             "plural": "Wyceny bez założenia kontynuacji",
-            "shape": "card"
+            "shape": "card",
+            "kind": "entry"
           },
           "policy_adjustment": {
             "label": "Zmiana zasad rachunkowości",
             "plural": "Zmiany zasad rachunkowości",
-            "shape": "card"
+            "shape": "card",
+            "kind": "entry"
           },
           "development_costs": {
             "label": "Prace rozwojowe",
             "plural": "Prace rozwojowe",
-            "shape": "card"
+            "shape": "card",
+            "kind": "master"
           },
           "year_close_clearing": {
             "label": "Zamknięcie roku – konto rozliczeniowe",
             "plural": "Zamknięcie roku – konta rozliczeniowe",
-            "shape": "card"
+            "shape": "card",
+            "kind": "entry"
           }
         },
         "fields": {
@@ -4252,7 +4311,21 @@
           "Deklaracje i ich zapłata to finance.tax_declaration (kind jpk_v7, vat7, pit, zus_dra, pcc3, other; period, due_date, amount, payment_status).",
           "Zamknięty miesiąc to finance.period_lock (month, book); jego zapisy już się nie zmieniają.",
           "company.kind to 'self' dla tej firmy, 'customer' albo 'supplier' dla pozostałych."
-        ]
+        ],
+        "views": {
+          "account-list": "Plan kont",
+          "company-list": "Firmy",
+          "fx-rates": "Kursy walut",
+          "invoice-list": "Faktury",
+          "purchase-invoice-list": "Faktury zakupu",
+          "journal": "Dziennik",
+          "issued-documents": "Dokumenty wydane",
+          "trial-balance": "Zestawienie obrotów i sald",
+          "group-trial-balance": "Zestawienie obrotów i sald grupy (EUR)",
+          "invoice-by-customer": "Sprzedaż według nabywców",
+          "intercompany-positions": "Rozrachunki wewnątrz grupy",
+          "who-can-do-what": "Kto co może"
+        }
       }
     },
     {

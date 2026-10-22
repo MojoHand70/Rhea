@@ -121,7 +121,7 @@ func TestM3PolandPack(t *testing.T) {
 		t.Fatal(err)
 	}
 	if sum.Types != 41 || sum.Views != 38 || sum.Rules != 136 || sum.Activities != 38 || sum.Events != 67 || sum.Skipped != 0 ||
-		sum.Bundle != "pack-pl-v41" {
+		sum.Bundle != "pack-pl-v42" {
 		t.Fatalf("first load: %+v", sum)
 	}
 	// Idempotent: a reload changes nothing.
@@ -149,7 +149,7 @@ func TestM3PolandPack(t *testing.T) {
 	// Approving the pack's bundle IS the installation: its types, views and
 	// rules activate together, and the chart of accounts and the VAT rates
 	// materialize from the waiting events.
-	post("/api/bundles/pack-pl-v41/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-pl-v42/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {
 		t.Fatalf("worklist not cleared after approvals: %d", len(wl))
 	}

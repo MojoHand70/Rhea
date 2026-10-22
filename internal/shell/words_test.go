@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -113,6 +114,9 @@ func TestThePackSpeaks(t *testing.T) {
 		if !ok || tw.Shape == "" {
 			missing = append(missing, "type "+ty.Name)
 		}
+		if tw.Kind == "" { // what it is — a document, an entry, master data: the desk files its lists by it (2026-10-22)
+			missing = append(missing, "the kind of "+ty.Name)
+		}
 		for _, f := range ty.Fields {
 			if w.Fields[ty.Name+"."+f.Name] == "" && w.Fields[f.Name] == "" {
 				missing = append(missing, "field "+ty.Name+"."+f.Name)
@@ -121,6 +125,39 @@ func TestThePackSpeaks(t *testing.T) {
 				if w.Values[ty.Name+"."+f.Name][v] == "" && w.Values[f.Name][v] == "" {
 					missing = append(missing, "value "+ty.Name+"."+f.Name+"="+v)
 				}
+			}
+		}
+	}
+	// Every view a person opens is titled in the pack's language: the pack's own,
+	// or another pack's (the base seeds, the common packs, all in English) with
+	// its Polish title in the words. The kernel's own lists of a type are named
+	// by the type's words.
+	var own struct {
+		ViewDefs []core.ViewDef `json:"view_defs"`
+	}
+	if b, err := os.ReadFile(filepath.Join("..", "..", "packs", "pl", "pack.json")); err != nil || json.Unmarshal(b, &own) != nil {
+		t.Fatalf("the Poland pack: %v", err)
+	}
+	ours := map[string]bool{}
+	for _, v := range own.ViewDefs {
+		ours[v.ID] = true
+	}
+	var nav []struct {
+		Functions []struct {
+			Views []struct {
+				ID     string `json:"view_id"`
+				Notion string `json:"notion"`
+			} `json:"views"`
+		} `json:"functions"`
+	}
+	get("/api/nav", &nav)
+	for _, d := range nav {
+		for _, f := range d.Functions {
+			for _, v := range f.Views {
+				if v.Notion == "detail" || ours[v.ID] || strings.HasPrefix(v.ID, "derived:") || w.Views[v.ID] != "" {
+					continue
+				}
+				missing = append(missing, "the title of view "+v.ID)
 			}
 		}
 	}

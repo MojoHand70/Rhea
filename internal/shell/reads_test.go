@@ -146,7 +146,7 @@ func TestFaceReads(t *testing.T) {
 	for _, r := range rules {
 		switch r.ID {
 		case "pl-book-sales-invoice":
-			if r.Approval == nil || r.Approval.By != "krzysztof" || r.Approval.Bundle != "pack-pl-v41" || r.Approval.At != "2026-09-01" {
+			if r.Approval == nil || r.Approval.By != "krzysztof" || r.Approval.Bundle != "pack-pl-v42" || r.Approval.At != "2026-09-01" {
 				t.Fatalf("pack rule approval: %+v", r.Approval)
 			}
 			seen++
