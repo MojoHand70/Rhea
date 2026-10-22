@@ -3587,13 +3587,15 @@ time is the rule in all of them; the switch is always in the same place, at the 
    language.
 2. *The company switch at the top, one company at a time.* The company's name in the
    top bar becomes the switch: it names the company acted for and opens the companies
-   the person may act for — search, pinned and recent first, each with what waits there.
-   Choosing one turns the whole desk to it — the drawer, the tabs, her panel, the box;
-   each company keeps its own arrangement of tabs, so returning restores it. For an
-   office the first entry is the office's home, **Klienci**: the one table, a row per
-   client — what waits, the VAT and JPK dates, documents unread, the owner's seat taken
-   or empty — a row opening that client. One company at a time, as the market does:
-   several clients side by side is where a booking lands on the wrong books.
+   the person may act for — search, pinned and recent first. Choosing one turns the whole
+   desk to it — the drawer, the tabs, her panel, the box; each company keeps its own
+   arrangement of tabs, so returning restores it. One company at a time, as the market
+   does (KK chose it): several clients side by side is where a booking lands on the
+   wrong books. *Not in this step* (KK, 2026-10-22): the office's worklist over all its
+   clients — what is done, what remains, notifications about a client — and which of its
+   accountants answers for which clients. They are designed together with case
+   management and the smart documents' workflows, not built ahead of them; the switch
+   names companies, nothing waits in it yet.
 3. *People and rights in a "Ludzie" activity.* For the company acted for: **Osoby** (who,
    in which role, from when, invited by whom), **Uprawnienia** (the who-can-do-what view,
    every cell its grant), **Grupy**, **Zastępstwa**, **Zaproszenia** waiting, **Moje
@@ -3611,10 +3613,12 @@ time is the rule in all of them; the switch is always in the same place, at the 
    own desk. This needs the GUS and white-list channels in `markets/pl` first.
 
 **Order of work.** (1) The drawer by kind, with the Poland pack's Polish titles — the
-fastest relief. (2) The company switch and the office's Klienci home, on a test world of
-an office with two clients. (3) Ludzie, from the phone's screens and the rights view. (4)
+fastest relief (done the same day: Rhea 68182f2, pack v42, rheaface e4cc52b). (2) The
+company switch, on a test world of an office with two clients. (3) Ludzie, from the
+phone's screens and the rights view. (4)
 The GUS and white-list channels, then Załóż konto and Dodaj klienta. Each in the gallery
-first, checked as the face's check asks.
+first, checked as the face's check asks. Apart, to design first with case management and
+the smart documents: the office's worklist over its clients and who answers for whom.
 
 ## Language decisions with a recorded destination
 
