@@ -552,3 +552,68 @@ func TestClientFromEnvNeverFakesByAccident(t *testing.T) {
 		t.Fatal("fake asked for: the fake")
 	}
 }
+
+// A company's invoices go out with the installation's VAT rates (review
+// 2026-10-21, F1): a company's pass hid every row that was not the
+// company's own, the pack's VAT rates among them — on white01, where
+// Helios's books are company-95's and the rates stayed the installation's,
+// every invoice was refused for naming no rate the pack knows and nothing
+// was sent. Now of what a pass only consults a company's pass sees the
+// company's rows and the installation's; of what it acts on — the invoices
+// it sends, the submissions it reads back — the company's own alone, so the
+// installation's own invoices are never sent in a company's name.
+func TestKSeFSendsACompanysInvoicesWithTheInstallationsRates(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	x := &exec.Executor{Store: s}
+	installPoland(t, s, x)
+	fact := func(company, typ, dedup string, payload map[string]any) {
+		t.Helper()
+		raw, _ := json.Marshal(payload)
+		if _, err := s.AppendEvent(ctx, core.Event{Kind: core.KindRaw, Type: typ, OccurredAt: "2026-09-21", Payload: raw, DedupKey: dedup, Company: company}); err != nil {
+			t.Fatal(err)
+		}
+		if _, errs := x.ProcessPending(ctx); len(errs) > 0 {
+			t.Fatalf("%s: %v", typ, errs)
+		}
+	}
+	party := func(company, dedup, name, kind, nip string) {
+		fact(company, "company.registered", dedup, map[string]any{"name": name, "kind": kind, "vat_id": "PL" + nip, "country": "PL",
+			"iban": "PL83101010230000261395100000", "address": "ul. Testowa 1, 00-001 Warszawa"})
+	}
+	invoice := func(company, dedup, number, seller, buyer string) {
+		fact(company, "sales.invoice.issued", dedup, map[string]any{"number": number, "issue_date": "2026-09-21", "seller_nip": "PL" + seller, "buyer_nip": "PL" + buyer,
+			"net": "1000.00", "vat": "230.00", "gross": "1230.00", "vat_rate": "23", "currency": "PLN", "intragroup": "no", "market": "pl"})
+	}
+	company := "company-95"
+	party(company, "self", "Helios sp. z o.o.", "self", "8058083055")
+	party(company, "buyer", "Nabywca S.A.", "customer", "5265877635")
+	invoice(company, "inv-1", "FV/1/2026", "8058083055", "5265877635")
+	party("", "inst-self", "Sprzed Przed Kluczem", "self", "1111111105")
+	party("", "inst-buyer", "Kupiec Przed Kluczem", "customer", "1111111111")
+	invoice("", "inv-old", "FV/9/2025", "1111111105", "1111111111")
+
+	counting := &countingKSeF{}
+	run, err := adapter.Run(ctx, s, x, pl.KSeF{Client: counting, Today: func() string { return "2026-09-22" }})
+	if err != nil || run.PassErr != nil {
+		t.Fatalf("the owner's pass: %v / %v", err, run.PassErr)
+	}
+	if counting.sent != 2 {
+		t.Fatalf("invoices sent: %d, want company-95's and the installation's own, once each", counting.sent)
+	}
+	subs, err := s.ObjectsByType(ctx, "ksef_submission")
+	if err != nil {
+		t.Fatal(err)
+	}
+	by := map[string]string{}
+	for _, sub := range subs {
+		inv, err := s.GetObject(ctx, core.Text(sub.State["invoice"]))
+		if err != nil {
+			t.Fatal(err)
+		}
+		by[core.Text(inv.State["number"])] = sub.Company + " " + core.Text(sub.State["status"])
+	}
+	if by["FV/1/2026"] != company+" accepted" || by["FV/9/2025"] != " accepted" || len(by) != 2 {
+		t.Fatalf("each invoice accepted under its own company: %v", by)
+	}
+}

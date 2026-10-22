@@ -4851,3 +4851,12 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   amounts moved is refused. Assessed and left (the finding's last sentence, a replayed
   prior node's stale state letting a new amendment pass the lifecycle law): its own step,
   with a reproduction. TestBackfillIsEachCompanysOwn.
+
+## 2026-10-22 — A channel's pass sees what it consults (the whole-tree review, step 5)
+
+- F1: a channel may say which types it acts on (`adapter.Acting`); in a company's pass it
+  sees of those the company's own objects alone and of every other type the company's rows
+  and the installation's. The KSeF send acts on sales_invoice and ksef_submission and
+  consults companies and VAT rates. A channel that says nothing keeps the strict view, where
+  a missing master record fails visibly and a document is never booked once per company.
+  TestKSeFSendsACompanysInvoicesWithTheInstallationsRates.

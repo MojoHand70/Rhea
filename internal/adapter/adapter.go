@@ -71,6 +71,18 @@ type Adapter interface {
 	Pass(ctx context.Context, reads Reads) ([]core.Event, error)
 }
 
+// Acting is an adapter that says which types it acts on — the invoices it
+// sends, the submissions it reads back. In a company's pass it sees of
+// those the company's own objects alone, so the installation's own are
+// never acted on in a company's name; every other type it only consults,
+// and sees as the store shows the company: its rows and the installation's
+// (the pack's VAT rates). An adapter that says nothing sees every type as
+// its own — a document read from every company's pass would be booked for
+// each — and a master record it needs is then missing, visibly.
+type Acting interface {
+	ActsOn() []string
+}
+
 // Implemented is one adapter the binary carries: the "implemented" side of
 // the channel registry. The "connected" side is the active channel
 // declarations in the activity store (core.ChannelSpec).
@@ -204,10 +216,14 @@ func Run(ctx context.Context, s *store.Store, x *exec.Executor, a Adapter) (Resu
 
 // scopedReads shows an adapter one company's objects: the installation's
 // rows are every scope's to read, but a document is one company's, and a
-// reader seeing it from every company would book it for each.
+// reader seeing it from every company would book it for each. Of the types
+// an adapter only consults (Acting), the installation's rows stay: hiding
+// them hid the pack's VAT rates from every company's KSeF pass, which sent
+// nothing (review 2026-10-21, F1).
 type scopedReads struct {
 	Reads
 	company string
+	acts    map[string]bool // nil: every type is acted on
 }
 
 // EventsOfTypes is the store's, within the scope, for readers that look at
@@ -226,6 +242,9 @@ func (r scopedReads) ObjectsByType(ctx context.Context, typ string) ([]core.Obje
 	objs, err := r.Reads.ObjectsByType(ctx, typ)
 	if err != nil {
 		return nil, err
+	}
+	if r.acts != nil && !r.acts[typ] {
+		return objs, nil
 	}
 	out := objs[:0]
 	for _, o := range objs {
@@ -250,7 +269,14 @@ func runScoped(ctx context.Context, s *store.Store, x *exec.Executor, a Adapter)
 		b.Bound(ch)
 	}
 	company := store.CompanyOf(ctx)
-	events, passErr := a.Pass(ctx, scopedReads{Reads: s, company: company})
+	reads := scopedReads{Reads: s, company: company}
+	if acting, ok := a.(Acting); ok {
+		reads.acts = map[string]bool{}
+		for _, t := range acting.ActsOn() {
+			reads.acts[t] = true
+		}
+	}
+	events, passErr := a.Pass(ctx, reads)
 	res.PassErr = passErr
 	for _, ev := range events {
 		if !ch.Spec.Allows(ev.Type) {

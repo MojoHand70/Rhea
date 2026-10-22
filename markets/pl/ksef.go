@@ -95,6 +95,11 @@ const (
 	EventKSeFRejected  = "ksef.invoice.rejected"
 )
 
+// ActsOn is what the pass acts on: the invoices it sends and the
+// submissions it reads back, a company's own; the companies and the VAT
+// rates it only consults, the installation's among them.
+func (KSeF) ActsOn() []string { return []string{"sales_invoice", "ksef_submission"} }
+
 func (k KSeF) Pass(ctx context.Context, reads adapter.Reads) ([]core.Event, error) {
 	invoices, err := reads.ObjectsByType(ctx, "sales_invoice")
 	if err != nil {
