@@ -51,13 +51,20 @@ type BackfillPlan struct {
 	Fingerprint string `json:"plan"`
 }
 
-// fingerprint is a plan's identity: the chains' events and rules, in order.
+// fingerprint is a plan's identity: the chains' events, dates and rules, in
+// order, and what each new consequence books — events and rules alone let a
+// dry run whose amounts had moved pass for the plan approved (review
+// 2026-10-21, B3).
 func (p *BackfillPlan) fingerprint() string {
 	h := sha256.New()
 	for _, c := range p.Chains {
-		fmt.Fprintf(h, "%d:", c.EventID)
+		fmt.Fprintf(h, "%d@%s>%s:", c.EventID, c.BookedAt, c.Forwarded)
 		for _, n := range c.nodes {
 			fmt.Fprintf(h, "%s/%d;", n.rule.ID, n.rule.Version)
+			if n.booked == 0 {
+				b, _ := json.Marshal([]any{n.mat, n.amend, n.matched, n.unmatched})
+				h.Write(b)
+			}
 		}
 		fmt.Fprint(h, "\n")
 	}
@@ -91,29 +98,42 @@ func (x *Executor) PlanBackfill(ctx context.Context, date string) (BackfillPlan,
 	// 2026-10-18: closed before the rule existed, January to August).
 	planned := newPlannedWorld()
 	ctx = context.WithValue(ctx, plannedKey{}, planned)
-	get := func(id string) (map[string]any, bool, error) {
-		if st, ok := planned.state[id]; ok {
-			return st, true, nil
-		}
-		o, err := x.Store.GetObject(ctx, id)
-		if errors.Is(err, store.ErrNotFound) {
-			return nil, false, nil
-		}
-		if err != nil {
-			return nil, false, err
-		}
-		return o.State, true, nil
-	}
-	lookup := func(typ, field string, value any) ([]string, error) {
-		ids, err := x.Store.FindObjectIDsByField(ctx, typ, field, core.Text(value))
-		if err != nil {
-			return nil, err
-		}
-		return planned.lookup(ids, typ, field, value), nil
-	}
+	// Each chain is planned in its own company's view, as the live path
+	// books it, and sees the bookings planned before it in that company and
+	// the installation's: in the caller's view, an operator's backfill summed
+	// every company's balances into each one's, and a company's own could
+	// not write a chain rooted in the installation's facts (review
+	// 2026-10-21, B3). A backfill run for a company is that company's past.
+	_, scoped := store.ScopeOf(ctx)
+	acting := store.CompanyOf(ctx)
 	for _, ev := range raws {
 		if waiting[ev.ID] || core.ReservedEventType(ev.Type) || core.TimeEventType(ev.Type) {
 			continue
+		}
+		if scoped && ev.Company != acting {
+			continue
+		}
+		company := ev.Company
+		cctx := scopeFor(ctx, company)
+		get := func(id string) (map[string]any, bool, error) {
+			if st, ok := planned.stateOf(id, company); ok {
+				return st, true, nil
+			}
+			o, err := x.Store.GetObject(cctx, id)
+			if errors.Is(err, store.ErrNotFound) {
+				return nil, false, nil
+			}
+			if err != nil {
+				return nil, false, err
+			}
+			return o.State, true, nil
+		}
+		lookup := func(typ, field string, value any) ([]string, error) {
+			ids, err := x.Store.FindObjectIDsByField(cctx, typ, field, core.Text(value))
+			if err != nil {
+				return nil, err
+			}
+			return planned.lookup(ids, typ, field, value, company), nil
 		}
 		chain, err := x.Store.ChainOf(ctx, ev.ID)
 		if err != nil {
@@ -132,14 +152,14 @@ func (x *Executor) PlanBackfill(ctx context.Context, date string) (BackfillPlan,
 			continue
 		}
 		root, forwarded := ev, ""
-		nodes, err := x.expandChain(ctx, root, rules, payload, lookup, get, prior, nil)
+		nodes, err := x.expandChain(cctx, root, rules, payload, lookup, get, prior, nil)
 		var locked *PeriodLockedError
 		if errors.As(err, &locked) {
 			// Never into a closed period: offered forward, dated on the
 			// backfill, still caused by the original fact.
 			forwarded = locked.Error()
 			root.OccurredAt = date
-			nodes, err = x.expandChain(ctx, root, rules, payload, lookup, get, prior, nil)
+			nodes, err = x.expandChain(cctx, root, rules, payload, lookup, get, prior, nil)
 		}
 		if err != nil {
 			plan.Errors = append(plan.Errors, fmt.Sprintf("event %d: %v", ev.ID, err))
@@ -161,7 +181,7 @@ func (x *Executor) PlanBackfill(ctx context.Context, date string) (BackfillPlan,
 		if len(c.nodes) == 0 {
 			continue
 		}
-		planned.add(c.nodes, get)
+		planned.add(c.nodes, get, company)
 		c.nodes = nodes // booking needs the replayed nodes too, as causes
 		plan.Chains = append(plan.Chains, c)
 	}
@@ -282,27 +302,45 @@ func (x *Executor) ApproveBackfillPlan(ctx context.Context, approvedBy, date, pl
 // plannedWorld is what the chains planned so far would leave: the objects
 // they materialize and the states they amend, read before the store's, and
 // their postings, which the ledger's balance read adds to the booked ones.
+// Each planned object is its chain's company's: a chain sees its own
+// company's and the installation's, as the store shows it.
 type plannedWorld struct {
-	state map[string]map[string]any
-	typ   map[string]string
-	order []string
+	state   map[string]map[string]any
+	typ     map[string]string
+	company map[string]string
+	order   []string
 }
 
 type plannedKey struct{}
 
 func newPlannedWorld() *plannedWorld {
-	return &plannedWorld{state: map[string]map[string]any{}, typ: map[string]string{}}
+	return &plannedWorld{state: map[string]map[string]any{}, typ: map[string]string{}, company: map[string]string{}}
 }
 
-// add takes in a planned chain's new consequences.
-func (w *plannedWorld) add(nodes []chainNode, get core.Getter) {
+// visible reports whether a chain of company sees a planned object.
+func (w *plannedWorld) visible(id, company string) bool {
+	c := w.company[id]
+	return c == "" || c == company
+}
+
+// stateOf is a planned object's state as a chain of company sees it.
+func (w *plannedWorld) stateOf(id, company string) (map[string]any, bool) {
+	st, ok := w.state[id]
+	if !ok || !w.visible(id, company) {
+		return nil, false
+	}
+	return st, true
+}
+
+// add takes in a planned chain's new consequences, as its company's.
+func (w *plannedWorld) add(nodes []chainNode, get core.Getter, company string) {
 	for _, n := range nodes {
 		if n.booked != 0 {
 			continue
 		}
 		switch {
 		case n.mat.ObjectID != "":
-			w.put(n.mat.ObjectID, n.mat.ObjectType, n.mat.State)
+			w.put(n.mat.ObjectID, n.mat.ObjectType, n.mat.State, company)
 		case n.amend != nil:
 			base, ok, _ := get(n.amend.ObjectID)
 			st := map[string]any{}
@@ -314,14 +352,15 @@ func (w *plannedWorld) add(nodes []chainNode, get core.Getter) {
 			for k, v := range n.amend.Set {
 				st[k] = v
 			}
-			w.put(n.amend.ObjectID, n.amend.ObjectType, st)
+			w.put(n.amend.ObjectID, n.amend.ObjectType, st, company)
 		}
 	}
 }
 
-func (w *plannedWorld) put(id, typ string, st map[string]any) {
+func (w *plannedWorld) put(id, typ string, st map[string]any, company string) {
 	if _, seen := w.state[id]; !seen {
 		w.order = append(w.order, id)
+		w.company[id] = company
 	}
 	w.state[id], w.typ[id] = st, typ
 }
@@ -329,31 +368,32 @@ func (w *plannedWorld) put(id, typ string, st map[string]any) {
 // lookup is the store's answer as the planned chains change it: an object
 // whose planned state no longer matches drops out, a planned one that
 // matches joins, after the booked ones — where it will stand once booked.
-func (w *plannedWorld) lookup(stored []string, typ, field string, value any) []string {
+func (w *plannedWorld) lookup(stored []string, typ, field string, value any, company string) []string {
 	want := core.Text(value)
 	out := make([]string, 0, len(stored))
 	in := map[string]bool{}
 	for _, id := range stored {
 		in[id] = true
-		if st, ok := w.state[id]; ok && core.Text(st[field]) != want {
+		if st, ok := w.stateOf(id, company); ok && core.Text(st[field]) != want {
 			continue
 		}
 		out = append(out, id)
 	}
 	for _, id := range w.order {
-		if !in[id] && w.typ[id] == typ && core.Text(w.state[id][field]) == want {
+		if !in[id] && w.visible(id, company) && w.typ[id] == typ && core.Text(w.state[id][field]) == want {
 			out = append(out, id)
 		}
 	}
 	return out
 }
 
-// balance is the planned postings' part of an account's balance.
-func (w *plannedWorld) balance(book, account, from, to string) int64 {
+// balance is the planned postings' part of an account's balance, as a
+// chain of company sees them.
+func (w *plannedWorld) balance(book, account, from, to, company string) int64 {
 	var n int64
 	for _, id := range w.order {
 		st := w.state[id]
-		if w.typ[id] != PostingObjectType || core.Text(st["account"]) != account {
+		if w.typ[id] != PostingObjectType || core.Text(st["account"]) != account || !w.visible(id, company) {
 			continue
 		}
 		b := core.Text(st["book"])

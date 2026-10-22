@@ -994,7 +994,7 @@ func (x *Executor) env(ctx context.Context, payload any, lookup core.Lookup, get
 		Balance: func(book, account, from, to string) (int64, error) {
 			n, err := x.Store.AccountBalance(ctx, book, account, from, to)
 			if w, ok := ctx.Value(plannedKey{}).(*plannedWorld); ok && err == nil {
-				n += w.balance(book, account, from, to) // a backfill's chains planned so far
+				n += w.balance(book, account, from, to, store.CompanyOf(ctx)) // a backfill's chains planned so far, this company's
 			}
 			return n, err
 		},

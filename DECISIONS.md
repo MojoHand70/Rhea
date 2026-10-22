@@ -4843,3 +4843,11 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   for's (`project.PathOf`): the copy is filtered by the company acted for, so a desk acting
   for one client and then another needs two files. A context acting for its scope's one
   company keeps the file it had. TestTheCopyIsTheCompanyActedFor.
+- B3: a backfill plans each past chain in its own company's view (as the live path books
+  it), against the bookings planned before it in that company and the installation's; a
+  backfill run for a company is that company's past alone (the installation's facts and
+  other companies' wait for the operator's run or their own); the plan's fingerprint also
+  covers each chain's dates and what each new consequence books, so a dry run whose
+  amounts moved is refused. Assessed and left (the finding's last sentence, a replayed
+  prior node's stale state letting a new amendment pass the lifecycle law): its own step,
+  with a reproduction. TestBackfillIsEachCompanysOwn.

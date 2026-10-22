@@ -8,6 +8,7 @@ import (
 
 	"rhea/internal/core"
 	"rhea/internal/exec"
+	"rhea/internal/store"
 	"rhea/internal/store/storetest"
 )
 
@@ -286,4 +287,104 @@ func TestBackfillInChainAmendmentKeepsProvenance(t *testing.T) {
 		t.Fatalf("case = %+v", cases)
 	}
 	assertReplayIdentical(t, x)
+}
+
+// A backfill books each company's past from that company's books (review
+// 2026-10-21, B3): every past chain was expanded in the caller's view — run
+// by the operator, company A's late consequence summed A's and B's
+// records, and one company's planned bookings fed the next company's; run
+// for a company, a chain rooted in the installation's own facts could not
+// be written there and the whole approval failed. Now each chain is planned
+// in its own company's view, with the bookings planned before it in that
+// company and the installation's; a company's backfill is its own past; and
+// the plan's fingerprint covers what it books, so a dry run whose amounts
+// moved is refused.
+func TestBackfillIsEachCompanysOwn(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	x := &exec.Executor{Store: s}
+	a, b, date := "PL5250001111", "PL5260001246", "2026-10-22"
+	for _, ot := range []core.ObjectType{
+		{Name: "note", Version: 1, Domain: "work", LabelField: "text", Amendable: []string{"amount"},
+			Fields: []core.FieldDef{{Name: "text", Type: "string", Required: true}, {Name: "amount", Type: "money", Required: true}}},
+		{Name: "echo", Version: 1, Domain: "work", Fields: []core.FieldDef{{Name: "text", Type: "string", Required: true}, {Name: "total", Type: "money", Required: true}}},
+		{Name: "tally", Version: 1, Domain: "work", Fields: []core.FieldDef{{Name: "text", Type: "string", Required: true}, {Name: "total", Type: "money", Required: true}}},
+	} {
+		if err := s.InsertObjectType(ctx, ot); err != nil {
+			t.Fatal(err)
+		}
+	}
+	activateRule(t, x, "note", 100, core.RuleSpec{Match: core.Match{EventType: "note.taken"},
+		Effect: core.Effect{Object: core.ObjectTemplate{Type: "note", Fields: map[string]string{"text": "=$.text", "amount": "=$.amount"}}}})
+	activateRule(t, x, "correct-note", 100, core.RuleSpec{Match: core.Match{EventType: "note.corrected"},
+		Effect: core.Effect{Amend: &core.AmendTemplate{Type: "note", Target: "=$.note", Set: map[string]string{"amount": "=$.amount"}}}})
+	fact := func(company, dedup, typ, payload string) {
+		t.Helper()
+		if _, err := s.AppendEvent(ctx, core.Event{Kind: core.KindRaw, Type: typ, OccurredAt: "2026-09-01",
+			Payload: json.RawMessage(payload), DedupKey: dedup, Company: company}); err != nil {
+			t.Fatal(err)
+		}
+		if _, errs := x.ProcessPending(ctx); len(errs) != 0 {
+			t.Fatal(errs)
+		}
+	}
+	fact(a, "a1", "note.taken", `{"text":"shared","amount":"12.50"}`)
+	fact(b, "b1", "note.taken", `{"text":"shared","amount":"99.00"}`)
+	fact("", "i1", "note.taken", `{"text":"inst","amount":"1.00"}`)
+	totals := func(typ string) map[string]string {
+		t.Helper()
+		objs, err := s.ObjectsByType(ctx, typ)
+		if err != nil {
+			t.Fatal(err)
+		}
+		out := map[string]string{}
+		for _, o := range objs {
+			out[o.Company] = core.Text(o.State["total"])
+		}
+		return out
+	}
+	late := func(typ string) core.RuleSpec {
+		return core.RuleSpec{Match: core.Match{EventType: "note.taken"}, Effect: core.Effect{Object: core.ObjectTemplate{Type: typ,
+			Fields: map[string]string{"text": "=$.text", "total": "=sum(m in objects(note, text, $.text): m.amount)"}}}}
+	}
+
+	// The operator's backfill: every company's past, each from its own books.
+	activateRule(t, x, "echo", 100, late("echo"))
+	if n, errs, err := x.ApproveBackfill(ctx, "operator", date); err != nil || len(errs) != 0 || n != 3 {
+		t.Fatalf("the operator's backfill: %d %v %v", n, errs, err)
+	}
+	if got := totals("echo"); got[a] != "1250" || got[b] != "9900" || got[""] != "100" {
+		t.Fatalf("each company's total from its own notes: %v", got)
+	}
+
+	// A company's backfill is its own past; a dry run whose amounts moved
+	// before the approval is refused.
+	activateRule(t, x, "tally", 100, late("tally"))
+	alfa := store.WithCompany(ctx, a)
+	read, err := x.PlanBackfill(alfa, date)
+	if err != nil || len(read.Chains) != 1 {
+		t.Fatalf("alfa's dry run: %v %+v", err, read.Chains)
+	}
+	ids, err := s.FindObjectIDsByField(ctx, "note", "text", "shared")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range ids {
+		if o, _ := s.GetObject(ctx, id); o.Company == a {
+			fact(a, "a1-corrected", "note.corrected", `{"note":"`+id+`","amount":"20.00"}`)
+		}
+	}
+	if _, _, err := x.ApproveBackfillPlan(alfa, "operator", date, read.Fingerprint); err == nil || !strings.Contains(err.Error(), "moved") {
+		t.Fatalf("approving a dry run whose amounts moved: %v", err)
+	}
+	again, err := x.PlanBackfill(alfa, date)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n, errs, err := x.ApproveBackfillPlan(alfa, "operator", date, again.Fingerprint); err != nil || len(errs) != 0 || n != 1 {
+		t.Fatalf("alfa's backfill: %d %v %v", n, errs, err)
+	}
+	if got := totals("tally"); len(got) != 1 || got[a] != "2000" {
+		t.Fatalf("alfa's own past alone: %v", got)
+	}
 }
