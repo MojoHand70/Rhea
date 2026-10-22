@@ -220,9 +220,20 @@ func (s *Server) buildExplainTree(ctx context.Context, ix *chainIndex, root core
 		if ev.Type == core.EventObjectAmended {
 			var am core.AmendedObject
 			if json.Unmarshal(ev.Payload, &am) == nil {
+				// money leaves as money: the log keeps minor units, and a note
+				// corrected to 350.50 read 35050 here (review 2026-10-21, E3)
+				set := make(map[string]any, len(am.Set))
+				for k, v := range am.Set {
+					set[k] = v
+					if moneyField(typeByName[am.ObjectType], k) {
+						if minor, ok := moneyMinor(v); ok {
+							set[k] = core.FormatMoney(minor)
+						}
+					}
+				}
 				ea := &explainAmend{explainObject: explainObject{
 					ObjectID: am.ObjectID, ObjectType: am.ObjectType,
-					DetailViewID: detailFor[am.ObjectType], Calc: am.Calc}, Set: am.Set}
+					DetailViewID: detailFor[am.ObjectType], Calc: am.Calc}, Set: set}
 				if o, err := s.Store.GetObject(ctx, am.ObjectID); err == nil {
 					if t, ok := typeByName[o.Type]; ok && t.LabelField != "" {
 						ea.Label, _ = o.State[t.LabelField].(string)
@@ -269,4 +280,14 @@ func detailViewByType(vds []core.ViewDef) map[string]string {
 		}
 	}
 	return out
+}
+
+// moneyField reports whether a type declares the field as money.
+func moneyField(t core.ObjectType, field string) bool {
+	for _, f := range t.Fields {
+		if f.Name == field {
+			return f.Type == "money"
+		}
+	}
+	return false
 }

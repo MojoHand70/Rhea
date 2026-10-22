@@ -4979,3 +4979,6 @@ with its four points settled the same day:
   every company — no longer machine routes, and a person needs the gate's view in every
   company anyone is let into (`rights.LetIn`). The operator's shell, naming no person, keeps
   them where the kernel does not serve persons only. TestTheDryRunsAskWhatTheGateAsks.
+- E3: an amendment's money fields leave the explanation as decimal strings ("350.50"), read
+  from the amended type's fields, as money crosses every other boundary (invariant 6).
+  TestAnAmendmentsMoneyIsMoneyInWhy.

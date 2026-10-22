@@ -58,7 +58,7 @@ func newGrantsWorld(t *testing.T) *grantsWorld {
 	if _, _, errs, err := w.x.ApproveBundle(w.ctx, sum.Bundle, "operator", w.today); err != nil || len(errs) != 0 {
 		t.Fatalf("approve: %v %v", err, errs)
 	}
-	if err := w.s.InsertObjectType(w.ctx, core.ObjectType{Name: "note", Version: 1, Domain: "work", LabelField: "text", Amendable: []string{"text"},
+	if err := w.s.InsertObjectType(w.ctx, core.ObjectType{Name: "note", Version: 1, Domain: "work", LabelField: "text", Amendable: []string{"text", "amount"},
 		Fields: []core.FieldDef{{Name: "text", Type: "string", Required: true}, {Name: "amount", Type: "money", Required: true}}}); err != nil {
 		t.Fatal(err)
 	}
@@ -617,5 +617,49 @@ func TestTheDryRunsAskWhatTheGateAsks(t *testing.T) {
 		if res.StatusCode != 401 {
 			t.Fatalf("%s naming no person: %d", path, res.StatusCode)
 		}
+	}
+}
+
+// An amendment's money is money in the explanation (review 2026-10-21, E3):
+// the walk handed an amendment's fields on as the log keeps them, so a note
+// corrected to 350.50 read 35050 — a hundred times the amount — wherever
+// "why?" was asked. Now a money field leaves as a decimal string, as money
+// crosses every other boundary.
+func TestAnAmendmentsMoneyIsMoneyInWhy(t *testing.T) {
+	w := newGrantsWorld(t)
+	a := "PL5250001111"
+	if _, err := w.s.InsertActivityVersion(w.ctx, core.Activity{Name: "correct_note", Status: core.StatusActive, Domain: "work", Description: "correct a note's amount",
+		Spec: core.ActivitySpec{Inputs: []core.FieldDef{{Name: "note", Type: "ref<note>", Required: true}, {Name: "amount", Type: "money", Required: true}},
+			Emits: "note.corrected", Who: []string{"human"}}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := w.s.InsertRuleVersion(w.ctx, core.Rule{ID: "correct-note", Status: core.StatusActive, Priority: 100, EffectiveFrom: "2026-01-01",
+		CreatedBy: "test", Description: "a corrected note", Spec: core.RuleSpec{Match: core.Match{EventType: "note.corrected"},
+			Effect: core.Effect{Amend: &core.AmendTemplate{Type: "note", Target: "=$.note", Set: map[string]string{"amount": "=$.amount"}}}}}); err != nil {
+		t.Fatal(err)
+	}
+	w.mustDoor("", a, "take_note", map[string]any{"text": "a note", "amount": "12.50"})
+	ids, err := w.s.FindObjectIDsByField(w.ctx, "note", "text", "a note")
+	if err != nil || len(ids) != 1 {
+		t.Fatal(err, ids)
+	}
+	var out map[string]any
+	if code := w.call("", a, "POST", "/api/activities/correct_note/trigger", map[string]any{"inputs": map[string]any{"note": ids[0], "amount": "350.50"}}, &out); code != 200 {
+		t.Fatalf("the correction: %d %v", code, out)
+	}
+	var why struct {
+		Tree struct {
+			Children []struct {
+				Amend *struct {
+					Set map[string]any `json:"set"`
+				} `json:"amend"`
+			} `json:"children"`
+		} `json:"tree"`
+	}
+	if code := w.call("", a, "GET", fmt.Sprintf("/api/explain?event=%d", int64(out["event_id"].(float64))), nil, &why); code != 200 {
+		t.Fatalf("why: %d", code)
+	}
+	if len(why.Tree.Children) != 1 || why.Tree.Children[0].Amend == nil || why.Tree.Children[0].Amend.Set["amount"] != "350.50" {
+		t.Fatalf("the amendment explained: %+v", why.Tree.Children)
 	}
 }
