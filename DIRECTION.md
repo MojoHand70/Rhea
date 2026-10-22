@@ -3541,6 +3541,81 @@ chooses, the books compute; a closed set of shapes for every domain and every
 client's app; the frame never moves, the learning lands in its places;
 monospace is a fact from the books; consistency and speed are tests.*
 
+## The desk in order: what is where, and whose (KK, 2026-10-22)
+
+KK, after the gallery: "Everything here is very chaotic, functions are mixed between
+drawer cards, not sorted, we mix metadata with transactions, general mess." And: if an
+accounting office works here, where does it choose the client? Where are users, their
+responsibilities, rights and permissions managed? Are there user groups? How does the
+house invite or create new clients? (The quick questions, the first of his points, moved
+the same day into her panel, about the tab in front — rheaface 7e71db9.)
+
+**What it rests on, already decided.** The notions are the people pack's (v3): person,
+role, membership, mandate, substitution and group, each a fact, with the who-can-do-what
+view (the `rights` notion, every cell opening to the grant behind it) — "People and
+rights", above. The onboarding ladder there (Rhea onboards an office or a company by NIP
+through GUS; an office adds its staff, its clients under a mandate, its clients' staff)
+stands; its screens and the GUS and white-list channels are its steps (5) and (6), not
+built. Acting for one company sees that company alone (the review's B1, 2026-10-22). The
+frame never moves; the face knows no business. What is missing is the face's half: where
+each of these lives on the desk. Today the drawer files views by the pack's function
+folders, so a domain mixes documents, reports and master data, and titles still in
+English ("Trial balance", "FX rates", "Invoices") show as they are; the desk names its
+one company as fixed text; people, rights and keys are on the phone only; nothing creates
+a company.
+
+**How the market does it.** QuickBooks Online Accountant: a "Go to QuickBooks" dropdown in
+the toolbar lists the firm's clients, the client's name then stays in the toolbar with
+"Back to practice", and the firm's home is a client list. wFirma's office list: a client
+is entered by its name, up to five pinned at the top. Xero: the organisation's name at the
+top left switches organisations. Odoo's Accounting menu keeps customers' work (invoices,
+credit notes, payments), vendors' work, reporting and configuration apart. One company at a
+time is the rule in all of them; the switch is always in the same place, at the top.
+
+**Proposed, each the standard Rhea suggests.**
+
+1. *The drawer by kind, then by function.* Every domain's drawer has the same three
+   folders in the same order: **Dokumenty i zapisy** (lists of documents and entries — the
+   work: invoices, bank lines, postings, flows), **Raporty** (registers, statements,
+   analyses — computed, read-only), **Kartoteki** (master data: firms, the chart of
+   accounts, VAT rates, exchange rates, people's roles). The kind comes from the data
+   alone — a list of a type the pack marks as a document, a list of any other type, a
+   computed view — so the face stays ignorant of business; the pack's function (VAT,
+   KSeF, Rozrachunki) groups within a kind only where a kind holds many. Every title
+   comes from the pack's words in its language: the Poland pack gives Polish titles to
+   the views still in English, and the pack's check fails on a title not in the pack's
+   language.
+2. *The company switch at the top, one company at a time.* The company's name in the
+   top bar becomes the switch: it names the company acted for and opens the companies
+   the person may act for — search, pinned and recent first, each with what waits there.
+   Choosing one turns the whole desk to it — the drawer, the tabs, her panel, the box;
+   each company keeps its own arrangement of tabs, so returning restores it. For an
+   office the first entry is the office's home, **Klienci**: the one table, a row per
+   client — what waits, the VAT and JPK dates, documents unread, the owner's seat taken
+   or empty — a row opening that client. One company at a time, as the market does:
+   several clients side by side is where a booking lands on the wrong books.
+3. *People and rights in a "Ludzie" activity.* For the company acted for: **Osoby** (who,
+   in which role, from when, invited by whom), **Uprawnienia** (the who-can-do-what view,
+   every cell its grant), **Grupy**, **Zastępstwa**, **Zaproszenia** waiting, **Moje
+   klucze** — the phone's screens drawn as tabs. In an office, the same for its staff,
+   and which staff serve which client.
+4. *Groups: there, and used for teams.* The pack has them; the face shows them. An office
+   gives a client to a team (a group) rather than to persons one by one; a supervisor's
+   two rights ("sees the work of", "approves for") rest on a group, as "People and
+   rights" proposed.
+5. *New companies, built as the ladder says.* The sign-in page's **Załóż konto** (in the
+   beta, from KK's invitation link): NIP, GUS fills the rest, the owner confirms and
+   enrols a key. An office's **Klienci → Dodaj klienta**: NIP → GUS → confirm → the
+   mandate from a date → the client's owner invited to claim their seat. The house keeps
+   no standing power; its exception doors, each with a reason, are the house company's
+   own desk. This needs the GUS and white-list channels in `markets/pl` first.
+
+**Order of work.** (1) The drawer by kind, with the Poland pack's Polish titles — the
+fastest relief. (2) The company switch and the office's Klienci home, on a test world of
+an office with two clients. (3) Ludzie, from the phone's screens and the rights view. (4)
+The GUS and white-list channels, then Załóż konto and Dodaj klienta. Each in the gallery
+first, checked as the face's check asks.
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
