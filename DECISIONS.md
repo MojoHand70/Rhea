@@ -4982,3 +4982,8 @@ with its four points settled the same day:
 - E3: an amendment's money fields leave the explanation as decimal strings ("350.50"), read
   from the amended type's fields, as money crosses every other boundary (invariant 6).
   TestAnAmendmentsMoneyIsMoneyInWhy.
+- E5: the FA(3) reader takes amounts as the schema's TKwotowy writes them — up to two
+  decimals ("1000", "1000.5", "1000.50") — and a line without P_11 leaves the invoice's
+  totals to decide (the lines' sum is checked only when every line states its net). The
+  doors' own money parser stays strict at exactly two decimals.
+  TestFAAmountsAsTheSchemaWritesThem.

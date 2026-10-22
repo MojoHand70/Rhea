@@ -293,14 +293,14 @@ func ParseFA(b []byte) (Invoice, error) {
 			continue
 		}
 		used++
-		net, err := core.ParseMoney(strings.TrimSpace(s.net))
+		net, err := readFAAmount(s.net)
 		if err != nil {
 			return inv, fmt.Errorf("net %q: %w", s.net, err)
 		}
 		inv.Net += net
 		inv.RateCode = s.code
 		if strings.TrimSpace(s.vat) != "" {
-			vat, err := core.ParseMoney(strings.TrimSpace(s.vat))
+			vat, err := readFAAmount(s.vat)
 			if err != nil {
 				return inv, fmt.Errorf("VAT %q: %w", s.vat, err)
 			}
@@ -313,7 +313,7 @@ func ParseFA(b []byte) (Invoice, error) {
 	if used > 1 {
 		inv.RateCode = ""
 	}
-	gross, err := core.ParseMoney(strings.TrimSpace(f.Body.Gross))
+	gross, err := readFAAmount(f.Body.Gross)
 	if err != nil {
 		return inv, fmt.Errorf("gross (P_15) %q: %w", f.Body.Gross, err)
 	}
@@ -323,10 +323,13 @@ func ParseFA(b []byte) (Invoice, error) {
 			core.FormatMoney(inv.Net), core.FormatMoney(inv.VAT), core.FormatMoney(inv.Gross))
 	}
 	var linesNet int64
+	linesNamed := true // every line states its net (P_11 is optional in FA(3))
 	rates := map[string]bool{}
 	for _, l := range f.Body.Lines {
-		net, err := core.ParseMoney(strings.TrimSpace(l.Net))
-		if err != nil {
+		var net int64
+		if strings.TrimSpace(l.Net) == "" {
+			linesNamed = false
+		} else if net, err = readFAAmount(l.Net); err != nil {
 			return inv, fmt.Errorf("line %q net %q: %w", l.Name, l.Net, err)
 		}
 		linesNet += net
@@ -336,7 +339,7 @@ func ParseFA(b []byte) (Invoice, error) {
 		}
 		inv.Lines = append(inv.Lines, InvoiceLine{Name: l.Name, Unit: l.Unit, Qty: l.Qty, UnitPrice: l.UnitPrice, Net: net, Rate: rate})
 	}
-	if len(inv.Lines) > 0 && linesNet != inv.Net {
+	if len(inv.Lines) > 0 && linesNamed && linesNet != inv.Net {
 		return inv, fmt.Errorf("the lines add up to %s, the net says %s", core.FormatMoney(linesNet), core.FormatMoney(inv.Net))
 	}
 	if len(rates) == 1 {
@@ -355,4 +358,16 @@ func packRate(p12 string) string {
 		return "0"
 	}
 	return p12
+}
+
+// readFAAmount reads an FA(3) amount as the schema writes it: TKwotowy takes up
+// to two decimals, so "1000", "1000.5" and "1000.50" are one amount — the
+// doors' own parser, asking for exactly two, made a valid invoice from KSeF
+// unreadable (review 2026-10-21, E5).
+func readFAAmount(s string) (int64, error) {
+	s = strings.TrimSpace(s)
+	if whole, frac, ok := strings.Cut(s, "."); ok && len(frac) == 1 {
+		s = whole + "." + frac + "0"
+	}
+	return core.ParseMoney(s)
 }

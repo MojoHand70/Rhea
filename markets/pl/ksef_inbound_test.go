@@ -359,3 +359,41 @@ func TestOneInvoiceThroughTwoDoorsIsOneFact(t *testing.T) {
 		t.Fatalf("two invoices, each once: %d facts", n)
 	}
 }
+
+// An FA(3) amount has up to two decimals, and a line may state no net
+// (review 2026-10-21, E5): the schema's TKwotowy takes "1000", "1000.5" and
+// "1000.50" alike, and P_11 on an invoice line is optional — the reader
+// asked every amount for exactly two decimals and every line for its net,
+// so a valid invoice from KSeF came back unreadable for a person to retype.
+// Now the reader takes what the schema takes, and a line without its net
+// leaves the totals to say what the invoice is.
+func TestFAAmountsAsTheSchemaWritesThem(t *testing.T) {
+	p, _, _ := sim.Load(filepath.Join("..", "..", "testdata", "customers", "nordwind.json"))
+	p.Months = 1
+	f, _ := sim.Generate(p)
+	var doc []byte
+	for _, d := range f.Documents {
+		if d.Source == "ksef" {
+			doc = d.Bytes
+			break
+		}
+	}
+	want, err := pl.ParseFA(doc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Every amount ending in a zero written with one decimal, as a valid
+	// file may write it, and the lines' P_11 dropped.
+	short := regexp.MustCompile(`>([0-9]+\.[0-9])0<`).ReplaceAll(doc, []byte(">$1<"))
+	short = regexp.MustCompile(`<P_11>[^<]*</P_11>`).ReplaceAll(short, nil)
+	if bytes.Equal(short, doc) || bytes.Contains(short, []byte("<P_11>")) {
+		t.Fatal("the test changed nothing")
+	}
+	got, err := pl.ParseFA(short)
+	if err != nil {
+		t.Fatalf("a valid FA(3) refused: %v", err)
+	}
+	if got.Net != want.Net || got.VAT != want.VAT || got.Gross != want.Gross || got.RateCode != want.RateCode || len(got.Lines) != len(want.Lines) {
+		t.Fatalf("read %+v, want %+v", got, want)
+	}
+}
