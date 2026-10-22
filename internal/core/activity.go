@@ -56,6 +56,13 @@ type ActivitySpec struct {
 	// company's facts: its right is needed in every company anyone is let
 	// into, whichever company it is opened in (review 2026-10-21, A5).
 	Everywhere bool `json:"everywhere,omitempty"`
+	// Identity says what makes two triggers of the door the same fact:
+	// templates over its inputs ("=month($.period)", "=$.book"), their values
+	// joined. A trigger whose identity a fact through the door already has
+	// is that fact, refused as done already — a month closed twice booked
+	// its settlements twice (review 2026-10-21, D3). Without one, a door
+	// carrying one file is identified by the file's hash.
+	Identity []string `json:"identity,omitempty"`
 }
 
 // ChannelSpec is the registry entry of one channel (DIRECTION 2026-10-10,
@@ -283,6 +290,15 @@ func (a Activity) Validate() error {
 			}
 		}
 	}
+	for _, id := range sp.Identity {
+		t, err := ParseTemplate(id)
+		if err != nil {
+			return fmt.Errorf("activity %q identity %q: %w", a.Name, id, err)
+		}
+		if t.refType != "" {
+			return fmt.Errorf("activity %q identity %q: an identity reads the inputs, never the books", a.Name, id)
+		}
+	}
 	if sp.Channel != nil {
 		return sp.Channel.validate(a)
 	}
@@ -432,6 +448,25 @@ func (a Activity) BuildEvent(in map[string]any, today string) (BuiltEvent, error
 			return BuiltEvent{}, err
 		}
 		out.Payload = b
+	}
+	if len(sp.Identity) > 0 {
+		var doc any
+		if err := json.Unmarshal(out.Payload, &doc); err != nil {
+			return BuiltEvent{}, err
+		}
+		parts := make([]string, 0, len(sp.Identity))
+		for _, id := range sp.Identity {
+			t, err := ParseTemplate(id)
+			if err != nil {
+				return BuiltEvent{}, fmt.Errorf("activity %q identity %q: %w", a.Name, id, err)
+			}
+			v, err := t.Eval(doc, FieldDef{Name: "identity", Type: "string"}, nil)
+			if err != nil {
+				return BuiltEvent{}, fmt.Errorf("activity %q identity %q: %w", a.Name, id, err)
+			}
+			parts = append(parts, Text(v))
+		}
+		out.Identity = strings.Join(parts, "/")
 	}
 	return out, nil
 }

@@ -1,9 +1,14 @@
 {
   "pack": "common-periods",
-  "version": 1,
+  "version": 2,
   "stage": "initial",
   "disclaimer": "This pack was prepared by artificial intelligence (AI). It is an initial version: its rules may contain errors and will change as accountants, tax advisers and auditors review them.",
   "history": [
+    {
+      "versions": "2",
+      "date": "2026-10-22",
+      "changes": "A month is closed once: the close is the month and the book, and a second close of them is refused at the door as done already — a second close booked a second lock and, in a market's pack, a second settlement (the whole-tree review of 2026-10-21, D3)."
+    },
     {
       "versions": "1",
       "date": "2026-10-15",
@@ -16,7 +21,7 @@
     {
       "name": "close_period",
       "domain": "finance",
-      "description": "Close a period: any day of the month being closed, and the book. A closed month refuses postings per event; a market's rules settle what the month owes (VAT, filings) on this fact.",
+      "description": "Close a period: any day of the month being closed, and the book. A month is closed once in a book: a second close of it is refused as done already. A closed month refuses postings per event; a market's rules settle what the month owes (VAT, filings) on this fact.",
       "spec": {
         "inputs": [
           {
@@ -37,6 +42,10 @@
         "emits": "period.closed",
         "who": [
           "human"
+        ],
+        "identity": [
+          "=month($.period)",
+          "=$.book"
         ]
       }
     }

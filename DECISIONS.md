@@ -4898,3 +4898,13 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   through — KSeF, a PDF, a person's confirmation of a PDF reading. An invoice already
   logged, under this key or an old door's, is known by those two fields of its payload: a
   later file of it is marked read and books nothing. TestOneInvoiceThroughTwoDoorsIsOneFact.
+- D3: a door may declare its identity as data (`identity`: templates over its inputs, their
+  values joined; a ref is refused — an identity reads the inputs, never the books), and a
+  trigger whose identity the door already logged is refused as done already. The periods
+  pack v2 declares close_period's: `=month($.period)` and `=$.book`, so a second close of a
+  month in a book books nothing — no second lock, no second VAT settlement or CIT advance
+  in the Poland pack. Chosen over guards in the three rules a close fires (the lock, the
+  settlement, the advance): one place, and nothing depends on whether a rule sees a lock
+  written earlier in its own chain. On a live installation the new door waits in the pack's
+  upgrade bundle until a person approves it. Reopening a month, when it comes, is its own
+  door. TestAMonthIsClosedOnce.

@@ -254,6 +254,9 @@ func (x *Executor) TriggerActivity(ctx context.Context, name string, inputs map[
 		}
 	}
 	if out.EventID, err = store.AppendEvent(ctx, tx, ev); err != nil {
+		if store.IsDuplicate(err) {
+			return Triggered{}, fmt.Errorf("activity %s: done already — %s is one fact, logged before: %w", name, dedupKey, err)
+		}
 		return Triggered{}, err
 	}
 	if apply != nil {

@@ -95,7 +95,7 @@ func TestM3PolandPack(t *testing.T) {
 	if _, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", "common", "periods.json"), "test"); err != nil {
 		t.Fatal(err)
 	}
-	post("/api/bundles/pack-common-periods-v1/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-common-periods-v2/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	// Documents: the issued_document the JPK file becomes.
 	if _, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", "common", "documents.json"), "test"); err != nil {
 		t.Fatal(err)
