@@ -109,7 +109,7 @@ func TestFaceReads(t *testing.T) {
 	// Every object names the fact its chain starts from: the invoice and the
 	// entry it booked share the sales.invoice.issued event.
 	invoice, err := s.GetEvent(ctx, one.Root)
-	if err != nil || invoice.Kind != core.KindRaw || invoice.Type != "sales.invoice.issued" || invoice.DedupKey != "fv-1" {
+	if err != nil || invoice.Kind != core.KindRaw || invoice.Type != "sales.invoice.issued" || invoice.DedupKey != "door/submit_event/fv-1" {
 		t.Fatalf("the invoice's root %d: %+v %v", one.Root, invoice, err)
 	}
 	var posts struct {

@@ -4933,3 +4933,8 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   rule for yet. confirm_reading turns only a channel's own proposal into only a type the
   channel declares, never a kernel type. The operator's tools (no person) are unchanged.
   TestTheOpenDoorIsNoSideDoor.
+- C2: a dedup key a caller hands a door is stored as `door/<door>/<key>`, a namespace no
+  reader keys anything in, so it can make the caller's own act idempotent but never
+  pre-claim a channel's fact. Keys the kernel computes (a file's hash, a declared identity,
+  a reaction's own key) stay as they are, so files received before keep their identity.
+  TestACallersKeyClaimsNoChannelsFact.

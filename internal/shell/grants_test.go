@@ -545,3 +545,30 @@ func TestTheOpenDoorIsNoSideDoor(t *testing.T) {
 		t.Fatalf("the owner's grant through the open door: %d %v", code, out)
 	}
 }
+
+// A key a caller chooses names what the caller did, never a channel's fact
+// (review 2026-10-21, C2): a door took the caller's dedup key as it came,
+// so a person who sent the key a bank statement's line will carry next year
+// pre-claimed it — the real line was then skipped as already logged. Now a
+// caller's key lives under its door's name, where no reader keys anything.
+func TestACallersKeyClaimsNoChannelsFact(t *testing.T) {
+	w := newGrantsWorld(t)
+	a := "PL5250001111"
+	w.person("Anna Nowak", "anna", a, "accountant")
+	key := "bank_mt940/PL61109010140000071219812874/2027/38/1/1"
+	var out map[string]any
+	if code := w.call("anna", a, "POST", "/api/activities/take_note/trigger", map[string]any{
+		"inputs": map[string]any{"text": "a note", "amount": "1.00"}, "dedup_key": key}, &out); code != 200 {
+		t.Fatalf("anna's note: %d %v", code, out)
+	}
+	line, _ := json.Marshal(map[string]any{"date": "2027-01-05", "amount": "99.00"})
+	if _, err := w.s.AppendEvent(store.WithCompany(w.ctx, a), core.Event{Kind: core.KindRaw, Type: "bank.statement.line",
+		OccurredAt: "2027-01-05", Payload: line, DedupKey: key, Company: a}); err != nil {
+		t.Fatalf("the bank line next year: %v", err)
+	}
+	// The caller's key still makes the caller's act idempotent.
+	if code := w.call("anna", a, "POST", "/api/activities/take_note/trigger", map[string]any{
+		"inputs": map[string]any{"text": "a note", "amount": "1.00"}, "dedup_key": key}, &out); code == 200 {
+		t.Fatalf("the same act twice under one key: %v", out)
+	}
+}

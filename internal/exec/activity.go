@@ -230,8 +230,14 @@ func (x *Executor) TriggerActivity(ctx context.Context, name string, inputs map[
 	}
 
 	// A file's hash is its identity: the same file through the same door is
-	// the same fact, unless the caller names the fact otherwise.
-	if dedupKey == "" && built.Identity != "" {
+	// the same fact, unless the caller names the fact otherwise. A key the
+	// caller chose names what the caller did, under its door's name, where
+	// no reader keys anything: taken as it came, it pre-claimed the key a
+	// channel's fact would carry, and the fact was skipped (review
+	// 2026-10-21, C2).
+	if dedupKey != "" {
+		dedupKey = "door/" + act.Name + "/" + dedupKey
+	} else if built.Identity != "" {
 		dedupKey = act.Name + "/" + built.Identity
 	}
 	ev := core.Event{
