@@ -4860,3 +4860,8 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   consults companies and VAT rates. A channel that says nothing keeps the strict view, where
   a missing master record fails visibly and a document is never booked once per company.
   TestKSeFSendsACompanysInvoicesWithTheInstallationsRates.
+- F2: a channel whose facts are the installation's whoever runs it says so
+  (`adapter.Shared`); the runner runs it once, for the installation, never per company.
+  The NBP channel is one. A rate already written under a company on a live installation
+  stays in its log (append-only); if `rhea pass nbp` was ever run there as the owner, the
+  company's copies need a look before the first EUR document. TestNBPRatesAreTheInstallations.

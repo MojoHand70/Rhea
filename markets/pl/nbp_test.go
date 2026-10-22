@@ -9,8 +9,10 @@ import (
 	"testing"
 
 	"rhea/internal/adapter"
+	"rhea/internal/core"
 	"rhea/internal/exec"
 	"rhea/internal/pack"
+	"rhea/internal/store"
 	"rhea/internal/store/storetest"
 	"rhea/markets/pl"
 )
@@ -92,3 +94,55 @@ func TestNBPLive(t *testing.T) {
 }
 
 func jsonNumber(s string) json.Number { return json.Number(s) }
+
+// A rate is the installation's, once, whoever runs the pass (review
+// 2026-10-21, F2): the owner's pass fanned out per company, so every company
+// held its own copy of each day's rate beside the installation's, and a
+// company's lookup of a day's rate found two — every EUR invoice, posting
+// and match then waited in the worklist as ambiguous. Now the NBP's facts
+// are the installation's: the pass runs once, for the installation, run by
+// the owner or for a company alike.
+func TestNBPRatesAreTheInstallations(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	x := &exec.Executor{Store: s}
+	installPoland(t, s, x)
+	sum, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", "pl", "nbp.json"), "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, errs, err := x.ApproveBundle(ctx, sum.Bundle, "krzysztof", "2026-09-01"); err != nil || len(errs) != 0 {
+		t.Fatalf("approve: %v %v", err, errs)
+	}
+	company := "company-95"
+	raw, _ := json.Marshal(map[string]any{"name": "Helios sp. z o.o.", "kind": "self", "vat_id": "PL8058083055", "country": "PL"})
+	if _, err := s.AppendEvent(ctx, core.Event{Kind: core.KindRaw, Type: "company.registered", OccurredAt: "2026-09-01", Payload: raw, DedupKey: "self", Company: company}); err != nil {
+		t.Fatal(err)
+	}
+	if _, errs := x.ProcessPending(ctx); len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	nbp := pl.NBP{
+		Client: pl.FakeNBP{Tables_: []pl.NBPTable{{No: "189/A/NBP/2026", EffectiveDate: "2026-09-29", Rates: []pl.NBPRate{{Code: "EUR", Mid: "4.2700"}}}}},
+		Today:  func() string { return "2026-09-30" }, From: "2026-09-29", Currencies: []string{"EUR"},
+	}
+	// The window's one rate (the 30th converts at the 29th's table), once.
+	if res, err := adapter.Run(ctx, s, x, nbp); err != nil || res.PassErr != nil || res.Submitted != 1 {
+		t.Fatalf("the owner's pass, the rate once: %+v %v", res, err)
+	}
+	if res, err := adapter.Run(store.WithCompany(ctx, company), s, x, nbp); err != nil || res.Submitted != 0 {
+		t.Fatalf("a pass for company-95 adds nothing: %+v %v", res, err)
+	}
+	rates, err := s.ObjectsByType(ctx, "fx_rate")
+	if err != nil || len(rates) != 1 {
+		t.Fatalf("one rate in all: %v %d", err, len(rates))
+	}
+	for _, r := range rates {
+		if r.Company != "" {
+			t.Fatalf("a rate of %q's", r.Company)
+		}
+	}
+	if ids, err := s.FindObjectIDsByField(store.WithCompany(ctx, company), "fx_rate", "code", "EUR/PLN/2026-09-30"); err != nil || len(ids) != 1 {
+		t.Fatalf("company-95 finds one rate for the day: %v %v", ids, err)
+	}
+}

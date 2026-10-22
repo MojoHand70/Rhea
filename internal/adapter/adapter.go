@@ -83,6 +83,15 @@ type Acting interface {
 	ActsOn() []string
 }
 
+// Shared is an adapter whose facts are the installation's whoever runs it:
+// published master data every company reads, a central bank's rates. Its
+// pass runs once, for the installation — fanned out per company, a
+// company's pass stamped the rates its own and a company's lookup of a
+// day's rate could find two (review 2026-10-21, F2).
+type Shared interface {
+	Installation() bool
+}
+
 // Implemented is one adapter the binary carries: the "implemented" side of
 // the channel registry. The "connected" side is the active channel
 // declarations in the activity store (core.ChannelSpec).
@@ -176,6 +185,9 @@ func Run(ctx context.Context, s *store.Store, x *exec.Executor, a Adapter) (Resu
 	// run for an office it fans out over the office's clients; each pass
 	// sees and stamps one company — rhea pass without a company stored
 	// company A's bank lines as rows every company saw.
+	if sh, ok := a.(Shared); ok && sh.Installation() {
+		return runScoped(store.WithInstallation(ctx), s, x, a)
+	}
 	set, scoped := store.ScopeOf(ctx)
 	var scopes []context.Context
 	switch {

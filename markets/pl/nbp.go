@@ -63,6 +63,10 @@ func init() {
 func (NBP) Name() string     { return "nbp" }
 func (NBP) CodeVersion() int { return nbpCodeVersion }
 
+// Installation: the NBP's rates are published for everyone, so they are the
+// installation's facts, written once, whichever company the pass is run for.
+func (NBP) Installation() bool { return true }
+
 // EventFXRatePublished is the fact a rate is: master data, append-only.
 const EventFXRatePublished = "fx.rate.published"
 
