@@ -2,12 +2,12 @@
 -- ascending, rule_id as tiebreak (DECISIONS.md 2026-10-01). DISTINCT ON
 -- forces its own ORDER BY, so the firing order is applied outside.
 SELECT rule_id, version, status, priority, effective_from,
-       created_by, description, spec, warrant, created_at, COALESCE(company, '')
+       created_by, description, spec, warrant, created_at, COALESCE(company, ''), COALESCE(replaces, '')
 FROM (
     SELECT DISTINCT ON (rule_id)
            rule_id, version, status, priority,
            to_char(effective_from,'YYYY-MM-DD') AS effective_from,
-           created_by, description, spec, warrant, created_at, company
+           created_by, description, spec, warrant, created_at, company, replaces
     FROM rule
     ORDER BY rule_id, version DESC
 ) latest

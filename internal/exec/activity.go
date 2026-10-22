@@ -552,7 +552,7 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 			return nil, err
 		}
 		var rule *core.Rule
-		for _, r := range forCompany(rules, ev.Company) { // another company's rule pairs nothing here
+		for _, r := range forCompany(rules, ev.Company, ev.OccurredAt) { // another company's rule pairs nothing here
 			if r.ID == p.Matching {
 				rule = &r
 			}

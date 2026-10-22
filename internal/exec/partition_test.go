@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"reflect"
+	"sort"
 	"testing"
 
 	"rhea/internal/core"
@@ -309,4 +310,83 @@ func TestACompanyRuleBooksOnlyItsCompany(t *testing.T) {
 	if r, err := restored.GetRule(ctx, "memo"); err != nil || r.Company != alfaKey {
 		t.Fatalf("restored memo rule: %+v, %v", r, err)
 	}
+}
+
+// A company's own reading of one of Rhea's rules replaces it for that company
+// alone, from the company rule's date (KK, 2026-10-22: the company's own rule
+// wins). Alfa reads a note as a memo from June; alfa's September note is a
+// memo and nothing else — never both, which would book it twice — alfa's May
+// note and beta's September note are Rhea's notes. Only a company's rule
+// replaces, and only a rule of Rhea's.
+func TestACompanysOwnRuleReplacesRheasForItAlone(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	x := &exec.Executor{Store: s}
+	for _, typ := range []string{"note", "memo"} {
+		if err := s.InsertObjectType(ctx, core.ObjectType{Name: typ, Version: 1, Domain: "work", LabelField: "text",
+			Fields: []core.FieldDef{{Name: "text", Type: "string", Required: true}}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	const alfaKey, betaKey = "PL5250001111", "PL5260001246"
+	rule := func(id, company, replaces, from, typ string) core.Rule {
+		return core.Rule{ID: id, Company: company, Replaces: replaces, Status: core.StatusActive, Priority: 100,
+			EffectiveFrom: from, CreatedBy: "test", Description: id, Spec: core.RuleSpec{
+				Match:  core.Match{EventType: "note.taken"},
+				Effect: core.Effect{Object: core.ObjectTemplate{Type: typ, Fields: map[string]string{"text": "=$.text"}}}}}
+	}
+	if _, err := s.InsertRuleVersion(ctx, rule("note", "", "", "2026-01-01", "note")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.InsertRuleVersion(ctx, rule("note@"+alfaKey, alfaKey, "note", "2026-06-01", "memo")); err != nil {
+		t.Fatal(err)
+	}
+	alfa, beta := store.WithCompany(ctx, alfaKey), store.WithCompany(ctx, betaKey)
+	submit := func(scope context.Context, date, text string) {
+		t.Helper()
+		if _, err := x.TriggerActivity(scope, "submit_event", map[string]any{
+			"event_type": "note.taken", "occurred_at": date, "payload": map[string]any{"text": text}}, "test", ""); err != nil {
+			t.Fatal(err)
+		}
+	}
+	submit(alfa, "2026-09-01", "alfa in September")
+	submit(alfa, "2026-05-01", "alfa in May")
+	submit(beta, "2026-09-01", "beta in September")
+	if _, errs := x.ProcessPending(ctx); len(errs) != 0 {
+		t.Fatal(errs)
+	}
+	texts := func(scope context.Context, typ string) []string {
+		t.Helper()
+		objs, err := s.ObjectsByType(scope, typ)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out []string
+		for _, o := range objs {
+			out = append(out, o.State["text"].(string))
+		}
+		sort.Strings(out)
+		return out
+	}
+	if got := texts(alfa, "memo"); !reflect.DeepEqual(got, []string{"alfa in September"}) {
+		t.Fatalf("alfa's memos: %v", got)
+	}
+	if got := texts(alfa, "note"); !reflect.DeepEqual(got, []string{"alfa in May"}) {
+		t.Fatalf("alfa's notes (Rhea's rule before alfa's own, never beside it): %v", got)
+	}
+	if got, memos := texts(beta, "note"), texts(beta, "memo"); !reflect.DeepEqual(got, []string{"beta in September"}) || len(memos) != 0 {
+		t.Fatalf("beta's notes %v, memos %v", got, memos)
+	}
+
+	// Only a company's rule replaces, and only a rule of Rhea's.
+	if _, err := s.InsertRuleVersion(ctx, rule("note-2", "", "note", "2026-01-01", "note")); err == nil {
+		t.Fatal("a rule of Rhea's replaced another")
+	}
+	if _, err := s.InsertRuleVersion(ctx, rule("note@"+betaKey, betaKey, "note@"+alfaKey, "2026-01-01", "memo")); err == nil {
+		t.Fatal("beta's rule replaced alfa's")
+	}
+	if _, err := s.InsertRuleVersion(ctx, rule("x@"+betaKey, betaKey, "nothing-of-rheas", "2026-01-01", "memo")); err == nil {
+		t.Fatal("a company rule replaced a rule Rhea does not have")
+	}
+	assertReplayIdentical(t, x)
 }

@@ -61,6 +61,8 @@ ALTER TABLE rule ADD COLUMN IF NOT EXISTS warrant JSONB;
 -- for every company. NULL is admitted so a backup written before the column
 -- restores its rules as what they were, Rhea's.
 ALTER TABLE rule ADD COLUMN IF NOT EXISTS company TEXT;
+-- The rule of Rhea's a company rule replaces for its company (core.Rule.Replaces).
+ALTER TABLE rule ADD COLUMN IF NOT EXISTS replaces TEXT;
 
 CREATE TABLE IF NOT EXISTS object_type (
     name       TEXT NOT NULL,
@@ -301,6 +303,27 @@ BEGIN
 END;
 $$;
 ALTER TABLE rule ENABLE ALWAYS TRIGGER rule_company_fixed;
+-- Only a company's own rule replaces, and only a rule of Rhea's: a company
+-- never sets another company's reading aside, and Rhea's rules never shadow
+-- one another.
+CREATE OR REPLACE FUNCTION rule_replaces_rheas() RETURNS trigger AS $$
+BEGIN
+    IF COALESCE(NEW.replaces, '') <> '' AND (COALESCE(NEW.company, '') = ''
+        OR NOT EXISTS (SELECT 1 FROM public.rule WHERE rule_id = NEW.replaces AND COALESCE(company, '') = '')) THEN
+        RAISE EXCEPTION 'rule % replaces %: only a company''s own rule replaces, and only a rule of Rhea''s', NEW.rule_id, NEW.replaces;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'rule_replaces_rheas') THEN
+        CREATE TRIGGER rule_replaces_rheas BEFORE INSERT ON rule
+            FOR EACH ROW EXECUTE FUNCTION rule_replaces_rheas();
+    END IF;
+END;
+$$;
+ALTER TABLE rule ENABLE ALWAYS TRIGGER rule_replaces_rheas;
 -- A fact is the same fact within its company: the same file sent to two
 -- clients is two facts, and one company's key never tells another that it
 -- holds the document. NULL companies compare equal here.

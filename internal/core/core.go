@@ -273,6 +273,10 @@ type Rule struct {
 	// every company (KK, 2026-10-22: company rules and Rhea's global
 	// rules). A rule's id keeps its company through every version.
 	Company string `json:"company,omitempty"`
+	// Replaces names the rule of Rhea's that this company rule replaces
+	// for its company, from its effective date: the company's own reading
+	// books there, Rhea's never beside it.
+	Replaces string `json:"replaces,omitempty"`
 }
 
 const (
