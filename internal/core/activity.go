@@ -216,6 +216,13 @@ func (sp ActivitySpec) emitsSource() (string, bool) {
 	return "", false
 }
 
+// Passthrough reports whether the door is open: it emits whatever type an
+// input names (submit_event).
+func (sp ActivitySpec) Passthrough() bool {
+	_, ok := sp.emitsSource()
+	return ok
+}
+
 // envelopeInput reports whether an input is consumed by the event envelope
 // rather than the payload: the emits source and the business date.
 func (sp ActivitySpec) envelopeInput(name string) bool {

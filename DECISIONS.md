@@ -4923,3 +4923,13 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   Settlements booked before v43 stay as they were; on a live installation the new rule
   waits in the pack's upgrade bundle until a person approves it.
   TestTheSettlementOwesWhatTheReturnDeclares.
+
+## 2026-10-22 — The rest that is small and clear (the whole-tree review, step 9)
+
+- C1: a fact a person sends through the open door (submit_event) whose type some door or
+  channel declares is checked as if through that door — the person must be admitted by one
+  of them — and refused, as a recorded refusal, otherwise; a type nothing declares still
+  comes in. Chosen over an allow-list, which would close the door to facts nothing has a
+  rule for yet. confirm_reading turns only a channel's own proposal into only a type the
+  channel declares, never a kernel type. The operator's tools (no person) are unchanged.
+  TestTheOpenDoorIsNoSideDoor.

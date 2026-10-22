@@ -496,3 +496,52 @@ func TestTheCopyIsTheCompanyActedFor(t *testing.T) {
 		t.Fatalf("the desk's figures: %s", got)
 	}
 }
+
+// A fact with a door of its own comes through the open door only from
+// someone that door admits (review 2026-10-21, C1): the open door refused
+// the kernel's own namespaces and nothing else, so an accountant — whose
+// door:* reaches it but never the people doors — submitted
+// membership.granted and owned another company's books, moved the clock
+// every company reads to 2099, and forged a reading whose confirmation
+// booked a raw match. Now a type some door or channel declares is checked
+// as if through that door, a confirmation turns only a channel's proposal
+// into only what the channel declares, and a fact nothing declares still
+// comes in.
+func TestTheOpenDoorIsNoSideDoor(t *testing.T) {
+	w := newGrantsWorld(t)
+	a, b := "PL5250001111", "PL5260001246"
+	kk := w.person("Krzysztof Kowal", "kk", a, "owner")
+	w.person("Olga Nowa", "olga", b, "owner")
+	anna := w.person("Anna Nowak", "anna", a, "accountant")
+	submit := func(person, typ string, payload map[string]any) (int, map[string]any) {
+		t.Helper()
+		return w.door(person, a, "submit_event", map[string]any{"event_type": typ, "occurred_at": w.today, "payload": payload})
+	}
+
+	if code, out := submit("anna", "membership.granted", map[string]any{"person": anna, "company": b, "role": "owner", "from": w.today, "granted_by": "anna"}); code != 403 {
+		t.Fatalf("anna granting herself beta through the open door: %d %v", code, out)
+	}
+	if code, out := submit("anna", "time.day_opened", map[string]any{"date": "2099-12-31"}); code != 403 {
+		t.Fatalf("anna moving the clock: %d %v", code, out)
+	}
+	code, out := submit("anna", "document.reading_proposed", map[string]any{"channel": "pdf_invoice", "event_type": "objects.matched",
+		"payload": map[string]any{"matching": "pl-match-incoming", "items": []string{"sales_invoice-1"}}, "document": "x"})
+	if code == 200 {
+		proposal, _ := out["event_id"].(float64)
+		if code, out := w.door("anna", a, "confirm_reading", map[string]any{"proposal": int64(proposal)}); code == 200 {
+			t.Fatalf("a forged reading confirmed: %v", out)
+		}
+	}
+	if matched, _ := w.s.EventsOfTypes(w.ctx, []string{core.EventObjectsMatched}); len(matched) != 0 {
+		t.Fatalf("a raw match was booked: %+v", matched)
+	}
+
+	// The door still opens: a fact nothing declares, and a grant by the
+	// owner whose role opens grant_membership.
+	if code, out := submit("anna", "visit.logged", map[string]any{"who": "a supplier"}); code != 200 {
+		t.Fatalf("a new fact through the open door: %d %v", code, out)
+	}
+	if code, out := submit("kk", "membership.granted", map[string]any{"person": kk, "company": a, "role": "reader", "from": w.today, "granted_by": "kk"}); code != 200 {
+		t.Fatalf("the owner's grant through the open door: %d %v", code, out)
+	}
+}

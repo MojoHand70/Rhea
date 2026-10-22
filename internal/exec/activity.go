@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"rhea/internal/core"
 	"rhea/internal/match"
@@ -200,6 +201,11 @@ func (x *Executor) TriggerActivity(ctx context.Context, name string, inputs map[
 	if err != nil {
 		return Triggered{}, fmt.Errorf("activity %s: %w", name, err)
 	}
+	if p := rights.PrincipalOf(ctx); p != nil && act.Spec.Passthrough() {
+		if err := x.mayEmit(ctx, *p, act.Name, built); err != nil {
+			return Triggered{}, err
+		}
+	}
 	// A document's fact carries its business date in the payload, as a
 	// verb's does: the day a file arrived is when an invoice was received,
 	// and the readers that turn the file into its typed event read it there.
@@ -271,6 +277,46 @@ func (x *Executor) TriggerActivity(ctx context.Context, name string, inputs map[
 	booked, errs := x.ProcessPending(caller)
 	out.Booked, out.Errors = booked, append(out.Errors, errs...)
 	return out, nil
+}
+
+// mayEmit decides a fact a person sends through the open door: a type some
+// door or channel declares comes through here only from someone one of them
+// admits, as if through it — the open door refused the kernel's own
+// namespaces and nothing else, so an accountant, whose door:* reaches it and
+// never the people doors, submitted membership.granted and owned another
+// company's books, and moved the clock every company reads (review
+// 2026-10-21, C1). A fact nothing declares still comes in.
+func (x *Executor) mayEmit(ctx context.Context, p rights.Principal, door string, built core.BuiltEvent) error {
+	acts, err := x.Store.ActiveActivities(ctx)
+	if err != nil {
+		return err
+	}
+	var inputs map[string]any
+	_ = json.Unmarshal(built.Payload, &inputs)
+	var owners []string
+	for _, a := range acts {
+		if a.Spec.Passthrough() || !a.Spec.Allows(built.Type) {
+			continue
+		}
+		owners = append(owners, a.Name)
+		_, err := rights.Authorize(ctx, x.Store, p, a, inputs, store.CompanyOf(ctx), x.today())
+		var refused *rights.ErrRefused
+		switch {
+		case err == nil:
+			return nil
+		case !errors.As(err, &refused):
+			return err
+		}
+	}
+	if len(owners) == 0 {
+		return nil
+	}
+	refused := &rights.ErrRefused{Person: p.Handle, Door: door, Company: store.CompanyOf(ctx),
+		Reason: fmt.Sprintf("%s comes through %s, which no role of yours opens", built.Type, strings.Join(owners, ", "))}
+	if err := x.RecordRefusal(ctx, refused); err != nil {
+		return err
+	}
+	return refused
 }
 
 // RecordRefusal appends the refusal as a fact under the company it was
@@ -680,6 +726,13 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 		}
 		if proposed.EventType == "" || len(proposed.Payload) == 0 {
 			return nil, fmt.Errorf("event #%d proposes nothing to confirm", p.Proposal)
+		}
+		// Only a channel proposes, and only what it declares: a "proposal"
+		// written through the open door named objects.matched, and its
+		// confirmation booked a raw match (review 2026-10-21, C1).
+		if ch, err := x.Store.GetActiveActivity(ctx, prop.ActivityName); err != nil || ch.Spec.Channel == nil ||
+			core.ReservedEventType(proposed.EventType) || !ch.Spec.Allows(proposed.EventType) {
+			return nil, fmt.Errorf("event #%d was not proposed by a channel declaring %s — a reading is confirmed only as its channel's own fact", p.Proposal, proposed.EventType)
 		}
 		raws, err := x.Store.EventsByKind(ctx, core.KindRaw)
 		if err != nil {
