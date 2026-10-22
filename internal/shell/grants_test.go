@@ -204,3 +204,48 @@ func TestAPersonOfNoCompanyHearsNothing(t *testing.T) {
 		t.Fatalf("the alarm speaks for every company: %+v", spoken)
 	}
 }
+
+// A company someone held is never free to claim (review 2026-10-21, A4):
+// a company counted as unclaimed when no membership or mandate held it
+// today, and an unclaimed company opened every door to anyone who named
+// it — a client whose office's mandate ended yesterday, or whose owner
+// starts next month, was anyone's to make themselves owner of. Now a
+// company anyone was ever granted into is claimed; while a company is
+// truly unclaimed only the claim itself is open; and the key is read once,
+// trimmed, so "PL…1111 " is the company it names.
+func TestALapsedCompanyIsNoOnesToClaim(t *testing.T) {
+	w := newGrantsWorld(t)
+	office, lapsed, later, held, fresh, own := "PL5250001111", "PL5260001246", "PL7010001234", "PL8130000001", "PL9990000009", "PL1110000001"
+	w.person("Krzysztof Kowal", "kk", office, "owner")
+	w.mustDoor("", lapsed, "grant_mandate", map[string]any{"office": office, "client": lapsed, "scope": "type:* view:*", "from": "2026-01-01", "to": w.dayFrom(-1), "granted_by": "operator"})
+	w.mustDoor("", lapsed, "take_note", map[string]any{"text": "the client's note", "amount": "12.50"})
+	olga := w.person("Olga Nowa", "olga", "", "owner")
+	w.mustDoor("", later, "grant_membership", map[string]any{"person": olga, "company": later, "role": "owner", "from": w.dayFrom(30), "granted_by": "operator"})
+	w.person("Ewa Owner", "ewa", held, "owner")
+	mallory := w.person("Mallory Mal", "mallory", own, "owner")
+
+	claim := func(company string) int {
+		t.Helper()
+		code, _ := w.door("mallory", company, "grant_membership", map[string]any{"person": mallory, "company": company, "role": "owner", "from": w.today, "granted_by": "mallory"})
+		return code
+	}
+	if code := claim(lapsed); code != 403 {
+		t.Fatalf("claiming a client whose mandate ended yesterday: %d", code)
+	}
+	if code := claim(later); code != 403 {
+		t.Fatalf("claiming a company whose owner starts next month: %d", code)
+	}
+	if code := w.call("mallory", held+" ", "GET", "/api/whoami", nil, nil); code != 403 {
+		t.Fatalf("a held company named with a trailing space: %d", code)
+	}
+
+	// A company nobody ever held opens to its claim and to nothing else
+	// until then.
+	if code, out := w.door("mallory", fresh, "take_note", map[string]any{"text": "before the claim", "amount": "1.00"}); code != 403 {
+		t.Fatalf("a door before the claim: %d %v", code, out)
+	}
+	if code := claim(fresh); code != 200 {
+		t.Fatalf("the claim: %d", code)
+	}
+	w.mustDoor("mallory", fresh, "take_note", map[string]any{"text": "after the claim", "amount": "1.00"})
+}

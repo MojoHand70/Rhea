@@ -4800,3 +4800,7 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   installation's own, and the host speaks for every company only on the machine's call,
   which names no person; a person with no company asking her to speak is refused before
   any model call. TestAPersonOfNoCompanyHearsNothing.
+- A4: a company is claimed once anyone was ever granted into it (a membership or a mandate,
+  whatever its dates); while a company is truly unclaimed only a door writing a grant into
+  it (membership.granted, mandate.granted) is open; the company a request names is trimmed
+  once at the door. TestALapsedCompanyIsNoOnesToClaim.

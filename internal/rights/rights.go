@@ -323,25 +323,34 @@ func Resolve(ctx context.Context, s *store.Store, handle, today string) (Princip
 	return Principal{Handle: handle, PersonID: id, Name: str(p, "name"), Grants: w.resolve(id)}, nil
 }
 
-// Claimed reports whether anyone holds the company today: a current
-// membership or mandate names it. An unclaimed company is open to its first
-// owner or office — the claim is the first grant written into it.
+// Claimed reports whether anyone was ever let into the company: a
+// membership or mandate names it, whatever its dates. A company whose
+// grants have lapsed, or not yet begun, is still someone's — counting only
+// today's grants made it anyone's to claim (review 2026-10-21, A4). An
+// unclaimed company is open to its first owner or office, and only to
+// that: the claim is the first grant written into it.
 func Claimed(ctx context.Context, s *store.Store, company, today string) (bool, error) {
 	w, err := load(ctx, s, today)
 	if err != nil {
 		return false, err
 	}
 	for _, m := range w.memberships {
-		if str(m, "company") == company && w.current(m) {
+		if str(m, "company") == company {
 			return true, nil
 		}
 	}
 	for _, md := range w.mandates {
-		if str(md, "client") == company && w.current(md) {
+		if str(md, "client") == company {
 			return true, nil
 		}
 	}
 	return false, nil
+}
+
+// claims reports whether a door writes a grant into a company — the only
+// doors open in a company nobody was ever let into.
+func claims(act core.Activity) bool {
+	return act.Spec.Emits == "membership.granted" || act.Spec.Emits == "mandate.granted"
 }
 
 // Table is who can do what in a company: every person with a grant there,
@@ -400,7 +409,9 @@ func Authorize(ctx context.Context, s *store.Store, p Principal, act core.Activi
 			if claimed {
 				return nil, refuse("no role of yours opens this door here")
 			}
-			// unclaimed: the first grant into it is the claim
+			if !claims(act) {
+				return nil, refuse("nobody holds this company yet — the first grant into it is its claim")
+			}
 		}
 		if office, ok := inputs["office"].(string); ok && office != "" && office != acting {
 			if _, ok := p.May(office, "door", act.Name, act.Domain); !ok {

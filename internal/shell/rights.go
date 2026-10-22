@@ -57,6 +57,10 @@ func (s *Server) principalHandler(next http.Handler) http.Handler {
 		if company == "" {
 			company = r.URL.Query().Get("company")
 		}
+		// one spelling of the key from here on: the claim check compared
+		// "PL…1111 " untrimmed while the scope trimmed it (review
+		// 2026-10-21, A4)
+		company = strings.TrimSpace(company)
 		if handle == "" {
 			if s.RequirePerson && !machineRoute(r) {
 				writeErr(w, 401, fmt.Errorf("sign in: this kernel serves signed-in persons only"))
@@ -123,7 +127,7 @@ func (s *Server) principalHandler(next http.Handler) http.Handler {
 				writeErr(w, 403, refused)
 				return
 			}
-			scope = append(scope, company) // a claim in progress: nobody holds it yet
+			scope = append(scope, company) // a claim in progress: nobody was ever let in
 		}
 		if len(scope) == 0 {
 			// A person nobody lets in anywhere today: a key no company
