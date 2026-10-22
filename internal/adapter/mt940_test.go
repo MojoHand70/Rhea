@@ -3,6 +3,7 @@ package adapter_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -268,5 +269,57 @@ func TestParseMT940Pages(t *testing.T) {
 	}
 	if _, err := adapter.ParseMT940([]byte(":25:PL61109010140000071219812874\r\n:20:X\r\n")); err == nil || !strings.Contains(err.Error(), "not an MT940 statement") {
 		t.Errorf("a file starting elsewhere than :20: parsed: %v", err)
+	}
+}
+
+// A bank line is keyed by its statement's year (review 2026-10-21, D1):
+// Polish banks number statements within the year, and a line was keyed by
+// account, statement number and position alone — January 2027's statement
+// 38 had the keys of January 2026's, so its lines counted as already
+// logged, the file was marked read, and the payments never reached the
+// books. Now the key names the year of the statement's opening balance; a
+// line logged before, under the key without a year, is still known when
+// the same statement comes again in another file.
+func TestMT940LinesOfTwoYearsAreTwoLines(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	x := &exec.Executor{Store: s}
+	installIntake(t, s, x)
+	sum, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", "pl", "bank-mt940.json"), "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, errs, err := x.ApproveBundle(ctx, sum.Bundle, "krzysztof", "2026-01-01"); err != nil || len(errs) != 0 {
+		t.Fatalf("approve: %v %v", err, errs)
+	}
+	account := "PL61109010140000071219812874"
+	statement := func(yy, day, amount, closing string) []byte {
+		return []byte(":20:STMT\r\n:25:" + account + "\r\n:28C:38/1\r\n:60F:C" + yy + "0102PLN1000,00\r\n" +
+			":61:" + yy + "01" + day + "01" + day + "C" + amount + "NTRFNONREF//1\r\n:86:PRZELEW PRZYCHODZACY|FS 1/" + yy + "|Mazowiecka Hurtownia S.A.|PL10105000997603123456789123\r\n" +
+			":62F:C" + yy + "0131PLN" + closing + "\r\n-\r\n")
+	}
+	// A line read before the key named the year: its statement 38/1 of 2026,
+	// as the reader logged it then.
+	old, _ := json.Marshal(map[string]any{"date": "2026-01-05", "amount": "362.85", "currency": "PLN", "direction": "credit",
+		"reference": "FS 1/26", "account": account, "statement": "38/1", "line": 1})
+	if _, err := s.AppendEvent(ctx, core.Event{Kind: core.KindRaw, Type: "bank.statement.line", OccurredAt: "2026-01-05", Payload: old,
+		DedupKey: "bank_mt940/" + account + "/38/1/1", Actor: "adapter:bank_mt940", ActivityName: "bank_mt940", ActivityVersion: 1}); err != nil {
+		t.Fatal(err)
+	}
+	receive(t, x, "january-2026-again.sta", "text/plain", "bank", "2026-02-01", statement("26", "05", "362,85", "1362,85"))
+	receive(t, x, "january-2027.sta", "text/plain", "bank", "2027-02-01", statement("27", "05", "99,00", "1099,00"))
+	if res, err := adapter.Run(ctx, s, x, adapter.MT940{}); err != nil || res.PassErr != nil {
+		t.Fatalf("pass: %+v %v", res, err)
+	}
+	lines, err := s.EventsOfTypes(ctx, []string{"bank.statement.line"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	dates := map[string]int{}
+	for _, l := range lines {
+		dates[l.OccurredAt]++
+	}
+	if len(lines) != 2 || dates["2026-01-05"] != 1 || dates["2027-01-05"] != 1 {
+		t.Fatalf("2026's line once and 2027's line once: %v", dates)
 	}
 }

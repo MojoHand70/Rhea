@@ -4884,3 +4884,11 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   (TestOffsiteSignsAsCurlDoes). `rhea backup FILE` still leaves a partial file when it fails;
   the nightly job writes under a temporary name and keeps a file only once -verify passes,
   so a cut file never stands as a backup. TestOffsiteUploadsOnlyAWholeBackup.
+
+## 2026-10-22 — The same thing read twice is one thing (the whole-tree review, step 7)
+
+- D1: a bank line's key names the year of its statement's opening balance
+  (`bank_mt940/<account>/<year>/<statement>/<line>`), since banks number statements within
+  the year. Lines logged under the key without a year stay as they are (the log is
+  append-only); the reader knows them by their old key and their date, so the same statement
+  arriving again in another file books nothing twice. TestMT940LinesOfTwoYearsAreTwoLines.
