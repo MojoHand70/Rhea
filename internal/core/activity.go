@@ -49,8 +49,13 @@ type ActivitySpec struct {
 	// company's: a person registered (one human, many workplaces), a
 	// sign-in recorded. The event is appended with no company whatever
 	// the caller acts for, so every scope sees it; the right to the door is
-	// held in any of the person's companies.
+	// held in every company a person it acts on is let into.
 	Installation bool `json:"installation,omitempty"`
+	// Everywhere marks a door whose act reaches every company's books —
+	// activating, retiring or backfilling the definitions that book every
+	// company's facts: its right is needed in every company anyone is let
+	// into, whichever company it is opened in (review 2026-10-21, A5).
+	Everywhere bool `json:"everywhere,omitempty"`
 }
 
 // ChannelSpec is the registry entry of one channel (DIRECTION 2026-10-10,
@@ -626,8 +631,9 @@ func BuiltinActivities() []Activity {
 					// correction's reason, on the record (the host remembers).
 					{Name: "reason", Type: "string"},
 				},
-				Emits: "rule.approved",
-				Who:   []string{"human"},
+				Emits:      "rule.approved",
+				Who:        []string{"human"},
+				Everywhere: true,
 			},
 		},
 		{
@@ -639,8 +645,9 @@ func BuiltinActivities() []Activity {
 					{Name: "approved_by", Type: "string", Required: true},
 					{Name: "occurred_at", Type: "date", Required: true},
 				},
-				Emits: "activity.approved",
-				Who:   []string{"human"},
+				Emits:      "activity.approved",
+				Who:        []string{"human"},
+				Everywhere: true,
 			},
 		},
 		{
@@ -652,8 +659,9 @@ func BuiltinActivities() []Activity {
 					{Name: "approved_by", Type: "string", Required: true},
 					{Name: "occurred_at", Type: "date", Required: true},
 				},
-				Emits: "bundle.approved",
-				Who:   []string{"human"},
+				Emits:      "bundle.approved",
+				Who:        []string{"human"},
+				Everywhere: true,
 			},
 		},
 		{
@@ -666,8 +674,9 @@ func BuiltinActivities() []Activity {
 					{Name: "rejected_by", Type: "string", Required: true},
 					{Name: "occurred_at", Type: "date", Required: true},
 				},
-				Emits: "bundle.rejected",
-				Who:   []string{"human"},
+				Emits:      "bundle.rejected",
+				Who:        []string{"human"},
+				Everywhere: true,
 			},
 		},
 		{
@@ -679,8 +688,9 @@ func BuiltinActivities() []Activity {
 					{Name: "occurred_at", Type: "date", Required: true},
 					{Name: "plan", Type: "string"}, // the dry run read, by its fingerprint
 				},
-				Emits: "backfill.approved",
-				Who:   []string{"human"},
+				Emits:      "backfill.approved",
+				Who:        []string{"human"},
+				Everywhere: true,
 			},
 		},
 		{

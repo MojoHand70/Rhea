@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -342,5 +343,57 @@ func TestAPersonIsChangedOnlyWhereTheyAreLetIn(t *testing.T) {
 	w.mustDoor("", own, "grant_membership", map[string]any{"person": anna, "company": own, "role": "accountant", "from": "2026-01-01", "granted_by": "operator"})
 	if code, out := w.door("kk", "", "set_person_status", map[string]any{"person": anna, "status": "left"}); code != 403 {
 		t.Fatalf("kk marking anna, let in at mallory's too, as left: %d %v", code, out)
+	}
+}
+
+// What runs on every company's books is approved by someone who may act in
+// each (review 2026-10-21, A5): rules, doors and bundles belong to no
+// company — one approval activates them for every company's facts — yet
+// approving was checked in the company acted for, so the owner of one
+// company activated what then booked another's. Now approving, rejecting
+// and backfilling need the right in every company anyone is let into; and
+// keeping an answer as a report, which drafts a bundle, needs the right to
+// ask for one.
+func TestWhatRunsEverywhereIsApprovedEverywhere(t *testing.T) {
+	w := newGrantsWorld(t)
+	a, b := "PL5250001111", "PL5260001246"
+	kk := w.person("Krzysztof Kowal", "kk", a, "owner")
+	w.person("Olga Nowa", "olga", b, "owner")
+	w.person("Ewa Reader", "ewa", a, "reader")
+	if _, err := w.s.InsertRuleVersion(w.ctx, core.Rule{ID: "memo", Status: core.StatusDraft, Priority: 100, EffectiveFrom: "2026-01-01",
+		CreatedBy: "agent:test", Description: "memos as notes", Spec: core.RuleSpec{Match: core.Match{EventType: "memo.taken"},
+			Effect: core.Effect{Object: core.ObjectTemplate{Type: "note", Fields: map[string]string{"text": "=$.text", "amount": "=$.amount"}}}}}); err != nil {
+		t.Fatal(err)
+	}
+
+	if code := w.call("olga", "", "POST", "/api/rules/memo/approve", map[string]any{}, nil); code != 403 {
+		t.Fatalf("olga approving, for a's books too: %d", code)
+	}
+	if code := w.call("kk", "", "POST", "/api/rules/memo/approve", map[string]any{}, nil); code != 403 {
+		t.Fatalf("kk approving, for b's books too: %d", code)
+	}
+	if r, err := w.s.GetRule(w.ctx, "memo"); err != nil || r.Status != core.StatusDraft {
+		t.Fatalf("the draft stays a draft: %v %v", err, r.Status)
+	}
+	w.mustDoor("olga", b, "grant_membership", map[string]any{"person": kk, "company": b, "role": "owner", "from": "2026-01-01", "granted_by": "olga"})
+	if code := w.call("kk", a, "POST", "/api/rules/memo/approve", map[string]any{}, nil); code != 200 {
+		t.Fatalf("kk, let in at both, approving: %d", code)
+	}
+
+	// An answer kept as a report is a draft for the gate: asked for by
+	// someone who may ask for one, never by a reader.
+	answered, err := w.x.TriggerActivity(store.WithCompany(w.ctx, a), "host_answered", map[string]any{"question": "How many notes?",
+		"sql": "SELECT COUNT(*) AS notes FROM objects WHERE object_type = 'note'", "reading": "One note.",
+		"visual": `{"kind":"table","title":"Notes"}`, "result": `{"columns":["notes"],"rows":[[1]]}`, "rows": 1, "asked_by": "ewa", "occurred_at": w.today},
+		"agent:test", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	keep := fmt.Sprintf("/api/answers/%d/keep", answered.EventID)
+	if code := w.call("ewa", a, "POST", keep, nil, nil); code != 403 {
+		t.Fatalf("a reader keeping an answer: %d", code)
+	}
+	if code := w.call("kk", a, "POST", keep, nil, nil); code != 200 {
+		t.Fatalf("the owner keeping it: %d", code)
 	}
 }

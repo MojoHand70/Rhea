@@ -4816,3 +4816,16 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   order, the first keeps the handle). A person let in at two companies is changed by
   someone who may act in both — status, identity and deputy are the whole person's.
   TestAPersonIsChangedOnlyWhereTheyAreLetIn.
+- A5: rules, doors, views and bundles belong to no company — one approval activates them
+  for every company's books — so approving, rejecting and backfilling (`Everywhere` on the
+  five gate doors) need the door's right in every company anyone is let into today; keeping
+  an answer as a report needs the right to ask for a bundle. On white01 today one company is
+  let in, so nothing changes for KK. The consequence, for KK's decision before a second
+  company with another owner joins: from then on only someone let in at every company
+  approves — the house in DIRECTION's words — and a company's own interview drafts wait for
+  that person; letting a company approve what it drafted needs definitions that belong to
+  one company (a design step, not this fix). Assessed and left, 2026-10-22, invariant 9:
+  the gate's list still shows every company's drafts with the question that asked for them,
+  and an approval's fact is filed under the approver's company, so another company's list
+  of rules does not show who approved them — both need a company on drafts and the house's
+  own facts, part of the same design step. TestWhatRunsEverywhereIsApprovedEverywhere.

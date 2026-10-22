@@ -371,6 +371,11 @@ func (s *Server) runLocked(ctx context.Context, sql string) ([]string, []string,
 // answered.
 func (s *Server) handleKeepAnswer(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	// keeping drafts a bundle: the right to ask for one, never a reader's
+	// (review 2026-10-21, A5)
+	if !s.allow(w, r, "door", "draft_bundle", "system") {
+		return
+	}
 	id, err := strconv.ParseInt(r.PathValue("event"), 10, 64)
 	if err != nil {
 		writeErr(w, 400, fmt.Errorf("keep: %q is not an answer's event", r.PathValue("event")))

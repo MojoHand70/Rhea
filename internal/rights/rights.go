@@ -352,6 +352,28 @@ func Claimed(ctx context.Context, s *store.Store, company, today string) (bool, 
 	return false, nil
 }
 
+// letIn is every company someone is let into today: a current membership's
+// company, a current mandate's client.
+func (w *world) letIn() []string {
+	set := map[string]bool{}
+	for _, m := range w.memberships {
+		if w.current(m) {
+			set[str(m, "company")] = true
+		}
+	}
+	for _, md := range w.mandates {
+		if w.current(md) {
+			set[str(md, "client")] = true
+		}
+	}
+	out := make([]string, 0, len(set))
+	for c := range set {
+		out = append(out, c)
+	}
+	sort.Strings(out)
+	return out
+}
+
 // claims reports whether a door writes a grant into a company — the only
 // doors open in a company nobody was ever let into.
 func claims(act core.Activity) bool {
@@ -455,6 +477,18 @@ func Authorize(ctx context.Context, s *store.Store, p Principal, act core.Activi
 			if _, ok := p.May(office, "door", act.Name, act.Domain); !ok {
 				return nil, refuse(fmt.Sprintf("no role of yours opens this door for %s", office))
 			}
+		}
+	}
+	// What runs on every company's books is approved by someone who may act
+	// in each: approved in one company, a rule booked every other's facts
+	// (review 2026-10-21, A5).
+	if act.Spec.Everywhere {
+		w, err := load(ctx, s, today)
+		if err != nil {
+			return nil, err
+		}
+		if !p.MayEverywhere(w.letIn(), "door", act.Name, act.Domain) {
+			return nil, refuse("this changes how every company's books are kept — it needs your right in every company let in here")
 		}
 	}
 	signed := make(map[string]any, len(inputs)+1)
