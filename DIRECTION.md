@@ -3496,6 +3496,24 @@ layout, draws every list the desk offers in each, and holds 100 000 rows to
 under 4 000 drawn elements in two frames per layout. Still owed: the gallery
 page itself, the token check, a chart as the table's next layout.
 
+**The gallery and the checks (2026-10-22; rheaface 675d9d6, 35bbf9e).** The
+three consistency items stand. (1) The gallery is a tab of the desk
+(desk.html?gallery; rhea-gallery.html with the Helios books), drawn by the
+desk's own parts and the face's renderers, never by copies: 38 exhibits in
+seven sections, each live in light and dark side by side, 59 states a button
+away, the phone as two real phones put into each state. (2) `node
+tools/check.mjs` fails on a colour or font outside the tokens, on a hand edit
+of the generated token block, on a var(--…) that names nothing, on a font size
+off the scale, and on any stylesheet class no exhibit shows in any state (382
+of 384; the two drawn only on live books set aside with that reason). (3) The
+face's CLAUDE.md: the gallery first, tokens only. The walk through every state
+found three real faults, each fixed with its check: a phone sheet opened just
+after closing vanished, a table tool needed two clicks after a column's menu, a
+disabled button looked enabled; and three rules no code used. Open, KK's
+choice: the face uses twenty-seven font sizes where a designed scale has about
+nine; the check holds the twenty-seven, so nothing new creeps in, until the
+scale is chosen and becomes tokens.
+
 **Consistency and speed are checks, not promises.** Several sessions build the
 face, and none remembers the last; a promise to reuse does not survive that.
 (1) One living gallery page shows every component in every state, light and
