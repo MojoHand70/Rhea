@@ -1,9 +1,14 @@
 {
   "pack": "pl",
-  "version": 42,
+  "version": 43,
   "stage": "initial",
   "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
   "history": [
+    {
+      "versions": "43",
+      "date": "2026-10-22",
+      "changes": "Rozliczenie VAT liczy podatek należny tak jak deklaracja: podatek każdej stawki zaokrąglony do pełnych złotych, potem suma — wcześniej zaokrąglana była sama suma, więc 100,50 przy 23% i 10,50 przy 8% dawały w rozliczeniu, porannej notatce i kalendarzu 111 zł do zapłaty, a w JPK_V7M 101 + 11 = 112; nadwyżka do przeniesienia różniła się o złotówkę tak samo (przegląd całości z 2026-10-21, E2)."
+    },
     {
       "versions": "42",
       "date": "2026-10-22",
@@ -6583,10 +6588,10 @@
     },
     {
       "rule_id": "pl-settle-vat",
-      "version": 3,
+      "version": 4,
       "priority": 100,
       "effective_from": "2026-01-01",
-      "description": "Zamknięcie miesiąca w księdze pl-stat rozlicza VAT: podstawy i podatek należny po stawkach z faktur sprzedaży tego okresu, podatek naliczony z faktur zakupu, nadwyżka z poprzedniego miesiąca; do zapłaty, gdy należny przewyższa naliczony, inaczej nadwyżka do przeniesienia (ustawa o VAT art. 86, 87, 99; pozycje JPK_V7M P_10–P_62); do zapłaty i do przeniesienia w pełnych złotych (Ordynacja podatkowa art. 63 §1: należny i naliczony zaokrąglone, potem różnica); firma zwolniona z VAT nie rozlicza VAT i nie składa deklaracji (ustawa o VAT art. 99 ust. 7); kwoty w złotych (faktura w walucie obcej — jej netto i VAT w złotych)",
+      "description": "Zamknięcie miesiąca w księdze pl-stat rozlicza VAT: podstawy i podatek należny po stawkach z faktur sprzedaży tego okresu, podatek naliczony z faktur zakupu, nadwyżka z poprzedniego miesiąca; do zapłaty, gdy należny przewyższa naliczony, inaczej nadwyżka do przeniesienia (ustawa o VAT art. 86, 87, 99; pozycje JPK_V7M P_10–P_62); do zapłaty i do przeniesienia w pełnych złotych (Ordynacja podatkowa art. 63 §1: należny i naliczony zaokrąglone, potem różnica), a należny jak w deklaracji — podatek każdej stawki zaokrąglony do pełnych złotych, potem suma (P_38 to suma zaokrąglonych pozycji), więc kwota do zapłaty i nadwyżka zgadzają się z JPK_V7M co do złotego; firma zwolniona z VAT nie rozlicza VAT i nie składa deklaracji (ustawa o VAT art. 99 ust. 7); kwoty w złotych (faktura w walucie obcej — jej netto i VAT w złotych)",
       "spec": {
         "match": {
           "event_type": "period.closed",
@@ -6620,8 +6625,8 @@
               "purchase_vat": "=sum(i in objects(purchase_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat))",
               "carried_in": "=sum(s in objects(vat_settlement, period, month(add_months($.period, -1))): s.vat_carry)",
               "input_vat": "=(sum(i in objects(purchase_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)) + sum(s in objects(vat_settlement, period, month(add_months($.period, -1))): s.vat_carry))",
-              "vat_due": "=if(round(sum(i in objects(sales_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)), 0, half_up) - round((sum(i in objects(purchase_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)) + sum(s in objects(vat_settlement, period, month(add_months($.period, -1))): s.vat_carry)), 0, half_up) > 0, round(sum(i in objects(sales_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)), 0, half_up) - round((sum(i in objects(purchase_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)) + sum(s in objects(vat_settlement, period, month(add_months($.period, -1))): s.vat_carry)), 0, half_up), sum(i in objects(sales_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)) - sum(i in objects(sales_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)))",
-              "vat_carry": "=if(round((sum(i in objects(purchase_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)) + sum(s in objects(vat_settlement, period, month(add_months($.period, -1))): s.vat_carry)), 0, half_up) - round(sum(i in objects(sales_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)), 0, half_up) > 0, round((sum(i in objects(purchase_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)) + sum(s in objects(vat_settlement, period, month(add_months($.period, -1))): s.vat_carry)), 0, half_up) - round(sum(i in objects(sales_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)), 0, half_up), sum(i in objects(sales_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)) - sum(i in objects(sales_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)))",
+              "vat_due": "=if((round(sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"23\": coalesce(i.vat_pln, i.vat)), 0, half_up) + round(sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"8\": coalesce(i.vat_pln, i.vat)), 0, half_up) + round(sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"5\": coalesce(i.vat_pln, i.vat)), 0, half_up)) - round((sum(i in objects(purchase_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)) + sum(s in objects(vat_settlement, period, month(add_months($.period, -1))): s.vat_carry)), 0, half_up) > 0, (round(sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"23\": coalesce(i.vat_pln, i.vat)), 0, half_up) + round(sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"8\": coalesce(i.vat_pln, i.vat)), 0, half_up) + round(sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"5\": coalesce(i.vat_pln, i.vat)), 0, half_up)) - round((sum(i in objects(purchase_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)) + sum(s in objects(vat_settlement, period, month(add_months($.period, -1))): s.vat_carry)), 0, half_up), sum(i in objects(sales_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)) - sum(i in objects(sales_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)))",
+              "vat_carry": "=if(round((sum(i in objects(purchase_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)) + sum(s in objects(vat_settlement, period, month(add_months($.period, -1))): s.vat_carry)), 0, half_up) - (round(sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"23\": coalesce(i.vat_pln, i.vat)), 0, half_up) + round(sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"8\": coalesce(i.vat_pln, i.vat)), 0, half_up) + round(sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"5\": coalesce(i.vat_pln, i.vat)), 0, half_up)) > 0, round((sum(i in objects(purchase_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)) + sum(s in objects(vat_settlement, period, month(add_months($.period, -1))): s.vat_carry)), 0, half_up) - (round(sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"23\": coalesce(i.vat_pln, i.vat)), 0, half_up) + round(sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"8\": coalesce(i.vat_pln, i.vat)), 0, half_up) + round(sum(i in objects(sales_invoice, vat_period, month($.period)) where i.vat_rate.code = \"5\": coalesce(i.vat_pln, i.vat)), 0, half_up)), sum(i in objects(sales_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)) - sum(i in objects(sales_invoice, vat_period, month($.period)): coalesce(i.vat_pln, i.vat)))",
               "closed_on": "=$.period"
             }
           }

@@ -4916,3 +4916,10 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   (`Converter.Round`). Every amount derived from a converted item (its equivalent, the rate
   difference, the payment's remainder) is then whole grosze, and a match settling an item
   whole bakes. TestConverterSettlesInWholeGrosze.
+- E2: the VAT settlement's output VAT is the return's — each rate's VAT rounded to whole
+  złoty, then summed (P_38 as the Ministry checks it), not the month's total rounded once —
+  so vat_due and vat_carry equal the JPK_V7M's P_51 and P_62 to the złoty (Poland pack v43,
+  pl-settle-vat v4). The deduction side already agreed: last month's carry is whole złoty.
+  Settlements booked before v43 stay as they were; on a live installation the new rule
+  waits in the pack's upgrade bundle until a person approves it.
+  TestTheSettlementOwesWhatTheReturnDeclares.

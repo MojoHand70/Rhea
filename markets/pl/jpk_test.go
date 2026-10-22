@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"rhea/internal/adapter"
+	"rhea/internal/core"
 	"rhea/internal/exec"
 	"rhea/internal/store/storetest"
 	"rhea/markets/pl"
@@ -153,5 +154,73 @@ func TestJPKV7M(t *testing.T) {
 		if err := os.WriteFile(path, f.Bytes, 0o644); err != nil {
 			t.Fatal(err)
 		}
+	}
+}
+
+// The VAT the owner is told to pay is the VAT the return declares (review
+// 2026-10-21, E2): the settlement rounded the month's output VAT once, the
+// JPK_V7M sums each rate's VAT rounded to whole złoty, as the Ministry
+// checks it — 100.50 at 23% and 10.50 at 8% made 111 in the settlement, the
+// morning and the tax calendar, and 101 + 11 = 112 in the return; with VAT
+// to deduct, the settlement carried 389 into the next month while the
+// return carried 388. Now the settlement rounds as the return does.
+func TestTheSettlementOwesWhatTheReturnDeclares(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	x := &exec.Executor{Store: s}
+	installPoland(t, s, x)
+	append1(t, s, x, "company.registered", "2026-09-01", "self", map[string]any{"name": "Rhea Test sp. z o.o.", "kind": "self",
+		"vat_id": "PL8058083055", "country": "PL", "iban": "PL83101010230000261395100000", "address": "ul. Testowa 1, 00-001 Warszawa"})
+	append1(t, s, x, "company.registered", "2026-09-01", "buyer", map[string]any{"name": "Nabywca S.A.", "kind": "customer",
+		"vat_id": "PL5265877635", "country": "PL", "iban": "PL60102010260000042270201111", "address": "ul. Próbna 2, 00-002 Warszawa"})
+	companies, _ := s.ObjectsByType(ctx, "company")
+	for _, c := range companies {
+		if c.State["kind"] == "self" {
+			if _, err := x.TriggerActivity(ctx, "identify_company", map[string]any{"company": c.ID, "email": "biuro@rhea-test.pl", "tax_office": "1471", "legal_form": "legal_entity", "occurred_at": "2026-09-01"}, "krzysztof", ""); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	sell := func(month, n, net, vat, gross, rate string) {
+		append1(t, s, x, "sales.invoice.issued", month+"-21", "inv-"+month+"-"+n, map[string]any{
+			"number": "FV/" + n + "/" + month, "issue_date": month + "-21", "seller_nip": "PL8058083055", "buyer_nip": "PL5265877635",
+			"net": net, "vat": vat, "gross": gross, "vat_rate": rate, "currency": "PLN", "intragroup": "no", "market": "pl"})
+	}
+	settle := func(month, last string) (map[string]any, string) {
+		t.Helper()
+		if _, err := x.TriggerActivity(ctx, "close_period", map[string]any{"period": last, "book": "pl-stat", "occurred_at": last}, "krzysztof", ""); err != nil {
+			t.Fatal(err)
+		}
+		f, err := adapter.Render(ctx, s, "jpk_v7m", map[string]string{"period": month, "created": last + "T10:00:00Z"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		settlements, _ := s.ObjectsByType(ctx, "vat_settlement")
+		for _, st := range settlements {
+			if st.State["period"] == month {
+				return st.State, string(f.Bytes)
+			}
+		}
+		t.Fatalf("no settlement for %s", month)
+		return nil, ""
+	}
+
+	// September: VAT due.
+	sell("2026-09", "1", "436.96", "100.50", "537.46", "23")
+	sell("2026-09", "2", "131.25", "10.50", "141.75", "8")
+	st, jpk := settle("2026-09", "2026-09-30")
+	if core.Text(st["vat_due"]) != "11200" || !strings.Contains(jpk, "<P_38>112</P_38>") || !strings.Contains(jpk, "<P_51>112</P_51>") {
+		t.Fatalf("the settlement says %v due, the return:\n%s", st["vat_due"], jpk)
+	}
+
+	// October: more to deduct than due — the excess carried forward.
+	sell("2026-10", "3", "436.96", "100.50", "537.46", "23")
+	sell("2026-10", "4", "131.25", "10.50", "141.75", "8")
+	append1(t, s, x, "purchase.invoice.received", "2026-10-10", "pur-10", map[string]any{
+		"number": "Z/10", "invoice_date": "2026-10-10", "supplier_nip": "PL5265877635", "buyer_nip": "PL8058083055",
+		"net": "2173.91", "vat": "500.00", "gross": "2673.91", "vat_rate": "23", "currency": "PLN", "market": "pl"})
+	st, jpk = settle("2026-10", "2026-10-31")
+	if core.Text(st["vat_carry"]) != "38800" || core.Text(st["vat_due"]) != "0" || !strings.Contains(jpk, "<P_62>388</P_62>") {
+		t.Fatalf("the settlement carries %v (due %v), the return:\n%s", st["vat_carry"], st["vat_due"], jpk)
 	}
 }
