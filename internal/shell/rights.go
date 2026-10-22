@@ -361,5 +361,30 @@ func (s *Server) handleWhoAmI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, 200, map[string]any{"person": p.Handle, "name": p.Name, "person_id": p.PersonID,
-		"companies": p.Companies(), "company": store.CompanyOf(r.Context()), "grants": p.Grants})
+		"companies": p.Companies(), "names": s.companyNames(r.Context(), p.Companies()),
+		"company": store.CompanyOf(r.Context()), "grants": p.Grants})
+}
+
+// companyNames tells each company a person holds by its own name: the
+// company record of kind "self" in that company's own books (the base
+// vocabulary's), never a customer's record inside them. It reads in the
+// person's own scope, whatever company the request acts for, so a person
+// learns the names of their companies and of no other — what the desk's
+// switch lists (DIRECTION 2026-10-22, "The desk in order"). A company with
+// no such record is left out, and the face shows its key.
+func (s *Server) companyNames(ctx context.Context, companies []string) map[string]string {
+	names := map[string]string{}
+	if len(companies) == 0 {
+		return names
+	}
+	objs, err := s.Store.ObjectsByType(store.WithScope(ctx, companies), "company")
+	if err != nil {
+		return names
+	}
+	for _, o := range objs {
+		if n, _ := o.State["name"].(string); o.Company != "" && o.State["kind"] == "self" && n != "" {
+			names[o.Company] = n
+		}
+	}
+	return names
 }
