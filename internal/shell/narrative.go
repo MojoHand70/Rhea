@@ -564,8 +564,7 @@ func (s *Server) analysisSpec(ctx context.Context, raw json.RawMessage) (core.An
 func (s *Server) analysisData(ctx context.Context, spec core.AnalysisSpec) ([]columnOut, [][]cellOut, [][]string, error) {
 	s.duck.Lock() // the rebuild and the read are one step: no other rebuild between them
 	defer s.duck.Unlock()
-	scope, scoped := store.ScopeOf(ctx)
-	path := project.PathFor(s.DuckPath, scope, scoped) // the scope's own copy
+	path := project.PathOf(ctx, s.DuckPath) // the scope's own copy, the company acted for's within it
 	if _, err := project.Rebuild(ctx, s.Store, path); err != nil {
 		return nil, nil, nil, err
 	}

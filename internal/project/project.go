@@ -395,6 +395,19 @@ func Wipe(duckPath string) error {
 	return nil
 }
 
+// PathOf is the file of the copy a context reads: its scope's, and within a
+// wider scope the company it acts for, because the copy is filtered by the
+// company acted for — one file for a desk acting for alfa and then for beta
+// served alfa's figures as beta's (review 2026-10-21, B2). A context acting
+// for its scope's one company keeps the scope's file.
+func PathOf(ctx context.Context, base string) string {
+	scope, scoped := store.ScopeOf(ctx)
+	if c := store.CompanyOf(ctx); c != "" && !(len(scope) == 1 && scope[0] == c) {
+		scope = append(append([]string{}, scope...), "acting:"+c)
+	}
+	return PathFor(base, scope, scoped)
+}
+
 // PathFor is the analysis file of a scope: the base path for the unscoped
 // kernel, a file of its own per scope — the copy is what the scope sees.
 func PathFor(base string, scope []string, scoped bool) string {

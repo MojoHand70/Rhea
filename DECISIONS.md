@@ -4839,3 +4839,7 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   operator's own desk (no person: the caller declares its scope, and the store test pins
   that a desk acting for one client may write a fact the data gives to another of its
   clients). TestActingForAClientReachesThatClientAlone.
+- B2: the analysis copy's file is the scope's and, within a wider scope, the company acted
+  for's (`project.PathOf`): the copy is filtered by the company acted for, so a desk acting
+  for one client and then another needs two files. A context acting for its scope's one
+  company keeps the file it had. TestTheCopyIsTheCompanyActedFor.

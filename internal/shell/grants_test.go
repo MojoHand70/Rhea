@@ -451,3 +451,48 @@ func TestActingForAClientReachesThatClientAlone(t *testing.T) {
 		t.Fatalf("alfa's note struck: %v %v", err, o.State)
 	}
 }
+
+// The analysis copy is the company's it is read for (review 2026-10-21,
+// B2): the copy's file and its freshness followed the scope alone while
+// its content followed the company acted for — a desk that read client
+// alfa's figures and then, with nothing written between, client beta's got
+// alfa's again, and the host would have filed them as beta's. Now a desk
+// acting for one company reads a copy of that company's own.
+func TestTheCopyIsTheCompanyActedFor(t *testing.T) {
+	w := newGrantsWorld(t)
+	a, b := "PL5250001111", "PL5260001246"
+	w.mustDoor("", a, "take_note", map[string]any{"text": "alfa 1", "amount": "12.50"})
+	w.mustDoor("", a, "take_note", map[string]any{"text": "alfa 2", "amount": "12.50"})
+	w.mustDoor("", b, "take_note", map[string]any{"text": "beta 1", "amount": "99.00"})
+	read := func(acting string) string {
+		t.Helper()
+		req, _ := http.NewRequest("GET", w.ts.URL+"/api/views/notes-today", nil)
+		req.Header.Set("X-Rhea-Scope", a+","+b)
+		if acting != "" {
+			req.Header.Set("X-Rhea-Company", acting)
+		}
+		res, err := w.ts.Client().Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+		var view struct {
+			Rows [][]struct {
+				V string `json:"v"`
+			} `json:"rows"`
+		}
+		if json.NewDecoder(res.Body).Decode(&view); res.StatusCode != 200 || len(view.Rows) != 1 {
+			t.Fatalf("the desk acting for %q: %d %+v", acting, res.StatusCode, view)
+		}
+		return view.Rows[0][0].V + " notes, " + view.Rows[0][1].V
+	}
+	if got := read(a); got != "2 notes, 25.00" {
+		t.Fatalf("alfa's figures: %s", got)
+	}
+	if got := read(b); got != "1 notes, 99.00" {
+		t.Fatalf("beta's figures, read after alfa's: %s", got)
+	}
+	if got := read(""); got != "3 notes, 124.00" {
+		t.Fatalf("the desk's figures: %s", got)
+	}
+}
