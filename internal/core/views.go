@@ -143,6 +143,10 @@ type WordsSpec struct {
 	Events        map[string]string            `json:"events,omitempty"`         // event type → its name
 	Doors         map[string]string            `json:"doors,omitempty"`          // activity → its name
 	AccountGroups map[string]string            `json:"account_groups,omitempty"` // a code's first digits → the group's name
+	// Views gives, in this language, the title of a view another pack brought
+	// in another (2026-10-22): a face shows the market's word, never the
+	// base pack's English.
+	Views map[string]string `json:"views,omitempty"`
 	// Notes say how this market's books are read — what a payment to social
 	// security is, which amount is in the home currency, which month an
 	// invoice counts in (2026-10-18): market knowledge for whoever reads the
@@ -150,12 +154,20 @@ type WordsSpec struct {
 	Notes []string `json:"notes,omitempty"`
 }
 
-// TypeWords names one type and says which shape it takes.
+// TypeWords names one type and says which shape it takes and what kind of
+// thing it is.
 type TypeWords struct {
 	Label  string `json:"label"`
 	Plural string `json:"plural,omitempty"`
 	Shape  string `json:"shape,omitempty"`
+	Kind   string `json:"kind,omitempty"`
 }
+
+// Kinds are what a thing in the books is (DIRECTION 2026-10-22, "The desk in
+// order"): a document that came in or went out, an entry the books made of
+// what happened, or master data the work refers to. A face files its lists by
+// them, knowing no business.
+var Kinds = []string{"document", "entry", "master"}
 
 // Shapes are the few forms an object takes on a face (DIRECTION, the
 // face): a document as a document, a card, a ledger, a statement.
@@ -174,8 +186,11 @@ func (w WordsSpec) Check() error {
 		if tw.Shape != "" && !slices.Contains(Shapes, tw.Shape) {
 			return fmt.Errorf("words: type %s takes shape %q, not one of %v", t, tw.Shape, Shapes)
 		}
+		if tw.Kind != "" && !slices.Contains(Kinds, tw.Kind) {
+			return fmt.Errorf("words: type %s is of kind %q, not one of %v", t, tw.Kind, Kinds)
+		}
 	}
-	for _, m := range []map[string]string{w.Fields, w.Events, w.Doors, w.AccountGroups} {
+	for _, m := range []map[string]string{w.Fields, w.Events, w.Doors, w.AccountGroups, w.Views} {
 		for k, v := range m {
 			if strings.TrimSpace(v) == "" {
 				return fmt.Errorf("words: %s has an empty label", k)
