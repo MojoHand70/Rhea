@@ -5008,3 +5008,9 @@ credited in the public library of lessons only by opting in, and a client is nev
   start, what a crash or a restart left unbooked. The operator's tools wait as long as their
   context lets them. A statement timeout inside a chain is left until a chain is measured
   to hang. TestAWaitForTheExecutorEnds.
+- G3 (the kernel's half): a clock run waiting for a person's catch-up answers 409, one whose
+  day's consequences failed 500, a morning with a failing narrative 500 — each logged, the
+  body as before plus an `error` line; GET /api/health (a machine route) says whether the
+  books' day is open, 503 when more than today's day waits; `rhea pass` exits 2 when facts
+  stay in the worklist. Alerting by mail is left until there is a channel to send it; the
+  deploy's --check reads the health and the timers' results. TestFailuresSpeak.

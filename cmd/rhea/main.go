@@ -411,6 +411,11 @@ func main() {
 		if run.PassErr != nil {
 			log.Fatal(run.PassErr)
 		}
+		// Facts left in the worklist are a pass that did not finish its work:
+		// it exited 0, and a scheduled pass looked done (review 2026-10-21, G3).
+		if len(run.Errors) > 0 {
+			os.Exit(2)
+		}
 
 	case "people":
 		// The operator's hand at the people doors (DIRECTION 2026-10-19):

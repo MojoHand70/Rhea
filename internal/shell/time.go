@@ -3,8 +3,11 @@ package shell
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"log"
 	"net/http"
 	"sort"
+	"strings"
 
 	"rhea/internal/adapter"
 	"rhea/internal/core"
@@ -35,8 +38,48 @@ func clockResult(res adapter.ClockResult) map[string]any {
 			errs[i] = e.Error()
 		}
 		out["errors"] = errs
+		out["error"] = fmt.Sprintf("the day's consequences failed and wait in the worklist: %s", strings.Join(errs, "; "))
+	} else if res.Gated {
+		out["error"] = fmt.Sprintf("%d days wait for a person's catch-up", len(res.Pending))
 	}
 	return out
+}
+
+// clockStatus is how a clock run answers: 409 when days wait for a
+// person's catch-up, 500 when the day's consequences failed, 200 otherwise —
+// both answered 200, and an overnight failure reached nobody (review
+// 2026-10-21, G3). The body is the run's either way, and a failure is
+// logged.
+func clockStatus(res adapter.ClockResult) int {
+	switch {
+	case len(res.Errors) > 0:
+		for _, e := range res.Errors {
+			log.Printf("clock: %v", e)
+		}
+		return 500
+	case res.Gated:
+		log.Printf("clock: %d days wait for a person's catch-up", len(res.Pending))
+		return 409
+	}
+	return 200
+}
+
+// handleHealth says whether the books' day is open — the machine's question
+// before anyone opens Today (G3): the books' day, the last opened, and how
+// many days are not; more than today's waits is 503.
+func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
+	st, err := adapter.ClockState(store.WithOwner(r.Context()), s.Store, s.Clock)
+	if err != nil {
+		log.Printf("health: %v", err)
+		writeJSON(w, 503, map[string]any{"ok": false, "error": "the books cannot be read"})
+		return
+	}
+	ok := len(st.Pending) <= 1
+	status := 200
+	if !ok {
+		status = 503
+	}
+	writeJSON(w, status, map[string]any{"ok": ok, "today": st.Today, "last_opened": st.LastOpened, "days_unopened": len(st.Pending)})
 }
 
 // handleTimeAdvance is the steady state over HTTP: opens at most one day;
@@ -49,7 +92,7 @@ func (s *Server) handleTimeAdvance(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 500, err)
 		return
 	}
-	writeJSON(w, 200, clockResult(res))
+	writeJSON(w, clockStatus(res), clockResult(res))
 }
 
 // handleTimeCatchUp is the human act: open the pending days, deliberately.
@@ -69,7 +112,7 @@ func (s *Server) handleTimeCatchUp(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 500, err)
 		return
 	}
-	writeJSON(w, 200, clockResult(res))
+	writeJSON(w, clockStatus(res), clockResult(res))
 }
 
 // handleTimeSimulate is the gate's dry run, shaped by the same renderer as

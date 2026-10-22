@@ -230,6 +230,7 @@ func (s *Server) mux() http.Handler {
 	mux.HandleFunc("GET /api/time", s.handleTime)
 	mux.HandleFunc("POST /api/time/advance", s.handleTimeAdvance)
 	mux.HandleFunc("POST /api/time/catchup", s.handleTimeCatchUp)
+	mux.HandleFunc("GET /api/health", s.handleHealth)
 	mux.HandleFunc("POST /api/time/simulate", s.handleTimeSimulate)
 	mux.HandleFunc("POST /api/events", s.handleSubmit)
 	mux.Handle("GET /", http.FileServerFS(web.FS))

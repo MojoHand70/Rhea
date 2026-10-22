@@ -162,9 +162,15 @@ func TestTimeSurfaceAndSchedulingNotion(t *testing.T) {
 		Opened []string `json:"opened"`
 		Fired  int      `json:"fired"`
 	}
-	post("/api/time/advance", nil, &res)
-	if !res.Gated || len(res.Opened) != 0 {
-		t.Fatalf("advance on a gap = %+v", res)
+	// Refused, and it says so: 409, the days waiting for a person (G3).
+	gated, err := ts.Client().Post(ts.URL+"/api/time/advance", "application/json", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	json.NewDecoder(gated.Body).Decode(&res)
+	gated.Body.Close()
+	if gated.StatusCode != 409 || !res.Gated || len(res.Opened) != 0 {
+		t.Fatalf("advance on a gap = %d %+v", gated.StatusCode, res)
 	}
 
 	// 3. The dry run reads like any approval: four would-be cases, the

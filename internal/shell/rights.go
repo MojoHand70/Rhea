@@ -35,7 +35,7 @@ func machineRoute(r *http.Request) bool {
 	switch r.Method + " " + r.URL.Path {
 	case "POST /api/time/advance",
 		"POST /api/speak", "POST /api/activities/record_access/trigger",
-		"GET /api/time", "GET /api/live":
+		"GET /api/time", "GET /api/live", "GET /api/health":
 		return true
 	}
 	return false

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"unicode"
@@ -247,7 +248,16 @@ func (s *Server) handleSpeak(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 404, fmt.Errorf("no narrative %q", only))
 		return
 	}
-	writeJSON(w, 200, out)
+	// A morning with a narrative that failed says so: it answered 200, and
+	// the timer that asked counted it a success (review 2026-10-21, G3).
+	status := 200
+	for _, sp := range out {
+		if sp.Error != "" {
+			log.Printf("speak: %s for %q: %s", sp.View, sp.Company, sp.Error)
+			status = 500
+		}
+	}
+	writeJSON(w, status, out)
 }
 
 // narrativeFor is the narrative a person hears: the first whose For names
