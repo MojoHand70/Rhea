@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -677,6 +678,12 @@ func (s *Server) handleLive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer unsubscribe()
+	// A booking's notice names its company ("company|types"): the stream
+	// passes on what the listener's scope sees — its companies and the
+	// installation's — so one company's screen never watches another book
+	// (review 2026-10-21, B7). A notice naming none (a replay) is everyone's.
+	set, scoped := store.ScopeOf(r.Context())
+	sees := func(company string) bool { return !scoped || company == "" || slices.Contains(set, company) }
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.WriteHeader(200)
@@ -688,6 +695,12 @@ func (s *Server) handleLive(w http.ResponseWriter, r *http.Request) {
 		case p, ok := <-notices:
 			if !ok {
 				return
+			}
+			if company, types, tagged := strings.Cut(p, "|"); tagged {
+				if !sees(company) {
+					continue
+				}
+				p = types
 			}
 			fmt.Fprintf(w, "event: projection\ndata: %s\n\n", p)
 			fl.Flush()

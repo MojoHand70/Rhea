@@ -650,7 +650,9 @@ func (x *Executor) bookTx(ctx context.Context, tx store.Querier, root core.Event
 			touched = append(touched, n.objectType())
 		}
 	}
-	return store.NotifyProjection(ctx, tx, strings.Join(touched, ","))
+	// the notice is its company's: every open screen heard every company's
+	// bookings (review 2026-10-21, B7)
+	return store.NotifyProjection(ctx, tx, root.Company+"|"+strings.Join(touched, ","))
 }
 
 // expandEffect turns a matched rule into the objects it materializes, using

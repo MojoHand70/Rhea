@@ -4987,3 +4987,7 @@ with its four points settled the same day:
   totals to decide (the lines' sum is checked only when every line states its net). The
   doors' own money parser stays strict at exactly two decimals.
   TestFAAmountsAsTheSchemaWritesThem.
+- B7: a booking's live notice names its company ("company|types"); the stream passes it on
+  only to a listener whose scope sees that company (or the installation's), so the face's
+  screens still hear their own bookings and refresh. A replay's notice is everyone's.
+  TestTheLiveStreamIsTheListenersOwn.

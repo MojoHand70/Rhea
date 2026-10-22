@@ -1,6 +1,7 @@
 package shell_test
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -9,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -661,5 +663,45 @@ func TestAnAmendmentsMoneyIsMoneyInWhy(t *testing.T) {
 	}
 	if len(why.Tree.Children) != 1 || why.Tree.Children[0].Amend == nil || why.Tree.Children[0].Amend.Set["amount"] != "350.50" {
 		t.Fatalf("the amendment explained: %+v", why.Tree.Children)
+	}
+}
+
+// The live stream tells a person of their own companies' bookings only
+// (review 2026-10-21, B7): every booking announced the types it touched to
+// every open screen, so a person of one company watched when another
+// booked, and what. Now a notice carries its company, and the stream
+// passes on what the listener's scope sees.
+func TestTheLiveStreamIsTheListenersOwn(t *testing.T) {
+	w := newGrantsWorld(t)
+	a, b := "PL5250001111", "PL5260001246"
+	w.person("Krzysztof Kowal", "kk", a, "owner")
+	olga := w.person("Olga Nowa", "olga", b, "owner")
+	ctx, cancel := context.WithTimeout(w.ctx, 10*time.Second)
+	defer cancel()
+	req, _ := http.NewRequestWithContext(ctx, "GET", w.ts.URL+"/api/live", nil)
+	req.Header.Set("X-Rhea-Person", "olga")
+	res, err := w.ts.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	heard := make(chan string, 8)
+	go func() {
+		sc := bufio.NewScanner(res.Body)
+		for sc.Scan() {
+			if data, ok := strings.CutPrefix(sc.Text(), "data: "); ok {
+				heard <- data
+			}
+		}
+	}()
+	w.mustDoor("kk", a, "take_note", map[string]any{"text": "alfa's note", "amount": "1.00"})
+	w.mustDoor("olga", b, "grant_membership", map[string]any{"person": olga, "company": b, "role": "reader", "from": w.today, "granted_by": "olga"})
+	select {
+	case got := <-heard:
+		if got != "membership" {
+			t.Fatalf("olga heard %q first: alfa's booking reached beta's screen", got)
+		}
+	case <-ctx.Done():
+		t.Fatal("olga heard nothing of her own booking")
 	}
 }
