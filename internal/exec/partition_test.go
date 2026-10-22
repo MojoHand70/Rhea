@@ -1,6 +1,7 @@
 package exec_test
 
 import (
+	"bytes"
 	"context"
 	"reflect"
 	"testing"
@@ -193,4 +194,119 @@ func TestChainsRunUnderTheEventsCompany(t *testing.T) {
 		}
 	}
 	assertReplayIdentical(t, x)
+}
+
+// A company's own rule books that company's facts and no other's (KK,
+// 2026-10-22: company rules and Rhea's global rules). Company alfa has a rule
+// for memos; beta's memo — run by the owner too, as the clock and the CLI
+// run — still waits in beta's worklist, while Rhea's rule for notes books for
+// both. Beta's scope does not see alfa's rule, the installation's sees only
+// Rhea's, a rule's id never changes company, and replay keeps it all.
+func TestACompanyRuleBooksOnlyItsCompany(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	x := &exec.Executor{Store: s}
+	if err := s.InsertObjectType(ctx, core.ObjectType{Name: "note", Version: 1, Domain: "work", LabelField: "text",
+		Fields: []core.FieldDef{{Name: "text", Type: "string", Required: true}}}); err != nil {
+		t.Fatal(err)
+	}
+	const alfaKey, betaKey = "PL5250001111", "PL5260001246"
+	rule := func(id, company, eventType string) core.Rule {
+		return core.Rule{ID: id, Company: company, Status: core.StatusActive, Priority: 100,
+			EffectiveFrom: "2026-01-01", CreatedBy: "test", Description: id, Spec: core.RuleSpec{
+				Match:  core.Match{EventType: eventType},
+				Effect: core.Effect{Object: core.ObjectTemplate{Type: "note", Fields: map[string]string{"text": "=$.text"}}}}}
+	}
+	for _, r := range []core.Rule{rule("note", "", "note.taken"), rule("memo", alfaKey, "memo.left")} {
+		if _, err := s.InsertRuleVersion(ctx, r); err != nil {
+			t.Fatal(err)
+		}
+	}
+	alfa, beta := store.WithCompany(ctx, alfaKey), store.WithCompany(ctx, betaKey)
+	submit := func(scope context.Context, eventType, text string) {
+		t.Helper()
+		if _, err := x.TriggerActivity(scope, "submit_event", map[string]any{
+			"event_type": eventType, "occurred_at": "2026-09-01", "payload": map[string]any{"text": text}}, "test", ""); err != nil {
+			t.Fatal(err)
+		}
+	}
+	submit(alfa, "memo.left", "alfa's memo")
+	submit(beta, "memo.left", "beta's memo")
+	submit(beta, "note.taken", "beta's note")
+	if _, errs := x.ProcessPending(ctx); len(errs) != 0 {
+		t.Fatal(errs)
+	}
+
+	texts := func(scope context.Context) []string {
+		t.Helper()
+		objs, err := s.ObjectsByType(scope, "note")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out []string
+		for _, o := range objs {
+			out = append(out, o.State["text"].(string))
+		}
+		return out
+	}
+	if !reflect.DeepEqual(texts(alfa), []string{"alfa's memo"}) || !reflect.DeepEqual(texts(beta), []string{"beta's note"}) {
+		t.Fatalf("alfa %v, beta %v", texts(alfa), texts(beta))
+	}
+	if left, _ := s.UnmatchedRawEvents(beta); len(left) != 1 {
+		t.Fatalf("beta's memo should wait for a rule of beta's own: %v", left)
+	}
+
+	ids := func(scope context.Context) []string {
+		t.Helper()
+		rules, err := s.ActiveRules(scope)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out []string
+		for _, r := range rules {
+			out = append(out, r.ID+"@"+r.Company)
+		}
+		return out
+	}
+	if got := ids(alfa); !reflect.DeepEqual(got, []string{"memo@" + alfaKey, "note@"}) {
+		t.Fatalf("alfa's rules: %v", got)
+	}
+	if got := ids(beta); !reflect.DeepEqual(got, []string{"note@"}) {
+		t.Fatalf("beta sees: %v", got)
+	}
+	if got := ids(store.WithInstallation(ctx)); !reflect.DeepEqual(got, []string{"note@"}) {
+		t.Fatalf("the installation sees: %v", got)
+	}
+	if _, err := s.GetRule(beta, "memo"); err == nil {
+		t.Fatal("beta reads alfa's rule")
+	}
+
+	// A rule's id keeps its company: no other company's version of alfa's
+	// rule, no company's version of Rhea's; and beta writes no rule of alfa's.
+	if _, err := s.InsertRuleVersion(ctx, rule("memo", betaKey, "memo.left")); err == nil {
+		t.Fatal("alfa's rule took a version of beta's")
+	}
+	if _, err := s.InsertRuleVersion(ctx, rule("note", alfaKey, "note.taken")); err == nil {
+		t.Fatal("Rhea's rule took a version of alfa's")
+	}
+	if _, err := s.InsertRuleVersion(beta, rule("memo-2", alfaKey, "memo.left")); err == nil {
+		t.Fatal("beta wrote a rule of alfa's")
+	}
+	assertReplayIdentical(t, x)
+	if got := texts(beta); !reflect.DeepEqual(got, []string{"beta's note"}) {
+		t.Fatalf("replay booked beta's memo by alfa's rule: %v", got)
+	}
+	// A backup carries each rule's company: restored, alfa's rule is alfa's
+	// still, never Rhea's for every company.
+	var buf bytes.Buffer
+	if _, err := s.Backup(ctx, &buf); err != nil {
+		t.Fatal(err)
+	}
+	restored := storetest.NewBare(t)
+	if _, err := restored.Restore(ctx, &buf); err != nil {
+		t.Fatal(err)
+	}
+	if r, err := restored.GetRule(ctx, "memo"); err != nil || r.Company != alfaKey {
+		t.Fatalf("restored memo rule: %+v, %v", r, err)
+	}
 }

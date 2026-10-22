@@ -56,6 +56,11 @@ CREATE TABLE IF NOT EXISTS rule (
 );
 -- A rule's own warrant: the source its reading rests on (core.Warrant).
 ALTER TABLE rule ADD COLUMN IF NOT EXISTS warrant JSONB;
+-- A rule's company (KK, 2026-10-22: company rules and Rhea's global rules):
+-- a company's own rule, booking its facts alone; empty or NULL, Rhea's rule
+-- for every company. NULL is admitted so a backup written before the column
+-- restores its rules as what they were, Rhea's.
+ALTER TABLE rule ADD COLUMN IF NOT EXISTS company TEXT;
 
 CREATE TABLE IF NOT EXISTS object_type (
     name       TEXT NOT NULL,
@@ -263,6 +268,39 @@ BEGIN
     END LOOP;
 END;
 $$;
+-- A company's own rule is seen, and written, only in a scope that names the
+-- company, as its facts are; Rhea's rules are every scope's.
+ALTER TABLE rule ENABLE ROW LEVEL SECURITY;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'rule' AND policyname = 'rule_scope') THEN
+        CREATE POLICY rule_scope ON rule TO rhea_app USING (rhea_in_scope(company));
+    END IF;
+END;
+$$;
+-- A rule's id keeps its company through every version: a company's own
+-- reading of Rhea's rule is a rule of its own, never a version of Rhea's, and
+-- no company writes a version of another's. Checked over every company's rows
+-- (SECURITY DEFINER: a scope's own eyes miss the others'); the refusal names
+-- no company.
+CREATE OR REPLACE FUNCTION rule_company_fixed() RETURNS trigger AS $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM public.rule WHERE rule_id = NEW.rule_id
+               AND COALESCE(company, '') <> COALESCE(NEW.company, '')) THEN
+        RAISE EXCEPTION 'rule % belongs to another company or to Rhea: a company''s own reading is a rule of its own', NEW.rule_id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'rule_company_fixed') THEN
+        CREATE TRIGGER rule_company_fixed BEFORE INSERT ON rule
+            FOR EACH ROW EXECUTE FUNCTION rule_company_fixed();
+    END IF;
+END;
+$$;
+ALTER TABLE rule ENABLE ALWAYS TRIGGER rule_company_fixed;
 -- A fact is the same fact within its company: the same file sent to two
 -- clients is two facts, and one company's key never tells another that it
 -- holds the document. NULL companies compare equal here.

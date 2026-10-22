@@ -615,11 +615,11 @@ func InsertRuleVersion(ctx context.Context, q Querier, r core.Rule) (core.Rule, 
 		}
 	}
 	err = q.QueryRow(ctx, `
-		INSERT INTO rule (rule_id, version, status, priority, effective_from, created_by, description, spec, warrant)
+		INSERT INTO rule (rule_id, version, status, priority, effective_from, created_by, description, spec, warrant, company)
 		VALUES ($1, COALESCE((SELECT MAX(version) FROM rule WHERE rule_id = $1), 0) + 1,
-		        $2, $3, $4, $5, $6, $7, $8)
+		        $2, $3, $4, $5, $6, $7, $8, NULLIF($9, ''))
 		RETURNING version, created_at`,
-		r.ID, r.Status, r.Priority, r.EffectiveFrom, r.CreatedBy, r.Description, spec, warrant,
+		r.ID, r.Status, r.Priority, r.EffectiveFrom, r.CreatedBy, r.Description, spec, warrant, r.Company,
 	).Scan(&r.Version, &r.CreatedAt)
 	if IsDuplicate(err) {
 		// MAX(version)+1 is not atomic: two drafts of one rule at the same
@@ -640,7 +640,7 @@ func scanRules(rows pgx.Rows) ([]core.Rule, error) {
 		var r core.Rule
 		var spec, warrant []byte
 		if err := rows.Scan(&r.ID, &r.Version, &r.Status, &r.Priority, &r.EffectiveFrom,
-			&r.CreatedBy, &r.Description, &spec, &warrant, &r.CreatedAt); err != nil {
+			&r.CreatedBy, &r.Description, &spec, &warrant, &r.CreatedAt, &r.Company); err != nil {
 			return nil, err
 		}
 		if err := json.Unmarshal(spec, &r.Spec); err != nil {
@@ -696,7 +696,7 @@ func (s *Store) GetRule(ctx context.Context, id string) (core.Rule, error) {
 func (s *Store) GetRuleVersion(ctx context.Context, id string, version int) (core.Rule, error) {
 	rows, err := s.Pool.Query(ctx, `
 		SELECT rule_id, version, status, priority, to_char(effective_from,'YYYY-MM-DD'),
-		       created_by, description, spec, warrant, created_at
+		       created_by, description, spec, warrant, created_at, COALESCE(company, '')
 		FROM rule WHERE rule_id = $1 AND version = $2`, id, version)
 	if err != nil {
 		return core.Rule{}, err

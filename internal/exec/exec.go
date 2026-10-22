@@ -25,6 +25,10 @@ type Executor struct {
 	// zero means core.DefaultMaxCollection. Tests lower it to see the
 	// refusal; nothing raises it per rule — the cap is the kernel's.
 	MaxCollection int
+	// LockWait bounds a wait for the executor: past it a caller is told the
+	// books are busy instead of queueing on. Zero waits as long as the
+	// caller's context lets it (the operator's tools); rhea serve sets it.
+	LockWait time.Duration
 	// draftTypes overlays a bundle's draft object types for its dry run:
 	// set only on a simulation's private copy of the executor, never on the
 	// one that books.
@@ -296,6 +300,7 @@ type lockWorldKey struct{}
 
 func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []core.Rule, payload any, base core.Lookup, baseGet core.Getter, prior Prior, seed *chainNode) ([]chainNode, error) {
 	ctx = context.WithValue(ctx, lockWorldKey{}, base)
+	rules = forCompany(rules, root.Company)
 	var nodes []chainNode
 	// A seed is a first node the root already carries — a person's
 	// pairing, run by the kernel before the rules — from which the
@@ -503,6 +508,21 @@ func scopeFor(ctx context.Context, company string) context.Context {
 // maxChainNodes bounds the consequences of one event: a chain larger than
 // this is refused into the worklist, naming the rule.
 const maxChainNodes = 10_000
+
+// forCompany is the rule set that may fire in a chain of the company's fact:
+// Rhea's rules, which book for every company, and the company's own. Another
+// company's rule never fires on it, whoever runs the chain — the owner's
+// clock and CLI load every rule (KK, 2026-10-22: company rules and Rhea's
+// global rules). The firing order is kept.
+func forCompany(rules []core.Rule, company string) []core.Rule {
+	out := make([]core.Rule, 0, len(rules))
+	for _, r := range rules {
+		if r.Company == "" || r.Company == company {
+			out = append(out, r)
+		}
+	}
+	return out
+}
 
 // matchRule reports whether rule r fires on ev (payload already decoded):
 // event type, effective date, and every where condition — a formula

@@ -268,6 +268,11 @@ type Rule struct {
 	// the rule explains. Optional.
 	Warrant   *Warrant  `json:"warrant,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
+	// Company is the company whose own rule this is, approved inside it
+	// and booking its facts alone; empty, a rule of Rhea's that books for
+	// every company (KK, 2026-10-22: company rules and Rhea's global
+	// rules). A rule's id keeps its company through every version.
+	Company string `json:"company,omitempty"`
 }
 
 const (
