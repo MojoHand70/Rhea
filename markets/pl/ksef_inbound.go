@@ -46,6 +46,10 @@ func (k KSeFInbound) Pass(ctx context.Context, reads adapter.Reads) ([]core.Even
 		return nil, err
 	}
 	sort.Slice(docs, func(i, j int) bool { return docs[i].ID < docs[j].ID })
+	logged, err := adapter.LoggedInvoices(ctx, reads)
+	if err != nil {
+		return nil, err
+	}
 	var out []core.Event
 	for _, d := range docs {
 		status, _ := d.State["status"].(string)
@@ -123,11 +127,20 @@ func (k KSeFInbound) Pass(ctx context.Context, reads adapter.Reads) ([]core.Even
 			"document": hash, "channel": k.Name(), "event_type": "purchase.invoice.received",
 		})
 		// The same invoice in other bytes (a BOM, CRLF, a manual upload
-		// beside the pull) is the same invoice: keyed on its KSeF number,
-		// else on the seller and the number, never on the file alone.
+		// beside the pull), or e-mailed as a PDF, is the same invoice: keyed
+		// on the seller and the number as every purchase invoice is, never on
+		// the file or the door alone (review 2026-10-21, D2).
 		dedup := "ksef_inbound/" + hash
-		if inv.SellerNIP != "" && inv.Number != "" {
-			dedup = "ksef_inbound/" + inv.SellerCountry + inv.SellerNIP + "/" + inv.Number
+		if key := adapter.PurchaseInvoiceKey(inv.SellerCountry+inv.SellerNIP, inv.Number); key != "" {
+			dedup = key
+			if logged[key] {
+				read, _ := json.Marshal(map[string]any{
+					"document": hash, "channel": k.Name(), "event_type": "purchase.invoice.received", "logged_before": key,
+				})
+				out = append(out, core.Event{Type: adapter.EventDocumentRead, OccurredAt: inv.IssueDate,
+					Payload: read, DedupKey: "ksef_inbound/read/" + hash})
+				continue
+			}
 		}
 		out = append(out,
 			core.Event{Type: "purchase.invoice.received", OccurredAt: inv.IssueDate,

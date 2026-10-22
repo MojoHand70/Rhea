@@ -149,6 +149,10 @@ func (r *PDFInvoice) Pass(ctx context.Context, reads Reads) ([]core.Event, error
 	if err != nil {
 		return nil, err
 	}
+	logged, err := LoggedInvoices(ctx, reads)
+	if err != nil {
+		return nil, err
+	}
 	sort.Slice(docs, func(i, j int) bool { return docs[i].ID < docs[j].ID })
 	var out []core.Event
 	for _, d := range docs {
@@ -190,12 +194,18 @@ func (r *PDFInvoice) Pass(ctx context.Context, reads Reads) ([]core.Event, error
 			return out, err
 		}
 		date, _ := fact["invoice_date"].(string)
-		// a resent scan of the same invoice is the same invoice: the fact's
-		// identity is the supplier and the number, whatever the bytes
+		// a resent scan of the same invoice is the same invoice, and so is
+		// the one KSeF delivered: the fact's identity is the supplier and the
+		// number, whatever the bytes and whichever the door (D2)
 		dedup := "pdf_invoice/" + hash
-		if nip, _ := fact["supplier_nip"].(string); nip != "" {
-			if number, _ := fact["number"].(string); number != "" {
-				dedup = "pdf_invoice/" + nip + "/" + number
+		nip, _ := fact["supplier_nip"].(string)
+		number, _ := fact["number"].(string)
+		if key := PurchaseInvoiceKey(nip, number); key != "" {
+			dedup = key
+			if logged[key] {
+				read, _ := json.Marshal(map[string]any{"document": hash, "channel": r.Name(), "event_type": "purchase.invoice.received", "logged_before": key})
+				out = append(out, core.Event{Type: EventDocumentRead, OccurredAt: date, Payload: read, DedupKey: "pdf_invoice/read/" + hash})
+				continue
 			}
 		}
 		if confidence.Cmp(r.threshold) < 0 {

@@ -155,7 +155,7 @@ func TestPDFInvoiceChannel(t *testing.T) {
 	}
 	ev, _ := s.GetEvent(ctx, conf.EventID)
 	json.Unmarshal(ev.Payload, &got)
-	if !strings.HasPrefix(ev.DedupKey, "pdf_invoice/"+fmt.Sprint(got["supplier_nip"])+"/") {
+	if ev.DedupKey != adapter.PurchaseInvoiceKey(fmt.Sprint(got["supplier_nip"]), fmt.Sprint(got["number"])) {
 		t.Fatalf("the confirmed fact's identity is the reader's: %s", ev.DedupKey)
 	}
 	if ev.Type != "purchase.invoice.received" || ev.Actor != "shell:krzysztof" || ev.CauseEventID == nil || *ev.CauseEventID != proposalID ||

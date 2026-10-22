@@ -264,3 +264,98 @@ func TestParseFA(t *testing.T) {
 func jsonUnmarshal(b []byte, v any) error { return json.Unmarshal(b, v) }
 
 var invoiceNumber = regexp.MustCompile(`<P_2>([^<]*)</P_2>`)
+
+// One purchase invoice is one fact, whichever door it came through (review
+// 2026-10-21, D2): the KSeF reader keyed an invoice "ksef_inbound/…" and the
+// PDF reader "pdf_invoice/…", so a supplier's invoice pulled from KSeF and
+// e-mailed as a PDF booked twice — the cost, the input VAT and the payable
+// twice, and two rows in the JPK. Now both key it on the seller's tax id and
+// the number, written one way; an invoice logged under either old key is
+// known by those two fields, so it is not logged again either.
+func TestOneInvoiceThroughTwoDoorsIsOneFact(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	x := &exec.Executor{Store: s}
+	installIntake(t, s, x)
+	sum, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", "pl", "pdf-invoice.json"), "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, errs, err := x.ApproveBundle(ctx, sum.Bundle, "krzysztof", "2026-01-01"); err != nil || len(errs) != 0 {
+		t.Fatalf("approve: %v %v", err, errs)
+	}
+	p, _, err := sim.Load(filepath.Join("..", "..", "testdata", "customers", "nordwind.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	p.Months = 1
+	f, err := sim.Generate(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var ksef []sim.Document
+	for _, d := range f.Documents {
+		if d.Source == "ksef" {
+			ksef = append(ksef, d)
+		}
+	}
+	if len(ksef) < 2 {
+		t.Fatalf("the test needs two KSeF invoices, the month has %d", len(ksef))
+	}
+	// The same invoice as a PDF, its seller's NIP written as people write it.
+	pdfOf := func(d sim.Document) []byte {
+		fact := f.Events[d.Events[0]].Payload
+		nip := strings.TrimPrefix(fact["supplier_nip"].(string), "PL")
+		return sim.WritePDF([]string{"RECHNUNG",
+			"Rechnungsnummer: " + fact["number"].(string),
+			"Rechnungsdatum: " + fact["invoice_date"].(string),
+			"Verkaeufer: " + fact["supplier"].(string),
+			"USt-IdNr.: " + nip[:3] + "-" + nip[3:6] + "-" + nip[6:8] + "-" + nip[8:],
+			"Kaeufer NIP: " + fact["buyer_nip"].(string),
+			"Nettobetrag: " + fact["net"].(string) + " PLN",
+			"MwSt. 23%: " + fact["vat"].(string) + " PLN",
+			"Bruttobetrag: " + fact["gross"].(string) + " PLN"})
+	}
+	invoices := func() int {
+		t.Helper()
+		evs, err := s.EventsOfTypes(ctx, []string{"purchase.invoice.received"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return len(evs)
+	}
+	pdf, _ := adapter.Lookup("pdf_invoice")
+	adapter.ModelReader = nil // the text layer, read exactly
+
+	// From KSeF, then the e-mailed PDF of the same invoice.
+	first := ksef[0]
+	receive(t, x, filepath.Base(first.Path), first.MediaType, first.Source, first.Date, first.Bytes)
+	if res, err := adapter.Run(ctx, s, x, pl.KSeFInbound{}); err != nil || res.PassErr != nil {
+		t.Fatalf("ksef pass: %+v %v", res, err)
+	}
+	receive(t, x, "scan-1.pdf", "application/pdf", "email", first.Date, pdfOf(first))
+	if res, err := adapter.Run(ctx, s, x, pdf); err != nil || res.PassErr != nil {
+		t.Fatalf("pdf pass: %+v %v", res, err)
+	}
+	if n := invoices(); n != 1 {
+		t.Fatalf("the invoice from KSeF and its PDF: %d facts", n)
+	}
+
+	// An invoice a PDF reading logged under the old key, then pulled from KSeF.
+	second := ksef[1]
+	fact := f.Events[second.Events[0]].Payload
+	old, _ := json.Marshal(map[string]any{"number": fact["number"], "supplier": fact["supplier"], "supplier_nip": fact["supplier_nip"],
+		"invoice_date": fact["invoice_date"], "net": fact["net"], "vat": fact["vat"], "gross": fact["gross"], "currency": "PLN"})
+	if _, err := s.AppendEvent(ctx, core.Event{Kind: core.KindRaw, Type: "purchase.invoice.received", OccurredAt: second.Date, Payload: old,
+		DedupKey: "pdf_invoice/" + fact["supplier_nip"].(string) + "/" + fact["number"].(string), Actor: "adapter:pdf_invoice",
+		ActivityName: "pdf_invoice", ActivityVersion: 1}); err != nil {
+		t.Fatal(err)
+	}
+	receive(t, x, filepath.Base(second.Path), second.MediaType, second.Source, second.Date, second.Bytes)
+	if res, err := adapter.Run(ctx, s, x, pl.KSeFInbound{}); err != nil || res.PassErr != nil {
+		t.Fatalf("ksef pass: %+v %v", res, err)
+	}
+	if n := invoices(); n != 2 {
+		t.Fatalf("two invoices, each once: %d facts", n)
+	}
+}

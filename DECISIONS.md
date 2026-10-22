@@ -4892,3 +4892,9 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   the year. Lines logged under the key without a year stay as they are (the log is
   append-only); the reader knows them by their old key and their date, so the same statement
   arriving again in another file books nothing twice. TestMT940LinesOfTwoYearsAreTwoLines.
+- D2: a purchase invoice's identity is the seller's tax id and the number, written one way
+  (`adapter.PurchaseInvoiceKey`: letters and digits, upper case, the EU VAT id's two-letter
+  country prefix dropped; the number upper case, spaces collapsed), whichever door it came
+  through — KSeF, a PDF, a person's confirmation of a PDF reading. An invoice already
+  logged, under this key or an old door's, is known by those two fields of its payload: a
+  later file of it is marked read and books nothing. TestOneInvoiceThroughTwoDoorsIsOneFact.
