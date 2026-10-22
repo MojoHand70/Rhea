@@ -374,6 +374,16 @@ func (w *world) letIn() []string {
 	return out
 }
 
+// LetIn is every company someone is let into today — where an act on every
+// company's books needs its right.
+func LetIn(ctx context.Context, s *store.Store, today string) ([]string, error) {
+	w, err := load(ctx, s, today)
+	if err != nil {
+		return nil, err
+	}
+	return w.letIn(), nil
+}
+
 // claims reports whether a door writes a grant into a company — the only
 // doors open in a company nobody was ever let into.
 func claims(act core.Activity) bool {

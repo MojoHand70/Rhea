@@ -54,6 +54,9 @@ func (s *Server) handleTimeAdvance(w http.ResponseWriter, r *http.Request) {
 
 // handleTimeCatchUp is the human act: open the pending days, deliberately.
 func (s *Server) handleTimeCatchUp(w http.ResponseWriter, r *http.Request) {
+	if !s.allowEverywhere(w, r, "view", ViewGate, "system") {
+		return
+	}
 	var req struct {
 		Through string `json:"through"`
 	}
@@ -72,6 +75,9 @@ func (s *Server) handleTimeCatchUp(w http.ResponseWriter, r *http.Request) {
 // handleTimeSimulate is the gate's dry run, shaped by the same renderer as
 // a rule approval's diff — the burst reads like any other decision.
 func (s *Server) handleTimeSimulate(w http.ResponseWriter, r *http.Request) {
+	if !s.allowEverywhere(w, r, "view", ViewGate, "system") {
+		return
+	}
 	var req struct {
 		Through string `json:"through"`
 	}

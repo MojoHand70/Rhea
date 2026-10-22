@@ -843,6 +843,9 @@ func (s *Server) handleApprove(w http.ResponseWriter, r *http.Request) {
 // field-level and typed (simdiff.go), because the approval gate is the trust
 // boundary and what the human reads there must be readable.
 func (s *Server) handleSimulate(w http.ResponseWriter, r *http.Request) {
+	if !s.allowSystem(w, r, ViewGate) { // the gate's dry run asks what the gate asks (A9)
+		return
+	}
 	ctx := r.Context()
 	diff, err := s.Exec.SimulateRule(ctx, r.PathValue("id"))
 	if err != nil {

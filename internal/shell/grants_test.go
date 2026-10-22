@@ -572,3 +572,50 @@ func TestACallersKeyClaimsNoChannelsFact(t *testing.T) {
 		t.Fatalf("the same act twice under one key: %v", out)
 	}
 }
+
+// The dry runs ask what the gate asks, and the clock's catch-up is no
+// machine's (review 2026-10-21, A9): the dry runs of a rule, a bundle and a
+// backfill checked no right at all; the clock's simulation ran as the owner
+// over every company for anyone who asked, and both it and the catch-up —
+// the person's decision to open days for every company — were open to a
+// caller naming no person even where the kernel serves persons only.
+func TestTheDryRunsAskWhatTheGateAsks(t *testing.T) {
+	w := newGrantsWorld(t)
+	a, b := "PL5250001111", "PL5260001246"
+	w.person("Krzysztof Kowal", "kk", a, "owner")
+	w.person("Olga Nowa", "olga", b, "owner")
+	w.person("Anna Nowak", "anna", a, "accountant")
+	w.mustDoor("kk", a, "declare_role", map[string]any{"name": "clerk", "rights": "door:take_note type:note"})
+	clerk := w.person("Celina Clerk", "celina", "", "clerk")
+	w.mustDoor("kk", a, "grant_membership", map[string]any{"person": clerk, "company": a, "role": "clerk", "from": "2026-01-01", "granted_by": "kk"})
+	if _, err := w.s.InsertRuleVersion(w.ctx, core.Rule{ID: "memo", Status: core.StatusDraft, Priority: 100, EffectiveFrom: "2026-01-01",
+		CreatedBy: "agent:test", Description: "memos as notes", Spec: core.RuleSpec{Match: core.Match{EventType: "memo.taken"},
+			Effect: core.Effect{Object: core.ObjectTemplate{Type: "note", Fields: map[string]string{"text": "=$.text", "amount": "=$.amount"}}}}}); err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{"/api/rules/memo/simulate", "/api/backfill/simulate", "/api/bundles/any/simulate"} {
+		if code := w.call("celina", a, "POST", path, map[string]any{}, nil); code != 403 {
+			t.Fatalf("a clerk without the gate's view at %s: %d", path, code)
+		}
+	}
+	// The clock acts on every company: its simulation and catch-up need the
+	// gate in each, and anna is let in at one.
+	for _, path := range []string{"/api/time/simulate", "/api/time/catchup"} {
+		if code := w.call("anna", a, "POST", path, map[string]any{}, nil); code != 403 {
+			t.Fatalf("anna, let in at one company, at %s: %d", path, code)
+		}
+	}
+	// Where the kernel serves persons only, they are no machine's routes.
+	persons := httptest.NewServer((&shell.Server{Store: w.s, Exec: w.x, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb"), RequirePerson: true, FaceKey: "k"}).Handler())
+	defer persons.Close()
+	for _, path := range []string{"/api/time/simulate", "/api/time/catchup"} {
+		res, err := http.Post(persons.URL+path, "application/json", bytes.NewReader([]byte(`{}`)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		res.Body.Close()
+		if res.StatusCode != 401 {
+			t.Fatalf("%s naming no person: %d", path, res.StatusCode)
+		}
+	}
+}

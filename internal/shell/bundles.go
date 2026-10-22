@@ -113,6 +113,9 @@ func (s *Server) handleBundles(w http.ResponseWriter, r *http.Request) {
 
 // handleSimulateBundle dry-runs the bundle as approval would land it.
 func (s *Server) handleSimulateBundle(w http.ResponseWriter, r *http.Request) {
+	if !s.allowSystem(w, r, ViewGate) { // as the preview asks (A9)
+		return
+	}
 	ctx := r.Context()
 	b, err := s.Store.GetBundle(ctx, r.PathValue("id"))
 	if err != nil {

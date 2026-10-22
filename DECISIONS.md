@@ -4974,3 +4974,8 @@ with its four points settled the same day:
   Must land before a second owner or an office is admitted on any installation
   (invariant 9: a company's books are that company's). Order of work: DIRECTION, "The
   learning process".
+- A9: the dry runs of a rule, a bundle and a backfill ask for the gate's view, as the
+  bundle's preview did; the clock's catch-up and its simulation are a person's decision over
+  every company — no longer machine routes, and a person needs the gate's view in every
+  company anyone is let into (`rights.LetIn`). The operator's shell, naming no person, keeps
+  them where the kernel does not serve persons only. TestTheDryRunsAskWhatTheGateAsks.

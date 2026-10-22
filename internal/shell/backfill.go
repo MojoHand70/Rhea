@@ -11,6 +11,9 @@ import (
 // the active rules would explain further, offered forward where a period is
 // closed, rendered as the same field-level diff every approval reads.
 func (s *Server) handleSimulateBackfill(w http.ResponseWriter, r *http.Request) {
+	if !s.allowSystem(w, r, ViewGate) { // the gate's dry run asks what the gate asks (A9)
+		return
+	}
 	ctx := r.Context()
 	plan, err := s.Exec.PlanBackfill(ctx, s.Clock.TodayUTC())
 	if err != nil {

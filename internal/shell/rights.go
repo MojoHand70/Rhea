@@ -26,12 +26,14 @@ import (
 // open API.
 
 // machineRoutes are the machine's own hands, open without a person even
-// when the kernel serves persons only: the clock the morning timer moves,
+// when the kernel serves persons only: the clock the morning timer moves (a
+// catch-up over many days and its simulation are a person's decision, never
+// a machine's — review 2026-10-21, A9),
 // the host speaking on the timer's call, the face reporting a sign-in, and
 // the two reads a face needs before anyone is signed in.
 func machineRoute(r *http.Request) bool {
 	switch r.Method + " " + r.URL.Path {
-	case "POST /api/time/advance", "POST /api/time/catchup", "POST /api/time/simulate",
+	case "POST /api/time/advance",
 		"POST /api/speak", "POST /api/activities/record_access/trigger",
 		"GET /api/time", "GET /api/live":
 		return true
@@ -251,6 +253,28 @@ const (
 
 func (s *Server) allowSystem(w http.ResponseWriter, r *http.Request, view string) bool {
 	return s.allow(w, r, "view", view, "system")
+}
+
+// allowEverywhere answers for an act on every company's books — the clock's
+// catch-up and its simulation: a signed-in person needs the right in every
+// company anyone is let into; the simulation ran as the owner over every
+// company for anyone who asked (review 2026-10-21, A9). Without a person,
+// the operator's own shell, it is the owner's.
+func (s *Server) allowEverywhere(w http.ResponseWriter, r *http.Request, kind, name, domain string) bool {
+	p := rights.PrincipalOf(r.Context())
+	if p == nil {
+		return true
+	}
+	companies, err := rights.LetIn(r.Context(), s.Store, s.Clock.TodayUTC())
+	if err != nil {
+		writeErr(w, 500, err)
+		return false
+	}
+	if p.MayEverywhere(companies, kind, name, domain) {
+		return true
+	}
+	writeErr(w, 403, fmt.Errorf("refused: this reaches every company's books — %s needs %s %s in each company let in here", p.Handle, kind, name))
+	return false
 }
 
 // --- who can do what ------------------------------------------------------
