@@ -4876,3 +4876,11 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   -verify FILE` checks a file with no database. The suggested header listing columns was
   not needed: each row is checked against the table it goes into.
   TestARestoreRefusesABackupThatIsNotWhole.
+- G1 (the kernel's half): `rhea backup -upload FILE` verifies a backup and puts it into an
+  S3-style bucket (KK chose OVH Object Storage), signed with AWS Signature V4 on the
+  standard library — a server's curl may not sign an upload correctly, and the secret
+  stays off command lines. Settings: RHEA_BACKUP_S3_URL (https://host/bucket[/prefix]),
+  _REGION, _KEY, _SECRET. The signer agrees with curl 8.18's to the last digit
+  (TestOffsiteSignsAsCurlDoes). `rhea backup FILE` still leaves a partial file when it fails;
+  the nightly job writes under a temporary name and keeps a file only once -verify passes,
+  so a cut file never stands as a backup. TestOffsiteUploadsOnlyAWholeBackup.

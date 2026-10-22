@@ -104,6 +104,23 @@ func main() {
 		fmt.Printf("%s is whole: %v\n", os.Args[3], counts)
 		return
 	}
+	// The night's backup leaves the machine: verified, then put into the
+	// bucket the settings name (rhea backup -upload FILE; offsite.go).
+	if len(os.Args) >= 3 && os.Args[1] == "backup" && os.Args[2] == "-upload" {
+		if len(os.Args) != 4 {
+			log.Fatal("usage: rhea backup -upload FILE")
+		}
+		o, err := offsiteFromEnv()
+		if err != nil {
+			log.Fatal(err)
+		}
+		counts, err := uploadBackup(context.Background(), o, os.Args[3])
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("%s uploaded to %s: %v\n", filepath.Base(os.Args[3]), o.base.Host+o.base.Path, counts)
+		return
+	}
 	// The caller's scope: the company whose facts this run is in
 	// (DIRECTION 2026-10-08, the partition key); empty means the owner's
 	// whole log. The owner's own commands — init, backup, restore, replay,
@@ -286,7 +303,7 @@ func main() {
 		// restore replays them. (rhea backup -verify FILE is above: it needs
 		// no database.)
 		if len(os.Args) >= 3 && strings.HasPrefix(os.Args[2], "-") {
-			log.Fatal("usage: rhea backup [FILE] | rhea backup -verify FILE")
+			log.Fatal("usage: rhea backup [FILE] | rhea backup -verify FILE | rhea backup -upload FILE")
 		}
 		out := os.Stdout
 		if len(os.Args) >= 3 {
