@@ -3478,6 +3478,24 @@ flow's "after 30 days" counts from issue, as the books have no payment term.
 Still owed by this section's order: the component gallery and the checks,
 before the next screen; KK's Qalcwise flows into the flow shape.
 
+**The table's layouts (2026-10-22; rheaface 7c3d8b9, 8e408d5).** Three of the
+closed set's shapes — board, calendar, timeline — are built as layouts of the
+one table, not as screens of their own, with cards beside them: the same rows,
+filters and order, chosen in the table's toolbar and saved with the view (KK:
+Airtable's habits). A layout is offered from the column types alone — a board
+needs a state or a reference, a calendar a date, a timeline two — and one not
+offered stays in its place, greyed, saying what it needs, so the frame does
+not move from one list to the next. A state's board keeps the pack's order of
+values and an unused step as an empty column, which is what a smart
+document's board needs; the first flow is now this board under its strip of
+steps, the shape KK's Qalcwise flows will fill. The first of the checks
+exists: `node tools/gridcheck.mjs` drives headless Chrome through its
+debugging port (real frames and a real clock — `--dump-dom` runs on virtual
+time, where a budget measures nothing), clicks, keys, saves and reopens every
+layout, draws every list the desk offers in each, and holds 100 000 rows to
+under 4 000 drawn elements in two frames per layout. Still owed: the gallery
+page itself, the token check, a chart as the table's next layout.
+
 **Consistency and speed are checks, not promises.** Several sessions build the
 face, and none remembers the last; a promise to reuse does not survive that.
 (1) One living gallery page shows every component in every state, light and
