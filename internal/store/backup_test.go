@@ -89,7 +89,7 @@ func TestBackupRestore(t *testing.T) {
 		t.Fatalf("backup counts: %v", counts)
 	}
 	lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
-	if !strings.HasPrefix(lines[0], `{"rhea_backup":1,`) || strings.Contains(buf.String(), `"t":"object"`) {
+	if !strings.HasPrefix(lines[0], `{"rhea_backup":2,`) || strings.Contains(buf.String(), `"t":"object"`) {
 		t.Fatalf("the backup's shape: %s", lines[0])
 	}
 
@@ -347,4 +347,83 @@ func mustJSON(t *testing.T, v any) string {
 		t.Fatal(err)
 	}
 	return string(j)
+}
+
+// A backup that is not whole is refused (review 2026-10-21, G2): a file cut
+// at a line boundary restored as a shorter log, a row dropped from its
+// middle restored as a log with a hole, and a row carrying a column this
+// database lacks — a backup written by a newer Rhea restored by an older
+// one, the company key among them — was restored without it; each said it
+// succeeded. Now a backup ends with what it carried, a restore refuses one
+// that does not say so or says otherwise, and every field of a row must be
+// a column here. A backup from before the end line still restores.
+func TestARestoreRefusesABackupThatIsNotWhole(t *testing.T) {
+	ctx := context.Background()
+	a := storetest.New(t)
+	xa := &exec.Executor{Store: a}
+	if err := a.InsertObjectType(ctx, core.ObjectType{Name: "note", Version: 1, Domain: "work", LabelField: "text",
+		Fields: []core.FieldDef{{Name: "text", Type: "string", Required: true}}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := a.InsertRuleVersion(ctx, core.Rule{ID: "note", Status: core.StatusActive, Priority: 100, EffectiveFrom: "2026-01-01", CreatedBy: "krzysztof",
+		Description: "notes", Spec: core.RuleSpec{Match: core.Match{EventType: "note.taken"},
+			Effect: core.Effect{Object: core.ObjectTemplate{Type: "note", Fields: map[string]string{"text": "=$.text"}}}}}); err != nil {
+		t.Fatal(err)
+	}
+	for i := 1; i <= 3; i++ {
+		if _, err := a.AppendEvent(ctx, core.Event{Kind: core.KindRaw, Type: "note.taken", OccurredAt: "2026-09-01", Actor: "cli:test",
+			Payload: []byte(fmt.Sprintf(`{"text":"note %d"}`, i)), DedupKey: fmt.Sprintf("n%d", i), Company: "PL5250001111"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, errs := xa.ProcessPending(ctx); len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	var buf bytes.Buffer
+	if _, err := a.Backup(ctx, &buf); err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
+	join := func(ls []string) string { return strings.Join(ls, "\n") + "\n" }
+	b := storetest.NewBare(t) // a refused restore leaves it empty for the next
+	restore := func(text string) error {
+		t.Helper()
+		_, err := b.Restore(ctx, strings.NewReader(text))
+		return err
+	}
+
+	if err := restore(join(lines[:len(lines)-1])); err == nil {
+		t.Fatal("a backup cut at a line boundary restored")
+	}
+	var holed []string
+	dropped := false
+	for _, l := range lines {
+		if !dropped && strings.Contains(l, `"t":"event"`) {
+			dropped = true
+			continue
+		}
+		holed = append(holed, l)
+	}
+	if err := restore(join(holed)); err == nil {
+		t.Fatal("a backup with an event dropped from its middle restored")
+	}
+	if err := restore(strings.ReplaceAll(buf.String(), `{"event_id":`, `{"branch":"north","event_id":`)); err == nil || !strings.Contains(err.Error(), "branch") {
+		t.Fatalf("a backup with a column this database lacks: %v", err)
+	}
+	if err := restore(buf.String()); err != nil {
+		t.Fatalf("the whole backup: %v", err)
+	}
+
+	// The same check reads a backup without a database (rhea backup
+	// -verify), and a backup from before the end line still restores.
+	if _, err := store.VerifyBackup(strings.NewReader(join(lines[:len(lines)-1]))); err == nil {
+		t.Fatal("a cut backup verified")
+	}
+	if counts, err := store.VerifyBackup(bytes.NewReader(buf.Bytes())); err != nil || counts["event"] == 0 {
+		t.Fatalf("the whole backup verifies: %v %v", counts, err)
+	}
+	old := strings.Replace(join(lines[:len(lines)-1]), `{"rhea_backup":2,`, `{"rhea_backup":1,`, 1)
+	if _, err := storetest.NewBare(t).Restore(ctx, strings.NewReader(old)); err != nil {
+		t.Fatalf("a format-1 backup: %v", err)
+	}
 }

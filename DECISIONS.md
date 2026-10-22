@@ -4865,3 +4865,14 @@ The review's cause 6 (packs/pl/REVIEW.md, VAT-18, KSEF-10, MON-16, MON-17, FB-13
   The NBP channel is one. A rate already written under a company on a live installation
   stays in its log (append-only); if `rhea pass nbp` was ever run there as the owner, the
   company's copies need a look before the first EUR document. TestNBPRatesAreTheInstallations.
+
+## 2026-10-22 — A backup that leaves the machine and proves itself whole (the whole-tree review, step 6)
+
+- G2: backups are format 2 — the last line names each table's rows and the last event's
+  id; a restore refuses a format-2 file without that line or disagreeing with it, and any
+  row with a field that is no column of this database (a newer Rhea's backup restored by an
+  older one loses nothing silently). Format-1 files (every backup before today, the deploy
+  backups on white01 among them) still restore as before, unverifiable. `rhea backup
+  -verify FILE` checks a file with no database. The suggested header listing columns was
+  not needed: each row is checked against the table it goes into.
+  TestARestoreRefusesABackupThatIsNotWhole.

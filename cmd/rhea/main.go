@@ -86,6 +86,24 @@ func main() {
 		}
 		return
 	}
+	// A backup is verified where it lies, with no database: its end line
+	// names what it carried (rhea backup -verify FILE).
+	if len(os.Args) >= 3 && os.Args[1] == "backup" && os.Args[2] == "-verify" {
+		if len(os.Args) != 4 {
+			log.Fatal("usage: rhea backup -verify FILE")
+		}
+		f, err := os.Open(os.Args[3])
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer f.Close()
+		counts, err := store.VerifyBackup(f)
+		if err != nil {
+			log.Fatalf("%s: %v", os.Args[3], err)
+		}
+		fmt.Printf("%s is whole: %v\n", os.Args[3], counts)
+		return
+	}
 	// The caller's scope: the company whose facts this run is in
 	// (DIRECTION 2026-10-08, the partition key); empty means the owner's
 	// whole log. The owner's own commands — init, backup, restore, replay,
@@ -265,7 +283,11 @@ func main() {
 	case "backup":
 		// The system of record as JSON lines: definitions, bundles, files,
 		// the event log — to FILE, or to stdout. Objects are not in it; a
-		// restore replays them.
+		// restore replays them. (rhea backup -verify FILE is above: it needs
+		// no database.)
+		if len(os.Args) >= 3 && strings.HasPrefix(os.Args[2], "-") {
+			log.Fatal("usage: rhea backup [FILE] | rhea backup -verify FILE")
+		}
 		out := os.Stdout
 		if len(os.Args) >= 3 {
 			f, err := os.Create(os.Args[2])
