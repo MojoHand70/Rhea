@@ -5163,3 +5163,24 @@ making a company someone's office needs the person's right there through their o
 membership (or a substitution standing in for one), never through a mandate
 (rights.MayAsMember) — KSeF's default, an authorisation is not passed on. Under a full
 mandate the office still manages the client's people (DIRECTION's onboarding level 4).
+
+## 2026-10-23 — Core, market packs and business packs (KK)
+
+KK's answers to the six questions of "Core, market packs and business packs" (DIRECTION), each on
+the option proposed:
+
+- **A country's law is a base and one regime pack per company**, not one Poland pack with
+  variants — superseding 2026-10-16's sole traders as a variant of the Poland pack: packs become
+  installable, and an office's clients mix regimes. Polska — podstawa, then Pełna księgowość,
+  KPiR, Ewidencja przychodów (later the NGO and unregistered-activity records).
+- **Packs are installed per company**, never for the whole installation; a pack's rules are the
+  company's own, what the company sees follows what it installed; Ustawienia → Pakiety lists the
+  available and the installed.
+- **Karta podatkowa is not offered** — closed to new entrants since 2022.
+- **KPiR is the first new regime pack** — sole traders were the first-phase users.
+- **Rachunki i karty are core** — own bank accounts, cards, cash desks, statements and matching;
+  the Polish banks' dialects, split payment, the VAT account and the white-list check are
+  Podstawa's.
+- **Modules per country** — Środki trwałe — Polska first, Kadry i płace later; modules compute and
+  keep their registers, the regime pack decides how anything reaches the books (KK chose a
+  separate fixed-asset pack per country).

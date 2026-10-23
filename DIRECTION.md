@@ -3786,7 +3786,9 @@ designer page; a right on the App as a whole.
 
 1. *Every tab an App:* today's views, actions and rules grouped into App definitions with no
    change in behaviour — the folder, the title, who may run it. The register is `APPS.md`:
-   every App Rhea already has, its layer, and what the face knows that is not its own.
+   every App Rhea already has, its layer, and what the face knows that is not its own. KK
+   turned this step first to what Rhea is with nothing installed and what each pack brings:
+   "Core, market packs and business packs" below sets its order.
 2. *Variables, parameters and interactive visualization* — a table and a form driven by an
    App's variables.
 3. *Workflow in the kernel* — rights per state, snapshots, a running process keeping its
@@ -3802,6 +3804,91 @@ Speed budgets throughout. Still to settle, each with the standard proposed: an A
 imposes (the FA(3) invoice, the JPK file) ships in the market pack and a company may add to it —
 its own fields, its own approval step — but not change its statutory part; values are computed
 at four moments — on input, when a fact they read changes, on the clock, or only when looked at.
+
+## Core, market packs and business packs (KK, 2026-10-23)
+
+KK, before the first App is declared: *"we should define what comes with Rhea without any
+business pack — what is the core Rhea. A user opens Rhea without any pack installed, what does he
+see? Then what comes in the Market Pack."* The answer, agreed the same day.
+
+**Rhea with nothing installed** is the five things that never change and the platform: sign-in,
+the person's companies (the switch), Ludzie (people and rights); Księgi — Dziennik, Plan kont
+(empty until a pack brings a chart or the company builds its own with Rhea), Zestawienie obrotów
+i sald, Okresy (open and close a month), Kontrahenci and Moja firma (name, tax id, address);
+**Rachunki i karty** — the company's own bank accounts (bank, IBAN, currency, purpose: main,
+VAT, foreign currency, savings), its cards (credit or debit, the account they settle from, the
+statement day, the limit), its cash desks, statements in (MT940; ISO 20022 CAMT.053 and card
+statements later) and matching, a kernel method; Dokumenty — files received and issued, with the
+readers that are no country's (MT940, scanned PDFs); Dziś — what waits for approval, and a card
+saying no pack is installed, pointing to Ustawienia → Pakiety; Rhea herself — conversation,
+"why?", search — who says she was taught nothing yet and can learn from scratch by the interview.
+What the founding vocabulary carries that is law (invoices, VAT rates, exchange rates) moves to
+the market pack.
+
+**A country is a base, one regime pack, and modules.**
+
+- **Polska — podstawa**: the law every Polish company meets whatever its books — VAT (rates,
+  registers, settlement, JPK_V7M/K; switched off by an exempt company's status), KSeF in and out
+  and the FA(3) invoice, the tax calendar, the NBP rates, GUS and the VAT white list, the
+  company's identity and declared form (urząd skarbowy, legal form; books full, KPiR or ryczałt;
+  tax CIT, skala, liniowy or ryczałt), the vehicle mileage log (a VAT matter), the Polish banks'
+  file dialects, split payment and the VAT account, the white-list check of a supplier's account,
+  the Polish words.
+- **One regime pack per company**, by its books: **Pełna księgowość** (UoR: the chart, double
+  entry, CIT with Estonian CIT as a choice inside — a tax regime that needs full books — deferred
+  tax, provisions, RMK, year-end close, financial statements, micro and small simplified as
+  options, equity; most of today's pack v44); **KPiR** (the book, 19 columns from 2026, the stock
+  count, the equipment register, PIT advances on skala and liniowy, IP Box records as an option,
+  JPK_PKPIR); **Ewidencja przychodów** (ryczałt: the revenue register by rate, ryczałt advances,
+  JPK_EWP); later **Organizacje pozarządowe** (uproszczona ewidencja przychodów i kosztów) and
+  **Działalność nierejestrowana** (uproszczona ewidencja sprzedaży). Karta podatkowa is not
+  offered: closed to new entrants since 2022, its existing users need only VAT and employee
+  records.
+- **Modules**, each country's own, needed in more than one regime: **Środki trwałe — Polska**
+  first (the register of fixed assets and intangibles, KŚT, the statutory rates, OT and LT, the
+  one-off write-off up to 10,000 zł, improvements, sale and disposal, tax and balance
+  depreciation), later **Kadry i płace** (employees, ZUS, PIT-11), possibly Magazyn and Pojazdy.
+- **The rule that keeps them apart: modules compute and keep their registers; the regime pack
+  decides how anything reaches the books.** Depreciation the fixed-asset module computes is 400/070
+  postings in full books, a cost line in KPiR, and nothing under ryczałt, whose register is still
+  kept; a bank line is postings in full books and no book entry at all in KPiR. So one module
+  serves every regime.
+
+Which a company installs: sp. z o.o., S.A. and spółka komandytowa — Podstawa and Pełna
+księgowość; a sole trader or a civil or general partnership on skala or liniowy below €2m —
+Podstawa and KPiR (IP Box records if used); on ryczałt — Podstawa and Ewidencja przychodów; above
+€2m or by choice — Pełna księgowość in its PIT variant; an NGO with no business activity and
+income up to 100,000 zł — Organizacje pozarządowe; unregistered activity — Podstawa's sales
+record; with employees — Kadry i płace; an accounting office — its own regime for its own books
+and the business pack *Rhea for Accounting Offices*. Rhea proposes them at onboarding — GUS gives
+the legal form, the person confirms the tax form — and the person approves.
+
+**Installed per company.** A pack installs into the company acted for, never the whole
+installation: a sole trader on KPiR and a sp. z o.o. on full books share an installation, and an
+office's clients mix regimes. Definitions of types and views stay shared; the rules a pack brings
+are the company's own (the company rules of 2026-10-22), and what the company sees follows what it
+installed. **Ustawienia → Pakiety** has two columns, *Dostępne* and *Zainstalowane*; each pack
+says its kind (market base, regime, module, business), version, what it brings (its Apps), who
+made it and what it needs (KPiR needs Podstawa); **Zainstaluj** shows what will be added and
+arrives as a proposal on Dziś, approving it makes it active; **Uaktualnij** takes a newer version;
+**Wyłącz** stops a pack from that day, what it booked staying.
+
+**The Marketplace, gradually.** Rhea's own packs first — Podstawa, Pełna księgowość and Środki
+trwałe split out of today's pack with no change for existing companies, then KPiR, Ewidencja
+przychodów, Rhea for Accounting Offices — then partners' (offices, consultants: the pack
+workspace brief of 2026-10-18).
+
+**Order of work** (step 1 of "Rhea Apps and business packs"):
+
+1. *The core:* what stays in the kernel and its base vocabulary, what moves to the market pack;
+   Rachunki i karty added.
+2. *Installation per company and the Pakiety tab* — with the company-rules work.
+3. *Today's Poland pack split* into Podstawa, Pełna księgowość and Środki trwałe — Polska, no
+   change in behaviour for existing companies.
+4. *KPiR.*
+5. *Ewidencja przychodów.*
+
+Each pack declares its Apps as it is built or split (`APPS.md` is the register they start from).
 
 ## The learning process: a lesson in words, taught once for many clients (KK, 2026-10-22)
 

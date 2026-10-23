@@ -102,6 +102,11 @@ the face's check and the live walk guard what the person sees.
 
 ## Order within step 1
 
+Superseded the same day by "Core, market packs and business packs" (DIRECTION): the core and
+Rachunki i karty first, installation per company and the Pakiety tab, the Poland pack split into
+Podstawa, Pełna księgowość and Środki trwałe — Polska, then KPiR and ryczałt; each pack declares
+its Apps as it is built or split. The order as first written:
+
 1. This register, and its App boundaries agreed.
 2. The kernel: the App as a definition kind — stored, versioned, approved with its pack — and
    `/api/apps`.
