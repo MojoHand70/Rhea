@@ -37,6 +37,8 @@ type grantsWorld struct {
 	ts    *httptest.Server
 	today string
 	asked atomic.Int32
+	// reply, when set, is what the model says instead of the one line
+	reply func(system, user string) string
 }
 
 func newGrantsWorld(t *testing.T) *grantsWorld {
@@ -46,6 +48,9 @@ func newGrantsWorld(t *testing.T) *grantsWorld {
 	srv := &shell.Server{Store: w.s, Exec: w.x, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb"),
 		Agent: &agent.Agent{Complete: func(ctx context.Context, system, user string) (string, error) {
 			w.asked.Add(1)
+			if w.reply != nil {
+				return w.reply(system, user), nil
+			}
 			return "One note was taken, worth 12.50 PLN.", nil
 		}}}
 	w.x.Today = srv.Clock.Today
