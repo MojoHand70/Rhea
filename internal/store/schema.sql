@@ -396,7 +396,10 @@ END;
 $$;
 GRANT USAGE ON SCHEMA public TO rhea_app;
 GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA public TO rhea_app;
-GRANT UPDATE, DELETE ON object TO rhea_app;
+-- A chain books and amends objects in its company's scope; only the owner's
+-- replay wipes the cache (invariant 7; review 2026-10-21, C3).
+GRANT UPDATE ON object TO rhea_app;
+REVOKE DELETE ON object FROM rhea_app;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO rhea_app;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO rhea_app;
 

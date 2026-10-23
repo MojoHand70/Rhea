@@ -5115,6 +5115,17 @@ KK's decision of 2026-10-22, built:
   (`blob_hash_is_bytes`), so a restore refuses a backup whose bytes were changed; the check
   is re-validated at every init, which hashes every file once per init.
   TestARestoredFileIsWhatItsNameSays.
+- C3: a company's request deletes no object. The role scoped requests run as keeps INSERT
+  and UPDATE on `object` (a chain books and amends in its company's scope, under row-level
+  security); DELETE is revoked, and only the owner's replay wipes the cache.
+  TestACompanysRequestDeletesNoObject. *Assessed and left:* the store's exported writers
+  still take any status — `InsertRuleVersion` an active rule, `InsertObjectType` and
+  `InsertViewDef` a live definition, `InsertObject` an object. Outside the executor every
+  caller writes drafts (the drafting doors, the pack loader, eval), and only the executor's
+  reactions to a recorded approval activate; the guard is that code, not the store. Making
+  the store draft-only means rewriting 208 test sites in 63 files that build their worlds
+  this way. Revisit before the kernel's code is opened to outside contributors, when
+  convention stops being enough.
 
 ## 2026-10-23 — Companies come in by their NIP (The desk in order, step 4)
 
