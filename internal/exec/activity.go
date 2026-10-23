@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"rhea/internal/core"
@@ -40,6 +41,9 @@ type Triggered struct {
 	// person has paired the same way twice: the standard as a policy step,
 	// waiting for approval.
 	Proposed *core.Bundle
+	// Clients are the companies approve_for_clients taught: its write
+	// reaches their books, and what waited there is booked after it.
+	Clients []string
 }
 
 // matchesOn counts the matches a structure made on a trigger so far — the
@@ -301,7 +305,14 @@ func (x *Executor) TriggerActivity(ctx context.Context, name string, inputs map[
 		return Triggered{}, err
 	}
 
-	tx, err := x.Store.Pool.Begin(ctx)
+	// An office teaching its clients writes into their books too: the
+	// transaction's scope widens to exactly the clients the person was let to
+	// teach, still acting for the company it acts for.
+	txCtx := ctx
+	if set, scoped := store.ScopeOf(ctx); scoped && len(out.Clients) > 0 {
+		txCtx = store.ActFor(store.WithScope(ctx, append(append([]string{}, set...), out.Clients...)), store.CompanyOf(ctx))
+	}
+	tx, err := x.Store.Pool.Begin(txCtx)
 	if err != nil {
 		return Triggered{}, err
 	}
@@ -330,6 +341,10 @@ func (x *Executor) TriggerActivity(ctx context.Context, name string, inputs map[
 	}
 
 	booked, errs := x.ProcessPending(caller)
+	for _, c := range out.Clients { // what waited in a taught client's books may book now
+		n, e := x.ProcessPending(store.WithCompany(caller, c))
+		booked, errs = booked+n, append(errs, e...)
+	}
 	out.Booked, out.Errors = booked, append(out.Errors, errs...)
 	return out, nil
 }
@@ -424,6 +439,68 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 			r, err = store.InsertRuleVersion(ctx, tx, r)
 			out.Rule = &r
 			return err
+		}, nil
+
+	case "rule.approved_for_clients":
+		var p struct {
+			RuleID     string `json:"rule_id"`
+			Clients    string `json:"clients"`
+			ApprovedBy string `json:"approved_by"`
+		}
+		if err := json.Unmarshal(ev.Payload, &p); err != nil {
+			return nil, err
+		}
+		r, err := x.Store.GetRule(ctx, p.RuleID)
+		if err != nil {
+			return nil, err
+		}
+		if r.Company == "" || r.Company != ev.Company || r.Status != core.StatusActive {
+			return nil, fmt.Errorf("rule %s is no active rule of the company acted for — an office teaches its clients what one of them was taught", p.RuleID)
+		}
+		seen, clients := map[string]bool{r.Company: true}, []string{}
+		for _, c := range strings.Split(p.Clients, ",") {
+			if c = strings.TrimSpace(c); c != "" && !seen[c] {
+				seen[c] = true
+				clients = append(clients, c)
+			}
+		}
+		if len(clients) == 0 {
+			return nil, fmt.Errorf("name the clients to teach, other than %s", r.Company)
+		}
+		sort.Strings(clients)
+		// Whole or nothing: the person approves rules in every client named,
+		// or no client is taught.
+		if pr := rights.PrincipalOf(ctx); pr != nil {
+			for _, c := range clients {
+				if _, ok := pr.May(c, "door", "approve_rule", "system"); !ok {
+					refused := &rights.ErrRefused{Person: pr.Handle, Door: ev.ActivityName, Company: c, Reason: "no role of yours approves rules here"}
+					if err := x.RecordRefusal(ctx, refused); err != nil {
+						return nil, err
+					}
+					return nil, refused
+				}
+			}
+		}
+		ev.DedupKey = fmt.Sprintf("approve-for/%s/%d/%s", r.ID, r.Version, strings.Join(clients, ","))
+		out.Clients = clients
+		base := strings.TrimSuffix(r.ID, "@"+r.Company)
+		return func(tx store.Querier) error {
+			for _, c := range clients {
+				own := r
+				own.ID, own.Company, own.Status = core.OwnedID(base, c), c, core.StatusActive
+				own, err := store.InsertRuleVersion(ctx, tx, own)
+				if err != nil {
+					return err
+				}
+				fact, _ := json.Marshal(map[string]any{"rule_id": own.ID, "approved_version": own.Version,
+					"approved_by": p.ApprovedBy, "taught_from": r.ID})
+				if _, err := store.AppendEvent(ctx, tx, core.Event{Kind: core.KindRaw, Type: ev.Type, OccurredAt: ev.OccurredAt,
+					Payload: fact, Actor: ev.Actor, Company: c, ActivityName: ev.ActivityName, ActivityVersion: ev.ActivityVersion,
+					DedupKey: fmt.Sprintf("approve-for/%s/%d", own.ID, own.Version)}); err != nil {
+					return err
+				}
+			}
+			return nil
 		}, nil
 
 	case "activity.approved":

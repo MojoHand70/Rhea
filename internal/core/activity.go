@@ -679,6 +679,20 @@ func BuiltinActivities() []Activity {
 			},
 		},
 		{
+			Name: "approve_for_clients", Domain: "system",
+			Description: "An office teaches once: a rule of the company acted for — its own, active — approved for other clients the office keeps, each getting it as its own rule, written down in each client's books as this approval (KK, 2026-10-22). The person must be able to approve rules in every client named, or nothing is approved.",
+			Spec: ActivitySpec{
+				Inputs: []FieldDef{
+					{Name: "rule_id", Type: "string", Required: true},
+					{Name: "clients", Type: "string", Required: true}, // company keys, comma-separated
+					{Name: "approved_by", Type: "string", Required: true},
+					{Name: "occurred_at", Type: "date", Required: true},
+				},
+				Emits: "rule.approved_for_clients",
+				Who:   []string{"human"},
+			},
+		},
+		{
 			Name: "approve_activity", Domain: "system",
 			Description: "Activate a draft activity — the gate applied to the gate; nothing in Rhea needs a second governance mechanism.",
 			Spec: ActivitySpec{
