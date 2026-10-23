@@ -7,6 +7,7 @@ import (
 
 	"rhea/internal/agent"
 	"rhea/internal/core"
+	"rhea/internal/exec"
 	"rhea/internal/network"
 	"rhea/internal/store"
 )
@@ -28,6 +29,14 @@ func DraftAsk(ctx context.Context, st *store.Store, k *network.Knowledge, intent
 	if err != nil {
 		return agent.Ask{}, err
 	}
+	// the author drafts for the company against what it is offered: a pack
+	// it has not installed is not shown (DIRECTION 2026-10-24, step 2)
+	offer, err := exec.Offered(ctx, st, store.CompanyOf(ctx), "")
+	if err != nil {
+		return agent.Ask{}, err
+	}
+	types = slices.DeleteFunc(types, func(t core.ObjectType) bool { return !offer.Type(t.Name) })
+	rules = slices.DeleteFunc(rules, func(r core.Rule) bool { return !offer.Rule(r) })
 	var targets []string
 	for _, t := range types {
 		for _, f := range t.Fields {

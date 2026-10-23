@@ -222,6 +222,19 @@ func (x *Executor) TriggerActivity(ctx context.Context, name string, inputs map[
 	if err != nil {
 		return Triggered{}, err
 	}
+	// a door of a pack installed per company opens only where the pack
+	// stands today, before anyone's rights are asked (DIRECTION 2026-10-24,
+	// step 2)
+	if company := store.CompanyOf(ctx); company != "" {
+		offer, err := x.Offered(ctx, company)
+		if err != nil {
+			return Triggered{}, err
+		}
+		if !offer.Door(act) {
+			p, _ := PackOf(act.CreatedBy)
+			return Triggered{}, &rights.ErrRefused{Door: act.Name, Company: company, Reason: fmt.Sprintf("the pack %s is not installed here — %s is not offered", p, act.Name)}
+		}
+	}
 	// The face says who, the kernel says whether (DIRECTION 2026-10-19,
 	// "People and rights"): a signed-in person is checked against the
 	// door's Who and their grants in the company they act for, the door

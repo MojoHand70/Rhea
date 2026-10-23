@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"slices"
 
 	"rhea/internal/core"
+	"rhea/internal/store"
 )
 
 // The language explaining itself (DECISIONS 2026-10-05): GET /api/types
@@ -70,14 +72,20 @@ func viewObjectType(vd core.ViewDef) string {
 }
 
 func (s *Server) explainTypes(ctx context.Context) ([]typeExplanation, error) {
-	types, err := s.Store.ListObjectTypes(ctx)
+	offer, err := s.Exec.Offered(ctx, store.CompanyOf(ctx))
 	if err != nil {
 		return nil, err
 	}
-	rules, err := s.Store.LatestRules(ctx)
+	allTypes, err := s.Store.ListObjectTypes(ctx)
 	if err != nil {
 		return nil, err
 	}
+	allRules, err := s.Store.LatestRules(ctx)
+	if err != nil {
+		return nil, err
+	}
+	types := slices.DeleteFunc(allTypes, func(t core.ObjectType) bool { return !offer.Type(t.Name) })
+	rules := slices.DeleteFunc(allRules, func(r core.Rule) bool { return !offer.Rule(r) })
 	views, err := s.effectiveViewDefs(ctx)
 	if err != nil {
 		return nil, err

@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"slices"
 
 	"rhea/internal/core"
 	"rhea/internal/rights"
+	"rhea/internal/store"
 )
 
 // The second vocabulary over HTTP (DIRECTION: the replaceable interpreter —
@@ -47,6 +49,15 @@ func (s *Server) handleActivities(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 500, err)
 		return
 	}
+	// a door of a pack installed per company is offered where the pack
+	// stands today (DIRECTION 2026-10-24, step 2)
+	offer, err := s.Exec.Offered(ctx, store.CompanyOf(ctx))
+	if err != nil {
+		writeErr(w, 500, err)
+		return
+	}
+	active = slices.DeleteFunc(active, func(a core.Activity) bool { return !offer.Door(a) })
+	latest = slices.DeleteFunc(latest, func(a core.Activity) bool { return !offer.Door(a) })
 	activeVersion := map[string]int{}
 	out := []activityOut{}
 	p := rights.PrincipalOf(ctx)

@@ -374,13 +374,31 @@ type navDomain struct {
 // derived from the type itself (core.DerivedListView/DerivedDetailView).
 // Stored views are the exceptions; derivation is the default.
 func (s *Server) effectiveViewDefs(ctx context.Context) ([]core.ViewDef, error) {
-	vds, err := s.Store.LatestViewDefs(ctx)
+	all, err := s.Store.LatestViewDefs(ctx)
 	if err != nil {
 		return nil, err
 	}
-	types, err := s.Store.ListObjectTypes(ctx)
+	allTypes, err := s.Store.ListObjectTypes(ctx)
 	if err != nil {
 		return nil, err
+	}
+	// what the company acted for is offered: a pack installed per company
+	// only where it is installed (DIRECTION 2026-10-24, step 2)
+	offer, err := s.Exec.Offered(ctx, store.CompanyOf(ctx))
+	if err != nil {
+		return nil, err
+	}
+	vds := make([]core.ViewDef, 0, len(all))
+	for _, v := range all {
+		if offer.View(v.ID) {
+			vds = append(vds, v)
+		}
+	}
+	types := make([]core.ObjectType, 0, len(allTypes))
+	for _, t := range allTypes {
+		if offer.Type(t.Name) {
+			types = append(types, t)
+		}
 	}
 	hasList, hasDetail := map[string]bool{}, map[string]bool{}
 	for _, v := range vds {

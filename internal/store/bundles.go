@@ -287,3 +287,32 @@ func (s *Store) ApprovedPacks(ctx context.Context) (map[string]*core.PackHeader,
 	}
 	return out, rows.Err()
 }
+
+// PackMembers is what every approved pack holds, by the pack's name: the
+// members of its approved bundles, every version's together.
+func (s *Store) PackMembers(ctx context.Context) (map[string][]core.Member, error) {
+	rows, err := s.Pool.Query(ctx, `
+		SELECT created_by, members FROM (
+		    SELECT DISTINCT ON (bundle_id) bundle_id, created_by, status, members
+		    FROM bundle WHERE created_by LIKE 'pack:%' ORDER BY bundle_id, version DESC) b
+		WHERE status = $1`, core.StatusActive)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string][]core.Member{}
+	for rows.Next() {
+		var by string
+		var raw []byte
+		if err := rows.Scan(&by, &raw); err != nil {
+			return nil, err
+		}
+		var ms []core.Member
+		if err := json.Unmarshal(raw, &ms); err != nil {
+			return nil, err
+		}
+		p := strings.TrimPrefix(by, "pack:")
+		out[p] = append(out[p], ms...)
+	}
+	return out, rows.Err()
+}

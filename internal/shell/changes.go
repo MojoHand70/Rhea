@@ -3,9 +3,11 @@ package shell
 import (
 	"fmt"
 	"net/http"
+	"slices"
 	"time"
 
 	"rhea/internal/core"
+	"rhea/internal/store"
 )
 
 // handleChanges tells a company what Rhea changed since a day (?since=
@@ -24,6 +26,14 @@ func (s *Server) handleChanges(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 500, err)
 		return
 	}
+	// a change of a pack installed per company is announced where the
+	// pack stands (DIRECTION 2026-10-24, step 2)
+	offer, err := s.Exec.Offered(r.Context(), store.CompanyOf(r.Context()))
+	if err != nil {
+		writeErr(w, 500, err)
+		return
+	}
+	changes = slices.DeleteFunc(changes, func(c core.Rule) bool { return !offer.Runs(c) })
 	if changes == nil {
 		changes = []core.Rule{}
 	}
