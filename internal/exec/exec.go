@@ -301,6 +301,10 @@ type lockWorldKey struct{}
 func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []core.Rule, payload any, base core.Lookup, baseGet core.Getter, prior Prior, seed *chainNode) ([]chainNode, error) {
 	ctx = context.WithValue(ctx, lockWorldKey{}, base)
 	rules = forCompany(rules, root.Company, root.OccurredAt)
+	rules, err := x.byInstall(ctx, rules, root.Company, root.OccurredAt, installedIn(base, baseGet))
+	if err != nil {
+		return nil, err
+	}
 	var nodes []chainNode
 	// A seed is a first node the root already carries — a person's
 	// pairing, run by the kernel before the rules — from which the

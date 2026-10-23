@@ -742,8 +742,16 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 		if err != nil {
 			return nil, err
 		}
+		is, err := x.installs(ctx)
+		if err != nil {
+			return nil, err
+		}
+		chosen, err := x.byInstall(ctx, forCompany(rules, ev.Company, ev.OccurredAt), ev.Company, ev.OccurredAt, installedFrom(is))
+		if err != nil {
+			return nil, err
+		}
 		var rule *core.Rule
-		for _, r := range forCompany(rules, ev.Company, ev.OccurredAt) { // another company's rule pairs nothing here
+		for _, r := range chosen { // another company's rule, a pack's it has not installed, pairs nothing here
 			if r.ID == p.Matching {
 				rule = &r
 			}

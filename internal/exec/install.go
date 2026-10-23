@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"strings"
 
 	"rhea/internal/core"
 )
@@ -125,4 +126,87 @@ func (x *Executor) checkSwitchOff(ctx context.Context, ev core.Event) error {
 		}
 	}
 	return nil
+}
+
+// byInstall keeps of a company's rule set those that may run for its fact
+// dated date: a rule of a pack installed per company only where the company
+// had the pack installed on that day; every other rule — the core's, a pack's
+// for the whole installation, the company's own, Rhea's others — as it was.
+// The installation's own facts (master data, no company) meet every pack's.
+func (x *Executor) byInstall(ctx context.Context, rules []core.Rule, company, date string, installed func(pack, date string) (bool, error)) ([]core.Rule, error) {
+	if company == "" {
+		return rules, nil
+	}
+	var packs map[string]*core.PackHeader
+	in := map[string]bool{}
+	out := make([]core.Rule, 0, len(rules))
+	for _, r := range rules {
+		p, ok := strings.CutPrefix(r.CreatedBy, "pack:")
+		if !ok || r.Company != "" {
+			out = append(out, r)
+			continue
+		}
+		if packs == nil {
+			var err error
+			if packs, err = x.Store.ApprovedPacks(ctx); err != nil {
+				return nil, err
+			}
+		}
+		if h := packs[p]; h == nil || h.Install != core.InstallCompany {
+			out = append(out, r)
+			continue
+		}
+		yes, seen := in[p]
+		if !seen {
+			var err error
+			if yes, err = installed(p, date); err != nil {
+				return nil, err
+			}
+			in[p] = yes
+		}
+		if yes {
+			out = append(out, r)
+		}
+	}
+	return out, nil
+}
+
+// installedIn answers, from a chain's view of the company's records, whether
+// a pack was installed there on a day: an installed_pack record from on or
+// before it, open or ending on or after it.
+func installedIn(lookup core.Lookup, get core.Getter) func(pack, date string) (bool, error) {
+	return func(pack, date string) (bool, error) {
+		if lookup == nil || get == nil {
+			return false, nil
+		}
+		ids, err := lookup("installed_pack", "pack", pack)
+		if err != nil {
+			return false, err
+		}
+		for _, id := range ids {
+			st, ok, err := get(id)
+			if err != nil {
+				return false, err
+			}
+			from, _ := st["from"].(string)
+			to, _ := st["to"].(string)
+			if ok && from != "" && from <= date && (to == "" || date <= to) {
+				return true, nil
+			}
+		}
+		return false, nil
+	}
+}
+
+// installedFrom answers the same from the company's records read from the
+// store — for a door's reaction, which runs outside a chain.
+func installedFrom(is []install) func(pack, date string) (bool, error) {
+	return func(pack, date string) (bool, error) {
+		for _, i := range is {
+			if i.pack == pack && i.from != "" && i.from <= date && (i.to == "" || date <= i.to) {
+				return true, nil
+			}
+		}
+		return false, nil
+	}
 }

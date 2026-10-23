@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -253,4 +254,36 @@ func (s *Store) ApprovedPack(ctx context.Context, name string) (b core.Bundle, o
 		return core.Bundle{}, false, nil
 	}
 	return b, err == nil, err
+}
+
+// ApprovedPacks is what each approved pack says it is, by the pack's name:
+// the header of its newest approved version — nil for a version approved
+// before packs said what they are.
+func (s *Store) ApprovedPacks(ctx context.Context) (map[string]*core.PackHeader, error) {
+	rows, err := s.Pool.Query(ctx, `
+		SELECT DISTINCT ON (created_by) created_by, pack FROM (
+		    SELECT DISTINCT ON (bundle_id) bundle_id, created_by, status, pack, created_at
+		    FROM bundle WHERE created_by LIKE 'pack:%' ORDER BY bundle_id, version DESC) b
+		WHERE status = $1 ORDER BY created_by, created_at DESC`, core.StatusActive)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]*core.PackHeader{}
+	for rows.Next() {
+		var by string
+		var header []byte
+		if err := rows.Scan(&by, &header); err != nil {
+			return nil, err
+		}
+		var h *core.PackHeader
+		if len(header) > 0 {
+			h = &core.PackHeader{}
+			if err := json.Unmarshal(header, h); err != nil {
+				return nil, err
+			}
+		}
+		out[strings.TrimPrefix(by, "pack:")] = h
+	}
+	return out, rows.Err()
 }
