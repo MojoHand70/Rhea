@@ -160,12 +160,18 @@ ALTER TABLE bundle ADD COLUMN IF NOT EXISTS company TEXT;
 -- without it. Append-only like the log: a file re-read later by a newer
 -- channel yields an amendment, never a rewrite.
 CREATE TABLE IF NOT EXISTS blob (
-    hash       TEXT PRIMARY KEY,          -- "sha256:" + hex of the bytes
+    hash       TEXT NOT NULL,             -- "sha256:" + hex of the bytes
     media_type TEXT NOT NULL,
     size       BIGINT NOT NULL,
     bytes      BYTEA NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    company    TEXT                       -- whose door received it (invariant 9)
 );
+-- A file is the company's that received it (review 2026-10-21, B4): the
+-- same bytes received by two companies are two rows, each its company's.
+ALTER TABLE blob ADD COLUMN IF NOT EXISTS company TEXT;
+ALTER TABLE blob DROP CONSTRAINT IF EXISTS blob_pkey;
+CREATE UNIQUE INDEX IF NOT EXISTS blob_hash_company ON blob (hash, COALESCE(company, ''));
 
 -- Projection cache. Rebuildable from the event log at any time.
 CREATE TABLE IF NOT EXISTS object (
@@ -283,6 +289,18 @@ BEGIN
     END IF;
 END;
 $$;
+-- A company's file is seen, and written, only where the company is. A file
+-- with no company is the installation's own, seen only in its own scope:
+-- files kept before they carried a company are each named company's by the
+-- copies rhea_stamp_blobs makes, and never every company's.
+ALTER TABLE blob ENABLE ROW LEVEL SECURITY;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'blob' AND policyname = 'blob_scope') THEN
+        CREATE POLICY blob_scope ON blob TO rhea_app USING (rhea_may_write(company)) WITH CHECK (rhea_may_write(company));
+    END IF;
+END;
+$$;
 -- A company's bundle — the question it asked, the proposal it was made — is
 -- seen, and written, only where the company is; Rhea's are every scope's.
 ALTER TABLE bundle ENABLE ROW LEVEL SECURITY;
@@ -387,3 +405,19 @@ ALTER TABLE event ADD CONSTRAINT event_derived_provenance
 -- field, a balance by account.
 CREATE INDEX IF NOT EXISTS object_type_idx ON object (object_type);
 CREATE INDEX IF NOT EXISTS object_posting_account ON object ((state->>'account')) WHERE object_type = 'posting';
+
+-- A file kept before files carried a company is, for each company whose
+-- documents name it, that company's: a copy under its key. The row with no
+-- company stays (append-only) and is the installation's alone. Run at every
+-- init and at the end of a restore; what is stamped already is not again.
+CREATE OR REPLACE FUNCTION rhea_stamp_blobs() RETURNS void AS $$
+    INSERT INTO blob (hash, media_type, size, bytes, created_at, company)
+    SELECT DISTINCT ON (b.hash, e.company) b.hash, b.media_type, b.size, b.bytes, b.created_at, e.company
+    FROM blob b
+    JOIN event e ON e.event_type IN ('document.received', 'document.issued')
+                AND COALESCE(e.company, '') <> ''
+                AND jsonb_path_exists(e.payload, '$.** ? (@ == $h)', jsonb_build_object('h', b.hash))
+    WHERE COALESCE(b.company, '') = ''
+    ON CONFLICT (hash, (COALESCE(company, ''))) DO NOTHING
+$$ LANGUAGE sql;
+SELECT rhea_stamp_blobs();

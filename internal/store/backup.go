@@ -3,6 +3,7 @@ package store
 import (
 	"bufio"
 	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -180,6 +181,9 @@ func (s *Store) InitSchema(ctx context.Context) error {
 	_, err := s.Pool.Exec(ctx, schemaSQL)
 	return err
 }
+
+//go:embed queries/stamp_blobs.sql
+var stampBlobsSQL string
 
 // Restore reads a backup into an empty system of record — the schema
 // present, no event and no definition yet — in one transaction, keeping
@@ -398,6 +402,11 @@ func (s *Store) restore(ctx context.Context, r io.Reader, st *stamper) (BackupCo
 		if _, err := tx.Exec(ctx, "SELECT setval(pg_get_serial_sequence('event', 'event_id'), (SELECT max(event_id) FROM event))"); err != nil {
 			return nil, fmt.Errorf("restore: the event sequence: %w", err)
 		}
+	}
+	// A backup written before files carried a company brings them back as
+	// nobody's: each becomes the company's whose documents name it.
+	if _, err := tx.Exec(ctx, stampBlobsSQL); err != nil {
+		return nil, fmt.Errorf("restore: the files' companies: %w", err)
 	}
 	return counts, tx.Commit(ctx)
 }

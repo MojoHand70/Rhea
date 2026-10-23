@@ -5099,3 +5099,15 @@ KK's decision of 2026-10-22, built:
 - *Known:* a late document dated before the promotion does not book by Rhea's earlier
   reading — the executor runs the newest version only (packs/us/REVIEW.md cause 3, the
   smart documents' first question). It waits in the worklist, as after any pack upgrade.
+
+## 2026-10-23 — The review's last company walls (B4, C3, D4)
+
+- B4: a file is the company's whose door received it. `blob` carries `company`; one row per
+  (hash, company), so the same bytes received by two companies are each one's own; row-level
+  security shows a file only where its company is, and a file with no company only in the
+  installation's own scope — never every company's, as it was. The shell serves a file by
+  the database's answer alone (`FileNamedInScope` is gone: a fact naming another company's
+  hash opened the file). Files kept before (white01's) are stamped by `rhea_stamp_blobs`,
+  at every init and at the end of a restore: for each company whose documents name a file,
+  a copy under its key; the row with no company stays (append-only). Copies double those
+  files' bytes, once. TestAFileIsTheCompanysThatReceivedIt, TestFilesFromBeforeTakeTheirCompany.

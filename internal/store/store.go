@@ -288,9 +288,11 @@ type Blob struct {
 	CreatedAt time.Time
 }
 
-// PutBlob keeps a file under its hash, once: a second put of the same bytes
-// is a no-op (stored=false). The hash is checked against the bytes — the
-// store vouches the content address, whoever computed it.
+// PutBlob keeps a file under its hash for the context's company, once: a
+// second put of the same bytes there is a no-op (stored=false). The hash is
+// checked against the bytes — the store vouches the content address,
+// whoever computed it. The file is the company's that received it, seen
+// only where that company is (invariant 9).
 func PutBlob(ctx context.Context, q Querier, hash, mediaType string, data []byte) (stored bool, err error) {
 	if want := core.HashBytes(data); hash != want {
 		return false, fmt.Errorf("blob %s: the bytes hash to %s", hash, want)
@@ -298,9 +300,13 @@ func PutBlob(ctx context.Context, q Querier, hash, mediaType string, data []byte
 	if mediaType == "" {
 		mediaType = "application/octet-stream"
 	}
+	var company *string
+	if c := CompanyOf(ctx); c != "" {
+		company = &c
+	}
 	tag, err := q.Exec(ctx, `
-		INSERT INTO blob (hash, media_type, size, bytes) VALUES ($1, $2, $3, $4)
-		ON CONFLICT (hash) DO NOTHING`, hash, mediaType, len(data), data)
+		INSERT INTO blob (hash, media_type, size, bytes, company) VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (hash, (COALESCE(company, ''))) DO NOTHING`, hash, mediaType, len(data), data, company)
 	if err != nil {
 		return false, err
 	}
@@ -311,11 +317,12 @@ func (s *Store) PutBlob(ctx context.Context, hash, mediaType string, data []byte
 	return PutBlob(ctx, s.Pool, hash, mediaType, data)
 }
 
-// GetBlob returns a stored file, bytes included.
+// GetBlob returns a stored file, bytes included, when the context's scope
+// holds it: a file is seen only where the company that received it is.
 func (s *Store) GetBlob(ctx context.Context, hash string) (Blob, error) {
 	var b Blob
 	err := s.Pool.QueryRow(ctx,
-		`SELECT hash, media_type, size, bytes, created_at FROM blob WHERE hash = $1`, hash,
+		`SELECT hash, media_type, size, bytes, created_at FROM blob WHERE hash = $1 LIMIT 1`, hash,
 	).Scan(&b.Hash, &b.MediaType, &b.Size, &b.Bytes, &b.CreatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return b, fmt.Errorf("no file %s in the store", hash)
@@ -1037,29 +1044,6 @@ func ScopeOf(ctx context.Context) ([]string, bool) {
 		return nil, false
 	}
 	return v.set, true
-}
-
-// FileNamedInScope says whether a document the context can see names a
-// file by its hash: a received or issued document object, or — before the
-// documents pack explains them — the door's own fact. A file is served
-// only to a scope that has it (invariant 9).
-func (s *Store) FileNamedInScope(ctx context.Context, hash string) (bool, error) {
-	for _, typ := range []string{"received_document", "issued_document"} {
-		ids, err := s.FindObjectIDsByField(ctx, typ, "hash", hash)
-		if err != nil {
-			return false, err
-		}
-		if len(ids) > 0 {
-			return true, nil
-		}
-	}
-	var named bool
-	err := s.Pool.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM event
-		               WHERE event_type IN ($1, $2) AND ($4 = '' OR company = $4 OR COALESCE(company, '') = '')
-		                 AND jsonb_path_exists(payload, '$.** ? (@ == $h)', jsonb_build_object('h', $3::text)))`,
-		core.EventDocumentReceived, core.EventDocumentIssued, hash, CompanyOf(ctx)).Scan(&named)
-	return named, err
 }
 
 // EventByDedupKey is the event a key names within a company (the
