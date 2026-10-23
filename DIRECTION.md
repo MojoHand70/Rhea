@@ -3889,6 +3889,8 @@ workspace brief of 2026-10-18).
 5. *Ewidencja przychodów.*
 
 Each pack declares its Apps as it is built or split (`APPS.md` is the register they start from).
+The target catalog these packs grow into — a vision, measured against the AI-native newcomers and
+the old guard — is `PACKS.md`, with the market research in `reports/`.
 
 ## The learning process: a lesson in words, taught once for many clients (KK, 2026-10-22)
 
