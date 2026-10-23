@@ -693,6 +693,20 @@ func BuiltinActivities() []Activity {
 			},
 		},
 		{
+			Name: "retire_rule", Domain: "system",
+			Description: "Switch one of the company's own rules off for it, with a reason: from now on it books nothing there, what it booked stays, and if it replaced a rule of Rhea's, Rhea's books again. A client's veto over a lesson an office taught it, written down in its books for the office to read (KK, 2026-10-22). A rule of Rhea's or of another company is not the company's to switch off.",
+			Spec: ActivitySpec{
+				Inputs: []FieldDef{
+					{Name: "rule_id", Type: "string", Required: true},
+					{Name: "reason", Type: "string", Required: true},
+					{Name: "retired_by", Type: "string", Required: true},
+					{Name: "occurred_at", Type: "date", Required: true},
+				},
+				Emits: "rule.retired",
+				Who:   []string{"human"},
+			},
+		},
+		{
 			Name: "approve_activity", Domain: "system",
 			Description: "Activate a draft activity — the gate applied to the gate; nothing in Rhea needs a second governance mechanism.",
 			Spec: ActivitySpec{

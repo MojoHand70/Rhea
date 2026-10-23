@@ -441,6 +441,31 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 			return err
 		}, nil
 
+	case "rule.retired":
+		var p struct {
+			RuleID string `json:"rule_id"`
+		}
+		if err := json.Unmarshal(ev.Payload, &p); err != nil {
+			return nil, err
+		}
+		r, err := x.Store.GetRule(ctx, p.RuleID)
+		if err != nil {
+			return nil, err
+		}
+		if r.Company == "" || r.Company != ev.Company {
+			return nil, fmt.Errorf("rule %s is not the company's own to switch off", p.RuleID)
+		}
+		if r.Status != core.StatusActive {
+			return nil, fmt.Errorf("rule %s is %s — only a rule that books can be switched off", p.RuleID, r.Status)
+		}
+		ev.DedupKey = fmt.Sprintf("retire/%s/%d", r.ID, r.Version+1)
+		return func(tx store.Querier) error {
+			r.Status = core.StatusSuperseded
+			r, err = store.InsertRuleVersion(ctx, tx, r)
+			out.Rule = &r
+			return err
+		}, nil
+
 	case "rule.approved_for_clients":
 		var p struct {
 			RuleID     string `json:"rule_id"`
@@ -481,9 +506,16 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 				}
 			}
 		}
+		// A client that switched the lesson off said no: the office does not
+		// teach it again over the client's veto.
+		base := strings.TrimSuffix(r.ID, "@"+r.Company)
+		for _, c := range clients {
+			if prev, err := x.Store.GetRule(store.WithCompany(ctx, c), core.OwnedID(base, c)); err == nil && prev.Status == core.StatusSuperseded {
+				return nil, fmt.Errorf("%s switched %s off — teaching it again is %s's to ask for", c, prev.ID, c)
+			}
+		}
 		ev.DedupKey = fmt.Sprintf("approve-for/%s/%d/%s", r.ID, r.Version, strings.Join(clients, ","))
 		out.Clients = clients
-		base := strings.TrimSuffix(r.ID, "@"+r.Company)
 		return func(tx store.Querier) error {
 			for _, c := range clients {
 				own := r
