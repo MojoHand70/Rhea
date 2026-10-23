@@ -5210,8 +5210,9 @@ KK's decisions in the designer talk (DIRECTION "The App designer"):
 
 - **Designer is a role in the people pack, and a paid one**; only a designer designs Apps.
 - **The owner and a designer may put an App into production**; in 99% of cases the designer, after
-  an oral agreement. Proposed with it: the production card names who agreed, kept with the
-  approval.
+  an oral agreement. The production card names who agreed, kept with the approval: the
+  requester's acceptance when there is one, otherwise whoever the designer names — the designer
+  may name themself (KK).
 - **Anyone may ask Rhea for an App**; Rhea prepares a draft as a proposal and the person who asked
   may accept it, but a designer verifies it and puts it into production.
 - **A running process moves to a new production version by default**; a version may let running

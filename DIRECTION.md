@@ -3991,9 +3991,9 @@ own data and writes nothing.
 - Anyone may ask Rhea for an App or a change. Rhea prepares the draft as a proposal; the person
   who asked may accept it — "this is what I meant" — and the acceptance is recorded on the draft.
 - A designer verifies it and puts it into production; the owner may too. KK: in 99% of cases the
-  designer, after an oral agreement. Proposed: the production card names who agreed — the
-  requester's acceptance when there is one, otherwise the person the designer names — kept with
-  the approval.
+  designer, after an oral agreement. The production card names who agreed — the requester's
+  acceptance when there is one, otherwise the person the designer names, the designer included
+  (KK) — kept with the approval.
 - A designer from outside the company (a partner building Apps for many firms, later the
   Marketplace) sees in the sandbox only what their own rights show; otherwise Rhea's sample
   company.
