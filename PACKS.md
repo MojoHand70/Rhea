@@ -211,10 +211,12 @@ ones. **Enterprise** — any process by the interview, consolidation, ESG; prici
 
 Aligned with the growth plan: the demo in April 2027, the big picture in October 2027.
 
-- **Wave 0 — the first strangers (now to early 2027).** The core with Rachunki i karty;
+- **Wave 0 — the first strangers, due for KSeF reaching micro-firms on 1 January 2027.** The
+  core with Rachunki i karty;
   installation per company; Poland split into Podstawa, Pełna księgowość and Środki trwałe; KPiR;
   Ewidencja przychodów; Rhea for Sole Proprietors and for Accounting Offices; parity with wFirma,
-  inFakt, Saldeo and mOrganizer; banks, KSeF, GUS, JPK sending, migration, mail-in.
+  inFakt, Saldeo and mOrganizer, and the newcomers' finance core (AP automation, AR and
+  collections, the close without hands); banks, KSeF, GUS, JPK sending, migration, mail-in.
 - **Wave 1 — the demo (April 2027).** Kadry i płace and HR; Sales and orders; Purchasing; CRM;
   Case; Time and projects; Documents and contracts; Fleet; Treasury and Controlling basics;
   Rhea for eCommerce, SaaS and Professional Services; marketplaces and payments.
