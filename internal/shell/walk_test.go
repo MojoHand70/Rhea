@@ -147,6 +147,7 @@ func TestEveryReadIsTheCompanysOwn(t *testing.T) {
 		{"GET /api/collection", "GET", "/api/collection", nil},
 		{"GET /api/files", "GET", "/api/files", nil},
 		{"GET /api/rules", "GET", "/api/rules", nil},
+		{"GET /api/promotions", "GET", "/api/promotions", nil},
 		{"GET /api/bundles", "GET", "/api/bundles", nil},
 		{"GET /api/bundles/{id}/preview", "GET", "/api/bundles/" + kept.ID + "/preview", nil},
 		{"GET /api/activities", "GET", "/api/activities", nil},
