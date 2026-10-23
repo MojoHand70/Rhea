@@ -591,6 +591,16 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 		}
 		// Gather every member's draft before anything is appended: a member
 		// that moved since the bundle was drafted refuses the whole approval.
+		// A rule's type is approved already or comes in this bundle: approved
+		// ahead of the bundle bringing its type — the core's parts are drafted
+		// together at init — the rule would run over a definition nobody
+		// approved yet.
+		brings := map[string]bool{}
+		for _, m := range b.Members {
+			if m.Kind == core.KindObjectType {
+				brings[m.Name] = true
+			}
+		}
 		var writes []func(tx store.Querier) error
 		for _, m := range b.Members {
 			if state, err := x.Store.MemberStatus(ctx, m); err != nil {
@@ -603,6 +613,11 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 				r, err := x.Store.GetRule(ctx, m.Name)
 				if err != nil {
 					return nil, err
+				}
+				if t := r.Spec.Effect.Object.Type; t != "" && !brings[t] {
+					if _, err := x.Store.GetObjectType(ctx, t); err != nil {
+						return nil, fmt.Errorf("bundle %s: rule %s writes %s, which nothing approved defines yet — approve the bundle that brings it first: %w", b.ID, r.ID, t, err)
+					}
 				}
 				writes = append(writes, func(tx store.Querier) error {
 					r.Status = core.StatusActive

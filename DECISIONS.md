@@ -5222,3 +5222,20 @@ KK's decisions in the designer talk (DIRECTION "The App designer"):
   breaking — and each breaking one is answered in the draft before it can go to production.
 - **A designer from outside the company sees in the sandbox only what their own rights show**;
   otherwise Rhea's sample company.
+
+## 2026-10-23 — The core ships in the kernel, approved like any pack (step 1)
+
+The spec is silent on how a server gets the core; the simplest that keeps the invariants:
+
+- **The core is a pack the kernel carries in its binary** (`packs/core/core.json` with the common
+  packs, embedded by `rhea/packs`): the founding vocabulary at its latest versions, and from the
+  Poland pack the contractor, Rachunki i karty's types and the task list, byte-identical, so a
+  database that has them drafts nothing (white01).
+- **`rhea init` drafts what the database lacks; a person approves** — the operator from the
+  command line on a new server, before any house exists; the kernel's own doors stay seeded active,
+  being the gate itself. Why not seed the core active: its rules are behaviour (invariant 2).
+- **A rule is approved only onto a type already approved or brought in the same bundle** — the
+  core's parts are drafted together and approved in order (Ludzie, the core, Okresy, Dokumenty);
+  out of order, a rule would run over a definition nobody approved.
+- Left for step 3, with the loader's succession: moving Rachunki i karty's rules and doors out of
+  the Poland pack, and cutting the law (Polish fields) out of what moved.

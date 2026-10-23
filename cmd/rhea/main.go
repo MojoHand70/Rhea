@@ -147,6 +147,17 @@ func main() {
 			log.Fatal(err)
 		}
 		fmt.Println("schema ready; builtin activities seeded (the gate's birth is in the log)")
+		// the core the kernel ships: drafted where the database lacks it,
+		// active only once a person approves (DIRECTION 2026-10-23, step 1)
+		sums, err := pack.LoadCore(owner, s, actor())
+		if err != nil {
+			log.Fatal(err)
+		}
+		for _, sum := range sums {
+			if sum.Bundle != "" {
+				fmt.Printf("core: bundle %s waits for approval — rhea approve %s\n", sum.Bundle, sum.Bundle)
+			}
+		}
 
 	case "load":
 		if len(os.Args) < 3 {

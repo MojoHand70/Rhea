@@ -1,0 +1,1237 @@
+{
+  "pack": "core",
+  "version": 1,
+  "description": "Core: what Rhea is with nothing installed — the ledger's vocabulary (company, account, posting, the period's lock, exchange rates), the invoice's common shape and its tax rate, contractors, Rachunki i karty's bank accounts, bank lines and settlements, and tasks. Market-neutral; the kernel carries it in its binary and rhea init drafts what a database lacks.",
+  "stage": "initial",
+  "disclaimer": "This pack was prepared by artificial intelligence (AI). It is an initial version: its definitions may contain errors and will change as accountants, tax advisers and auditors review them.",
+  "history": [
+    {
+      "versions": "1",
+      "date": "2026-10-23",
+      "changes": "The core as a pack the kernel ships: the founding vocabulary at its latest versions (company, invoice, account, posting, period_lock, vat_rate, sales_invoice, fx_rate, purchase_invoice and their views), and the contractor, Rachunki i karty's types and the task list as the Poland pack v44 carries them — nothing changes where they already are."
+    }
+  ],
+  "warrant": {
+    "basis": "practice",
+    "citations": [
+      "every ledger keeps accounts, journal entries and periods; every company keeps bank accounts, bank statements and the settlement of its documents against them",
+      "DIRECTION 2026-10-23, Core, market packs and business packs: what Rhea is with nothing installed"
+    ],
+    "scope": "all markets"
+  },
+  "object_types": [
+    {
+      "name": "invoice",
+      "version": 2,
+      "domain": "finance",
+      "is_document": true,
+      "fields": [
+        {
+          "name": "customer",
+          "type": "ref<company>",
+          "required": true
+        },
+        {
+          "name": "issue_date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "total",
+          "type": "money",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "company",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "name",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "kind",
+          "type": "enum",
+          "values": [
+            "customer",
+            "supplier",
+            "self"
+          ],
+          "required": true
+        },
+        {
+          "name": "vat_id",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "country",
+          "type": "string",
+          "required": false
+        }
+      ]
+    },
+    {
+      "name": "account",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "name",
+      "fields": [
+        {
+          "name": "code",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "type",
+          "type": "enum",
+          "values": [
+            "asset",
+            "liability",
+            "equity",
+            "revenue",
+            "expense",
+            "debtor",
+            "creditor",
+            "tax",
+            "bank",
+            "clearing"
+          ],
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "posting",
+      "version": 3,
+      "domain": "finance",
+      "is_document": false,
+      "fields": [
+        {
+          "name": "entry",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "line",
+          "type": "int",
+          "required": true
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "account",
+          "type": "ref<account>",
+          "required": true
+        },
+        {
+          "name": "side",
+          "type": "enum",
+          "values": [
+            "debit",
+            "credit"
+          ],
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "tx_amount",
+          "type": "money",
+          "required": false
+        },
+        {
+          "name": "tx_currency",
+          "type": "string",
+          "required": false
+        }
+      ]
+    },
+    {
+      "name": "period_lock",
+      "version": 2,
+      "domain": "finance",
+      "is_document": false,
+      "fields": [
+        {
+          "name": "month",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "vat_rate",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "name",
+      "fields": [
+        {
+          "name": "code",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "percent",
+          "type": "int",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "sales_invoice",
+      "version": 3,
+      "domain": "finance",
+      "is_document": true,
+      "label_field": "number",
+      "fields": [
+        {
+          "name": "number",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "issue_date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "seller",
+          "type": "ref<company>",
+          "required": true
+        },
+        {
+          "name": "buyer",
+          "type": "ref<company>",
+          "required": true
+        },
+        {
+          "name": "net",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "vat",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "gross",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "vat_rate",
+          "type": "ref<vat_rate>",
+          "required": true
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "intragroup",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "seller_nip",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "buyer_nip",
+          "type": "string",
+          "required": false
+        }
+      ]
+    },
+    {
+      "name": "fx_rate",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "code",
+      "fields": [
+        {
+          "name": "code",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "base",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "quote",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "rate",
+          "type": "string",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "purchase_invoice",
+      "version": 1,
+      "domain": "finance",
+      "is_document": true,
+      "label_field": "number",
+      "fields": [
+        {
+          "name": "number",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "invoice_date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "supplier",
+          "type": "ref<company>",
+          "required": true
+        },
+        {
+          "name": "owner",
+          "type": "ref<company>",
+          "required": true
+        },
+        {
+          "name": "mirror_of",
+          "type": "ref<sales_invoice>",
+          "required": false
+        },
+        {
+          "name": "net",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "vat",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "gross",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "vat_rate",
+          "type": "ref<vat_rate>",
+          "required": false
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "contractor",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "name",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "nip",
+          "type": "string"
+        },
+        {
+          "name": "regon",
+          "type": "string"
+        },
+        {
+          "name": "address",
+          "type": "string"
+        },
+        {
+          "name": "country",
+          "type": "string"
+        },
+        {
+          "name": "payment_term_days",
+          "type": "int"
+        },
+        {
+          "name": "cash_method",
+          "type": "enum",
+          "values": [
+            "yes",
+            "no"
+          ]
+        },
+        {
+          "name": "very_important",
+          "type": "enum",
+          "values": [
+            "yes",
+            "no"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "bank_account",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "name",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "number",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "bank",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "bank_operation",
+      "version": 3,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "title",
+      "fields": [
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "direction",
+          "type": "enum",
+          "values": [
+            "credit",
+            "debit"
+          ],
+          "required": true
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "counterparty",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "counterparty_account",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "account",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "contractor",
+          "type": "ref<contractor>",
+          "required": false
+        },
+        {
+          "name": "kind",
+          "type": "enum",
+          "values": [
+            "transfer",
+            "card",
+            "fee",
+            "other",
+            "interest",
+            "tax",
+            "zus",
+            "own",
+            "owner"
+          ],
+          "required": false
+        },
+        {
+          "name": "open",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "settlement_status",
+          "type": "enum",
+          "values": [
+            "unsettled",
+            "settled",
+            "private"
+          ],
+          "required": true
+        }
+      ],
+      "lifecycle": {
+        "field": "settlement_status",
+        "transitions": {
+          "unsettled": [
+            "unsettled",
+            "settled",
+            "private"
+          ],
+          "settled": [
+            "unsettled"
+          ]
+        }
+      },
+      "amendable": [
+        "kind",
+        "open"
+      ]
+    },
+    {
+      "name": "settlement",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "fields": [
+        {
+          "name": "operation",
+          "type": "ref<bank_operation>",
+          "required": true
+        },
+        {
+          "name": "document_type",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "document_id",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "matching_difference",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "fields": [
+        {
+          "name": "matching",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "kind",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "direction",
+          "type": "enum",
+          "values": [
+            "short",
+            "over",
+            "up",
+            "down"
+          ],
+          "required": true
+        },
+        {
+          "name": "account",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "task",
+      "version": 2,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "title",
+      "fields": [
+        {
+          "name": "title",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "open",
+            "done",
+            "rejected",
+            "cancelled",
+            "blocked"
+          ]
+        },
+        {
+          "name": "due_date",
+          "type": "date"
+        },
+        {
+          "name": "priority",
+          "type": "enum",
+          "values": [
+            "problem",
+            "critical",
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        {
+          "name": "category",
+          "type": "enum",
+          "values": [
+            "month_close",
+            "taxes",
+            "invoices",
+            "contractor_payments",
+            "accounting",
+            "reminders",
+            "agent",
+            "other"
+          ]
+        },
+        {
+          "name": "requester",
+          "type": "ref<person>"
+        },
+        {
+          "name": "assignee",
+          "type": "ref<person>"
+        },
+        {
+          "name": "description",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "task_schedule",
+      "version": 2,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "name",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "cadence",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "weekly",
+            "monthly",
+            "yearly",
+            "other"
+          ]
+        },
+        {
+          "name": "next_run",
+          "type": "date"
+        },
+        {
+          "name": "last_run",
+          "type": "date"
+        },
+        {
+          "name": "active",
+          "type": "enum",
+          "values": [
+            "yes",
+            "no"
+          ]
+        },
+        {
+          "name": "requester",
+          "type": "ref<person>"
+        },
+        {
+          "name": "assignee",
+          "type": "ref<person>"
+        }
+      ]
+    }
+  ],
+  "view_defs": [
+    {
+      "view_id": "invoice-list",
+      "version": 1,
+      "notion": "list",
+      "title": "Invoices",
+      "domain": "finance",
+      "function": "documents",
+      "spec": {
+        "object_type": "invoice",
+        "columns": [
+          {
+            "field": "customer",
+            "label": "Customer"
+          },
+          {
+            "field": "issue_date",
+            "label": "Issue date"
+          },
+          {
+            "field": "currency",
+            "label": "Currency"
+          },
+          {
+            "field": "total",
+            "label": "Total"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "invoice-detail",
+      "version": 1,
+      "notion": "detail",
+      "title": "Invoice",
+      "domain": "finance",
+      "function": "documents",
+      "spec": {
+        "object_type": "invoice",
+        "sections": [
+          {
+            "title": "Document",
+            "fields": [
+              "customer",
+              "issue_date",
+              "currency"
+            ]
+          },
+          {
+            "title": "Amounts",
+            "fields": [
+              "total"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "invoice-by-customer",
+      "version": 2,
+      "notion": "analysis",
+      "title": "Invoice totals by customer",
+      "domain": "finance",
+      "function": "analysis",
+      "spec": {
+        "sql": "SELECT json_extract_string(c.state, '$.name') AS customer, COUNT(*) AS invoices, SUM(CAST(json_extract(i.state, '$.total') AS BIGINT)) AS total FROM objects i JOIN objects c ON json_extract_string(i.state, '$.customer') = c.object_id WHERE i.object_type = 'invoice' AND c.object_type = 'company' GROUP BY 1 ORDER BY total DESC",
+        "columns": [
+          {
+            "field": "customer",
+            "label": "Customer",
+            "type": "string"
+          },
+          {
+            "field": "invoices",
+            "label": "Invoices",
+            "type": "int"
+          },
+          {
+            "field": "total",
+            "label": "Total",
+            "type": "money"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "company-list",
+      "version": 1,
+      "notion": "list",
+      "title": "Companies",
+      "domain": "finance",
+      "function": "master data",
+      "spec": {
+        "object_type": "company",
+        "columns": [
+          {
+            "field": "name",
+            "label": "Name"
+          },
+          {
+            "field": "kind",
+            "label": "Kind"
+          },
+          {
+            "field": "country",
+            "label": "Country"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "company-detail",
+      "version": 1,
+      "notion": "detail",
+      "title": "Company",
+      "domain": "finance",
+      "function": "master data",
+      "spec": {
+        "object_type": "company",
+        "sections": [
+          {
+            "title": "Company",
+            "fields": [
+              "name",
+              "kind"
+            ]
+          },
+          {
+            "title": "Registration",
+            "fields": [
+              "vat_id",
+              "country"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "account-list",
+      "version": 1,
+      "notion": "list",
+      "title": "Chart of accounts",
+      "domain": "finance",
+      "function": "accounting",
+      "spec": {
+        "object_type": "account",
+        "columns": [
+          {
+            "field": "code",
+            "label": "Code"
+          },
+          {
+            "field": "name",
+            "label": "Account"
+          },
+          {
+            "field": "type",
+            "label": "Type"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "account-detail",
+      "version": 1,
+      "notion": "detail",
+      "title": "Account",
+      "domain": "finance",
+      "function": "accounting",
+      "spec": {
+        "object_type": "account",
+        "sections": [
+          {
+            "title": "Account",
+            "fields": [
+              "code",
+              "name",
+              "type"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "journal",
+      "version": 2,
+      "notion": "list",
+      "title": "Journal",
+      "domain": "finance",
+      "function": "documents",
+      "spec": {
+        "object_type": "posting",
+        "columns": [
+          {
+            "field": "entry",
+            "label": "Entry"
+          },
+          {
+            "field": "line",
+            "label": "Line"
+          },
+          {
+            "field": "book",
+            "label": "Book"
+          },
+          {
+            "field": "account",
+            "label": "Account"
+          },
+          {
+            "field": "side",
+            "label": "Side"
+          },
+          {
+            "field": "amount",
+            "label": "Amount"
+          },
+          {
+            "field": "currency",
+            "label": "Ccy"
+          },
+          {
+            "field": "date",
+            "label": "Date"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "posting-detail",
+      "version": 2,
+      "notion": "detail",
+      "title": "Posting",
+      "domain": "finance",
+      "function": "documents",
+      "spec": {
+        "object_type": "posting",
+        "sections": [
+          {
+            "title": "Posting",
+            "fields": [
+              "entry",
+              "line",
+              "book",
+              "account",
+              "side"
+            ]
+          },
+          {
+            "title": "Value",
+            "fields": [
+              "amount",
+              "currency",
+              "date"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "trial-balance",
+      "version": 2,
+      "notion": "analysis",
+      "title": "Trial balance",
+      "domain": "finance",
+      "function": "analysis",
+      "spec": {
+        "sql": "SELECT book, code, account, d AS debit, c AS credit, d - c AS balance FROM (SELECT COALESCE(json_extract_string(p.state,'$.book'),'main') AS book, json_extract_string(a.state,'$.code') AS code, json_extract_string(a.state,'$.name') AS account, COALESCE(SUM(CASE WHEN json_extract_string(p.state,'$.side')='debit' THEN CAST(json_extract(p.state,'$.amount') AS BIGINT) ELSE 0 END),0) AS d, COALESCE(SUM(CASE WHEN json_extract_string(p.state,'$.side')='credit' THEN CAST(json_extract(p.state,'$.amount') AS BIGINT) ELSE 0 END),0) AS c FROM objects p JOIN objects a ON json_extract_string(p.state,'$.account') = a.object_id WHERE p.object_type = 'posting' AND a.object_type = 'account' GROUP BY 1, 2, 3) t ORDER BY book, code",
+        "columns": [
+          {
+            "field": "book",
+            "label": "Book",
+            "type": "string"
+          },
+          {
+            "field": "code",
+            "label": "Code",
+            "type": "string"
+          },
+          {
+            "field": "account",
+            "label": "Account",
+            "type": "string"
+          },
+          {
+            "field": "debit",
+            "label": "Debit",
+            "type": "money"
+          },
+          {
+            "field": "credit",
+            "label": "Credit",
+            "type": "money"
+          },
+          {
+            "field": "balance",
+            "label": "Balance",
+            "type": "money"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "fx-rates",
+      "version": 1,
+      "notion": "list",
+      "title": "FX rates",
+      "domain": "finance",
+      "function": "documents",
+      "spec": {
+        "object_type": "fx_rate",
+        "columns": [
+          {
+            "field": "date",
+            "label": "Date"
+          },
+          {
+            "field": "base",
+            "label": "From"
+          },
+          {
+            "field": "quote",
+            "label": "To"
+          },
+          {
+            "field": "rate",
+            "label": "Rate"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "purchase-invoice-list",
+      "version": 1,
+      "notion": "list",
+      "title": "Purchase invoices",
+      "domain": "finance",
+      "function": "documents",
+      "spec": {
+        "object_type": "purchase_invoice",
+        "columns": [
+          {
+            "field": "number",
+            "label": "Number"
+          },
+          {
+            "field": "invoice_date",
+            "label": "Date"
+          },
+          {
+            "field": "supplier",
+            "label": "Supplier"
+          },
+          {
+            "field": "owner",
+            "label": "Owner"
+          },
+          {
+            "field": "gross",
+            "label": "Gross"
+          },
+          {
+            "field": "currency",
+            "label": "Ccy"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "group-trial-balance",
+      "version": 1,
+      "notion": "analysis",
+      "title": "Group trial balance (EUR)",
+      "domain": "finance",
+      "function": "analysis",
+      "spec": {
+        "sql": "WITH rate AS (SELECT CAST(json_extract_string(state,'$.rate') AS DECIMAL(18,6)) AS r FROM objects WHERE object_type = 'fx_rate' AND json_extract_string(state,'$.base') = 'EUR' AND json_extract_string(state,'$.quote') = 'PLN' ORDER BY json_extract_string(state,'$.date') DESC LIMIT 1), ic AS (SELECT DISTINCT root_event_id FROM objects WHERE object_type = 'purchase_invoice'), p AS (SELECT json_extract_string(a.state,'$.code') AS code, json_extract_string(a.state,'$.name') AS account, json_extract_string(o.state,'$.side') AS side, CASE WHEN json_extract_string(o.state,'$.currency') = 'EUR' THEN CAST(json_extract(o.state,'$.amount') AS BIGINT) ELSE CAST(round(CAST(json_extract(o.state,'$.amount') AS BIGINT) / (SELECT r FROM rate)) AS BIGINT) END AS eur FROM objects o JOIN objects a ON json_extract_string(o.state,'$.account') = a.object_id WHERE o.object_type = 'posting' AND a.object_type = 'account' AND NOT (o.root_event_id IN (SELECT root_event_id FROM ic) AND json_extract_string(a.state,'$.type') <> 'tax')), sums AS (SELECT code, account, COALESCE(SUM(CASE WHEN side = 'debit' THEN eur ELSE 0 END),0) AS d, COALESCE(SUM(CASE WHEN side = 'credit' THEN eur ELSE 0 END),0) AS c FROM p GROUP BY 1, 2), rows_ AS (SELECT code, account, d, c FROM sums UNION ALL SELECT 'CTA', 'Translation difference', CASE WHEN s < 0 THEN -s ELSE 0 END, CASE WHEN s > 0 THEN s ELSE 0 END FROM (SELECT COALESCE(SUM(d),0) - COALESCE(SUM(c),0) AS s FROM sums) t WHERE s <> 0) SELECT code, account, d AS debit, c AS credit, d - c AS balance FROM rows_ ORDER BY code",
+        "columns": [
+          {
+            "field": "code",
+            "label": "Code",
+            "type": "string"
+          },
+          {
+            "field": "account",
+            "label": "Account",
+            "type": "string"
+          },
+          {
+            "field": "debit",
+            "label": "Debit",
+            "type": "money"
+          },
+          {
+            "field": "credit",
+            "label": "Credit",
+            "type": "money"
+          },
+          {
+            "field": "balance",
+            "label": "Balance",
+            "type": "money"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "intercompany-positions",
+      "version": 1,
+      "notion": "analysis",
+      "title": "Intercompany positions",
+      "domain": "finance",
+      "function": "analysis",
+      "spec": {
+        "sql": "SELECT CAST(root AS VARCHAR) AS root_event, r AS receivable, pay AS payable, abs(r - pay) AS difference FROM (SELECT o.root_event_id AS root, COALESCE(SUM(CASE WHEN json_extract_string(a.state,'$.type') = 'debtor' THEN COALESCE(CAST(json_extract(o.state,'$.tx_amount') AS BIGINT), CAST(json_extract(o.state,'$.amount') AS BIGINT)) ELSE 0 END),0) AS r, COALESCE(SUM(CASE WHEN json_extract_string(a.state,'$.type') = 'creditor' THEN COALESCE(CAST(json_extract(o.state,'$.tx_amount') AS BIGINT), CAST(json_extract(o.state,'$.amount') AS BIGINT)) ELSE 0 END),0) AS pay FROM objects o JOIN objects a ON json_extract_string(o.state,'$.account') = a.object_id WHERE o.object_type = 'posting' AND a.object_type = 'account' AND o.root_event_id IN (SELECT DISTINCT root_event_id FROM objects WHERE object_type = 'purchase_invoice') GROUP BY 1) t ORDER BY root",
+        "columns": [
+          {
+            "field": "root_event",
+            "label": "Root event",
+            "type": "event"
+          },
+          {
+            "field": "receivable",
+            "label": "Receivable",
+            "type": "money"
+          },
+          {
+            "field": "payable",
+            "label": "Payable",
+            "type": "money"
+          },
+          {
+            "field": "difference",
+            "label": "Difference",
+            "type": "money"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "do-zrobienia",
+      "version": 1,
+      "notion": "queue",
+      "title": "Do zrobienia dziś",
+      "domain": "finance",
+      "function": "briefing",
+      "spec": {
+        "object_type": "task",
+        "where": [
+          {
+            "path": "$.state.status",
+            "op": "eq",
+            "value": "open"
+          }
+        ],
+        "rank": "=($.today - $.state.due_date) * 10 + if($.state.priority = 'critical', 30, if($.state.priority = 'high', 20, if($.state.priority = 'medium', 10, 0)))",
+        "columns": [
+          "title",
+          "due_date",
+          "priority",
+          "category",
+          "assignee"
+        ],
+        "approvals": true
+      }
+    }
+  ]
+}

@@ -3890,6 +3890,39 @@ workspace brief of 2026-10-18).
 4. *KPiR.*
 5. *Ewidencja przychodów.*
 
+**Step 1 designed: the core, shipped by the kernel (2026-10-23).** The readiness review found
+the core shipped by nothing: the founding vocabulary reached white01 through a restore of the
+Helios simulation, the face's build tool inserts it active without an approval, a fresh server
+fails at its first pack ("requires object type …"). The design, the simplest that keeps the
+invariants:
+
+- *The core is a pack the kernel carries in its binary* (`packs/core`, embedded): the founding
+  vocabulary at its latest versions — company, account, posting, period_lock, fx_rate (the kernel
+  names these), invoice, sales_invoice, purchase_invoice, vat_rate, with their views — the common
+  packs Ludzie, Okresy and Dokumenty, and from the Poland pack Kontrahenci and Rachunki i karty's
+  types (contractor, bank_account, bank_operation, settlement, matching_difference, task,
+  task_schedule, with do-zrobienia), each byte-identical to the version the Poland pack carries
+  today, so nothing changes where they already are. They load, and are approved, in the order
+  Ludzie (a task names a person), the founding vocabulary, Okresy (its rule writes the period
+  lock), Dokumenty; an approval out of that order is refused — a rule is approved only onto a type
+  already approved or brought in the same bundle.
+- *`rhea init` loads it as any pack is loaded:* what the database lacks is drafted into one bundle,
+  what it holds identically is skipped (white01: nothing to draft), nothing activates without a
+  person. On a new server, before any house exists, the operator approves it from the command line,
+  as packs are approved there today; a later core version arrives as an upgrade the house approves
+  (every company moves, D1). The kernel's own doors stay seeded active as before — they are the
+  gate itself; the core's rules are behaviour, and behaviour waits for a person (invariant 2).
+- *Not moved yet:* the rules and doors of Rachunki i karty still in the Poland pack
+  (`pl-company-account`, `pl-explain-bank-operation`, `pl-classify-bank-operation`,
+  `classify_bank_operation`) move with the loader's succession in step 3 — moved now they would
+  read as conflicts; the law inside what moved — the invoices' and VAT rates' Polish fields, the
+  contractor's NIP, REGON and cash method — is cut out when types can be extended (step 3).
+- *What stops:* the face's build tool inserting types active, the walk loading the founding files
+  by hand, the deploy copying the common packs — each takes the core from the binary.
+- *Proved by tests:* a fresh database after `init` holds a waiting core bundle and, approved,
+  everything the Poland pack requires (the Poland pack loads on it); `init` twice drafts nothing; a
+  database built from the founding files, as white01 was, drafts nothing.
+
 Each pack declares its Apps as it is built or split (`APPS.md` is the register they start from).
 The target catalog these packs grow into — a vision, measured against the AI-native newcomers and
 the old guard — is `PACKS.md`, with the market research in `reports/`.

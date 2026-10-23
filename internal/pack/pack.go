@@ -21,6 +21,7 @@ import (
 
 	"rhea/internal/core"
 	"rhea/internal/store"
+	"rhea/packs"
 )
 
 // Manifest is a pack file: one JSON document holding everything the market
@@ -173,6 +174,48 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 	if err != nil {
 		return Summary{}, err
 	}
+	return LoadBytes(ctx, s, b, actor)
+}
+
+// LoadCore drafts what the database lacks of the core the kernel ships
+// (DIRECTION 2026-10-23, step 1): the common packs and the founding
+// vocabulary with Rachunki i karty, each as any pack is loaded — what is
+// there identically is skipped, nothing activates until a person approves.
+// Each part sees the drafts of the parts before it, as they are approved in
+// that order: Okresy's rule writes the core's period lock before anyone has
+// approved the core.
+func LoadCore(ctx context.Context, s *store.Store, actor string) ([]Summary, error) {
+	var sums []Summary
+	before := map[string]core.ObjectType{}
+	for _, f := range packs.Core {
+		b, err := packs.FS.ReadFile(f)
+		if err != nil {
+			return sums, err
+		}
+		sum, err := load(ctx, s, b, actor, before)
+		if err != nil {
+			return sums, fmt.Errorf("core %s: %w", f, err)
+		}
+		sums = append(sums, sum)
+		var m Manifest
+		if err := json.Unmarshal(b, &m); err != nil {
+			return sums, err
+		}
+		for _, t := range m.ObjectTypes {
+			before[t.Name] = t
+		}
+	}
+	return sums, nil
+}
+
+// LoadBytes loads a pack file's contents (Load's body).
+func LoadBytes(ctx context.Context, s *store.Store, b []byte, actor string) (Summary, error) {
+	return load(ctx, s, b, actor, nil)
+}
+
+// load is LoadBytes with the types of packs drafted alongside, which this
+// pack's rules may name before they are approved.
+func load(ctx context.Context, s *store.Store, b []byte, actor string, alongside map[string]core.ObjectType) (Summary, error) {
 	var m Manifest
 	if err := json.Unmarshal(b, &m); err != nil {
 		return Summary{}, err
@@ -272,6 +315,9 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 			// The pack's own draft types first: they activate with the rule.
 			t, ok := packTypes[name]
 			if !ok {
+				t, ok = alongside[name]
+			}
+			if !ok {
 				var err error
 				if t, err = s.GetObjectType(ctx, name); err != nil {
 					return sum, fmt.Errorf("rule %s: %w", r.RuleID, err)
@@ -286,6 +332,9 @@ func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, err
 		// types first, then the kernel's.
 		if err := r.Spec.Check(func(name string) (core.ObjectType, bool) {
 			if t, ok := packTypes[name]; ok {
+				return t, true
+			}
+			if t, ok := alongside[name]; ok {
 				return t, true
 			}
 			t, err := s.GetObjectType(ctx, name)
