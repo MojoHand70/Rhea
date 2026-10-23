@@ -3960,6 +3960,12 @@ Pakiety tab, its install card and the card for a company with nothing installed.
 words merged across packs, readers run only for companies with their pack, screens found by their
 role rather than their id.
 
+*Built 2026-10-24:* the kernel in five commits (d0e3264 what a pack is, 39f976a installs as facts,
+a7dc65f rules chosen by install, 7311a07 what a company is served, e6a3d85 the catalog), the face's
+Pakiety tab and Dziś card in rheaface a4b055c; the live walk installs a pack from Pakiety. Not yet:
+after an install dated back, Rhea proposing to book the facts already recorded since that day (the
+backfill exists and respects installs; nothing proposes it yet).
+
 Each pack declares its Apps as it is built or split (`APPS.md` is the register they start from).
 The target catalog these packs grow into — a vision, measured against the AI-native newcomers and
 the old guard — is `PACKS.md`, with the market research in `reports/`.
