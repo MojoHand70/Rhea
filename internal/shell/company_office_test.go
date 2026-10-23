@@ -146,3 +146,33 @@ func TestAClientSwitchesALessonOff(t *testing.T) {
 		t.Fatal("the office taught beta again what beta switched off")
 	}
 }
+
+// Only the office's own people make a company someone's office (KK,
+// 2026-10-23): olek owns the office, which keeps client d under a full
+// mandate. Through that mandate he may still manage d's people, but he may not
+// make d the office of a new company — a right held through a mandate is not
+// passed on (KSeF's default). Making his own office the new company's office
+// is his to do.
+func TestAMandateIsNotPassedOn(t *testing.T) {
+	o := newOfficeScene(t)
+	w, d, z := o.w, "PL8020005678", "PL8030009012"
+	w.person("Olek Owner", "olek", o.office, "owner")
+	w.mustDoor("", d, "grant_mandate", map[string]any{"office": o.office, "client": d, "scope": "*", "from": "2026-01-01", "granted_by": "operator"})
+	mandate := func(office string) (int, map[string]any) {
+		t.Helper()
+		return w.door("olek", z, "grant_mandate", map[string]any{"office": office, "client": z, "scope": "door:* view:* type:*",
+			"from": w.today, "granted_by": "olek"})
+	}
+	if code, out := mandate(d); code != 403 {
+		t.Fatalf("olek making his client d the office of a new company: %d %v", code, out)
+	}
+	if code, out := mandate(o.office); code != 200 {
+		t.Fatalf("olek making his own office the new company's office: %d %v", code, out)
+	}
+	// Under the full mandate he still manages d's people.
+	w.mustDoor("", "", "register_person", map[string]any{"name": "Dorota Pracownik", "handle": "dorota", "role": "reader"})
+	if code, out := w.door("olek", d, "grant_membership", map[string]any{"person": w.personID("dorota"), "company": d, "role": "reader",
+		"from": w.today, "granted_by": "olek"}); code != 200 {
+		t.Fatalf("olek onboarding d's employee under the mandate: %d %v", code, out)
+	}
+}

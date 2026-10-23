@@ -5152,3 +5152,14 @@ KK's decision of 2026-10-22, built:
   Rhea's staff (a person of the house), claims the company as its owner, enters its record;
   one link founds one company. Both are the face's server's sequence of kernel doors as the
   person; a retry grants no second mandate and enters nothing twice.
+
+## 2026-10-23 — A mandate is not passed on (KK)
+
+Found by the face's walk (rhea-face): an office's person acting under a full mandate
+("*") could make the client the office of a third company — grant_mandate checked the
+`office` named against any right the person held there, a mandate's included — so a
+client became another company's office and the real office reached nothing. KK chose:
+making a company someone's office needs the person's right there through their own
+membership (or a substitution standing in for one), never through a mandate
+(rights.MayAsMember) — KSeF's default, an authorisation is not passed on. Under a full
+mandate the office still manages the client's people (DIRECTION's onboarding level 4).

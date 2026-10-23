@@ -86,6 +86,18 @@ func (p Principal) May(company, kind, name, domain string) (Grant, bool) {
 	return Grant{}, false
 }
 
+// MayAsMember reports whether the person may do the thing in the company by
+// a right of their own there — a membership, or a substitution standing in
+// for one — never through a mandate, whose rights an office does not pass on.
+func (p Principal) MayAsMember(company, kind, name, domain string) bool {
+	for _, g := range p.Grants {
+		if g.Company == company && g.Via != "mandate" && g.Scope == nil && g.Covers(kind, name, domain) {
+			return true
+		}
+	}
+	return false
+}
+
 // MayAnywhere reports whether the person may do the thing in any company —
 // the question an installation-wide door asks.
 func (p Principal) MayAnywhere(kind, name, domain string) (Grant, bool) {
@@ -508,8 +520,13 @@ func Authorize(ctx context.Context, s *store.Store, p Principal, act core.Activi
 			}
 		}
 		if office, ok := inputs["office"].(string); ok && office != "" && office != acting {
-			if _, ok := p.May(office, "door", act.Name, act.Domain); !ok {
-				return nil, refuse(fmt.Sprintf("no role of yours opens this door for %s", office))
+			// Making a company someone's office is that office's own act: a
+			// right of the person's own there, never one held through a
+			// mandate — what an office holds in a client it does not pass on,
+			// or the office's person made the client a third company's office
+			// (KK, 2026-10-23; KSeF's default).
+			if !p.MayAsMember(office, "door", act.Name, act.Domain) {
+				return nil, refuse(fmt.Sprintf("no role of your own in %s opens this door — a right held through a mandate is not passed on", office))
 			}
 		}
 	}
