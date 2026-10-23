@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"net/http/httptest"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -263,8 +262,7 @@ func TestOneRuleDraftedForACompanyIsItsOwn(t *testing.T) {
 	}
 	srv := &shell.Server{Store: s, Exec: &exec.Executor{Store: s}, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb"),
 		Agent: &agent.Agent{Complete: func(ctx context.Context, system, user string) (string, error) { return drafted, nil }}}
-	ts := httptest.NewServer(srv.Handler())
-	defer ts.Close()
+	ts := serve(t, srv.Handler())
 	post := func(company, path string, body, out any) int {
 		t.Helper()
 		b, _ := json.Marshal(body)

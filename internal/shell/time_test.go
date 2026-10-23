@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"net/http/httptest"
 	"path/filepath"
 	"testing"
 	"time"
@@ -28,8 +27,7 @@ func TestTimeSurfaceAndSchedulingNotion(t *testing.T) {
 	day, _ := time.Parse("2006-01-02", "2026-10-10")
 	srv := &shell.Server{Store: s, Exec: x, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb"),
 		Clock: adapter.Clock{Now: func() time.Time { return day }}}
-	ts := httptest.NewServer(srv.Handler())
-	defer ts.Close()
+	ts := serve(t, srv.Handler())
 
 	get := func(path string, out any) {
 		t.Helper()

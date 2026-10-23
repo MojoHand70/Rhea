@@ -54,8 +54,7 @@ func TestWhatSheWasNeverTaught(t *testing.T) {
 		if withNetwork {
 			srv.Network = nw
 		}
-		ts := httptest.NewServer(srv.Handler())
-		t.Cleanup(ts.Close)
+		ts := serve(t, srv.Handler())
 		if _, err := s.InsertRuleVersion(ctx, core.Rule{ID: "register-company", Status: core.StatusDraft, Priority: 10, EffectiveFrom: "2026-01-01",
 			CreatedBy: "human", Description: "register-company",
 			Spec: core.RuleSpec{Match: core.Match{EventType: "company.registered"}, Effect: core.Effect{Object: core.ObjectTemplate{Type: "company",

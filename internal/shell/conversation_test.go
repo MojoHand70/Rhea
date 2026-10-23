@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"net/http/httptest"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -36,8 +35,7 @@ func TestRedraftAnswersTheRejection(t *testing.T) {
 		  "object_types":[{"name":"note","domain":"work","fields":[{"name":"text","type":"string","required":true}]}]}`, nil
 	}}
 	srv := &shell.Server{Store: s, Exec: x, Agent: a, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb")}
-	ts := httptest.NewServer(srv.Handler())
-	defer ts.Close()
+	ts := serve(t, srv.Handler())
 	post := func(path string, body any, out any) int {
 		t.Helper()
 		b, _ := json.Marshal(body)

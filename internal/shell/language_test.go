@@ -3,7 +3,6 @@ package shell_test
 import (
 	"context"
 	"encoding/json"
-	"net/http/httptest"
 	"path/filepath"
 	"testing"
 
@@ -38,8 +37,7 @@ func TestLanguageExplainsItself(t *testing.T) {
 
 	srv := &shell.Server{Store: s, Exec: &exec.Executor{Store: s},
 		DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb")}
-	ts := httptest.NewServer(srv.Handler())
-	defer ts.Close()
+	ts := serve(t, srv.Handler())
 
 	res, err := ts.Client().Get(ts.URL + "/api/types")
 	if err != nil {

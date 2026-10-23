@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -39,8 +38,7 @@ func TestThePackSpeaks(t *testing.T) {
 	day := "2026-10-16"
 	srv := &shell.Server{Store: s, Exec: x, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb"),
 		Clock: adapter.Clock{Now: func() time.Time { d, _ := time.Parse("2006-01-02", day); return d.Add(9 * time.Hour) }}}
-	ts := httptest.NewServer(srv.Handler())
-	defer ts.Close()
+	ts := serve(t, srv.Handler())
 	get := func(path string, out any) {
 		t.Helper()
 		res, err := ts.Client().Get(ts.URL + path)

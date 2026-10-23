@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -45,8 +44,7 @@ func TestBriefing(t *testing.T) {
 			}
 			return words, nil
 		}}}
-	ts := httptest.NewServer(srv.Handler())
-	defer ts.Close()
+	ts := serve(t, srv.Handler())
 	get := func(path string, out any) {
 		t.Helper()
 		res, err := ts.Client().Get(ts.URL + path)
@@ -250,8 +248,7 @@ func TestTwoCompaniesAtTheDoors(t *testing.T) {
 	s := storetest.New(t)
 	x := &exec.Executor{Store: s}
 	srv := &shell.Server{Store: s, Exec: x, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb")}
-	ts := httptest.NewServer(srv.Handler())
-	defer ts.Close()
+	ts := serve(t, srv.Handler())
 	call := func(method, company, path string, body any, out any) int {
 		t.Helper()
 		var rd io.Reader
@@ -380,8 +377,7 @@ func TestTwoCompaniesAtTheDoors(t *testing.T) {
 func TestCrossSiteWritesAreRefused(t *testing.T) {
 	s := storetest.New(t)
 	srv := &shell.Server{Store: s, Exec: &exec.Executor{Store: s}, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb")}
-	ts := httptest.NewServer(srv.Handler())
-	defer ts.Close()
+	ts := serve(t, srv.Handler())
 	post := func(headers map[string]string) int {
 		t.Helper()
 		req, _ := http.NewRequest("POST", ts.URL+"/api/rules/nothing/approve", strings.NewReader(`{"approved_by":"human"}`))

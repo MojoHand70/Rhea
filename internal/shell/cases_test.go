@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http/httptest"
 	"path/filepath"
 	"testing"
 
@@ -27,8 +26,7 @@ func TestCasesArePureData(t *testing.T) {
 	s := storetest.New(t)
 	x := &exec.Executor{Store: s}
 	srv := &shell.Server{Store: s, Exec: x, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb")}
-	ts := httptest.NewServer(srv.Handler())
-	defer ts.Close()
+	ts := serve(t, srv.Handler())
 
 	get := func(path string, out any) {
 		t.Helper()

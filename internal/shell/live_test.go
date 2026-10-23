@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -30,8 +31,7 @@ func TestLiveScreens(t *testing.T) {
 	x := &exec.Executor{Store: s}
 	srv := &shell.Server{Store: s, Exec: x,
 		DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb")}
-	ts := httptest.NewServer(srv.Handler())
-	defer ts.Close()
+	ts := serve(t, srv.Handler())
 
 	// An active rule, approved the ordinary way.
 	if _, err := s.InsertRuleVersion(ctx, core.Rule{
@@ -102,5 +102,53 @@ func TestLiveScreens(t *testing.T) {
 		case <-deadline:
 			t.Fatal("no projection notice on the stream")
 		}
+	}
+}
+
+// serve starts a test server for h, closed when the test ends.
+func serve(t *testing.T, h http.Handler) *httptest.Server {
+	t.Helper()
+	ts := httptest.NewServer(h)
+	t.Cleanup(func() { closeServer(ts) })
+	return ts
+}
+
+// closeServer ends a test server whatever its clients hold open: httptest's
+// Close waits for every request, and a live stream never ends by itself. The
+// listener goes first, so nothing new arrives while the open ones are dropped.
+func closeServer(ts *httptest.Server) {
+	ts.Listener.Close()
+	ts.CloseClientConnections()
+	ts.Close()
+}
+
+// TestAStrayStreamDoesNotHoldATestServer (2026-10-23): a browser left
+// running on the machine — the face's walk left 28 — redials its dead
+// server's port for the live stream; a test server handed that port serves
+// it the stream, which never ends by itself, and closing the server waited
+// for it until the suite's 20-minute limit. Closing a test server must not
+// wait on a stream nobody in the test opened.
+func TestAStrayStreamDoesNotHoldATestServer(t *testing.T) {
+	s := storetest.New(t)
+	srv := &shell.Server{Store: s, Exec: &exec.Executor{Store: s}, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb")}
+	ts := httptest.NewServer(srv.Handler())
+	// the stranger: a bare connection that asks for the stream and stays
+	stranger, err := net.Dial("tcp", ts.Listener.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stranger.Close()
+	if _, err := stranger.Write([]byte("GET /api/live HTTP/1.1\r\nHost: localhost\r\n\r\n")); err != nil {
+		t.Fatal(err)
+	}
+	if line, err := bufio.NewReader(stranger).ReadString('\n'); err != nil || !strings.HasPrefix(line, "HTTP/1.1 200") {
+		t.Fatalf("the stream did not open: %q %v", line, err)
+	}
+	closed := make(chan struct{})
+	go func() { closeServer(ts); close(closed) }()
+	select {
+	case <-closed:
+	case <-time.After(5 * time.Second):
+		t.Fatal("closing the test server waits on a stranger's live stream")
 	}
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"net/http/httptest"
 	"path/filepath"
 	"sync/atomic"
 	"testing"
@@ -32,8 +31,7 @@ func TestFailuresSpeak(t *testing.T) {
 	now.Store(day.Unix())
 	srv := &shell.Server{Store: s, Exec: x, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb"),
 		Clock: adapter.Clock{Now: func() time.Time { return time.Unix(now.Load(), 0).UTC() }}}
-	ts := httptest.NewServer(srv.Handler())
-	defer ts.Close()
+	ts := serve(t, srv.Handler())
 	call := func(method, path string) (int, map[string]any) {
 		t.Helper()
 		req, _ := http.NewRequest(method, ts.URL+path, nil)

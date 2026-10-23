@@ -43,8 +43,7 @@ func TestAnswerFromTheBooks(t *testing.T) {
 			replies = replies[1:]
 			return r, nil
 		}}}
-	ts := httptest.NewServer(srv.Handler())
-	defer ts.Close()
+	ts := serve(t, srv.Handler())
 	call := func(method, path string, body, out any) int {
 		t.Helper()
 		var rd *bytes.Reader

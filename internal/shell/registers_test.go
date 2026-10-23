@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"net/http/httptest"
 	"slices"
 	"testing"
 
@@ -45,8 +44,7 @@ func TestARegisterSaysWhoATaxIDIs(t *testing.T) {
 		return n
 	}
 	before := logged()
-	ts := httptest.NewServer((&shell.Server{Store: s}).Handler())
-	defer ts.Close()
+	ts := serve(t, (&shell.Server{Store: s}).Handler())
 	get := func(path string, out any) int {
 		t.Helper()
 		res, err := ts.Client().Get(ts.URL + path)

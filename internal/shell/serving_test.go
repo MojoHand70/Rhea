@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"net/http/httptest"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -30,8 +29,7 @@ func TestFailuresStayInsideAndRequestsLeaveALine(t *testing.T) {
 	defer log.SetOutput(before)
 
 	// A panic: a server with no store.
-	broken := httptest.NewServer((&shell.Server{}).Handler())
-	defer broken.Close()
+	broken := serve(t, (&shell.Server{}).Handler())
 	res, err := http.Get(broken.URL + "/api/types")
 	if err != nil {
 		t.Fatal(err)
@@ -50,8 +48,7 @@ func TestFailuresStayInsideAndRequestsLeaveALine(t *testing.T) {
 	if _, err := s.Pool.Exec(ctx, `DROP TABLE object_type CASCADE`); err != nil {
 		t.Fatal(err)
 	}
-	srv := httptest.NewServer((&shell.Server{Store: s, Exec: &exec.Executor{Store: s}, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb")}).Handler())
-	defer srv.Close()
+	srv := serve(t, (&shell.Server{Store: s, Exec: &exec.Executor{Store: s}, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb")}).Handler())
 	logged.Reset()
 	res, err = http.Get(srv.URL + "/api/types")
 	if err != nil {

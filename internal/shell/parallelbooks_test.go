@@ -11,7 +11,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http/httptest"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -37,8 +36,7 @@ func TestParallelBooksTrialBalance(t *testing.T) {
 		Agent:    &agent.Agent{Complete: func(context.Context, string, string) (string, error) { return "", fmt.Errorf("no agent in this test") }},
 		DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb"),
 	}
-	ts := httptest.NewServer(srv.Handler())
-	defer ts.Close()
+	ts := serve(t, srv.Handler())
 
 	get := func(path string, out any) {
 		t.Helper()

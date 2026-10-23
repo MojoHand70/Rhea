@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -50,8 +49,7 @@ func TestM0DemoStory(t *testing.T) {
 		Store: s, Exec: &exec.Executor{Store: s}, Agent: fixture,
 		DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb"),
 	}
-	ts := httptest.NewServer(srv.Handler())
-	defer ts.Close()
+	ts := serve(t, srv.Handler())
 
 	get := func(path string, out any) {
 		t.Helper()
@@ -252,8 +250,7 @@ func TestDerivedDefaultViews(t *testing.T) {
 
 	srv := &shell.Server{Store: s, Exec: &exec.Executor{Store: s},
 		DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb")}
-	ts := httptest.NewServer(srv.Handler())
-	defer ts.Close()
+	ts := serve(t, srv.Handler())
 
 	get := func(path string, out any) {
 		t.Helper()
@@ -444,8 +441,7 @@ func TestMasterDataRefStory(t *testing.T) {
 		Store: s, Exec: &exec.Executor{Store: s}, Agent: fixture,
 		DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb"),
 	}
-	ts := httptest.NewServer(srv.Handler())
-	defer ts.Close()
+	ts := serve(t, srv.Handler())
 
 	get := func(path string, out any) {
 		t.Helper()

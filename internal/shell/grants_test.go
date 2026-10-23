@@ -55,8 +55,7 @@ func newGrantsWorld(t *testing.T) *grantsWorld {
 		}}}
 	w.x.Today = srv.Clock.Today
 	w.today = srv.Clock.Today()
-	w.ts = httptest.NewServer(srv.Handler())
-	t.Cleanup(w.ts.Close)
+	w.ts = serve(t, srv.Handler())
 
 	sum, err := pack.Load(w.ctx, w.s, filepath.Join("..", "..", "packs", "common", "people.json"), "test")
 	if err != nil {
@@ -618,8 +617,7 @@ func TestTheDryRunsAskWhatTheGateAsks(t *testing.T) {
 		}
 	}
 	// Where the kernel serves persons only, they are no machine's routes.
-	persons := httptest.NewServer((&shell.Server{Store: w.s, Exec: w.x, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb"), RequirePerson: true, FaceKey: "k"}).Handler())
-	defer persons.Close()
+	persons := serve(t, (&shell.Server{Store: w.s, Exec: w.x, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb"), RequirePerson: true, FaceKey: "k"}).Handler())
 	for _, path := range []string{"/api/time/simulate", "/api/time/catchup"} {
 		res, err := http.Post(persons.URL+path, "application/json", bytes.NewReader([]byte(`{}`)))
 		if err != nil {

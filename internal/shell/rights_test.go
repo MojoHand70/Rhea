@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -33,8 +32,7 @@ func TestPersonsAtTheDoors(t *testing.T) {
 	x := &exec.Executor{Store: s}
 	srv := &shell.Server{Store: s, Exec: x, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb")}
 	x.Today = srv.Clock.Today
-	ts := httptest.NewServer(srv.Handler())
-	defer ts.Close()
+	ts := serve(t, srv.Handler())
 	today := srv.Clock.Today()
 
 	call := func(person, company, method, path string, body any, out any) int {
@@ -304,8 +302,7 @@ func TestAPersonIsAlwaysChecked(t *testing.T) {
 			return "One note was taken, worth 12.50 PLN.", nil
 		}}}
 	x.Today = srv.Clock.Today
-	ts := httptest.NewServer(srv.Handler())
-	defer ts.Close()
+	ts := serve(t, srv.Handler())
 	today := srv.Clock.Today()
 
 	call := func(person, company, method, path string, body any, out any) int {
@@ -467,8 +464,7 @@ func TestTheKernelBelievesOnlyTheFace(t *testing.T) {
 	x := &exec.Executor{Store: s}
 	srv := &shell.Server{Store: s, Exec: x, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb"), RequirePerson: true, FaceKey: "the face's own key"}
 	x.Today = srv.Clock.Today
-	ts := httptest.NewServer(srv.Handler())
-	defer ts.Close()
+	ts := serve(t, srv.Handler())
 	sum, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", "common", "people.json"), "test")
 	if err != nil {
 		t.Fatal(err)
@@ -511,8 +507,7 @@ func TestTheKernelBelievesOnlyTheFace(t *testing.T) {
 	}
 
 	// Serving persons only without a key is believing nobody, never anybody.
-	keyless := httptest.NewServer((&shell.Server{Store: s, Exec: x, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb"), RequirePerson: true}).Handler())
-	defer keyless.Close()
+	keyless := serve(t, (&shell.Server{Store: s, Exec: x, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb"), RequirePerson: true}).Handler())
 	if code, _ := whoami(keyless.URL, "the face's own key"); code != 401 {
 		t.Fatalf("a kernel serving persons only with no key: %d", code)
 	}
@@ -527,8 +522,7 @@ func TestPersonsOnly(t *testing.T) {
 	x := &exec.Executor{Store: s}
 	srv := &shell.Server{Store: s, Exec: x, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb"), RequirePerson: true}
 	x.Today = srv.Clock.Today
-	ts := httptest.NewServer(srv.Handler())
-	defer ts.Close()
+	ts := serve(t, srv.Handler())
 	get := func(path string) int {
 		res, err := ts.Client().Get(ts.URL + path)
 		if err != nil {

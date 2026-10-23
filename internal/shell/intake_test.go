@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"path/filepath"
 	"testing"
 
@@ -23,8 +22,7 @@ func TestIntakeOverHTTP(t *testing.T) {
 	s := storetest.New(t)
 	srv := &shell.Server{Store: s, Exec: &exec.Executor{Store: s},
 		DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb")}
-	ts := httptest.NewServer(srv.Handler())
-	defer ts.Close()
+	ts := serve(t, srv.Handler())
 
 	data := []byte("%PDF-1.7 a scan")
 	hash := core.HashBytes(data)
