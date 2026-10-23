@@ -120,14 +120,18 @@ func TestIntercompany(t *testing.T) {
 			Fields: map[string]string{"code": "=$.code", "base": "=$.base",
 				"quote": "=$.quote", "date": "=$.date", "rate": "=$.rate"}}},
 	})
-	for dedup, c := range map[string]map[string]any{
-		"alfa":     {"name": "Alfa Sp. z o.o.", "kind": "self", "vat_id": "5250001111", "country": "PL"},
-		"beta":     {"name": "Beta GmbH", "kind": "self", "vat_id": "DE811111111", "country": "DE"},
-		"buyer-de": {"name": "Käufer AG", "kind": "customer", "vat_id": "DE123456789", "country": "DE"},
+	// in one order: a map's would be another story each time it is told
+	for _, c := range []struct {
+		dedup   string
+		payload map[string]any
+	}{
+		{"alfa", map[string]any{"name": "Alfa Sp. z o.o.", "kind": "self", "vat_id": "5250001111", "country": "PL"}},
+		{"beta", map[string]any{"name": "Beta GmbH", "kind": "self", "vat_id": "DE811111111", "country": "DE"}},
+		{"buyer-de", map[string]any{"name": "Käufer AG", "kind": "customer", "vat_id": "DE123456789", "country": "DE"}},
 	} {
 		post("/api/events", map[string]any{
 			"event_type": "company.registered", "occurred_at": "2026-09-01",
-			"dedup_key": dedup, "payload": c}, nil)
+			"dedup_key": c.dedup, "payload": c.payload}, nil)
 	}
 	post("/api/events", map[string]any{
 		"event_type": "fx.rate.published", "occurred_at": "2026-10-05", "dedup_key": "nbp-1005",

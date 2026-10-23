@@ -5028,6 +5028,20 @@ credited in the public library of lessons only by opting in, and a client is nev
   company in another zone waits for an installation of its own. rhea serve refuses a zone
   the database does not know, and the binary carries the zone database. On white01 the
   deploy sets Europe/Warsaw. TestTheBooksDayIsTheInstallations.
+- H2: every read route is walked by a person of another company
+  (TestEveryReadIsTheCompanysOwn); the route list is read from shell.go, so a new read
+  route fails the test until it is walked. The live stream is walked by its own test. The
+  walk found no leak.
+- H1: a story told twice books the same (`storetest.Twice`): each telling on fresh
+  databases, every fact of the two logs compared but its recorded time. This is a second
+  run of the story, not a re-feed of the first log, because an approval's reaction runs
+  only inside its door's transaction: logged facts re-appended would never activate the
+  rules they approved. Told twice: the founding story, Poland, the CIT advance backfilled,
+  intercompany, the matching grid, and the six matching stories (bank, FX, netting,
+  three-way, intercompany, unpairing). The intercompany story fed its companies from a
+  map, a different order on every run; it now feeds them in one order. *Assessed and
+  left:* the pack upgrade story books no facts, so telling it twice proves nothing; an
+  upgrade between bookings is told twice only as far as the Poland story approves its pack.
 
 ## 2026-10-23 — Who approves what: the company its own, Rhea's staff the rest
 
