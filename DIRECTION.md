@@ -3785,7 +3785,8 @@ designer page; a right on the App as a whole.
 **Order of work.**
 
 1. *Every tab an App:* today's views, actions and rules grouped into App definitions with no
-   change in behaviour — the folder, the title, who may run it.
+   change in behaviour — the folder, the title, who may run it. The register is `APPS.md`:
+   every App Rhea already has, its layer, and what the face knows that is not its own.
 2. *Variables, parameters and interactive visualization* — a table and a form driven by an
    App's variables.
 3. *Workflow in the kernel* — rights per state, snapshots, a running process keeping its
