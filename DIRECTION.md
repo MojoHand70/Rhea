@@ -3628,7 +3628,12 @@ withdrawn link leaves the membership it carried, so the person keeps access they
 used until someone ends it; the market's standard (a revoked invitation takes the pending
 user with it) is the one to propose. Groups (4) show as Kartoteki and in Kto ma dostęp; a
 client given to a team waits for the worklist's design. (4)
-The GUS and white-list channels, then Załóż konto and Dodaj klienta. Each in the gallery
+The GUS and white-list channels, then Załóż konto and Dodaj klienta (done 2026-10-23: Rhea
+46a682b the registers as a read the kernel serves — GUS's BIR 1.1, the Ministry's VAT list —
+and 42e7c99 the Poland pack's enter_company door, v44; rheaface 00158e4 the form, Dodaj
+klienta at the switch's foot, Załóż konto from Rhea's staff's link; walked live with the
+registers stood in by their recorded answers; GUS on white01 waits for the key GUS issues on
+request). Each in the gallery
 first, checked as the face's check asks. Apart, to design first with case management and
 the smart documents: the office's worklist over its clients and who answers for whom.
 

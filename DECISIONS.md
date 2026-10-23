@@ -5111,3 +5111,29 @@ KK's decision of 2026-10-22, built:
   at every init and at the end of a restore: for each company whose documents name a file,
   a copy under its key; the row with no company stays (append-only). Copies double those
   files' bytes, once. TestAFileIsTheCompanysThatReceivedIt, TestFilesFromBeforeTakeTheirCompany.
+
+## 2026-10-23 — Companies come in by their NIP (The desk in order, step 4)
+
+- KK: withdrawing a pending invitation removes the person too, as a revoked invitation does in
+  the market's apps (rheaface 84bf03c): the membership the link granted ends the day before the
+  books' today, signed by the owner who withdrew it, before the link stops opening; a refusal
+  leaves both.
+- The public registers are a read the kernel serves, not a channel: a lookup writes nothing,
+  and what the person confirms reaches the log through a door that names the register's
+  answer as its source (`adapter.CompanyRegister`, `GET /api/registers/{name}?id=`). Why:
+  onboarding needs the answer while the person waits, a channel is a pass that appends; the
+  evidence still lands in the log, so replay never asks a register again. A register's refusal
+  is 424 in its own words, not the server's failure.
+- GUS wants a key it issues free on request (RHEA_GUS_KEY); until KK has it, an installation
+  reads the VAT list alone and the form says GUS did not answer. The VAT list's daily limit (a
+  hundred searches per caller) is shared by an installation's people: enough for onboarding;
+  a hundred clients at once would need the Ministry's daily flat file. Assessed and left.
+- The Poland pack's door emits `company.entered`, never `company.registered`: houses taught a
+  rule on `company.registered` (Helios on white01, many tests), and a pack rule on the same
+  event would have entered every company twice, in replay too.
+- A company's key is PL and its NIP. An office adds a client with its mandate first (the claim:
+  the first grant into a company nobody holds), then the client's own record, then optionally
+  the owner's invitation carrying the owner's membership. A founder comes by a link from
+  Rhea's staff (a person of the house), claims the company as its owner, enters its record;
+  one link founds one company. Both are the face's server's sequence of kernel doors as the
+  person; a retry grants no second mandate and enters nothing twice.
