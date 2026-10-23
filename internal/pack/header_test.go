@@ -82,7 +82,7 @@ func TestAPackVersionKeepsWhatThePackIs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := &core.PackHeader{Pack: "base-test", Version: 1, Kind: "market", Market: "PL", Install: "company"}
+	want := &core.PackHeader{Pack: "base-test", Version: 1, Kind: "market", Market: "PL", Install: "company", Description: "a test pack"}
 	if b.Status != core.StatusActive || !reflect.DeepEqual(b.Pack, want) {
 		t.Fatalf("approved bundle = %s %+v, want active %+v", b.Status, b.Pack, want)
 	}

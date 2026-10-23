@@ -316,3 +316,26 @@ func (s *Store) PackMembers(ctx context.Context) (map[string][]core.Member, erro
 	}
 	return out, rows.Err()
 }
+
+// ApprovedPackVersions is the newest approved version of every pack, by the
+// pack's name: the bundle that made it active.
+func (s *Store) ApprovedPackVersions(ctx context.Context) ([]core.Bundle, error) {
+	rows, err := s.Pool.Query(ctx, `
+		SELECT DISTINCT ON (created_by) * FROM (
+		    SELECT DISTINCT ON (bundle_id) `+bundleCols+`
+		    FROM bundle WHERE created_by LIKE 'pack:%' ORDER BY bundle_id, version DESC) b
+		WHERE status = $1 ORDER BY created_by, created_at DESC`, core.StatusActive)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []core.Bundle
+	for rows.Next() {
+		b, err := scanBundle(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, b)
+	}
+	return out, rows.Err()
+}

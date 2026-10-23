@@ -50,6 +50,8 @@ type PackHeader struct {
 	Market  string   `json:"market,omitempty"`
 	Needs   []string `json:"needs,omitempty"`
 	Install string   `json:"install"`
+	// Description is the pack's own, in its market's language.
+	Description string `json:"description,omitempty"`
 }
 
 // The kinds a pack may be, and how it may be installed.

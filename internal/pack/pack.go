@@ -247,7 +247,8 @@ func load(ctx context.Context, s *store.Store, b []byte, actor string, alongside
 
 	var header *core.PackHeader
 	if m.Kind != "" || m.Install != "" || len(m.Needs) > 0 {
-		header = &core.PackHeader{Pack: m.Pack, Version: m.Version, Kind: m.Kind, Market: m.Market, Needs: m.Needs, Install: m.Install}
+		header = &core.PackHeader{Pack: m.Pack, Version: m.Version, Kind: m.Kind, Market: m.Market, Needs: m.Needs, Install: m.Install,
+			Description: m.Description}
 		if err := header.Validate(); err != nil {
 			return sum, err
 		}
