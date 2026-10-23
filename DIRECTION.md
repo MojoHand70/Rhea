@@ -3637,6 +3637,35 @@ request). Each in the gallery
 first, checked as the face's check asks. Apart, to design first with case management and
 the smart documents: the office's worklist over its clients and who answers for whom.
 
+## What never changes, what the law imposes, what the business chooses (KK, 2026-10-23)
+
+KK, after a proposal that would have written one accounting office's business model into the
+face — a fixed client list, three pricing models, the fields of an agreement: *"will every
+office company have to behave the way we defined their business model?"* Rhea is an AI-ERP;
+the principles that keep it one, in KK's words and the decisions already made:
+
+- **The face knows no business.** It renders what the definitions say; a screen that needs to
+  know what an invoice is belongs in a view.
+- **Implementation by interview** (2026-10-07): not a configuration — the company's own evidence
+  first, the unexplained residue drives the questions, done when nothing is left unexplained.
+- **A Rhea app is a package of smart documents** (2026-10-19): the Accounting Office, eCommerce,
+  SaaS, Professional Services apps — smart documents with their workflow and business objects
+  supporting one business model, Rhea's standard as the starting point, the interview shaping it
+  to each company, every company ending with its own version, approved and explained.
+- **Some things do not change:** the ledger, the account, the journal, the balance, the
+  accounting period — the kernel and its base vocabulary.
+- **Some things the law imposes:** the market's pack — VAT, KSeF, JPK, CIT, the statutory chart.
+- **The rest is the business model, and a business model is processes and data:** apps, held as
+  data, adapted by the interview.
+
+What this asks of the work: the platform — who is who, who may do what, which company, how a
+company enters Rhea, drawing any view and any smart document, reading across an office's clients
+within its mandates — is the face's and the kernel's; anything that says how a kind of business
+works is an app. The face holds business knowledge today that belongs elsewhere (the sales
+invoice's flow states, Today's VAT month-end and bank-line cards, the starter questions, the
+stand-in domain words): each moves out — law to the pack, business to an app — with the face's
+check and the live walk guarding what the person sees.
+
 ## The learning process: a lesson in words, taught once for many clients (KK, 2026-10-22)
 
 KK, in the talk about the MVP: the one key that opens an accounting office is automation
