@@ -274,6 +274,8 @@ func (s *Server) mux() http.Handler {
 	mux.HandleFunc("GET /api/channels", s.handleChannels)
 	mux.HandleFunc("GET /api/rights", s.handleRights)
 	mux.HandleFunc("GET /api/whoami", s.handleWhoAmI)
+	mux.HandleFunc("GET /api/registers", s.handleRegisters)
+	mux.HandleFunc("GET /api/registers/{name}", s.handleRegister)
 	mux.HandleFunc("GET /api/blobs/{hash}", s.handleBlob)
 	mux.HandleFunc("GET /api/time", s.handleTime)
 	mux.HandleFunc("POST /api/time/advance", s.handleTimeAdvance)
