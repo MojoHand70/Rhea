@@ -202,6 +202,11 @@ func (x *Executor) companysOwn(ctx context.Context, door string, inputs map[stri
 	return false
 }
 
+// announced are the doors that change Rhea's own definitions when they do not
+// act on a company's own: their facts are the installation's, so every
+// company hears of the change.
+var announced = map[string]bool{"approve_rule": true, "approve_activity": true, "approve_bundle": true, "reject_bundle": true}
+
 // TriggerActivity fires a declared verb: input validation, ref existence,
 // the stamped append, the reserved reaction, then the ordinary worklist
 // re-evaluation. dedupKey is the caller's idempotency handle (the CLI's file
@@ -227,10 +232,11 @@ func (x *Executor) TriggerActivity(ctx context.Context, name string, inputs map[
 	// skipped the check (review 2026-10-21, A1). The kernel speaking for
 	// itself under a person's request sets the person aside in code first
 	// (rights.WithoutPrincipal).
+	own := act.Spec.Everywhere && x.companysOwn(ctx, act.Name, inputs, store.CompanyOf(ctx))
 	if p := rights.PrincipalOf(ctx); p != nil {
 		actor = p.Handle
 		gate := act
-		if act.Spec.Everywhere && x.companysOwn(ctx, act.Name, inputs, store.CompanyOf(ctx)) {
+		if own {
 			gate.Spec.Everywhere = false // the company's own alone: its right in the company is enough
 		}
 		signed, err := rights.Authorize(ctx, x.Store, *p, gate, inputs, store.CompanyOf(ctx), x.today())
@@ -245,9 +251,12 @@ func (x *Executor) TriggerActivity(ctx context.Context, name string, inputs map[
 		}
 		inputs = signed
 	}
-	if act.Spec.Installation {
+	_, scoped := store.ScopeOf(ctx)
+	if act.Spec.Installation || scoped && announced[act.Name] && !own {
 		// the installation's fact, whoever acts for whom: written under the
-		// installation's own scope, the one that may write such rows
+		// installation's own scope, the one that may write such rows — and a
+		// change to Rhea's own definitions, which every company reads (KK,
+		// 2026-10-22: a change of Rhea's rules is announced to each company)
 		ctx = store.WithInstallation(ctx)
 	}
 	built, err := act.BuildEvent(inputs, x.today())
