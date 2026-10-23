@@ -284,13 +284,16 @@ BEGIN
 END;
 $$;
 -- A company's own rule is seen, and written, only in a scope that names the
--- company, as its facts are; Rhea's rules are every scope's.
+-- company, as its facts are; Rhea's rules are every scope's to read and the
+-- installation's alone to write — checked by the read test, a session acting
+-- for one company wrote drafts for everyone (readiness review 2026-10-23).
 ALTER TABLE rule ENABLE ROW LEVEL SECURITY;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'rule' AND policyname = 'rule_scope') THEN
-        CREATE POLICY rule_scope ON rule TO rhea_app USING (rhea_in_scope(company));
+        CREATE POLICY rule_scope ON rule TO rhea_app USING (rhea_in_scope(company)) WITH CHECK (rhea_may_write(company));
     END IF;
+    ALTER POLICY rule_scope ON rule USING (rhea_in_scope(company)) WITH CHECK (rhea_may_write(company));
 END;
 $$;
 -- A company's file is seen, and written, only where the company is. A file
@@ -306,13 +309,15 @@ BEGIN
 END;
 $$;
 -- A company's bundle — the question it asked, the proposal it was made — is
--- seen, and written, only where the company is; Rhea's are every scope's.
+-- seen, and written, only where the company is; Rhea's are every scope's to
+-- read and the installation's alone to write, as Rhea's rules are.
 ALTER TABLE bundle ENABLE ROW LEVEL SECURITY;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'bundle' AND policyname = 'bundle_scope') THEN
-        CREATE POLICY bundle_scope ON bundle TO rhea_app USING (rhea_in_scope(company));
+        CREATE POLICY bundle_scope ON bundle TO rhea_app USING (rhea_in_scope(company)) WITH CHECK (rhea_may_write(company));
     END IF;
+    ALTER POLICY bundle_scope ON bundle USING (rhea_in_scope(company)) WITH CHECK (rhea_may_write(company));
 END;
 $$;
 CREATE OR REPLACE FUNCTION bundle_company_fixed() RETURNS trigger AS $$
