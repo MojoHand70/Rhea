@@ -74,7 +74,7 @@ func (s *Server) noteUntaught(ctx context.Context, asked, missing, askedBy, kind
 		shared = "no"
 	}
 	inputs := map[string]any{"asked": asked, "missing": missing, "asked_by": askedBy, "shared": shared, "kind": kind,
-		"occurred_at": s.Clock.TodayUTC()}
+		"occurred_at": s.Clock.Today()}
 	if detail != "" {
 		inputs["detail"] = detail
 	}

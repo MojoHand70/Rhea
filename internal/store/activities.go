@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -15,7 +14,7 @@ import (
 
 // todayUTC is the business date of acts the kernel performs on its own
 // clock, like seeding its verbs.
-func todayUTC() string { return time.Now().UTC().Format("2006-01-02") }
+func todayUTC() string { return core.Today() }
 
 //go:embed queries/active_activities.sql
 var activeActivitiesSQL string

@@ -901,7 +901,7 @@ func (s *Server) handleApprove(w http.ResponseWriter, r *http.Request) {
 		req.ApprovedBy = "human"
 	}
 	rule, booked, procErrs, err := s.Exec.ApproveRuleWithReason(r.Context(), r.PathValue("id"),
-		req.ApprovedBy, s.Clock.TodayUTC(), req.Reason)
+		req.ApprovedBy, s.Clock.Today(), req.Reason)
 	if err != nil {
 		writeErr(w, 400, err)
 		return

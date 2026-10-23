@@ -5021,3 +5021,10 @@ credited in the public library of lessons only by opting in, and a client is nev
   detail in the log — a duplicate keeps its words, "done already" being the person's
   answer; database addresses are logged with their password masked (`store.RedactDSN`).
   TestFailuresStayInsideAndRequestsLeaveALine, TestADatabasesPasswordStaysOutOfErrors.
+- E4: the books' day is the date in the installation's time zone (`RHEA_TIMEZONE`, an IANA
+  name; UTC when unset), in one function (`core.BooksDay`), for the clock (`Clock.Today`,
+  renamed from TodayUTC) and every door, reader and command that dates a fact by today. The
+  zone is the installation's because the clock opens one day for every company at once; a
+  company in another zone waits for an installation of its own. rhea serve refuses a zone
+  the database does not know, and the binary carries the zone database. On white01 the
+  deploy sets Europe/Warsaw. TestTheBooksDayIsTheInstallations.

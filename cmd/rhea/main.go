@@ -49,6 +49,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	_ "time/tzdata" // the books' zone needs no zone files on the machine
 
 	"rhea/internal/adapter"
 	"rhea/internal/agent"
@@ -519,6 +520,9 @@ func main() {
 		addr := fs.String("addr", "127.0.0.1:8070", "listen address (this machine by default: from outside, the face is the door)")
 		requirePerson := fs.Bool("require-person", os.Getenv("RHEA_REQUIRE_PERSON") != "", "serve signed-in persons only (a face is the only door from outside); also RHEA_REQUIRE_PERSON=1")
 		fs.Parse(os.Args[2:])
+		if _, err := core.BooksZone(); err != nil {
+			log.Fatalf("RHEA_TIMEZONE: %v — an IANA zone such as Europe/Warsaw, or unset for UTC", err)
+		}
 		faceKey := os.Getenv("RHEA_FACE_KEY")
 		if *requirePerson && faceKey == "" {
 			log.Fatal("serving signed-in persons only needs RHEA_FACE_KEY: the key the face proves itself with, the same in the face's settings")
@@ -527,7 +531,7 @@ func main() {
 		if *requirePerson {
 			log.Printf("serving signed-in persons only (X-Rhea-Person from the face, proved by its key)")
 		}
-		x.Today = srv.Clock.TodayUTC // a door whose inputs carry no date takes the books' day
+		x.Today = srv.Clock.Today // a door whose inputs carry no date takes the books' day
 		// A request waits for the books at most this long, then hears they
 		// are busy (503) instead of queueing behind a replay or a backfill
 		// (review 2026-10-21, G5).
@@ -921,7 +925,7 @@ func loadDefinitions(ctx context.Context, s *store.Store, path string) (int, str
 	return len(members), bundle.ID, nil
 }
 
-func today() string { return time.Now().UTC().Format("2006-01-02") }
+func today() string { return core.Today() }
 
 // actor identifies who runs this CLI: RHEA_ACTOR, or cli:<os user>.
 func actor() string {
@@ -1054,7 +1058,7 @@ func people(ctx context.Context, s *store.Store, x *exec.Executor, verb, name, h
 			log.Fatalf("no one person signs as %q (%v)", person, err)
 		}
 		if from == "" {
-			from = time.Now().UTC().Format("2006-01-02")
+			from = core.Today()
 		}
 		trigger(store.WithCompany(ctx, company), "grant_membership", map[string]any{
 			"person": ids[0], "company": company, "role": role, "from": from, "granted_by": actor()})
@@ -1062,7 +1066,7 @@ func people(ctx context.Context, s *store.Store, x *exec.Executor, verb, name, h
 		if company == "" {
 			log.Fatal("rhea people who -company KEY")
 		}
-		table, err := rights.Table(ctx, s, company, time.Now().UTC().Format("2006-01-02"))
+		table, err := rights.Table(ctx, s, company, core.Today())
 		if err != nil {
 			log.Fatal(err)
 		}

@@ -48,8 +48,8 @@ func newGrantsWorld(t *testing.T) *grantsWorld {
 			w.asked.Add(1)
 			return "One note was taken, worth 12.50 PLN.", nil
 		}}}
-	w.x.Today = srv.Clock.TodayUTC
-	w.today = srv.Clock.TodayUTC()
+	w.x.Today = srv.Clock.Today
+	w.today = srv.Clock.Today()
 	w.ts = httptest.NewServer(srv.Handler())
 	t.Cleanup(w.ts.Close)
 

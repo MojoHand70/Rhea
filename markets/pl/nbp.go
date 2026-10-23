@@ -71,7 +71,7 @@ func (NBP) Installation() bool { return true }
 const EventFXRatePublished = "fx.rate.published"
 
 func (n NBP) Pass(ctx context.Context, _ adapter.Reads) ([]core.Event, error) {
-	today := time.Now().UTC().Format("2006-01-02")
+	today := core.Today()
 	if n.Today != nil {
 		today = n.Today()
 	}

@@ -152,7 +152,7 @@ func (s *Server) handleApproveBundle(w http.ResponseWriter, r *http.Request) {
 		req.ApprovedBy = "human"
 	}
 	b, booked, procErrs, err := s.Exec.ApproveBundle(r.Context(), r.PathValue("id"),
-		req.ApprovedBy, s.Clock.TodayUTC())
+		req.ApprovedBy, s.Clock.Today())
 	if err != nil {
 		writeErr(w, 400, err)
 		return
@@ -177,7 +177,7 @@ func (s *Server) handleRejectBundle(w http.ResponseWriter, r *http.Request) {
 		req.RejectedBy = "human"
 	}
 	b, err := s.Exec.RejectBundle(r.Context(), r.PathValue("id"), req.Reason,
-		req.RejectedBy, s.Clock.TodayUTC())
+		req.RejectedBy, s.Clock.Today())
 	if err != nil {
 		writeErr(w, 400, err)
 		return
@@ -252,7 +252,7 @@ func (s *Server) handleDraftBundle(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 500, err)
 		return
 	}
-	ask.Words, ask.Today = s.words(ctx), s.Clock.TodayUTC()
+	ask.Words, ask.Today = s.words(ctx), s.Clock.Today()
 	bd, err := s.Agent.DraftBundle(ctx, ask)
 	if errors.Is(err, agent.ErrAlreadyAnswered) {
 		writeJSON(w, 200, map[string]any{"already_answered": true, "description": bd.Description})
@@ -273,7 +273,7 @@ func (s *Server) handleDraftBundle(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if effective == "" {
-		effective = s.Clock.TodayUTC()
+		effective = s.Clock.Today()
 	}
 	b, err := StoreBundleDraft(ctx, s.Store, k, bd, "agent:"+agent.Model(), effective, req.Intent, req.After)
 	if err != nil {

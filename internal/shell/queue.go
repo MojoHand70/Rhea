@@ -66,7 +66,7 @@ func (s *Server) serveQueue(ctx context.Context, w http.ResponseWriter, vd *core
 		return
 	}
 	detailFor := detailViewByType(vds)
-	today := s.Clock.TodayUTC()
+	today := s.Clock.Today()
 	env := s.formulaEnv(ctx, map[string]string{"$.state": spec.ObjectType})
 	columns := make([]columnOut, 0, len(spec.Columns))
 	for _, f := range spec.Columns {

@@ -32,10 +32,10 @@ func TestPersonsAtTheDoors(t *testing.T) {
 	s := storetest.New(t)
 	x := &exec.Executor{Store: s}
 	srv := &shell.Server{Store: s, Exec: x, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb")}
-	x.Today = srv.Clock.TodayUTC
+	x.Today = srv.Clock.Today
 	ts := httptest.NewServer(srv.Handler())
 	defer ts.Close()
-	today := srv.Clock.TodayUTC()
+	today := srv.Clock.Today()
 
 	call := func(person, company, method, path string, body any, out any) int {
 		t.Helper()
@@ -303,10 +303,10 @@ func TestAPersonIsAlwaysChecked(t *testing.T) {
 		Agent: &agent.Agent{Complete: func(ctx context.Context, system, user string) (string, error) {
 			return "One note was taken, worth 12.50 PLN.", nil
 		}}}
-	x.Today = srv.Clock.TodayUTC
+	x.Today = srv.Clock.Today
 	ts := httptest.NewServer(srv.Handler())
 	defer ts.Close()
-	today := srv.Clock.TodayUTC()
+	today := srv.Clock.Today()
 
 	call := func(person, company, method, path string, body any, out any) int {
 		t.Helper()
@@ -463,14 +463,14 @@ func TestTheKernelBelievesOnlyTheFace(t *testing.T) {
 	s := storetest.New(t)
 	x := &exec.Executor{Store: s}
 	srv := &shell.Server{Store: s, Exec: x, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb"), RequirePerson: true, FaceKey: "the face's own key"}
-	x.Today = srv.Clock.TodayUTC
+	x.Today = srv.Clock.Today
 	ts := httptest.NewServer(srv.Handler())
 	defer ts.Close()
 	sum, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", "common", "people.json"), "test")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, _, errs, err := x.ApproveBundle(ctx, sum.Bundle, "operator", srv.Clock.TodayUTC()); err != nil || len(errs) != 0 {
+	if _, _, errs, err := x.ApproveBundle(ctx, sum.Bundle, "operator", srv.Clock.Today()); err != nil || len(errs) != 0 {
 		t.Fatalf("approve: %v %v", err, errs)
 	}
 	if _, err := x.TriggerActivity(ctx, "register_person", map[string]any{"name": "Krzysztof Kowal", "handle": "kk", "role": "owner"}, "operator", ""); err != nil {
@@ -523,7 +523,7 @@ func TestPersonsOnly(t *testing.T) {
 	s := storetest.New(t)
 	x := &exec.Executor{Store: s}
 	srv := &shell.Server{Store: s, Exec: x, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb"), RequirePerson: true}
-	x.Today = srv.Clock.TodayUTC
+	x.Today = srv.Clock.Today
 	ts := httptest.NewServer(srv.Handler())
 	defer ts.Close()
 	get := func(path string) int {

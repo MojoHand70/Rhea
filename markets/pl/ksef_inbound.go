@@ -155,7 +155,7 @@ func (k KSeFInbound) today() string {
 	if k.Today != nil {
 		return k.Today()
 	}
-	return time.Now().UTC().Format("2006-01-02")
+	return core.Today()
 }
 
 var ksefRefPattern = regexp.MustCompile(`^\d{10}-\d{8}-[0-9A-F]{12}-[0-9A-F]{2}$`)

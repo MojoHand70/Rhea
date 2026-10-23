@@ -100,7 +100,7 @@ func (s *Server) principalHandler(next http.Handler) http.Handler {
 			return
 		}
 		ctx := r.Context()
-		today := s.Clock.TodayUTC()
+		today := s.Clock.Today()
 		p, err := rights.Resolve(ctx, s.Store, handle, today)
 		if err != nil {
 			writeErr(w, 403, fmt.Errorf("refused: %w", err))
@@ -265,7 +265,7 @@ func (s *Server) allowEverywhere(w http.ResponseWriter, r *http.Request, kind, n
 	if p == nil {
 		return true
 	}
-	companies, err := rights.LetIn(r.Context(), s.Store, s.Clock.TodayUTC())
+	companies, err := rights.LetIn(r.Context(), s.Store, s.Clock.Today())
 	if err != nil {
 		writeErr(w, 500, err)
 		return false
@@ -313,7 +313,7 @@ func (s *Server) serveRights(ctx context.Context, w http.ResponseWriter, vd *cor
 			return
 		}
 	}
-	today := s.Clock.TodayUTC()
+	today := s.Clock.Today()
 	table, err := rights.Table(ctx, s.Store, company, today)
 	if err != nil {
 		writeErr(w, 500, err)

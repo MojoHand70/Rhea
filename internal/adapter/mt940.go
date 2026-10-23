@@ -133,7 +133,7 @@ func (m MT940) today() string {
 	if m.Today != nil {
 		return m.Today()
 	}
-	return time.Now().UTC().Format("2006-01-02")
+	return core.Today()
 }
 
 // Statement is what the reader takes from one :20: of an MT940: the first

@@ -493,7 +493,7 @@ func (x *Executor) today() string {
 	if x.Today != nil {
 		return x.Today()
 	}
-	return time.Now().UTC().Format("2006-01-02")
+	return core.Today()
 }
 
 // scopeFor is the scope a fact's chain runs under: its company's, or the

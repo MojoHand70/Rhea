@@ -337,3 +337,22 @@ func TestClockOpensADayPerCompany(t *testing.T) {
 		}
 	}
 }
+
+// The books' day is the installation's own (review 2026-10-21, E4): the
+// clock read the date in UTC, so a document received in Warsaw at half
+// past midnight on the 1st was dated the last day of the month before —
+// and fell into the VAT period before. Now the books' day is the date in
+// the installation's time zone (RHEA_TIMEZONE, UTC when unset), for the
+// clock and every door that dates a fact by today.
+func TestTheBooksDayIsTheInstallations(t *testing.T) {
+	night := time.Date(2026, 10, 31, 23, 30, 0, 0, time.UTC) // 00:30 on 1 November in Warsaw
+	clock := Clock{Now: func() time.Time { return night }}
+	t.Setenv("RHEA_TIMEZONE", "Europe/Warsaw")
+	if got := clock.Today(); got != "2026-11-01" {
+		t.Fatalf("half past midnight in Warsaw is %s", got)
+	}
+	t.Setenv("RHEA_TIMEZONE", "")
+	if got := clock.Today(); got != "2026-10-31" {
+		t.Fatalf("an installation naming no zone keeps UTC: %s", got)
+	}
+}

@@ -211,7 +211,7 @@ func (s *Server) serveScheduling(ctx context.Context, w http.ResponseWriter, vd 
 	// kernel's time is the log's; an interpreter may know what day it is.
 	writeJSON(w, 200, map[string]any{
 		"view": vd, "date_field": spec.DateField,
-		"today": s.Clock.TodayUTC(),
+		"today": s.Clock.Today(),
 		"days":  days, "undated": byDate[""],
 	})
 }

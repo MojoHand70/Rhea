@@ -17,7 +17,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"time"
 
 	"rhea/internal/adapter"
 	"rhea/internal/agent"
@@ -330,7 +329,7 @@ func Run(ctx context.Context, st *store.Store, a *agent.Agent, model string, c C
 			return rep, err
 		}
 		if sum.Bundle != "" {
-			if _, _, _, err := x.ApproveBundle(ctx, sum.Bundle, "eval", time.Now().UTC().Format("2006-01-02")); err != nil {
+			if _, _, _, err := x.ApproveBundle(ctx, sum.Bundle, "eval", core.Today()); err != nil {
 				return rep, fmt.Errorf("pack %s: %w", pk, err)
 			}
 		}

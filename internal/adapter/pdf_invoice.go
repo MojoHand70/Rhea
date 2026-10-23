@@ -307,7 +307,7 @@ func (r *PDFInvoice) today() string {
 	if r.Today != nil {
 		return r.Today()
 	}
-	return time.Now().UTC().Format("2006-01-02")
+	return core.Today()
 }
 
 // The text layer: the strings a PDF's content stream shows, as the

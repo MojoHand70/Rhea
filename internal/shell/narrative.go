@@ -104,7 +104,7 @@ func (s *Server) narrativeFacts(ctx context.Context, vd *core.ViewDef) (map[stri
 		}
 		facts = append(facts, fact)
 	}
-	out := map[string]any{"view": vd, "facts": facts, "today": s.Clock.TodayUTC()}
+	out := map[string]any{"view": vd, "facts": facts, "today": s.Clock.Today()}
 	factsJSON, _ := json.Marshal(facts)
 	return out, factsJSON, 200, nil
 }
@@ -136,7 +136,7 @@ func (s *Server) narrate(ctx context.Context, vd *core.ViewDef) (map[string]any,
 	// the reason; a second refusal stands, and the facts speak alone.
 	refused, words := "", ""
 	for try := 0; try < 2; try++ {
-		words, err = s.Agent.Narrate(ctx, s.Clock.TodayUTC(), spec.Voice, factsJSON, before, refused)
+		words, err = s.Agent.Narrate(ctx, s.Clock.Today(), spec.Voice, factsJSON, before, refused)
 		if err != nil {
 			out["silent"] = "the host could not speak: " + err.Error()
 			return out, 200, nil
@@ -578,7 +578,7 @@ func (s *Server) analysisData(ctx context.Context, spec core.AnalysisSpec) ([]co
 	if _, err := project.Rebuild(ctx, s.Store, path); err != nil {
 		return nil, nil, nil, err
 	}
-	sql := strings.ReplaceAll(spec.SQL, core.TodayInSQL, "DATE '"+s.Clock.TodayUTC()+"'")
+	sql := strings.ReplaceAll(spec.SQL, core.TodayInSQL, "DATE '"+s.Clock.Today()+"'")
 	cols, rows, err := project.Query(ctx, path, sql)
 	if err != nil {
 		return nil, nil, nil, err

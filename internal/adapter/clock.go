@@ -55,13 +55,15 @@ func init() {
 	Register(Implemented{Name: "clock", CodeVersion: clockCodeVersion, Format: "calendar"})
 }
 
-// TodayUTC is the one wall-clock read: the clock's day, as a business date.
-func (c Clock) TodayUTC() string {
+// Today is the one wall-clock read: the clock's day, as a business date —
+// the date where the books are kept (core.BooksDay; it was UTC's, review
+// 2026-10-21, E4).
+func (c Clock) Today() string {
 	now := c.Now
 	if now == nil {
 		now = time.Now
 	}
-	return now().UTC().Format("2006-01-02")
+	return core.BooksDay(now())
 }
 
 // ClockStatus says where time stands: the last opened day and every day
@@ -85,7 +87,7 @@ type ClockResult struct {
 // ClockState reads where time stands. A log that never opened a day starts
 // today — the genesis day is the day the clock first runs.
 func ClockState(ctx context.Context, s *store.Store, c Clock) (ClockStatus, error) {
-	st := ClockStatus{Today: c.TodayUTC()}
+	st := ClockStatus{Today: c.Today()}
 	last, ok, err := s.LatestEventOfType(ctx, core.EventDayOpened)
 	if err != nil {
 		return st, err

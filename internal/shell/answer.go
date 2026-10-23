@@ -137,7 +137,7 @@ func (s *Server) handleAnswer(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 500, err)
 		return
 	}
-	ask := agent.AnswerAsk{Question: req.Question, Today: s.Clock.TodayUTC(), Tables: tables, Words: s.words(ctx), Books: s.books(ctx)}
+	ask := agent.AnswerAsk{Question: req.Question, Today: s.Clock.Today(), Tables: tables, Words: s.words(ctx), Books: s.books(ctx)}
 	var (
 		ans agent.Answer
 		got componentOut
@@ -190,7 +190,7 @@ func (s *Server) handleAnswer(w http.ResponseWriter, r *http.Request) {
 	}
 	result, _ := json.Marshal(map[string]any{"columns": names, "rows": told, "more": got.More || len(got.Rows) > len(told)})
 	t, err := s.Exec.TriggerActivity(ctx, "host_answered", map[string]any{"question": req.Question, "sql": ans.SQL, "reading": ans.Reading,
-		"visual": string(vis), "result": string(result), "rows": len(got.Rows), "asked_by": req.AskedBy, "occurred_at": s.Clock.TodayUTC()}, req.AskedBy, "")
+		"visual": string(vis), "result": string(result), "rows": len(got.Rows), "asked_by": req.AskedBy, "occurred_at": s.Clock.Today()}, req.AskedBy, "")
 	if err != nil {
 		writeErr(w, 500, err)
 		return

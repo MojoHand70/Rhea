@@ -15,7 +15,7 @@ func (s *Server) handleSimulateBackfill(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	ctx := r.Context()
-	plan, err := s.Exec.PlanBackfill(ctx, s.Clock.TodayUTC())
+	plan, err := s.Exec.PlanBackfill(ctx, s.Clock.Today())
 	if err != nil {
 		writeErr(w, 400, err)
 		return
@@ -49,7 +49,7 @@ func (s *Server) handleApproveBackfill(w http.ResponseWriter, r *http.Request) {
 	if req.ApprovedBy == "" {
 		req.ApprovedBy = "human"
 	}
-	n, errs, err := s.Exec.ApproveBackfillPlan(r.Context(), req.ApprovedBy, s.Clock.TodayUTC(), req.Plan)
+	n, errs, err := s.Exec.ApproveBackfillPlan(r.Context(), req.ApprovedBy, s.Clock.Today(), req.Plan)
 	if err != nil {
 		writeErr(w, 400, err)
 		return

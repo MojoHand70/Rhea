@@ -122,7 +122,7 @@ func (s *Server) handleApproveActivity(w http.ResponseWriter, r *http.Request) {
 		req.ApprovedBy = "human"
 	}
 	a, booked, procErrs, err := s.Exec.ApproveActivity(r.Context(), r.PathValue("name"),
-		req.ApprovedBy, s.Clock.TodayUTC())
+		req.ApprovedBy, s.Clock.Today())
 	if err != nil {
 		writeErr(w, 400, err)
 		return

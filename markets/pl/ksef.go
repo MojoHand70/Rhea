@@ -130,7 +130,7 @@ func (k KSeF) Pass(ctx context.Context, reads adapter.Reads) ([]core.Event, erro
 			accepted[id] = true
 		}
 	}
-	today := time.Now().UTC().Format("2006-01-02")
+	today := core.Today()
 	if k.Today != nil {
 		today = k.Today()
 	}
