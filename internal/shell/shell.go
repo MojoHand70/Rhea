@@ -855,6 +855,13 @@ func (s *Server) handleDraft(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	// Named as the bundle door names it: drafted for a company, its own —
+	// and a desk acting for none is refused before anything is asked.
+	company, known, err := draftingFor(ctx, s.Store)
+	if err != nil {
+		writeErr(w, 400, err)
+		return
+	}
 	// The ask goes through the draft_rule door first: the request is in the
 	// log as rule.draft_requested before any model answers. Drafting itself
 	// cannot be a kernel reaction — reactions are deterministic, the agent is
@@ -876,10 +883,12 @@ func (s *Server) handleDraft(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 502, err) // the request event stays — the log is honest about unanswered asks
 		return
 	}
+	id, replaces := ownRule(known, company, draft.RuleID)
 	rule, err := s.Store.InsertRuleVersion(ctx, core.Rule{
-		ID: draft.RuleID, Status: core.StatusDraft, Priority: draft.Priority,
+		ID: id, Status: core.StatusDraft, Priority: draft.Priority,
 		EffectiveFrom: sample.OccurredAt, CreatedBy: "agent:" + agent.Model(),
 		Description: draft.Description, Spec: draft.Spec,
+		Company: company, Replaces: replaces,
 	})
 	if err != nil {
 		writeErr(w, 500, err)

@@ -28,19 +28,9 @@ import (
 // for no company — the installation's own scope or the owner — they are
 // Rhea's; a scope over several companies acting for none drafts nothing.
 func StoreBundleDraft(ctx context.Context, st *store.Store, k *network.Knowledge, bd agent.BundleDraft, createdBy, effectiveFrom, question, after string) (core.Bundle, error) {
-	company := store.CompanyOf(ctx)
-	if set, scoped := store.ScopeOf(ctx); scoped && company == "" && len(set) > 0 {
-		return core.Bundle{}, fmt.Errorf("act for one of your companies to draft its rules")
-	}
-	known := map[string]core.Rule{}
-	if company != "" {
-		rules, err := st.LatestRules(ctx)
-		if err != nil {
-			return core.Bundle{}, err
-		}
-		for _, r := range rules {
-			known[r.ID] = r
-		}
+	company, known, err := draftingFor(ctx, st)
+	if err != nil {
+		return core.Bundle{}, err
 	}
 	// A proposal resting on the network is verified here, and its support is
 	// counted by Rhea from what she learned — never taken from the proposer.
@@ -91,12 +81,7 @@ func StoreBundleDraft(ctx context.Context, st *store.Store, k *network.Knowledge
 		members = append(members, core.Member{Kind: core.KindViewDef, Name: view.ID, Version: v})
 	}
 	for _, d := range bd.Rules {
-		id, replaces := core.OwnedID(d.RuleID, company), ""
-		if own, ok := known[id]; ok {
-			replaces = own.Replaces // a redraft of the company's own keeps what it replaces
-		} else if rheas, ok := known[strings.TrimSuffix(d.RuleID, "@"+company)]; ok && rheas.Company == "" {
-			replaces = rheas.ID
-		}
+		id, replaces := ownRule(known, company, d.RuleID)
 		r, err := store.InsertRuleVersion(ctx, tx, core.Rule{
 			ID: id, Status: core.StatusDraft, Priority: d.Priority,
 			EffectiveFrom: effectiveFrom, CreatedBy: createdBy,
@@ -146,4 +131,44 @@ func StoreBundleDraft(ctx context.Context, st *store.Store, k *network.Knowledge
 		return core.Bundle{}, err
 	}
 	return b, tx.Commit(ctx)
+}
+
+// draftingFor is the company a draft is made for — the one acted for, empty
+// for Rhea's own (the installation's scope, the owner) — and, for a company,
+// the rules its drafts are named against: its own and Rhea's, by id. A desk
+// over several companies acting for none drafts nothing: whose would it be?
+func draftingFor(ctx context.Context, st *store.Store) (string, map[string]core.Rule, error) {
+	company := store.CompanyOf(ctx)
+	if set, scoped := store.ScopeOf(ctx); scoped && company == "" && len(set) > 0 {
+		return "", nil, fmt.Errorf("act for one of your companies to draft its rules")
+	}
+	known := map[string]core.Rule{}
+	if company != "" {
+		rules, err := st.LatestRules(ctx)
+		if err != nil {
+			return "", nil, err
+		}
+		for _, r := range rules {
+			known[r.ID] = r
+		}
+	}
+	return company, known, nil
+}
+
+// ownRule names a rule drafted for company (KK, 2026-10-22): the company's
+// own id, and the rule of Rhea's it replaces — a redraft of the company's own
+// keeps what that replaces, a rule named after one of Rhea's replaces it for
+// the company alone. Drafted for no company, the name is Rhea's as drafted.
+func ownRule(known map[string]core.Rule, company, drafted string) (id, replaces string) {
+	id = core.OwnedID(drafted, company)
+	if company == "" {
+		return id, ""
+	}
+	if own, ok := known[id]; ok {
+		return id, own.Replaces
+	}
+	if rheas, ok := known[strings.TrimSuffix(drafted, "@"+company)]; ok && rheas.Company == "" {
+		return id, rheas.ID
+	}
+	return id, ""
 }

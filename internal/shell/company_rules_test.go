@@ -1,7 +1,12 @@
 package shell_test
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -236,4 +241,71 @@ func objectID(t *testing.T, s *store.Store, scope context.Context, typ, field, v
 		t.Fatalf("%s with %s %s: %v %v", typ, field, value, ids, err)
 	}
 	return ids[0]
+}
+
+// The one-rule draft door names what it drafts as the bundle door does (KK,
+// 2026-10-22): drafted acting for alfa from alfa's waiting fact, the rule is
+// alfa's own and replaces Rhea's of the same name for alfa alone; drafted
+// acting for no company, it is Rhea's.
+func TestOneRuleDraftedForACompanyIsItsOwn(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	if err := s.InsertObjectType(ctx, core.ObjectType{Name: "note", Version: 1, Domain: "work", LabelField: "text",
+		Fields: []core.FieldDef{{Name: "text", Type: "string", Required: true}}}); err != nil {
+		t.Fatal(err)
+	}
+	drafted := `{"rule_id": "book-note", "description": "notes", "priority": 100,
+		"spec": {"match": {"event_type": "note.taken"}, "effect": {"object": {"type": "note", "fields": {"text": "=$.text"}}}}}`
+	if _, err := s.InsertRuleVersion(ctx, core.Rule{ID: "book-note", Status: core.StatusActive, Priority: 100, EffectiveFrom: "2026-01-01",
+		CreatedBy: "test", Description: "Rhea's notes", Spec: core.RuleSpec{Match: core.Match{EventType: "note.kept"},
+			Effect: core.Effect{Object: core.ObjectTemplate{Type: "note", Fields: map[string]string{"text": "=$.text"}}}}}); err != nil {
+		t.Fatal(err)
+	}
+	srv := &shell.Server{Store: s, Exec: &exec.Executor{Store: s}, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb"),
+		Agent: &agent.Agent{Complete: func(ctx context.Context, system, user string) (string, error) { return drafted, nil }}}
+	ts := httptest.NewServer(srv.Handler())
+	defer ts.Close()
+	post := func(company, path string, body, out any) int {
+		t.Helper()
+		b, _ := json.Marshal(body)
+		req, _ := http.NewRequest("POST", ts.URL+path, bytes.NewReader(b))
+		req.Header.Set("Content-Type", "application/json")
+		if company != "" {
+			req.Header.Set("X-Rhea-Company", company)
+		}
+		res, err := ts.Client().Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+		json.NewDecoder(res.Body).Decode(out)
+		return res.StatusCode
+	}
+	waiting := func(company string) int64 {
+		t.Helper()
+		ev, err := s.AppendEvent(store.WithCompany(ctx, company), core.Event{Kind: core.KindRaw, Type: "note.taken", OccurredAt: "2026-09-01",
+			Payload: []byte(`{"text":"a note"}`), DedupKey: "note-" + company, Company: company})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return ev
+	}
+
+	var rule core.Rule
+	if code := post(alfaKey, "/api/rules/draft", map[string]any{"intent": "notes", "sample_event_id": waiting(alfaKey), "object_type": "note"}, &rule); code != 200 {
+		t.Fatalf("drafting for alfa: %d %+v", code, rule)
+	}
+	if rule.ID != "book-note@"+alfaKey || rule.Company != alfaKey || rule.Replaces != "book-note" || rule.Status != core.StatusDraft {
+		t.Fatalf("alfa's one-rule draft: %+v", rule)
+	}
+	if r, _ := s.GetRule(ctx, "book-note"); r.Version != 1 || r.Status != core.StatusActive {
+		t.Fatalf("Rhea's rule moved: %+v", r)
+	}
+	rule = core.Rule{}
+	if code := post("", "/api/rules/draft", map[string]any{"intent": "notes", "sample_event_id": waiting(""), "object_type": "note"}, &rule); code != 200 {
+		t.Fatalf("drafting for no company: %d %+v", code, rule)
+	}
+	if rule.ID != "book-note" || rule.Company != "" || rule.Version != 2 {
+		t.Fatalf("Rhea's one-rule draft: %+v", rule)
+	}
 }
