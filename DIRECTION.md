@@ -3923,6 +3923,43 @@ invariants:
   everything the Poland pack requires (the Poland pack loads on it); `init` twice drafts nothing; a
   database built from the founding files, as white01 was, drafts nothing.
 
+**Step 2 designed: installing per company (2026-10-24).** Built on the company rules of
+2026-10-22: a pack's rules stay Rhea's rules, and what a company installed decides which of them
+run for it — never copies of a pack's rules into each company (the readiness review, §1.6).
+
+- *A pack says what it is.* Its file names its kind (core, market, regime, module, business), its
+  market, the packs it needs (KPiR needs Polska — podstawa), and how it is installed: for the
+  whole installation or per company. The approved pack version keeps this with it, so the
+  installation knows its catalog. A pack whose needs are not available is refused at loading.
+- *What runs where.* The core and the common packs run for every company, always. Today's Poland
+  and Germany packs declare themselves for the whole installation, so nothing changes on white01
+  or in the tests; the split (step 3) gives the new packs the per-company form, and every company
+  that has today's Poland pack then gets the installs that keep its books as they are.
+- *An install is a fact in the company's log*: "pack P installed from date D", and "switched off
+  from date E", by a person who may (the company's owner, or an office under its mandate, as for a
+  company rule) — explained, replayed, never a setting. One version for everyone (D1): an install
+  names the pack, and the company follows its approved version.
+- *Rules chosen by install.* For a company's fact dated D, a rule of a per-company pack runs only
+  if the company had the pack installed on D; its own rules and Rhea's other rules run as today.
+  Switched off, a pack stops from that day and what it booked stays. A fact dated before the
+  install is not booked by the pack, unless the person approves booking the past (the backfill
+  that exists).
+- *What a company is served.* Screens, types, doors, words and Rhea's announced changes from
+  per-company packs the company has not installed are not served to it, and such a door is refused
+  before anyone's rights are asked. One place in the kernel decides it, which every read uses.
+- *Pakiety.* Ustawienia → Pakiety lists the catalog in two columns, Dostępne and Zainstalowane:
+  each pack's name, kind, version, what it needs and what it brings. Zainstaluj shows what the
+  pack adds and asks from when (by default the company's first open month); confirmed by someone
+  who may install, the pack is installed. Rhea's own proposals (at onboarding, from step 3) wait on
+  Dziś as cards whose approval is the same act. Wyłącz asks from when.
+
+Built in small steps, each with its failing test first: the pack's own description; installs and
+switch-offs as facts; rules chosen by install (two companies, one install, a switch-off, replay
+identical); what is served (every read path walked with two companies); the catalog; the face's
+Pakiety tab, its install card and the card for a company with nothing installed. Left for step 3:
+words merged across packs, readers run only for companies with their pack, screens found by their
+role rather than their id.
+
 Each pack declares its Apps as it is built or split (`APPS.md` is the register they start from).
 The target catalog these packs grow into — a vision, measured against the AI-native newcomers and
 the old guard — is `PACKS.md`, with the market research in `reports/`.

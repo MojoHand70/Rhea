@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"rhea/internal/core"
 	"rhea/internal/pack"
 )
 
@@ -46,6 +47,11 @@ func TestEveryPackSaysWhatItIs(t *testing.T) {
 		}
 		if strings.TrimSpace(m.Disclaimer) == "" {
 			t.Errorf("%s: no disclaimer", f)
+		}
+		// and what it is (DIRECTION 2026-10-24, step 2): its kind and how
+		// it is installed, so the installation's catalog can say
+		if !slices.Contains(core.PackKinds, m.Kind) || !slices.Contains(core.PackInstalls, m.Install) {
+			t.Errorf("%s: kind %q, install %q — want one of %v and one of %v", f, m.Kind, m.Install, core.PackKinds, core.PackInstalls)
 		}
 		if len(m.History) == 0 {
 			t.Errorf("%s: no history", f)

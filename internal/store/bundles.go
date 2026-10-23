@@ -54,18 +54,23 @@ func InsertBundleVersion(ctx context.Context, q Querier, b core.Bundle) (core.Bu
 	if err != nil {
 		return b, err
 	}
-	var warrant []byte
+	var warrant, header []byte
 	if b.Warrant != nil {
 		if warrant, err = json.Marshal(b.Warrant); err != nil {
 			return b, err
 		}
 	}
+	if b.Pack != nil {
+		if header, err = json.Marshal(b.Pack); err != nil {
+			return b, err
+		}
+	}
 	err = q.QueryRow(ctx, `
-		INSERT INTO bundle (bundle_id, version, status, description, members, created_by, warrant, question, after_bundle, company)
+		INSERT INTO bundle (bundle_id, version, status, description, members, created_by, warrant, question, after_bundle, company, pack)
 		VALUES ($1, COALESCE((SELECT MAX(version) FROM bundle WHERE bundle_id = $1), 0) + 1,
-		        $2, $3, $4, $5, $6, $7, $8, NULLIF($9, ''))
+		        $2, $3, $4, $5, $6, $7, $8, NULLIF($9, ''), $10)
 		RETURNING version, created_at`,
-		b.ID, b.Status, b.Description, members, b.CreatedBy, warrant, b.Question, b.After, b.Company,
+		b.ID, b.Status, b.Description, members, b.CreatedBy, warrant, b.Question, b.After, b.Company, header,
 	).Scan(&b.Version, &b.CreatedAt)
 	if IsDuplicate(err) {
 		return b, fmt.Errorf("bundle %s moved while this version was drafted — redraft from the latest: %w", b.ID, err)
@@ -74,14 +79,20 @@ func InsertBundleVersion(ctx context.Context, q Querier, b core.Bundle) (core.Bu
 }
 
 const bundleCols = `bundle_id, version, status, description, members, created_by, created_at, warrant,
-	COALESCE(question, ''), COALESCE(after_bundle, ''), COALESCE(company, '')`
+	COALESCE(question, ''), COALESCE(after_bundle, ''), COALESCE(company, ''), pack`
 
 func scanBundle(row pgx.Row) (core.Bundle, error) {
 	var b core.Bundle
-	var members, warrant []byte
+	var members, warrant, header []byte
 	if err := row.Scan(&b.ID, &b.Version, &b.Status, &b.Description, &members, &b.CreatedBy, &b.CreatedAt, &warrant,
-		&b.Question, &b.After, &b.Company); err != nil {
+		&b.Question, &b.After, &b.Company, &header); err != nil {
 		return b, err
+	}
+	if len(header) > 0 {
+		b.Pack = &core.PackHeader{}
+		if err := json.Unmarshal(header, b.Pack); err != nil {
+			return b, err
+		}
 	}
 	if len(warrant) > 0 {
 		b.Warrant = &core.Warrant{}
@@ -228,4 +239,18 @@ func (s *Store) BundleRejection(ctx context.Context, id string) (Rejection, bool
 		return r, false, err
 	}
 	return r, true, nil
+}
+
+// ApprovedPack is the newest approved version of a pack — the bundle that made
+// it active, with what the pack says it is — or ok false when no version of
+// the pack is approved.
+func (s *Store) ApprovedPack(ctx context.Context, name string) (b core.Bundle, ok bool, err error) {
+	b, err = scanBundle(s.Pool.QueryRow(ctx, `
+		SELECT * FROM (SELECT DISTINCT ON (bundle_id) `+bundleCols+`
+		               FROM bundle WHERE created_by = $1 ORDER BY bundle_id, version DESC) b
+		WHERE status = $2 ORDER BY created_at DESC, bundle_id DESC LIMIT 1`, "pack:"+name, core.StatusActive))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return core.Bundle{}, false, nil
+	}
+	return b, err == nil, err
 }

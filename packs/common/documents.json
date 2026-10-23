@@ -1,6 +1,8 @@
 {
   "pack": "common-documents",
   "version": 4,
+  "kind": "core",
+  "install": "installation",
   "stage": "initial",
   "disclaimer": "This pack was prepared by artificial intelligence (AI). It is an initial version: its rules may contain errors and will change as accountants, tax advisers and auditors review them.",
   "history": [

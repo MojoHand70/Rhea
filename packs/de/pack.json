@@ -1,6 +1,9 @@
 {
   "pack": "de",
   "version": 3,
+  "kind": "market",
+  "market": "DE",
+  "install": "installation",
   "stage": "initial",
   "disclaimer": "Dieses Paket wurde von künstlicher Intelligenz (KI) erstellt. Es ist eine erste Fassung: Die Regeln können Fehler enthalten und werden sich ändern, sobald Buchhalter, Steuerberater und Wirtschaftsprüfer sie prüfen.",
   "history": [

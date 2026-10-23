@@ -1,6 +1,9 @@
 {
   "pack": "pl",
   "version": 44,
+  "kind": "market",
+  "market": "PL",
+  "install": "installation",
   "stage": "initial",
   "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
   "history": [

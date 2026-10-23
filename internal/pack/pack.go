@@ -29,9 +29,18 @@ import (
 // account and posting, say) without shipping them — base definitions belong
 // to the base, and a second market proves the boundary by reusing them.
 type Manifest struct {
-	Pack        string            `json:"pack"`
-	Version     int               `json:"version"`
-	Description string            `json:"description"`
+	Pack        string `json:"pack"`
+	Version     int    `json:"version"`
+	Description string `json:"description"`
+	// Kind, Market, Needs and Install say what the pack is (DIRECTION
+	// 2026-10-24, step 2): core, market, regime, module or business; the
+	// market it serves; the packs that must be approved before it; for the
+	// whole installation or per company. Kept with the bundle approving
+	// the version; a pack file without a kind (an old test's) keeps none.
+	Kind        string            `json:"kind,omitempty"`
+	Market      string            `json:"market,omitempty"`
+	Needs       []string          `json:"needs,omitempty"`
+	Install     string            `json:"install,omitempty"`
 	Requires    []string          `json:"requires,omitempty"`
 	ObjectTypes []core.ObjectType `json:"object_types,omitempty"`
 	ViewDefs    []core.ViewDef    `json:"view_defs,omitempty"`
@@ -236,6 +245,20 @@ func load(ctx context.Context, s *store.Store, b []byte, actor string, alongside
 		return fmt.Errorf("pack %s v%d is already loaded as bundle %s and this file differs from it (%s is new) — bump the pack's version", m.Pack, m.Version, BundleID(m.Pack, m.Version), what)
 	}
 
+	var header *core.PackHeader
+	if m.Kind != "" || m.Install != "" || len(m.Needs) > 0 {
+		header = &core.PackHeader{Pack: m.Pack, Version: m.Version, Kind: m.Kind, Market: m.Market, Needs: m.Needs, Install: m.Install}
+		if err := header.Validate(); err != nil {
+			return sum, err
+		}
+	}
+	for _, name := range m.Needs {
+		if _, ok, err := s.ApprovedPack(ctx, name); err != nil {
+			return sum, err
+		} else if !ok {
+			return sum, fmt.Errorf("pack %s needs the pack %s — approve a version of %s first", m.Pack, name, name)
+		}
+	}
 	for _, name := range m.Requires {
 		if _, err := s.GetObjectType(ctx, name); err != nil {
 			return sum, fmt.Errorf("pack %s requires object type %q — load its base definitions first", m.Pack, name)
@@ -415,6 +438,7 @@ func load(ctx context.Context, s *store.Store, b []byte, actor string, alongside
 			ID: BundleID(m.Pack, m.Version), CreatedBy: "pack:" + m.Pack, Members: members,
 			Description: fmt.Sprintf("%s pack %s v%d: %s", map[bool]string{false: "Install", true: "Upgrade to"}[sum.Upgraded > 0], m.Pack, m.Version, m.Description),
 			Warrant:     warrant,
+			Pack:        header,
 		})
 		if err != nil {
 			return sum, err

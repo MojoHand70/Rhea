@@ -34,6 +34,47 @@ type Bundle struct {
 	// its proposal are that company's, seen only where it is; empty, a
 	// proposal of Rhea's (KK, 2026-10-22: company rules and Rhea's rules).
 	Company string `json:"company,omitempty"`
+	// Pack is what the pack this bundle approves a version of says it is;
+	// nil on bundles that approve no pack's version.
+	Pack *PackHeader `json:"pack,omitempty"`
+}
+
+// PackHeader is what a pack says it is (DIRECTION 2026-10-24, step 2): its
+// kind, its market, the packs it needs, and whether it is installed for the
+// whole installation or per company. Kept with the bundle approving the
+// pack's version, it is the installation's catalog.
+type PackHeader struct {
+	Pack    string   `json:"pack"`
+	Version int      `json:"version"`
+	Kind    string   `json:"kind"`
+	Market  string   `json:"market,omitempty"`
+	Needs   []string `json:"needs,omitempty"`
+	Install string   `json:"install"`
+}
+
+// The kinds a pack may be, and how it may be installed.
+var (
+	PackKinds    = []string{"core", "market", "regime", "module", "business"}
+	PackInstalls = []string{InstallInstallation, InstallCompany}
+)
+
+const (
+	InstallInstallation = "installation" // runs for every company of the installation
+	InstallCompany      = "company"      // runs for a company that installed it
+)
+
+// Validate refuses a header no pack can have.
+func (h PackHeader) Validate() error {
+	if !slices.Contains(PackKinds, h.Kind) {
+		return fmt.Errorf("pack %s: kind %q is not one of %v", h.Pack, h.Kind, PackKinds)
+	}
+	if !slices.Contains(PackInstalls, h.Install) {
+		return fmt.Errorf("pack %s: install %q is not one of %v", h.Pack, h.Install, PackInstalls)
+	}
+	if h.Kind == "core" && h.Install != InstallInstallation {
+		return fmt.Errorf("pack %s: the core runs for the whole installation", h.Pack)
+	}
+	return nil
 }
 
 // OwnedID names a definition drafted for a company — a rule, a bundle — so the

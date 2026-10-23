@@ -153,6 +153,9 @@ ALTER TABLE bundle ADD COLUMN IF NOT EXISTS after_bundle TEXT;
 -- The company a bundle was drafted for (core.Bundle.Company); NULL or empty,
 -- a proposal of Rhea's.
 ALTER TABLE bundle ADD COLUMN IF NOT EXISTS company TEXT;
+-- What the pack a bundle approves a version of says it is (core.PackHeader):
+-- the installation's catalog (DIRECTION 2026-10-24, step 2).
+ALTER TABLE bundle ADD COLUMN IF NOT EXISTS pack JSONB;
 
 -- The blob store (DIRECTION 2026-10-10, "the file is the fact"): every file
 -- a door or a channel receives, kept whole under its content hash. A
