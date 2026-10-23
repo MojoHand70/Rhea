@@ -3786,6 +3786,17 @@ before a second owner or an office is admitted anywhere: (1) the sentence and th
 (2) the office teaching many clients at once; (3) learning from doing beyond matching; (4) trust earned; (5) the measure in the
 generator; (6) the library on rhea.plus.
 
+**The two kinds of rules: built in the kernel, 2026-10-23.** A company's rule books its
+own facts alone (18091a2) and replaces Rhea's for it alone, never beside it (41311ee);
+what is drafted or learned for a company is the company's (6eee0aa, d0fb4fb); a company
+approves its own, Rhea's staff — the house — the rest (c8cc8c8); an office teaches its
+clients in one act (7cbd83c); a client switches a lesson off (a4c82d0); a reading ten
+companies under three keepers hold becomes Rhea's by staff (d6d9010); Rhea's changes are
+the installation's facts, listed to every company (36b31ba). Left: the face's half (the
+changes on Today, the statute warning, the client picker, the switch-off, the staff's
+promotions page), and sorting an installation's existing rules into Rhea's and a company's
+before its second company is admitted.
+
 One line: *a lesson is a sentence she can be held to, taught once for the office, earned
 into automation by its record, and shared as the profession's library.*
 
