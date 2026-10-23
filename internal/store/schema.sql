@@ -172,6 +172,10 @@ CREATE TABLE IF NOT EXISTS blob (
 ALTER TABLE blob ADD COLUMN IF NOT EXISTS company TEXT;
 ALTER TABLE blob DROP CONSTRAINT IF EXISTS blob_pkey;
 CREATE UNIQUE INDEX IF NOT EXISTS blob_hash_company ON blob (hash, COALESCE(company, ''));
+-- A file's bytes are what its name says, whoever writes the row: a door (the
+-- store checks there too) or a restore, which took the backup's word.
+ALTER TABLE blob DROP CONSTRAINT IF EXISTS blob_hash_is_bytes;
+ALTER TABLE blob ADD CONSTRAINT blob_hash_is_bytes CHECK (hash = 'sha256:' || encode(sha256(bytes), 'hex'));
 
 -- Projection cache. Rebuildable from the event log at any time.
 CREATE TABLE IF NOT EXISTS object (

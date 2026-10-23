@@ -5111,6 +5111,10 @@ KK's decision of 2026-10-22, built:
   at every init and at the end of a restore: for each company whose documents name a file,
   a copy under its key; the row with no company stays (append-only). Copies double those
   files' bytes, once. TestAFileIsTheCompanysThatReceivedIt, TestFilesFromBeforeTakeTheirCompany.
+- B4, second half: the database checks every file row's bytes against its hash
+  (`blob_hash_is_bytes`), so a restore refuses a backup whose bytes were changed; the check
+  is re-validated at every init, which hashes every file once per init.
+  TestARestoredFileIsWhatItsNameSays.
 
 ## 2026-10-23 — Companies come in by their NIP (The desk in order, step 4)
 
