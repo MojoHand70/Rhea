@@ -5060,3 +5060,28 @@ KK's decision of 2026-10-22 (company rules and Rhea's global rules), built:
   `rhea people grant -person kk -company house -role owner`; the face then shows the
   house beside Helios in the company switch, and approvals of Rhea's are made acting
   for the house.
+
+## 2026-10-23 — A reading many companies hold becomes Rhea's (promotion)
+
+KK's decision of 2026-10-22, built:
+
+- **The pattern is the rule's body.** Company rules with the same match and effect, active,
+  counted across the installation from the rules alone; simulated companies (`sim:`) are
+  not counted. A company's keeper is the office of its current mandate, or the company.
+- **The floor: ten companies, three keepers** (exec.PromoteCompanies, PromoteKeepers).
+  Counted within this installation. The network counts installations, not companies;
+  joining the two counts waits for a second hosted installation.
+- **Staff see only what reached the floor** (GET /api/promotions, a right in the house):
+  the body, how many companies and keepers, how many companies read that fact their own
+  way at all — never a company's name. Below the floor a pattern can be one firm's own
+  business, so nobody sees it.
+- **promote_rule writes Rhea's rule**: a new version of the rule the copies replace (or
+  one staff name), booking every company from the promotion's day. Its warrant is the
+  network's, with the support counted and an external biegły rewident's opinion cited
+  when one was asked. The promotion fact is the installation's, which every company
+  reads.
+- **The companies' copies stay.** They keep winning for their companies (they read the
+  same); nothing is retired for a company — it retires its copy if it wishes.
+- *Known:* a late document dated before the promotion does not book by Rhea's earlier
+  reading — the executor runs the newest version only (packs/us/REVIEW.md cause 3, the
+  smart documents' first question). It waits in the worklist, as after any pack upgrade.

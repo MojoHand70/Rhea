@@ -693,6 +693,25 @@ func BuiltinActivities() []Activity {
 			},
 		},
 		{
+			Name: "promote_rule", Domain: "system",
+			Description: "Rhea's staff make a reading many companies hold Rhea's own: the same rule held by at least ten companies kept by at least three offices or installations, counted from the rules alone, becomes a rule of Rhea's for every company from this day — optionally with an external statutory auditor's opinion, cited in its warrant (KK, 2026-10-22).",
+			Spec: ActivitySpec{
+				Inputs: []FieldDef{
+					{Name: "shape", Type: "string", Required: true}, // the pattern's key, as /api/promotions lists it
+					{Name: "rule_id", Type: "string"},               // the rule of Rhea's to write; by default the one the companies' rules replace
+					{Name: "opinion", Type: "string"},               // an external biegły rewident's opinion, when one was asked
+					{Name: "approved_by", Type: "string", Required: true},
+					{Name: "occurred_at", Type: "date", Required: true},
+				},
+				Emits:      "rule.promoted",
+				Who:        []string{"human"},
+				Everywhere: true,
+				// the installation's fact, which every company reads: a change
+				// of Rhea's rules is announced to all
+				Installation: true,
+			},
+		},
+		{
 			Name: "retire_rule", Domain: "system",
 			Description: "Switch one of the company's own rules off for it, with a reason: from now on it books nothing there, what it booked stays, and if it replaced a rule of Rhea's, Rhea's books again. A client's veto over a lesson an office taught it, written down in its books for the office to read (KK, 2026-10-22). A rule of Rhea's or of another company is not the company's to switch off.",
 			Spec: ActivitySpec{

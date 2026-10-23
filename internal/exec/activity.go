@@ -441,6 +441,9 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 			return err
 		}, nil
 
+	case "rule.promoted":
+		return x.preparePromotion(ctx, ev)
+
 	case "rule.retired":
 		var p struct {
 			RuleID string `json:"rule_id"`

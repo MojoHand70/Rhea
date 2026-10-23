@@ -208,6 +208,24 @@ func load(ctx context.Context, s *store.Store, today string) (*world, error) {
 
 func str(o core.Object, f string) string { v, _ := o.State[f].(string); return v }
 
+// Keepers maps each client to the office keeping its books on the day: the
+// office of a current mandate. A company no office keeps keeps its own — the
+// count a promotion asks for (KK, 2026-10-22: ten companies kept by three
+// offices or installations).
+func Keepers(ctx context.Context, s *store.Store, today string) (map[string]string, error) {
+	w, err := load(ctx, s, today)
+	if err != nil {
+		return nil, err
+	}
+	out := map[string]string{}
+	for _, md := range w.mandates {
+		if w.current(md) {
+			out[str(md, "client")] = str(md, "office")
+		}
+	}
+	return out, nil
+}
+
 // current reports whether a dated grant holds on the books' day: begun and
 // not past its last day. The dates decide, not the status — an ended
 // membership still answers who could do what on the days it held, and to
