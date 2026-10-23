@@ -5203,3 +5203,19 @@ KK's answers to the readiness review's three questions (`reports/Installable pac
   the interview changes; account numbers with segments the company declares; dimensions on posting
   lines (cost centre, project, …) and groupings of accounts for reporting; Rhea's rules book to an
   account's role, never its number, the company's chart saying which account plays each role.
+
+## 2026-10-23 — The App designer (KK)
+
+KK's decisions in the designer talk (DIRECTION "The App designer"):
+
+- **Designer is a role in the people pack, and a paid one**; only a designer designs Apps.
+- **The owner and a designer may put an App into production**; in 99% of cases the designer, after
+  an oral agreement. Proposed with it: the production card names who agreed, kept with the
+  approval.
+- **Anyone may ask Rhea for an App**; Rhea prepares a draft as a proposal and the person who asked
+  may accept it, but a designer verifies it and puts it into production.
+- **A running process moves to a new production version by default**; a version may let running
+  processes finish on the old one. Breaking changes are identified in design — free, visible,
+  breaking — and each breaking one is answered in the draft before it can go to production.
+- **A designer from outside the company sees in the sandbox only what their own rights show**;
+  otherwise Rhea's sample company.

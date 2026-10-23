@@ -3796,6 +3796,7 @@ designer page; a right on the App as a whole.
 4. *Triggers and autonomy* — declared per App; act, propose, earn it.
 5. *Generic connectors* — an API fetch and an e-mail as configured channels.
 6. *The designer page* — the sandbox and the visual artefact; Rhea designs an App by interview.
+   Its design: "The App designer" below.
 7. *The first business pack: Rhea for Accounting Offices* — its Apps from the market's standard,
    with their warrants, shaped for each office by the interview; with it, the office's read
    across its clients within its mandates.
@@ -3965,6 +3966,154 @@ get roles and the chart becomes the company's (the installation-wide chart was o
 blockers). Segments and dimensions are a core change of their own — the posting line gains
 dimensions — after KPiR, before an office brings over a client's chart. Other countries' invoicing
 packs follow demand; Tylko's list is the first.
+
+## The App designer (KK, 2026-10-23)
+
+KK opened the designer in talk the same day — step 6 of "Rhea Apps and business packs": who
+designs, the panes, versions, and what happens to an App's running processes when its production
+version changes. KK's list, the shape proposed in the talk, and KK's four decisions (DECISIONS
+2026-10-23, "The App designer").
+
+**The Designer.** A role in the people pack beside owner, chief accountant, accountant, reader and
+support, and a paid one: the grant is what is billed. Only a designer, or the owner (who holds
+everything), designs an App and puts a version into production. Its rights are a new family in
+the vocabulary beside door:, view: and type: (proposed: `app:design`, `app:release`).
+
+**Rhea designs; the panes check and adjust.** The usual way in is a sentence — "design me an App
+for purchase invoices" — and Rhea drafts the whole App. The designer is first the page that shows
+that draft; its panes are where a person checks it and changes details. Rhea and the panes edit
+the one definition (JSON, validated before anyone approves): whatever can be clicked can be said,
+and the other way round; nothing lives only in a pane. The preview runs the draft on the company's
+own data and writes nothing.
+
+**Who asks, who accepts, who releases** (KK's decisions).
+
+- Anyone may ask Rhea for an App or a change. Rhea prepares the draft as a proposal; the person
+  who asked may accept it — "this is what I meant" — and the acceptance is recorded on the draft.
+- A designer verifies it and puts it into production; the owner may too. KK: in 99% of cases the
+  designer, after an oral agreement. Proposed: the production card names who agreed — the
+  requester's acceptance when there is one, otherwise the person the designer names — kept with
+  the approval.
+- A designer from outside the company (a partner building Apps for many firms, later the
+  Marketplace) sees in the sandbox only what their own rights show; otherwise Rhea's sample
+  company.
+
+**General properties.** Name, category, folder; read-only (a report) or data input; with or
+without a workflow; with or without a visual UI (without one, an App that runs on triggers alone);
+who may run it. The kind declared decides which panes the designer opens, and the kernel checks
+it: a read-only App with an action is refused.
+
+**Visual.** Components in flex rows; a container holds components and arranges them the flex way
+(proposed: one concept — a row is a container laid across, the page a container laid down). Width
+relative to the parent: 1/6, 1/4, 1/3, 1/2, 2/3, 3/4, 5/6, 100% — twelfths, so rows line up across
+the page — Fit or Fixed; min and max width in px; height auto or fixed in px. Gaps come off before
+the fractions, so 1/2 + 1/2 always fits. Min width makes the phone: four quarter-width fields with
+a 160 px minimum stand in one line on a desk and wrap on a phone, with no separate phone design;
+narrower than a phone, everything is 100%. Components carry no colour, font or padding of their
+own — width, height, label and a variant from a closed list — so every App looks like Rhea, a
+brand change is made once, and the face's consistency check covers Apps. The repository is the
+desk's gallery: the table with its layouts (first), the document sheet, the statement, figures,
+Rhea's words, the board; form fields (text, number, money, date, choice, a record picker, yes/no,
+file); container, tabs, button. A component nobody has is a request to Rhea's makers, never built
+inside an App.
+
+**Variables and queries.** Every property of a component — its default value, whether it shows
+(the whole, or a part with properties of its own), whether it may be edited, whether it is
+required — and every transition's condition, every action's condition and parameters, is a fixed
+value or a formula over the App's variables; the state is one more variable. A variable is set by
+input (with a default formula until the person types), by a formula, by a query, or by a parameter
+the App opens with (the month). For speed: a component's formula reads variables and never runs a
+query; queries run when the App opens or a parameter changes, formulas recompute as the person
+types. The designer refuses circles (A from B, B from A) and shows for each variable what it reads
+and what reads it. Queries only read — the books and other Apps' data within the person's rights,
+the App's own tables. Writing happens only on a transition: an action records a fact, approved
+rules book it.
+
+**Workflow.** States; transitions, the label being the button; who may move; a condition; actions,
+each with its condition and parameters. A transition is fired by a person or by a trigger (a fact,
+the clock, another App's state, a condition coming true), each automatic one with its autonomy
+(act, propose, earn it). Who sees and who edits which field in each state is one table of ticks,
+fields by states, not a condition on every field. A snapshot of the variables at each move.
+
+**Data tables.** Object types the App owns, each the company's by construction: a designer cannot
+make a table another company sees.
+
+**Versions.** Rhea's lifecycle as it is: the development version is a draft, the production
+version the active one, earlier ones superseded; putting a version into production is an
+approval, a fact with who and when. *Restore production to development* starts a new draft as a
+copy of what runs, the unfinished draft set aside and kept. *Back to an older version* is a new
+version with the old content (v7 = v5), the history whole.
+
+**Fixed identities.** Every state, transition, field, variable and component gets an identity when
+it is made; its label is free text. Renaming is never removing: "Weryfikacja" renamed
+"Sprawdzenie" is the same state. When Rhea edits by talk it keeps identities, and a draft that
+drops one and adds another under the same label is asked "is this a rename?" before anything else.
+Most upgrades are automatic because of this.
+
+**Running processes: upgrade by default** (KK). A running process is its list of facts — started,
+filled, moved — so upgrading reads the same facts under the new version and records one more:
+"moved from v4 to v5". Nothing is rewritten; what happened under v4 says v4 forever, and replay
+reads each process under the version it had at each point. After the move the new version holds in
+full, rights included: if v5 says only the manager approves above 10,000 zł, a 12,000 zł invoice
+waiting for the accountant now waits for the manager — usually the reason for the change. One
+switch per version, *let the running ones finish on the old one*, serves a change dated by law.
+Warrant for the shape: workflow engines keep an instance on its version and move it by an explicit
+plan mapping old steps to new ones, checked before it runs (Camunda's process instance migration);
+Rhea draws the plan itself.
+
+**Breaking changes are found in design** (KK: "what I'm worried are breaking changes, which must be
+identified in design"). The designer compares the draft with production all the time, by identity,
+and classes every change the moment it is made — marked beside it in its pane, counted on the
+company's own data — and a list, *Zmiany względem produkcji*, gathers them in three groups.
+
+- *Free* — nothing already there notices: layout, labels, help texts, a new optional field, a new
+  state or transition, a new variable, wider rights.
+- *Visible* — nothing stops, but something already there changes, and the designer shows it: a
+  changed formula (each running process's values, before and after), narrower rights (who now
+  waits for whom), a new condition on a transition (processes that could move and now cannot).
+- *Breaking* — something already there cannot go on as it is without a decision:
+  1. *the flow*: a state removed, merged or split with processes in it; a process left with no way
+     out;
+  2. *the data*: a field removed (its values stay in the history; the new version neither shows
+     nor computes them); a field's type changed (the values that do not convert, listed: "3 records
+     say 'brak' where an amount is now required"); a new required field that records lack; a
+     choice removed that records hold; a link pointed at another table;
+  3. *what others rely on* — the dangerous kind, invisible in the App's own panes: a field of a fact
+     the App records that an approved rule reads (the books), and a variable, field or state that
+     another App's formula, query or trigger, or a report, reads. The designer knows every reader,
+     the rules and Apps being definitions.
+
+Each breaking change carries its answer in the draft itself: a mapping (Rhea proposes, the designer
+confirms), a fill formula or a default for a new required field, a conversion with the failing
+values listed, the removal confirmed, or "these finish on the old version". The facts an App
+records are never changed in place: a field may be added to a fact, never removed or retyped; a
+different meaning is a new fact, and the rules that book it come in the same package (the
+event-sourcing practice: a recorded fact never changes meaning — Greg Young, *Versioning in an
+Event Sourced System*). A draft with a breaking change unanswered cannot go to production; the
+button says why. *Try the upgrade* in the sandbox runs it over a copy of every running process and
+record and shows what moves, what changes and what stays — the list the production card repeats:
+
+> v5 of Faktury kosztowe: 41 in progress. 38 move on their own. 2 sit in "Weryfikacja", which v5
+> no longer has — Rhea proposes "Do akceptacji". 1 stays on v4 and finishes there: v5 requires an
+> MPK it lacks; it moves once someone gives one.
+
+**The first App to design with it: purchase invoices described and approved.** Most purchase
+invoices from Polish suppliers already arrive through KSeF, so Rhea's first question is which job
+is meant — describing and approving those that arrive (opis merytoryczny, MPK, akceptacja), or
+entering those from abroad. For the first: *Faktury kosztowe — opis i akceptacja*,
+Księgowość/Zakupy, data input, with a workflow; the Poland pack's purchase invoice plus the App's
+own table *opis* (MPK, projekt, opis); variables — gross, a limit of 5,000 zł the office changes,
+over the limit, the supplier's account on the white list; the layout — supplier 1/2 · NIP 1/4 ·
+date 1/4, the lines 100%, opis 2/3 · totals 1/3, the white-list warning shown only when the account
+is off the list; the flow — Nowa → Opisana → (Do akceptacji, over the limit) → Zaakceptowana →
+Zaksięgowana, and Odrzucona; an invoice arriving from KSeF opens one in Nowa on its own; nobody
+approves their own invoice; the approval records a fact the pack's rules already book.
+
+**What it needs from the kernel**, in the order of "Rhea Apps and business packs": a running
+process knowing its version, and an old version still running for the processes that stay (step
+3); identities and the comparison with production; the readers of every fact and field, known from
+the definitions. The read-only designer page comes early (`APPS.md`, step 1); the editable panes
+after the App runs (step 6).
 
 ## The learning process: a lesson in words, taught once for many clients (KK, 2026-10-22)
 
