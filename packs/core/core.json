@@ -1,12 +1,17 @@
 {
   "pack": "core",
-  "version": 1,
+  "version": 2,
   "kind": "core",
   "install": "installation",
   "description": "Core: what Rhea is with nothing installed — the ledger's vocabulary (company, account, posting, the period's lock, exchange rates), the invoice's common shape and its tax rate, contractors, Rachunki i karty's bank accounts, bank lines and settlements, and tasks. Market-neutral; the kernel carries it in its binary and rhea init drafts what a database lacks.",
   "stage": "initial",
   "disclaimer": "This pack was prepared by artificial intelligence (AI). It is an initial version: its definitions may contain errors and will change as accountants, tax advisers and auditors review them.",
   "history": [
+    {
+      "versions": "2",
+      "date": "2026-10-24",
+      "changes": "Installing a pack in a company: the installed_pack record (which pack, from which day, until which day, who installed it and who switched it off), the doors install_pack and switch_off_pack, and the rules that keep each install and switch-off as the company's record — the kernel checks every install against the catalog before it is a fact."
+    },
     {
       "versions": "1",
       "date": "2026-10-23",
@@ -767,6 +772,61 @@
           "type": "ref<person>"
         }
       ]
+    },
+    {
+      "name": "installed_pack",
+      "version": 1,
+      "domain": "packs",
+      "is_document": false,
+      "label_field": "pack",
+      "fields": [
+        {
+          "name": "pack",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "from",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "to",
+          "type": "date",
+          "required": false
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "installed",
+            "switched_off"
+          ]
+        },
+        {
+          "name": "installed_by",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "switched_off_by",
+          "type": "string",
+          "required": false
+        }
+      ],
+      "lifecycle": {
+        "field": "status",
+        "transitions": {
+          "installed": [
+            "switched_off"
+          ]
+        }
+      },
+      "amendable": [
+        "to",
+        "switched_off_by"
+      ]
     }
   ],
   "view_defs": [
@@ -1233,6 +1293,122 @@
           "assignee"
         ],
         "approvals": true
+      }
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "core-install-pack",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "An installed pack is the company's record: which pack, from which day, who installed it",
+      "spec": {
+        "match": {
+          "event_type": "pack.installed"
+        },
+        "effect": {
+          "object": {
+            "type": "installed_pack",
+            "fields": {
+              "pack": "=$.pack",
+              "from": "=$.from",
+              "status": "installed",
+              "installed_by": "=$.installed_by"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "core-switch-off-pack",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "A pack switched off stops from its last day; what it booked stays",
+      "spec": {
+        "match": {
+          "event_type": "pack.switched_off"
+        },
+        "effect": {
+          "amend": {
+            "type": "installed_pack",
+            "target": "=$.installed",
+            "set": {
+              "status": "switched_off",
+              "to": "=$.to",
+              "switched_off_by": "=$.switched_off_by"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "activities": [
+    {
+      "name": "install_pack",
+      "domain": "packs",
+      "description": "Install a pack in the company from a day: its rules book the company's facts from that day",
+      "spec": {
+        "inputs": [
+          {
+            "name": "pack",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "from",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "installed_by",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "pack.installed",
+        "who": [
+          "human"
+        ],
+        "identity": [
+          "=$.pack",
+          "=$.from"
+        ]
+      }
+    },
+    {
+      "name": "switch_off_pack",
+      "domain": "packs",
+      "description": "Switch a pack off in the company from its last day; what it booked stays",
+      "spec": {
+        "inputs": [
+          {
+            "name": "installed",
+            "type": "ref<installed_pack>",
+            "required": true
+          },
+          {
+            "name": "to",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "switched_off_by",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "pack.switched_off",
+        "who": [
+          "human"
+        ]
       }
     }
   ]

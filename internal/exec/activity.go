@@ -453,6 +453,12 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 	case "rule.promoted":
 		return x.preparePromotion(ctx, ev)
 
+	case "pack.installed":
+		return nil, x.checkInstall(ctx, *ev)
+
+	case "pack.switched_off":
+		return nil, x.checkSwitchOff(ctx, *ev)
+
 	case "rule.retired":
 		var p struct {
 			RuleID string `json:"rule_id"`

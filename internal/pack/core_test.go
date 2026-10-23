@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"rhea/internal/core"
@@ -36,7 +37,7 @@ func TestTheKernelShipsItsCore(t *testing.T) {
 		}
 		waiting = append(waiting, sum.Bundle)
 	}
-	if len(waiting) != 4 || waiting[1] != "pack-core-v1" {
+	if len(waiting) != 4 || !strings.HasPrefix(waiting[1], "pack-core-v") {
 		t.Fatalf("waiting = %v, want Ludzie, the core, then Okresy and Dokumenty", waiting)
 	}
 	if _, err := s.GetObjectType(ctx, "posting"); err == nil {
@@ -74,7 +75,9 @@ func TestTheKernelShipsItsCore(t *testing.T) {
 
 // A database built from the founding files, as white01 was (the founding
 // vocabulary inserted, the common packs and the Poland pack approved),
-// already holds the core: init drafts nothing there.
+// already holds the core as it first shipped: init drafts there only what the
+// core has added since — the installed_pack record, its two doors and their
+// two rules (core v2) — and nothing of the common packs.
 func TestACoreAlreadyThereDraftsNothing(t *testing.T) {
 	ctx := context.Background()
 	s := storetest.New(t)
@@ -117,8 +120,9 @@ func TestACoreAlreadyThereDraftsNothing(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, sum := range sums {
-		if sum.Bundle != "" || sum.Types+sum.Views+sum.Rules+sum.Activities+sum.Upgraded != 0 || len(sum.Conflicts) != 0 {
-			t.Fatalf("init drafted on a database that holds the core: %+v", sum)
+		added := sum.Pack == "core" && sum.Types == 1 && sum.Views == 0 && sum.Rules == 2 && sum.Activities == 2 && sum.Bundle == "pack-core-v2"
+		if !added && (sum.Bundle != "" || sum.Types+sum.Views+sum.Rules+sum.Activities+sum.Upgraded != 0) || len(sum.Conflicts) != 0 {
+			t.Fatalf("init drafted more than the core added since on a database that holds it: %+v", sum)
 		}
 	}
 }
