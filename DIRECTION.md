@@ -3616,9 +3616,18 @@ time is the rule in all of them; the switch is always in the same place, at the 
 fastest relief (done the same day: Rhea 68182f2, pack v42, rheaface e4cc52b). (2) The
 company switch, on a test world of an office with two clients (done the same day: Rhea
 d1614b9 names the companies in whoami, rheaface 5c2a471 the switch; checked on a stubbed
-person of three companies and the kernel's two-company test, not yet walked on a live
-office). (3) Ludzie, from the
-phone's screens and the rights view. (4)
+person of three companies and the kernel's two-company test; walked live the next day,
+where a person of several companies coming to the desk was sent back to sign in — fixed,
+rheaface a22627c). (3) Ludzie, from the phone's screens and the rights view (done
+2026-10-23: rheaface 88874a6 the waiting links listed and withdrawn, 1b0f671 Ludzie's
+Dostęp — Kto ma dostęp, Kto co może, Zaproszenia — and the person's own menu at the top
+with their keys and signing out; walked live on an office with two clients by
+`tools/walk.mjs`, the face's live check: the kernel at a named commit on a fresh database,
+sign-in with a key Chrome simulates). Steps (2) and (3) left one question for KK: a
+withdrawn link leaves the membership it carried, so the person keeps access they never
+used until someone ends it; the market's standard (a revoked invitation takes the pending
+user with it) is the one to propose. Groups (4) show as Kartoteki and in Kto ma dostęp; a
+client given to a team waits for the worklist's design. (4)
 The GUS and white-list channels, then Załóż konto and Dodaj klienta. Each in the gallery
 first, checked as the face's check asks. Apart, to design first with case management and
 the smart documents: the office's worklist over its clients and who answers for whom.
