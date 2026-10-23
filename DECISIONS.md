@@ -5200,9 +5200,11 @@ KK's answers to the readiness review's three questions (`reports/Installable pac
   awaiting KK's word: the invoice's common shape (EN 16931's model) stays core, amending the same
   day's "invoices move to the market pack" — an EU layer cannot own it, CH and NO being outside.
 - **D3: each company has its own chart of accounts** — the country's standard chart as a proposal
-  the interview changes; account numbers with segments the company declares; dimensions on posting
-  lines (cost centre, project, …) and groupings of accounts for reporting; Rhea's rules book to an
-  account's role, never its number, the company's chart saying which account plays each role.
+  the interview changes; account numbers with segments the company declares; attributes on the
+  account itself (A-codes: the statement line, the JPK_KR_PD tag, the tax treatment, a group
+  line), each declared by the pack that needs it; Rhea's rules book to an account's role, never its
+  number, the company's chart saying which account plays each role. KK corrected the first
+  reading: codes on the transaction (cost centre, project) are T-codes, not part of this.
 
 ## 2026-10-23 — The App designer (KK)
 

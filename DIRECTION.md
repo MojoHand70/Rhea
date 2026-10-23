@@ -3944,15 +3944,20 @@ later, based on interview can be modified by a client."*
 - *Account numbers have segments.* The company declares the structure — say a three-digit synthetic
   account, then analytic segments (401-01-003) — and what each segment means (a cost type, a
   counterparty, a region); reports group and filter by any segment.
-- *Analytics beyond the number.* Dimensions on every posting line — cost centre (MPK), project,
-  department, product — for what cuts across accounts, so cost centres do not multiply the chart;
-  and groupings of accounts for reporting: statement positions, and in Poland the account tags
-  JPK_KR_PD asks for, phasing in from the 2025 tax year.
+- *Account attributes — A-codes.* Beyond its number, each account carries attributes of its own
+  that group it for reporting: the statement line it maps to (bilans, rachunek zysków i strat), in
+  Poland the account tag JPK_KR_PD asks for (phasing in from the 2025 tax year), the tax treatment
+  (one exists already: `account.tax_treatment`), a group's reporting line. The pack that needs an
+  attribute declares it; the standard chart sets its values and the interview changes them. This
+  is also how a pack adds to the account without re-versioning its type — the readiness review's
+  §3: today the Poland pack's `account` v2 exists only to add `tax_treatment`. KK corrected the
+  first reading: codes on the transaction — cost centre, project — are T-codes, a different thing
+  and not this decision (they belong to Controlling, later).
 - *Rhea's rules book to what an account is for, not to its number.* A rule books "receivables from
   customers" or "cost of external services"; the company's chart says which of its accounts plays
-  that role, the standard's mapping being the default. Without it a client's changed chart breaks
-  Rhea's rules. Every literal account in today's full-books rules becomes a role (the readiness
-  review, §3).
+  that role, the standard's mapping being the default — the role carried as one more account
+  attribute, declared by the regime pack. Without it a client's changed chart breaks Rhea's rules.
+  Every literal account in today's full-books rules becomes a role (the readiness review, §3).
 - *Country standards Rhea offers*, each checked when its pack is written: charts the law imposes —
   France's Plan comptable général, Spain's Plan General de Contabilidad, Belgium's PCMN, Czechia's
   směrná účtová osnova; standards of practice — Germany's SKR03 and SKR04, the Netherlands' RGS,
@@ -3962,10 +3967,12 @@ later, based on interview can be modified by a client."*
 
 **What changes in the order of work.** The split (step 3) cuts four packs from today's: Polska —
 podstawa, Fakturowanie — Polska, Pełna księgowość and Środki trwałe — Polska. Before it, accounts
-get roles and the chart becomes the company's (the installation-wide chart was one of the review's
-blockers). Segments and dimensions are a core change of their own — the posting line gains
-dimensions — after KPiR, before an office brings over a client's chart. Other countries' invoicing
-packs follow demand; Tylko's list is the first.
+get attributes (A-codes) and roles, and the chart becomes the company's (the installation-wide
+chart was one of the review's blockers). Segments in the account number come after KPiR, before an
+office brings over a client's chart. Other countries' invoicing packs follow demand; Tylko's list
+is the first — Tylko has not chosen Rhea (KK, 2026-10-23): it will have a company registered in
+each country, wants invoicing now, sells 80% to consumers and 20% to businesses, and may want the
+books in Rhea too.
 
 ## The App designer (KK, 2026-10-23)
 

@@ -130,7 +130,8 @@ that plans invoicing in all seven and finds hardly anyone who serves it. The inv
 shape (EN 16931) stays core, so seven countries' invoices are one sales ledger. And each regime
 pack brings its country's **standard chart of accounts** as a proposal the company's interview
 changes (the Plan comptable général, SKR03/SKR04, RGS, the Polish model chart, …), with segments
-and dimensions in the core (DIRECTION "Invoicing per country, and each company's own chart").
+in the number and attributes on the account (A-codes: statement line, JPK_KR_PD tag, tax
+treatment) in the core (DIRECTION "Invoicing per country, and each company's own chart").
 
 ## 3. Domain packs
 

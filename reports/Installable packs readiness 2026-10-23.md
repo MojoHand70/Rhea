@@ -332,8 +332,9 @@ per company (measure before acting).
 
 **KK's answers (2026-10-23):** D1 yes. D2 — invoicing is a pack per country (Tylko plans invoicing
 in PL, DE, NL, FR, CH, DK, NO); the invoice's common shape stays core, proposed with it. D3 — each
-company its own chart, with segments, dimensions and groupings for reporting, the country standard
-as a proposal the interview changes; Rhea's rules book to an account's role. The brief is in
+company its own chart, with segments in the number and attributes on the account (A-codes, such as
+the statement line), the country standard as a proposal the interview changes; Rhea's rules book to
+an account's role. The brief is in
 DIRECTION, "Invoicing per country, and each company's own chart"; the split becomes four packs
 (Podstawa, Fakturowanie — Polska, Pełna księgowość, Środki trwałe — Polska), with account roles and
 the company's own chart before it.
