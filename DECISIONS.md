@@ -5184,3 +5184,22 @@ the option proposed:
 - **Modules per country** — Środki trwałe — Polska first, Kadry i płace later; modules compute and
   keep their registers, the regime pack decides how anything reaches the books (KK chose a
   separate fixed-asset pack per country).
+
+## 2026-10-23 — A pack's new version, invoicing per country, each company's chart (KK)
+
+KK's answers to the readiness review's three questions (`reports/Installable packs readiness
+2026-10-23.md` §7; the brief in DIRECTION "Invoicing per country, and each company's own chart"):
+
+- **D1: a pack's new version reaches every company that has it**, Dziś showing what changed; one
+  rule kept the company's way is a company rule replacing Rhea's; staying on a whole older version
+  later, if an office asks. So step 2 installs per company at one version.
+- **D2: invoicing is a pack per country** (Fakturowanie — Polska, Rechnungsstellung — Deutschland,
+  Facturation — France, …), apart from the country's base: a company installs the invoicing pack
+  of each country it invoices in — prompted by Tylko, which plans invoicing in PL, DE, NL, FR, CH,
+  DK, NO. Which pack an invoice follows is the law's (VAT Directive art. 219a). Proposed with it,
+  awaiting KK's word: the invoice's common shape (EN 16931's model) stays core, amending the same
+  day's "invoices move to the market pack" — an EU layer cannot own it, CH and NO being outside.
+- **D3: each company has its own chart of accounts** — the country's standard chart as a proposal
+  the interview changes; account numbers with segments the company declares; dimensions on posting
+  lines (cost centre, project, …) and groupings of accounts for reporting; Rhea's rules book to an
+  account's role, never its number, the company's chart saying which account plays each role.

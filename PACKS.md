@@ -122,6 +122,16 @@ accounts, cards, cash desks, statements, matching), documents in and out, Dziś,
 Germany follows Poland because the cross-border wedge (German groups' Polish subsidiaries) needs
 both, and its e-invoicing mandate makes 2027–2028 the moment companies change software.
 
+**Invoicing is a pack per country** (KK, 2026-10-23), apart from the country's base, so a company
+installs the invoicing pack of every country it invoices in without that country's books:
+Fakturowanie — Polska (FA(3), KSeF — out of Podstawa), Rechnungsstellung — Deutschland,
+Facturation — France, then Nederland, Schweiz, Danmark, Norge — the list Tylko brought, a company
+that plans invoicing in all seven and finds hardly anyone who serves it. The invoice's common
+shape (EN 16931) stays core, so seven countries' invoices are one sales ledger. And each regime
+pack brings its country's **standard chart of accounts** as a proposal the company's interview
+changes (the Plan comptable général, SKR03/SKR04, RGS, the Polish model chart, …), with segments
+and dimensions in the core (DIRECTION "Invoicing per country, and each company's own chart").
+
 ## 3. Domain packs
 
 KK's sixteen, then what the big ERPs have that the list does not name yet. Edition per `tMVP.md`

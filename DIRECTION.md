@@ -3823,7 +3823,8 @@ readers that are no country's (MT940, scanned PDFs); Dziś — what waits for ap
 saying no pack is installed, pointing to Ustawienia → Pakiety; Rhea herself — conversation,
 "why?", search — who says she was taught nothing yet and can learn from scratch by the interview.
 What the founding vocabulary carries that is law (invoices, VAT rates, exchange rates) moves to
-the market pack.
+the market pack — amended in "Invoicing per country, and each company's own chart" below: the
+invoice's common shape stays core, its law moves to each country's invoicing pack.
 
 **A country is a base, one regime pack, and modules.**
 
@@ -3891,6 +3892,79 @@ workspace brief of 2026-10-18).
 Each pack declares its Apps as it is built or split (`APPS.md` is the register they start from).
 The target catalog these packs grow into — a vision, measured against the AI-native newcomers and
 the old guard — is `PACKS.md`, with the market research in `reports/`.
+
+## Invoicing per country, and each company's own chart (KK, 2026-10-23)
+
+KK's answers to the three questions of the readiness review (`reports/Installable packs readiness
+2026-10-23.md`, §7), read before any pack is split.
+
+**A new version of a pack reaches every company that has it.** When Rhea publishes a pack's new
+version, every company that installed it moves to it, and Dziś shows what changed — as Rhea's rule
+changes are shown now. A company that wants its own way for one rule has it already: its own rule
+replacing Rhea's, with the warning (owed) when the rule it replaces rests on the law and changes.
+A company staying on a whole older version comes later, if an office asks for it.
+
+**Invoicing is a pack per country.** KK: *"Our Tylko client is planning to have invoicing in PL,
+DE, NL, FR, CH, DK, NO and other countries. They look for an invoicing solution which can support
+that and there is not too many doing that (none?). I think we need a separate per country
+invoicing pack."*
+
+- *What an invoicing pack holds:* the country's invoice law — what an invoice must say, numbering,
+  wording and language, the rates it charges, corrections, the e-invoice format and the channel,
+  and the dates its mandate bites. Fakturowanie — Polska (FA(3), KSeF in and out — leaving
+  Podstawa); Rechnungsstellung — Deutschland (XRechnung, ZUGFeRD; receiving since 2025, issuing
+  from 2027–2028); Facturation — France (Factur-X, UBL or CII through a registered platform, from
+  September 2026); Nederland, Schweiz (outside the EU: MWST, the QR-bill), Danmark, Norge — each
+  written from the country's law when its pack is made, its dates checked then.
+- *Apart from the country's base:* a company installs the invoicing pack of every country it
+  invoices in, without that country's tax returns or books — a Polish company invoicing in Germany
+  installs Rechnungsstellung — Deutschland and keeps Polish books.
+- *Which pack an invoice follows is the law's, never the person's choice:* in the EU the invoicing
+  rules of the country where the seller is established, or registered and supplying from (VAT
+  Directive 2006/112/EC art. 219a, with its exceptions for reverse charge and the one-stop shop);
+  outside the EU each country's own. Rhea picks it from the seller's registrations and the supply.
+- *What they share stays in the core* (proposed with this decision): the invoice's common shape —
+  seller, buyer, lines, tax per line, currency, dates, number; the semantic model of EN 16931,
+  which Norway's EHF follows too — so a company invoicing in seven countries keeps one sales
+  ledger, one list of customers, one receivables. This amends the same day's "invoices move to the
+  market pack": the shape stays core, the law moves to each country's invoicing pack. An EU layer
+  could not own it — Switzerland and Norway are on the list.
+
+**Each company has its own chart of accounts.** KK: *"Each company has its own chart of accounts.
+Even more, we need to enable account numbers to have so called 'segments' — group of digits, where
+segments can later be used for analytics. Each account can have additional analytical coding /
+grouping for reporting purposes. I think we should offer a comprehensive country standard, which
+later, based on interview can be modified by a client."*
+
+- *The chart is the company's.* The regime pack brings its country's standard chart as a proposal;
+  installing makes it the company's own, and the interview changes it — accounts added, renamed,
+  split into analytics, or a migrating client's own chart kept. Helios's present chart becomes
+  Helios's; a KPiR company has none and sees none.
+- *Account numbers have segments.* The company declares the structure — say a three-digit synthetic
+  account, then analytic segments (401-01-003) — and what each segment means (a cost type, a
+  counterparty, a region); reports group and filter by any segment.
+- *Analytics beyond the number.* Dimensions on every posting line — cost centre (MPK), project,
+  department, product — for what cuts across accounts, so cost centres do not multiply the chart;
+  and groupings of accounts for reporting: statement positions, and in Poland the account tags
+  JPK_KR_PD asks for, phasing in from the 2025 tax year.
+- *Rhea's rules book to what an account is for, not to its number.* A rule books "receivables from
+  customers" or "cost of external services"; the company's chart says which of its accounts plays
+  that role, the standard's mapping being the default. Without it a client's changed chart breaks
+  Rhea's rules. Every literal account in today's full-books rules becomes a role (the readiness
+  review, §3).
+- *Country standards Rhea offers*, each checked when its pack is written: charts the law imposes —
+  France's Plan comptable général, Spain's Plan General de Contabilidad, Belgium's PCMN, Czechia's
+  směrná účtová osnova; standards of practice — Germany's SKR03 and SKR04, the Netherlands' RGS,
+  Switzerland's KMU-Kontenrahmen, Norway's NS 4102. Poland's law sets none (UoR art. 10 ust. 1
+  pkt 3 lit. a leaves the zakładowy plan kont to each entity's policy): Rhea's Polish standard is
+  the model chart of practice, groups 0–9.
+
+**What changes in the order of work.** The split (step 3) cuts four packs from today's: Polska —
+podstawa, Fakturowanie — Polska, Pełna księgowość and Środki trwałe — Polska. Before it, accounts
+get roles and the chart becomes the company's (the installation-wide chart was one of the review's
+blockers). Segments and dimensions are a core change of their own — the posting line gains
+dimensions — after KPiR, before an office brings over a client's chart. Other countries' invoicing
+packs follow demand; Tylko's list is the first.
 
 ## The learning process: a lesson in words, taught once for many clients (KK, 2026-10-22)
 

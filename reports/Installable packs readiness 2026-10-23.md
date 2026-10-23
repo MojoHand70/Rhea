@@ -330,6 +330,14 @@ per company (measure before acting).
   makes the zakładowy plan kont part of each entity's own accounting policy. Helios's present chart
   stays Helios's (existing postings name it); a KPiR company has none and sees none.
 
+**KK's answers (2026-10-23):** D1 yes. D2 — invoicing is a pack per country (Tylko plans invoicing
+in PL, DE, NL, FR, CH, DK, NO); the invoice's common shape stays core, proposed with it. D3 — each
+company its own chart, with segments, dimensions and groupings for reporting, the country standard
+as a proposal the interview changes; Rhea's rules book to an account's role. The brief is in
+DIRECTION, "Invoicing per country, and each company's own chart"; the split becomes four packs
+(Podstawa, Fakturowanie — Polska, Pełna księgowość, Środki trwałe — Polska), with account roles and
+the company's own chart before it.
+
 ## Corrections to the readers
 
 - "120 of 138 Polish rules would book a German company's facts" was overstated: the entry rules
