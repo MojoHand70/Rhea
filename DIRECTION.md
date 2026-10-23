@@ -2860,6 +2860,10 @@ the firm's own clients.
 
 ## Smart documents: a process as one definition (KK, 2026-10-19)
 
+*Superseded in name and definition by "Rhea Apps and business packs" (KK, 2026-10-23): a smart
+document is now an App, and a Rhea app of smart documents a business pack. The language pieces,
+the invariants and the proofs below stand, read with "App" for "smart document".*
+
 KK's call, after the US register showed what an invoice line costs today
 and the talk turned to Rhea's language as object modelling (classes,
 objects, attributes, methods): a document should carry its own
@@ -3665,6 +3669,138 @@ works is an app. The face holds business knowledge today that belongs elsewhere 
 invoice's flow states, Today's VAT month-end and bank-line cards, the starter questions, the
 stand-in domain words): each moves out — law to the pack, business to an app — with the face's
 check and the live walk guarding what the person sees.
+
+## Rhea Apps and business packs (KK, 2026-10-23)
+
+**The names.** An **App** (a Rhea Smart App) is a small program run in Rhea. A **business pack**
+is a collection of Apps for one business model: *Rhea for Accounting Offices Business Pack*, and
+packs for eCommerce, a SaaS company, a professional services company. "Smart document" goes: in
+95% of cases there is no paper. *Document* means the paper again — an App may digitize one coming
+in (a reader: KSeF, a bank statement, a scan) or generate one going out (a writer: an agreement,
+an invoice, a goods receipt). The layers are the ones above: what never changes is the kernel and
+its base vocabulary (ledger, account, journal, balance, accounting period); what the law imposes
+is the market pack; the business model — processes and data — is business packs of Apps, shaped
+for each company by the interview.
+
+**What an App is** (KK's words, then the parts agreed in talk the same day).
+
+- An App is a program that manipulates data, and it knows how to calculate.
+- It may run through a defined flow of states, but does not have to: most Apps — nine in ten —
+  are stateless.
+- It may have a visualization; the simplest is a table, which the face already has. Every tab of
+  the face is an App.
+- It respects the security of every object it touches, and it says who may run it.
+- Rhea designs an App with the person, interactively — a sandbox, a visual artefact — and the
+  definitions stay light and nimble: performance is of utmost importance.
+
+**An App's definition consists of:**
+
+1. *Variables* — scalars or collections, each set by input, by a formula, by a query, or by a
+   combination; parameters among them (the month a report is for).
+2. *Formulas* — Rhea's formula language: exact money with declared rounding, reading across
+   linked records; loops only through collections, so a calculation always finishes.
+3. *Visualization* — interactive, and it may depend on the variables: a table (and its layouts:
+   cards, board, calendar, timeline), a form, a statement, her words.
+4. *Workflow* (optional) — states, transitions between them, the actions performed on a
+   transition, and who may do what in each state: change which values, see them, move it on.
+5. *Its own data structures* — an App to create a client defines the client.
+6. *External data structures* — another App's data, or Rhea core's, read within the person's
+   rights.
+7. *Connectors* — an API fetch, an e-mail, KSeF.
+8. *Triggers* — what sets it going with nobody at the screen: a fact arrives (an invoice from
+   KSeF, a bank line, a scan, another App's action), the clock (a day opens, a month starts, a
+   deadline comes), another App's state changes (the client's month is closed), a condition on
+   data becomes true (an amount over a limit, a payment overdue, stock below its minimum).
+9. *Autonomy* for each automatic action — **act** (do it), **propose** (one tap on Dziś), or
+   **earn it** (propose first, act on its own after a run of accepted proposals, propose again
+   at the first overrule: the learning brief's trust, 2026-10-22).
+10. *Who may run it* — a right on the App as a whole.
+
+**Automatic by default.** KK: an App that waited for a button would be the opposite of the goal.
+The path every change takes is fixed — *a fact arrives, an approved rule matches it, the rule
+records its result, the books follow* — and nobody presses anything: the person approves the
+App once, and from then on it runs on every fact that matches. A person in the loop is a choice
+the App declares, step by step, never a limit of the engine. The automation is the approved
+rules, not the AI: the AI designs; when an App runs, nothing is guessed, and every automatic step
+is explained and replays.
+
+**What the invariants ask of an App** (the smart-documents note's, carried over).
+
+- *It never writes the books itself.* It reads, computes and decides; an action records a fact;
+  a rule books it — so every value names the fact, the rule and the version behind it.
+- *It always finishes:* loops over named, capped collections; no `while`, no recursion; named
+  algorithms (FIFO, allocation with the remainder) stay kernel methods an App calls.
+- *A connector call is two facts*, the request out and the answer in, through a channel; nothing
+  calls out in the middle of a calculation, so replay never asks again.
+- *Definitions pass the gate; running an App does not.* A new or changed App is drafted (by the
+  interview or a person) and approved as one package; starting, filling and moving it are
+  business, recorded as facts. Model output never runs with authority.
+- *A running process keeps its version*; moving it to a new one is a deliberate, approved act.
+- *It sees only what its person may see*, within the company acted for (or, for an office,
+  the clients its mandates let in); chains stay bounded, every trigger safe to fire twice.
+
+**How it is written and shown.** One definition per App, in the format packs already use (JSON:
+the AI writes it reliably, the kernel validates it before anyone approves), with a section per
+part above; formulas in the formula language; read-only queries in SQL over the analysis copy.
+At approval the kernel turns it once into the pieces it runs — types, actions, rules, views —
+so nothing is interpreted per click; values are computed when facts happen, not on every look;
+only what is on screen is drawn; speed budgets are checks. The face shows a definition as a
+page — its variables and where each comes from, the state diagram, who may do what, a live
+preview on the company's own data — and the same page is the sandbox while Rhea and the person
+design it.
+
+**Two Apps, sketched.**
+
+*Terminy podatkowe* — stateless, as it is today (the Poland pack's `kalendarz-podatkowy`, v2):
+a table under Księgowość in the morning briefing; its source one query over the books (the VAT
+and income-tax days, moved past weekends and Polish holidays, Easter computed); no workflow; who
+may see it from the people pack's roles. As an App definition:
+
+```json
+{ "app": "terminy-podatkowe", "version": 2, "title": "Terminy podatkowe", "folder": "Księgowość/Poranek",
+  "run": "view", "variables": { "today": "=today()" },
+  "data": { "query": "…the statutory days, moved past weekends and holidays…" },
+  "view": { "table": { "columns": ["rodzaj", "okres", "termin", "kwota"], "editable": false } } }
+```
+
+*Rozliczenie miesięczne klienta* — the accounting office's monthly settlement, with a workflow
+(in the office's business pack, every number of it the interview's to shape): an instance per
+client per month; states *liczone → gotowe → zafakturowane → zapłacone*, and *sporne*; variables
+— documents booked in the client's books this month (a query within the mandate), employees on
+payroll, the rate (a formula over the agreement's price bands), net, VAT, the payment term;
+triggers — the month starts (the clock opens one per active agreement), the client's month is
+closed (→ gotowe), the client's payment is matched in the office's bank (→ zapłacone); autonomy
+— the invoice is issued and sent through KSeF on its own up to the agreed fee, proposed above
+it; rights — the accountant sees it and corrects the count with a reason, the office's manager
+moves it on, the client sees it once invoiced. A person touches the exceptions alone.
+
+**Rhea today, and what is missing.** Formulas, data structures, external data within rights,
+security by company and right, facts-and-rules automation, the clock, connectors as channels,
+drafting by Rhea and the approval card's live preview: there. Missing: the App as one unit;
+an App's own variables and parameters, and visualizations built from them (forms, inputs);
+rights per state, snapshots at each move, a running process keeping its version; triggers and
+autonomy declared in one place; generic connectors as configuration rather than code; the
+designer page; a right on the App as a whole.
+
+**Order of work.**
+
+1. *Every tab an App:* today's views, actions and rules grouped into App definitions with no
+   change in behaviour — the folder, the title, who may run it.
+2. *Variables, parameters and interactive visualization* — a table and a form driven by an
+   App's variables.
+3. *Workflow in the kernel* — rights per state, snapshots, a running process keeping its
+   version (the smart-documents note's first question).
+4. *Triggers and autonomy* — declared per App; act, propose, earn it.
+5. *Generic connectors* — an API fetch and an e-mail as configured channels.
+6. *The designer page* — the sandbox and the visual artefact; Rhea designs an App by interview.
+7. *The first business pack: Rhea for Accounting Offices* — its Apps from the market's standard,
+   with their warrants, shaped for each office by the interview; with it, the office's read
+   across its clients within its mandates.
+
+Speed budgets throughout. Still to settle, each with the standard proposed: an App the law
+imposes (the FA(3) invoice, the JPK file) ships in the market pack and a company may add to it —
+its own fields, its own approval step — but not change its statutory part; values are computed
+at four moments — on input, when a fact they read changes, on the clock, or only when looked at.
 
 ## The learning process: a lesson in words, taught once for many clients (KK, 2026-10-22)
 
