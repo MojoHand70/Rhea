@@ -5028,3 +5028,35 @@ credited in the public library of lessons only by opting in, and a client is nev
   company in another zone waits for an installation of its own. rhea serve refuses a zone
   the database does not know, and the binary carries the zone database. On white01 the
   deploy sets Europe/Warsaw. TestTheBooksDayIsTheInstallations.
+
+## 2026-10-23 — Who approves what: the company its own, Rhea's staff the rest
+
+KK's decision of 2026-10-22 (company rules and Rhea's global rules), built:
+
+- **The house is Rhea's staff.** A company key, `house` (core.House); staff are the
+  persons whose role in the house opens the door. The installation's owner grants it
+  (`rhea people grant -person HANDLE -company house -role owner`); a signed-in person
+  never claims it, even while nobody holds it.
+- **What changes how every company's books are kept is staff's to approve**: the five
+  doors marked everywhere — approve_rule, approve_activity, approve_bundle,
+  reject_bundle, approve_backfill — need the person's right in the house. A right in
+  every company let in (review A5's test) is no longer enough: an office let into all
+  its clients is still not Rhea.
+- **Unless the door acts on the acting company's own alone**, when the company's right
+  is enough (exec.companysOwn): approving its own rule; approving or rejecting its own
+  bundle whose rules are all its own and whose types, views and doors are new words
+  (version 1); a backfill acting for it, which plans and books its own past alone.
+  approve_activity alone is always staff's (a door outside a bundle is rare; the
+  bundle carries the company's new ones).
+- **A new word is the company's, a changed word staff's.** A new type, view or door
+  changes no other company's books; a new version of one every company shares does.
+  *Assessed and left (invariant 9, 2026-10-23):* a word a company adds is seen by
+  every company by its name — a type's name, a view's title — because definitions
+  other than rules and bundles carry no company yet. No fact or object crosses. Company
+  vocabulary comes with the smart documents' specialisation (a client's document
+  extends the pack's); revisit before the first office is admitted.
+- **white01.** KK is not yet in the house there: before approving the upgrades that
+  wait (periods v2, pl v43), the deploy carrying this needs
+  `rhea people grant -person kk -company house -role owner`; the face then shows the
+  house beside Helios in the company switch, and approvals of Rhea's are made acting
+  for the house.

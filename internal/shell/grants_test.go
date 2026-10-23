@@ -348,14 +348,15 @@ func TestAPersonIsChangedOnlyWhereTheyAreLetIn(t *testing.T) {
 	}
 }
 
-// What runs on every company's books is approved by someone who may act in
-// each (review 2026-10-21, A5): rules, doors and bundles belong to no
-// company — one approval activates them for every company's facts — yet
-// approving was checked in the company acted for, so the owner of one
-// company activated what then booked another's. Now approving, rejecting
-// and backfilling need the right in every company anyone is let into; and
-// keeping an answer as a report, which drafts a bundle, needs the right to
-// ask for one.
+// What runs on every company's books is approved by Rhea's staff (review
+// 2026-10-21, A5, then KK, 2026-10-22): a rule of Rhea's belongs to no company
+// — one approval activates it for every company's facts — yet approving was
+// checked in the company acted for, so the owner of one company activated
+// what then booked another's. A5 asked for the right in every company anyone
+// is let into; KK's decision asks for the house's: an owner let into both
+// companies is still not Rhea. (A company's own rule is the company's to
+// approve — TestCompanyRulesAreTheCompanysAndRheasAreStaffs.) Keeping an
+// answer as a report, which drafts a bundle, needs the right to ask for one.
 func TestWhatRunsEverywhereIsApprovedEverywhere(t *testing.T) {
 	w := newGrantsWorld(t)
 	a, b := "PL5250001111", "PL5260001246"
@@ -378,8 +379,12 @@ func TestWhatRunsEverywhereIsApprovedEverywhere(t *testing.T) {
 		t.Fatalf("the draft stays a draft: %v %v", err, r.Status)
 	}
 	w.mustDoor("olga", b, "grant_membership", map[string]any{"person": kk, "company": b, "role": "owner", "from": "2026-01-01", "granted_by": "olga"})
-	if code := w.call("kk", a, "POST", "/api/rules/memo/approve", map[string]any{}, nil); code != 200 {
-		t.Fatalf("kk, let in at both, approving: %d", code)
+	if code := w.call("kk", a, "POST", "/api/rules/memo/approve", map[string]any{}, nil); code != 403 {
+		t.Fatalf("kk, let in at both but no staff, approving Rhea's rule: %d", code)
+	}
+	w.mustDoor("", core.House, "grant_membership", map[string]any{"person": kk, "company": core.House, "role": "owner", "from": "2026-01-01", "granted_by": "operator"})
+	if code := w.call("kk", core.House, "POST", "/api/rules/memo/approve", map[string]any{}, nil); code != 200 {
+		t.Fatalf("kk, staff, approving: %d", code)
 	}
 
 	// An answer kept as a report is a draft for the gate: asked for by

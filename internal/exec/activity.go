@@ -159,6 +159,45 @@ func (x *Executor) learnedProposal(ctx context.Context, rule core.Rule, company 
 	return nil, nil
 }
 
+// companysOwn reports whether a door that is Rhea staff's when it changes how
+// every company's books are kept acts here on the acting company's own alone
+// (KK, 2026-10-22: company rules and Rhea's global rules): approving its own
+// rule; approving or rejecting its own bundle, whose rules are all its own and
+// whose types, views and doors are new words nobody had — a new name changes
+// no other company's books, a new version of one every company shares does;
+// a backfill acting for it, which plans and books its own past alone. Then the
+// company's right is enough. Anything else, or anything it cannot read, stays
+// staff's.
+func (x *Executor) companysOwn(ctx context.Context, door string, inputs map[string]any, company string) bool {
+	if company == "" {
+		return false
+	}
+	own := func(rule string) bool {
+		r, err := x.Store.GetRule(ctx, rule)
+		return err == nil && r.Company == company
+	}
+	switch door {
+	case "approve_rule":
+		id, _ := inputs["rule_id"].(string)
+		return own(id)
+	case "approve_bundle", "reject_bundle":
+		id, _ := inputs["bundle_id"].(string)
+		b, err := x.Store.GetBundle(ctx, id)
+		if err != nil || b.Company != company {
+			return false
+		}
+		for _, m := range b.Members {
+			if m.Kind == core.KindRule && !own(m.Name) || m.Kind != core.KindRule && m.Version != 1 {
+				return false
+			}
+		}
+		return true
+	case "approve_backfill":
+		return true
+	}
+	return false
+}
+
 // TriggerActivity fires a declared verb: input validation, ref existence,
 // the stamped append, the reserved reaction, then the ordinary worklist
 // re-evaluation. dedupKey is the caller's idempotency handle (the CLI's file
@@ -186,7 +225,11 @@ func (x *Executor) TriggerActivity(ctx context.Context, name string, inputs map[
 	// (rights.WithoutPrincipal).
 	if p := rights.PrincipalOf(ctx); p != nil {
 		actor = p.Handle
-		signed, err := rights.Authorize(ctx, x.Store, *p, act, inputs, store.CompanyOf(ctx), x.today())
+		gate := act
+		if act.Spec.Everywhere && x.companysOwn(ctx, act.Name, inputs, store.CompanyOf(ctx)) {
+			gate.Spec.Everywhere = false // the company's own alone: its right in the company is enough
+		}
+		signed, err := rights.Authorize(ctx, x.Store, *p, gate, inputs, store.CompanyOf(ctx), x.today())
 		if err != nil {
 			var refused *rights.ErrRefused
 			if errors.As(err, &refused) {

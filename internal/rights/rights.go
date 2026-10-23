@@ -472,6 +472,12 @@ func Authorize(ctx context.Context, s *store.Store, p Principal, act core.Activi
 			}
 		}
 		if _, ok := p.May(acting, "door", act.Name, act.Domain); !ok {
+			if acting == core.House {
+				// Rhea's staff are let in by the installation's owner alone:
+				// claimed by the first comer, the house would make anyone the
+				// approver of every company's rules.
+				return nil, refuse("the house is entered by the installation owner's grant alone")
+			}
 			claimed, err := Claimed(ctx, s, acting, today)
 			if err != nil {
 				return nil, err
@@ -489,16 +495,15 @@ func Authorize(ctx context.Context, s *store.Store, p Principal, act core.Activi
 			}
 		}
 	}
-	// What runs on every company's books is approved by someone who may act
-	// in each: approved in one company, a rule booked every other's facts
-	// (review 2026-10-21, A5).
+	// What runs on every company's books is Rhea staff's to approve: a right
+	// in the house, however many companies the person is let into — an
+	// office let into all its clients is still not Rhea (KK, 2026-10-22;
+	// before it, a right in every company let in, review 2026-10-21, A5). A
+	// door acting on the company's own alone comes here unmarked: the
+	// executor says so (exec.companysOwn).
 	if act.Spec.Everywhere {
-		w, err := load(ctx, s, today)
-		if err != nil {
-			return nil, err
-		}
-		if !p.MayEverywhere(w.letIn(), "door", act.Name, act.Domain) {
-			return nil, refuse("this changes how every company's books are kept — it needs your right in every company let in here")
+		if _, ok := p.May(core.House, "door", act.Name, act.Domain); !ok {
+			return nil, refuse("this changes how every company's books are kept — it is Rhea staff's to approve")
 		}
 	}
 	signed := make(map[string]any, len(inputs)+1)

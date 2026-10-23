@@ -410,9 +410,11 @@ func TestAPersonIsAlwaysChecked(t *testing.T) {
 		t.Fatalf("each refusal names ewa at approve_rule: %v %d", err, len(refusals))
 	}
 
-	// The owner may approve, and the approval is hers whatever the body
-	// named: the approver is the person signed in.
-	if code := call("kk", "", "POST", "/api/rules/memo/approve", map[string]any{"approved_by": "kernel"}, nil); code != 200 {
+	// Staff may approve Rhea's rule (KK, 2026-10-22: the house's people), and
+	// the approval is theirs whatever the body named: the approver is the
+	// person signed in.
+	mustDoor("", core.House, "grant_membership", map[string]any{"person": personID("kk"), "company": core.House, "role": "owner", "from": "2026-01-01", "granted_by": "operator"})
+	if code := call("kk", core.House, "POST", "/api/rules/memo/approve", map[string]any{"approved_by": "kernel"}, nil); code != 200 {
 		t.Fatalf("kk approving: %d", code)
 	}
 	approvals, err := s.EventsOfTypes(ctx, []string{"rule.approved"})
@@ -436,14 +438,15 @@ func TestAPersonIsAlwaysChecked(t *testing.T) {
 	}
 
 	// The host still speaks while a person asks: the words are the agent's,
-	// under the person's company.
+	// under the person's company — named, as the face names it, now that kk
+	// is in the house as well as the office.
 	var spoken []struct {
 		Said      string `json:"said"`
 		SaidEvent int64  `json:"said_event"`
 		Error     string `json:"error"`
 		Silent    string `json:"silent"`
 	}
-	if code := call("kk", "", "POST", "/api/speak?view=briefing", nil, &spoken); code != 200 || len(spoken) != 1 || spoken[0].SaidEvent == 0 {
+	if code := call("kk", office, "POST", "/api/speak?view=briefing", nil, &spoken); code != 200 || len(spoken) != 1 || spoken[0].SaidEvent == 0 {
 		t.Fatalf("the host speaks for kk: %d %+v", code, spoken)
 	}
 	said, err := s.GetEvent(ctx, spoken[0].SaidEvent)
