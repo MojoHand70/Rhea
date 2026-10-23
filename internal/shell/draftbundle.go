@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -19,7 +20,28 @@ import (
 // versions are the kernel's to assign, and a taken bundle id gets a suffix —
 // a redraft is a new bundle, naming in `after` the rejected one it answers,
 // and every bundle keeps the question it answers.
+//
+// Drafted acting for a company, the bundle and its rules are the company's
+// own (KK, 2026-10-22: company rules and Rhea's global rules): their ids end
+// "@company", a rule named after one of Rhea's replaces Rhea's for the
+// company alone, and the question is seen only where the company is. Acting
+// for no company — the installation's own scope or the owner — they are
+// Rhea's; a scope over several companies acting for none drafts nothing.
 func StoreBundleDraft(ctx context.Context, st *store.Store, k *network.Knowledge, bd agent.BundleDraft, createdBy, effectiveFrom, question, after string) (core.Bundle, error) {
+	company := store.CompanyOf(ctx)
+	if set, scoped := store.ScopeOf(ctx); scoped && company == "" && len(set) > 0 {
+		return core.Bundle{}, fmt.Errorf("act for one of your companies to draft its rules")
+	}
+	known := map[string]core.Rule{}
+	if company != "" {
+		rules, err := st.LatestRules(ctx)
+		if err != nil {
+			return core.Bundle{}, err
+		}
+		for _, r := range rules {
+			known[r.ID] = r
+		}
+	}
 	// A proposal resting on the network is verified here, and its support is
 	// counted by Rhea from what she learned — never taken from the proposer.
 	if bd.Warrant != nil && bd.Warrant.Basis == "network" {
@@ -69,10 +91,17 @@ func StoreBundleDraft(ctx context.Context, st *store.Store, k *network.Knowledge
 		members = append(members, core.Member{Kind: core.KindViewDef, Name: view.ID, Version: v})
 	}
 	for _, d := range bd.Rules {
+		id, replaces := core.OwnedID(d.RuleID, company), ""
+		if own, ok := known[id]; ok {
+			replaces = own.Replaces // a redraft of the company's own keeps what it replaces
+		} else if rheas, ok := known[strings.TrimSuffix(d.RuleID, "@"+company)]; ok && rheas.Company == "" {
+			replaces = rheas.ID
+		}
 		r, err := store.InsertRuleVersion(ctx, tx, core.Rule{
-			ID: d.RuleID, Status: core.StatusDraft, Priority: d.Priority,
+			ID: id, Status: core.StatusDraft, Priority: d.Priority,
 			EffectiveFrom: effectiveFrom, CreatedBy: createdBy,
 			Description: d.Description, Spec: d.Spec,
+			Company: company, Replaces: replaces,
 		})
 		if err != nil {
 			return core.Bundle{}, fmt.Errorf("rule %s: %w", d.RuleID, err)
@@ -89,7 +118,7 @@ func StoreBundleDraft(ctx context.Context, st *store.Store, k *network.Knowledge
 		}
 		members = append(members, core.Member{Kind: core.KindActivity, Name: a.Name, Version: a.Version})
 	}
-	id := bd.BundleID
+	id := core.OwnedID(bd.BundleID, company)
 	for n := 2; ; n++ {
 		_, err := st.GetBundle(ctx, id)
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -98,12 +127,12 @@ func StoreBundleDraft(ctx context.Context, st *store.Store, k *network.Knowledge
 		if err != nil {
 			return core.Bundle{}, err // a store failure is not a free id
 		}
-		id = fmt.Sprintf("%s-%d", bd.BundleID, n)
+		id = core.OwnedID(fmt.Sprintf("%s-%d", strings.TrimSuffix(bd.BundleID, "@"+company), n), company)
 	}
 	// The members are this transaction's own fresh drafts: no other bundle
 	// can hold them, so the bundle's guard has nothing to check here.
 	b := core.Bundle{ID: id, Status: core.StatusDraft, Description: bd.Description,
-		Members: members, CreatedBy: createdBy, Warrant: bd.Warrant, Question: question, After: after}
+		Members: members, CreatedBy: createdBy, Warrant: bd.Warrant, Question: question, After: after, Company: company}
 	if err := b.Validate(); err != nil {
 		return core.Bundle{}, err
 	}

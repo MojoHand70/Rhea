@@ -78,8 +78,11 @@ func withDate(payload json.RawMessage, date string) (json.RawMessage, error) {
 // that an earlier pairing of this structure was also explained by, and that
 // was never proposed before — a rejected proposal never returns. It returns
 // the write that drafts the rule's next version with the step appended,
-// bundled with a client warrant naming both pairings, or nil.
-func (x *Executor) learnedProposal(ctx context.Context, rule core.Rule, matched *core.MatchedObjects, derived []core.Event) (func(tx store.Querier, eventID int64) (*core.Bundle, error), error) {
+// bundled with a client warrant naming both pairings, or nil. A company's
+// people teach the company: paired acting for a company, the lesson is the
+// company's own rule — replacing Rhea's for it alone when the pairing ran
+// on Rhea's — in a bundle of the company's (KK, 2026-10-22).
+func (x *Executor) learnedProposal(ctx context.Context, rule core.Rule, company string, matched *core.MatchedObjects, derived []core.Event) (func(tx store.Querier, eventID int64) (*core.Bundle, error), error) {
 	tmpl := rule.Spec.Effect.Matching
 	if len(matched.Standards) == 0 {
 		return nil, nil
@@ -88,7 +91,7 @@ func (x *Executor) learnedProposal(ctx context.Context, rule core.Rule, matched 
 		if hasStandard(tmpl.Policy, standard) {
 			continue
 		}
-		if _, err := x.Store.GetBundle(ctx, core.LearnedBundleID(tmpl.Name, standard)); err == nil {
+		if _, err := x.Store.GetBundle(ctx, core.OwnedID(core.LearnedBundleID(tmpl.Name, standard), company)); err == nil {
 			continue // proposed already: open, approved, or overruled — never again
 		}
 		var earlier int64
@@ -126,6 +129,9 @@ func (x *Executor) learnedProposal(ctx context.Context, rule core.Rule, matched 
 		}
 		return func(tx store.Querier, eventID int64) (*core.Bundle, error) {
 			next := rule
+			if company != "" && rule.Company == "" {
+				next.ID, next.Company, next.Replaces = core.OwnedID(rule.ID, company), company, rule.ID
+			}
 			next.Status = core.StatusDraft
 			next.CreatedBy = "kernel"
 			next.Description = fmt.Sprintf("%s; learned: %s, after the owner paired this way twice", rule.Description, standard)
@@ -136,7 +142,7 @@ func (x *Executor) learnedProposal(ctx context.Context, rule core.Rule, matched 
 			if err != nil {
 				return nil, err
 			}
-			b := core.Bundle{ID: core.LearnedBundleID(tmpl.Name, standard), Status: core.StatusDraft,
+			b := core.Bundle{ID: core.OwnedID(core.LearnedBundleID(tmpl.Name, standard), company), Company: company, Status: core.StatusDraft,
 				Description: fmt.Sprintf("The owner paired %s by hand the %s way twice: add %s as the last step of the policy.", tmpl.Name, standard, standard),
 				Members:     []core.Member{{Kind: core.KindRule, Name: next.ID, Version: next.Version}},
 				Warrant: &core.Warrant{Basis: "client",
@@ -590,7 +596,7 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 		if matched.Standards, err = x.standardsFor(ctx, rule.Spec.Effect.Matching, matched, lookup, get); err != nil {
 			return nil, err
 		}
-		proposal, err := x.learnedProposal(ctx, *rule, matched, derived)
+		proposal, err := x.learnedProposal(ctx, *rule, ev.Company, matched, derived)
 		if err != nil {
 			return nil, err
 		}

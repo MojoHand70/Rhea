@@ -3,6 +3,7 @@ package core
 import (
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 )
 
@@ -29,6 +30,21 @@ type Bundle struct {
 	After     string    `json:"after,omitempty"`
 	CreatedBy string    `json:"created_by"`
 	CreatedAt time.Time `json:"created_at"`
+	// Company is the company the bundle was drafted for — its question and
+	// its proposal are that company's, seen only where it is; empty, a
+	// proposal of Rhea's (KK, 2026-10-22: company rules and Rhea's rules).
+	Company string `json:"company,omitempty"`
+}
+
+// OwnedID names a definition drafted for a company — a rule, a bundle — so the
+// id says whose it is and never meets another company's of the same name: the
+// drafted id with "@company" after it, once. Rhea's own (no company) keep the
+// id as drafted.
+func OwnedID(id, company string) string {
+	if company == "" || strings.HasSuffix(id, "@"+company) {
+		return id
+	}
+	return id + "@" + company
 }
 
 // Warrant is a suggestion's provenance, as provenance is a fact's: its

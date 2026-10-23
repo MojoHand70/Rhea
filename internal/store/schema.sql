@@ -150,6 +150,9 @@ ALTER TABLE bundle ADD COLUMN IF NOT EXISTS warrant JSONB;
 -- The conversation: the question a bundle answers, and the rejected bundle it redrafts.
 ALTER TABLE bundle ADD COLUMN IF NOT EXISTS question TEXT;
 ALTER TABLE bundle ADD COLUMN IF NOT EXISTS after_bundle TEXT;
+-- The company a bundle was drafted for (core.Bundle.Company); NULL or empty,
+-- a proposal of Rhea's.
+ALTER TABLE bundle ADD COLUMN IF NOT EXISTS company TEXT;
 
 -- The blob store (DIRECTION 2026-10-10, "the file is the fact"): every file
 -- a door or a channel receives, kept whole under its content hash. A
@@ -280,6 +283,34 @@ BEGIN
     END IF;
 END;
 $$;
+-- A company's bundle — the question it asked, the proposal it was made — is
+-- seen, and written, only where the company is; Rhea's are every scope's.
+ALTER TABLE bundle ENABLE ROW LEVEL SECURITY;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'bundle' AND policyname = 'bundle_scope') THEN
+        CREATE POLICY bundle_scope ON bundle TO rhea_app USING (rhea_in_scope(company));
+    END IF;
+END;
+$$;
+CREATE OR REPLACE FUNCTION bundle_company_fixed() RETURNS trigger AS $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM public.bundle WHERE bundle_id = NEW.bundle_id
+               AND COALESCE(company, '') <> COALESCE(NEW.company, '')) THEN
+        RAISE EXCEPTION 'bundle % belongs to another company or to Rhea', NEW.bundle_id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'bundle_company_fixed') THEN
+        CREATE TRIGGER bundle_company_fixed BEFORE INSERT ON bundle
+            FOR EACH ROW EXECUTE FUNCTION bundle_company_fixed();
+    END IF;
+END;
+$$;
+ALTER TABLE bundle ENABLE ALWAYS TRIGGER bundle_company_fixed;
 -- A rule's id keeps its company through every version: a company's own
 -- reading of Rhea's rule is a rule of its own, never a version of Rhea's, and
 -- no company writes a version of another's. Checked over every company's rows

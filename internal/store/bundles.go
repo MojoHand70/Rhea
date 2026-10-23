@@ -61,11 +61,11 @@ func InsertBundleVersion(ctx context.Context, q Querier, b core.Bundle) (core.Bu
 		}
 	}
 	err = q.QueryRow(ctx, `
-		INSERT INTO bundle (bundle_id, version, status, description, members, created_by, warrant, question, after_bundle)
+		INSERT INTO bundle (bundle_id, version, status, description, members, created_by, warrant, question, after_bundle, company)
 		VALUES ($1, COALESCE((SELECT MAX(version) FROM bundle WHERE bundle_id = $1), 0) + 1,
-		        $2, $3, $4, $5, $6, $7, $8)
+		        $2, $3, $4, $5, $6, $7, $8, NULLIF($9, ''))
 		RETURNING version, created_at`,
-		b.ID, b.Status, b.Description, members, b.CreatedBy, warrant, b.Question, b.After,
+		b.ID, b.Status, b.Description, members, b.CreatedBy, warrant, b.Question, b.After, b.Company,
 	).Scan(&b.Version, &b.CreatedAt)
 	if IsDuplicate(err) {
 		return b, fmt.Errorf("bundle %s moved while this version was drafted — redraft from the latest: %w", b.ID, err)
@@ -74,13 +74,13 @@ func InsertBundleVersion(ctx context.Context, q Querier, b core.Bundle) (core.Bu
 }
 
 const bundleCols = `bundle_id, version, status, description, members, created_by, created_at, warrant,
-	COALESCE(question, ''), COALESCE(after_bundle, '')`
+	COALESCE(question, ''), COALESCE(after_bundle, ''), COALESCE(company, '')`
 
 func scanBundle(row pgx.Row) (core.Bundle, error) {
 	var b core.Bundle
 	var members, warrant []byte
 	if err := row.Scan(&b.ID, &b.Version, &b.Status, &b.Description, &members, &b.CreatedBy, &b.CreatedAt, &warrant,
-		&b.Question, &b.After); err != nil {
+		&b.Question, &b.After, &b.Company); err != nil {
 		return b, err
 	}
 	if len(warrant) > 0 {
