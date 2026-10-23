@@ -114,14 +114,15 @@ func TestM3PolandPack(t *testing.T) {
 	// costs), 52 draft rules, ten doors (the KSeF channel, identify_company,
 	// declare_company_form, set_cost_account, declare_company_accounts,
 	// classify_bank_operation, set_tax_treatment, declare_cit_status,
-	// recompute_cit_advance, spread_cost), 49 master-data events.
+	// recompute_cit_advance, spread_cost), 49 master-data events. (The counts
+	// below are the pack as it stands; v44 added enter_company and its two rules.)
 	packPath := filepath.Join("..", "..", "packs", "pl", "pack.json")
 	sum, err := pack.Load(ctx, s, packPath, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 41 || sum.Views != 38 || sum.Rules != 136 || sum.Activities != 38 || sum.Events != 67 || sum.Skipped != 0 ||
-		sum.Bundle != "pack-pl-v43" {
+	if sum.Types != 41 || sum.Views != 38 || sum.Rules != 138 || sum.Activities != 39 || sum.Events != 67 || sum.Skipped != 0 ||
+		sum.Bundle != "pack-pl-v44" {
 		t.Fatalf("first load: %+v", sum)
 	}
 	// Idempotent: a reload changes nothing.
@@ -129,7 +130,7 @@ func TestM3PolandPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Skipped != 320 || sum.Bundle != "" {
+	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Skipped != 323 || sum.Bundle != "" {
 		t.Fatalf("reload: %+v", sum)
 	}
 
@@ -149,7 +150,7 @@ func TestM3PolandPack(t *testing.T) {
 	// Approving the pack's bundle IS the installation: its types, views and
 	// rules activate together, and the chart of accounts and the VAT rates
 	// materialize from the waiting events.
-	post("/api/bundles/pack-pl-v43/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-pl-v44/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {
 		t.Fatalf("worklist not cleared after approvals: %d", len(wl))
 	}

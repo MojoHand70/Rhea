@@ -1,9 +1,14 @@
 {
   "pack": "pl",
-  "version": 43,
+  "version": 44,
   "stage": "initial",
   "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
   "history": [
+    {
+      "versions": "44",
+      "date": "2026-10-23",
+      "changes": "Firmę wpisuje się do kartoteki drzwiami „wpisanie firmy”: po NIP, z tym, co mówią o niej GUS i Wykaz podatników VAT, albo wpisaną ręcznie — tak zakłada się nowe biuro lub firmę i tak biuro dodaje klienta. Nazwa, adres, rachunek i forma prawna trafiają do kartoteki; REGON, KRS i ślad odpowiedzi rejestru zostają w fakcie jako jego źródło. Ta sama firma tego samego rodzaju wpisana drugi raz jest tą samą firmą."
+    },
     {
       "versions": "43",
       "date": "2026-10-22",
@@ -3155,7 +3160,7 @@
     },
     {
       "view_id": "slownik",
-      "version": 16,
+      "version": 17,
       "notion": "words",
       "title": "Słownik",
       "domain": "finance",
@@ -4219,7 +4224,8 @@
           "cessation.provided": "Rezerwa na zaniechanie działalności",
           "policy.changed": "Zmiana zasad rachunkowości",
           "development_costs.capitalised": "Aktywowanie prac rozwojowych",
-          "development_costs.amortised": "Odpis prac rozwojowych"
+          "development_costs.amortised": "Odpis prac rozwojowych",
+          "company.entered": "Firma wpisana do kartoteki"
         },
         "doors": {
           "appoint_deputy": "wyznaczenie zastępcy",
@@ -4289,7 +4295,8 @@
           "provide_for_cessation": "rezerwa na zaniechanie działalności",
           "adjust_for_policy_change": "zmiana zasad rachunkowości",
           "capitalise_development_costs": "aktywowanie prac rozwojowych",
-          "amortise_development_costs": "odpis prac rozwojowych"
+          "amortise_development_costs": "odpis prac rozwojowych",
+          "enter_company": "wpisanie firmy"
         },
         "account_groups": {
           "0": "Aktywa trwałe",
@@ -11084,6 +11091,69 @@
           "wzorcowy plan kont: 020 Wartości niematerialne i prawne, 075 Umorzenie wartości niematerialnych i prawnych, 401 Amortyzacja, 490 Rozliczenie kosztów, 813 Kapitał z aktualizacji wyceny, 820 Rozliczenie wyniku finansowego, 830 Rezerwy na zobowiązania"
         ]
       }
+    },
+    {
+      "rule_id": "pl-enter-company",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Firma wpisana bez formy prawnej: nazwa, rodzaj, NIP, kraj, adres i rachunek, jak je wpisano",
+      "spec": {
+        "match": {
+          "event_type": "company.entered",
+          "where": [
+            {
+              "path": "$.legal_form",
+              "op": "absent"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "company",
+            "fields": {
+              "name": "=$.name",
+              "kind": "=$.kind",
+              "vat_id": "=$.vat_id",
+              "country": "=coalesce($.country, \"PL\")",
+              "address": "=coalesce($.address, \"\")",
+              "iban": "=coalesce($.iban, \"\")"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-enter-company-form",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Firma wpisana z formą prawną, jaką podał rejestr albo wpisujący: osoba fizyczna albo osoba prawna",
+      "spec": {
+        "match": {
+          "event_type": "company.entered",
+          "where": [
+            {
+              "path": "$.legal_form",
+              "op": "exists"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "company",
+            "fields": {
+              "name": "=$.name",
+              "kind": "=$.kind",
+              "vat_id": "=$.vat_id",
+              "country": "=coalesce($.country, \"PL\")",
+              "address": "=coalesce($.address, \"\")",
+              "iban": "=coalesce($.iban, \"\")",
+              "legal_form": "=$.legal_form"
+            }
+          }
+        }
+      }
     }
   ],
   "activities": [
@@ -12589,6 +12659,83 @@
         "emits": "development_costs.amortised",
         "who": [
           "human"
+        ]
+      }
+    },
+    {
+      "name": "enter_company",
+      "domain": "finance",
+      "description": "Firma wpisana do kartoteki po NIP: nazwa, adres, rachunek i forma prawna — tak, jak podały je rejestry (GUS, Wykaz podatników VAT), albo wpisane ręcznie; REGON, KRS i ślad odpowiedzi rejestru zostają w fakcie jako jego źródło",
+      "spec": {
+        "inputs": [
+          {
+            "name": "name",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "kind",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "customer",
+              "supplier",
+              "self"
+            ]
+          },
+          {
+            "name": "vat_id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "country",
+            "type": "string"
+          },
+          {
+            "name": "address",
+            "type": "string"
+          },
+          {
+            "name": "iban",
+            "type": "string"
+          },
+          {
+            "name": "legal_form",
+            "type": "enum",
+            "values": [
+              "natural_person",
+              "legal_entity"
+            ]
+          },
+          {
+            "name": "regon",
+            "type": "string"
+          },
+          {
+            "name": "krs",
+            "type": "string"
+          },
+          {
+            "name": "source",
+            "type": "string"
+          },
+          {
+            "name": "source_ref",
+            "type": "string"
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "company.entered",
+        "who": [
+          "human"
+        ],
+        "identity": [
+          "=$.kind",
+          "=$.vat_id"
         ]
       }
     }
