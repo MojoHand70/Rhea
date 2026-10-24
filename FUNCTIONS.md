@@ -15,7 +15,9 @@ How to read one function:
   *not yet*; *to verify* — I could not confirm it from the code.
 - **The boxes** are its tests: tick one when you have tried it and it does what it says.
 - **Built as an App** marks a document type, a flow or a company's own table: an App on M8, shipped
-  standard and reshaped by the client. Everything else is product.
+  standard and reshaped by the client. **Business pack** marks a collection of Apps for one kind of
+  business or work (payroll, collections), designed after M8. Everything else is product: the
+  channels, the checks, the law's objects, the export, the API, the interview.
 
 ## The order of work: catch up with flowMEE, then pass it
 
@@ -38,10 +40,13 @@ with its machinery and ends with its functions; no function is built on a piece 
 | Wave | Machinery first | Then the functions | Done when | Against flowMEE |
 |---|---|---|---|---|
 | 1. The App machinery | M8, M7 | 100 (the first standard Apps), 101 (MPK and projects, as tables) | KK's MPK sentence becomes an approved App with its table, carried on a booking line; a cost invoice's App sends it for approval by a formula; lines at several rates book right | what none of them has: any logic and any data, per client, approved and replayable |
-| 2. Documents in, checked, booked right | M3, M5 | 20, 22–27, 29–31, 55, 77–82, 87, 88, 92–95 | a client's month of KSeF invoices and bank statements comes in by itself, is checked and booked by the invoice Apps, and a person sees only the questions | catches up on their core: intake, checks, dekretacja, the bank |
-| 3. Beside the office's program, and onboarding | M1, M9, M11, M10 | 11, 14, 15, 21, 70, 73–76, 84–86, 103–113 | an office keeps Optima, runs a client in Rhea and imports the month; a new client is set up by interview, the share Rhea books by herself shown before it commits | catches up on how they sell, and passes them: Rhea keeps the books, compares them with the program's each month, and the office can move its books over |
-| 4. Cost control and money | M12 | 32, 33, 60, 89–91, 96–99, 102 | the standard Apps for corrections, recurring invoices, receipts, payroll lists, budgets, reminders and the live result run for a client; a reminder goes once | catches up on the rest of their list |
+| 2. Documents in, checked, booked right | M3, M5 | 20, 22–27, 29–31, 55, 77–82, 87, 88, 92–95, 116 | a client's month of KSeF invoices and bank statements comes in by itself, is checked and booked by the invoice Apps, and a person sees only the questions | catches up on their core: intake, checks, dekretacja, the bank |
+| 3. Beside the office's program, and onboarding | M1, M9, M11, M10 | 11, 14, 15, 21, 70, 73–76, 84–86, 103–114 | an office keeps Optima, runs a client in Rhea and imports the month; a new client is set up by interview, the share Rhea books by herself shown before it commits | catches up on how they sell, and passes them: Rhea keeps the books, compares them with the program's each month, and the office can move its books over |
+| 4. Cost control and money | M12 | 32, 33, 60, 89–91, 96–98, 102, 115, 117 | the standard Apps for corrections, recurring invoices, receipts, payroll lists, budgets and the live result run for a client; the office asks its clients and a reminder reaches each once | catches up on the rest of their list |
 | 5. Rhea's books for everyone | M6 | 34, 35, 42–48, 51–54, 56, 58, 61–63, 71, 72, 83 | an office closes a sole trader's and a company's month in Rhea and sends the JPK with its UPO | passes them for good: they leave all of this to the program |
+
+*Outside the waves:* business packs, designed on M8 once it stands — collections (99), payroll
+(119); with each country's invoicing pack — 118.
 
 *Waits for KK:* the chart design (M1 opens wave 3; export needs each company's own chart); the
 questions at the end of EXPORT.md and API.md.
@@ -264,18 +269,33 @@ Books (full, KPiR, ryczałt), VAT status (active, exempt), income tax (CIT, skal
 - [ ] the form is shown on the company's page
 - [ ] Rhea proposes the packs the form needs
 
-**84. One list of questions across all clients** — the office's accountant · Dziś, the office's desk
-→ every client's documents and bank lines waiting for a person, in one list, each opening in its own
-client. *Now: to verify (the kernel serves an office's scope; Dziś is drawn per company).*
+**84. One queue of decisions across all clients** — the office's accountant · Dziś, the office's desk
+→ every client's documents and bank lines waiting for a decision, in one queue, each opening in its
+own client, so an accountant with forty clients does not open forty desks. *Now: to verify (the
+kernel serves an office's scope; Dziś is drawn per company).*
 - [ ] a question of client A opens in client A, never in B
-- [ ] answered, it leaves the list for everyone in the office
+- [ ] answered, it leaves the queue for everyone in the office
+
+**115. The office talks with its clients** — the office's people and the client's · on a document, a month, an amount to pay
+A question on a document with its options ("a private purchase or the business's?"), a reminder to
+all clients ("documents by the 5th"), a short survey, an approval asked of the client → each message
+and answer a fact, attached to what it is about; an answer the books can use is used (the client's
+"yes, received", 79). Not a free chat at first. *Now: not yet.* *(KK's idea, 2026-10-25; the shape
+is Claude's proposal.)*
+- [ ] the client answers on the phone with one tap, and the document moves on
+- [ ] a reminder to all clients reaches each of them once
+
+*Stands on:* M12.
 
 **85. Set a new client up by interview** — Rhea, with the client's owner or the office · the new company's desk
-The client's last months (KSeF invoices, bank statements, the chart and the year's entries from its
-program) → the pack's rules run over them; what they leave unexplained is asked about, the largest
-group first; the answers become rules, approved as one set; the share Rhea books by herself shown
-at every step, and before the client commits (DIRECTION, "Implementation by interview",
-2026-10-08). *Now: not yet (simulated clients only: 8 of 8 runs done).*
+An intelligent walkthrough, easy and structured (KK, 2026-10-25): a fixed path of topics — the
+company, its books and taxes, its documents and channels, its bank, its people, the Apps it needs —
+one question at a time, each with its options and Rhea's recommendation, in plain words. Evidence
+first: what she can read from the client's documents, the registers (GUS, the white list) and its
+program's files she does not ask; she asks about what is left, the largest group first, saying how
+many documents each answer settles. The answers become rules, approved as one set; the share Rhea
+books by herself is shown throughout, and before the client commits (DIRECTION, "Implementation by
+interview", 2026-10-08). *Now: not yet (simulated clients only: 8 of 8 runs done).*
 - [ ] before anything is approved, the owner sees how many of their documents Rhea would book by herself
 - [ ] each question says how many documents its answer would explain
 - [ ] done means nothing left unexplained, counting what was knowingly set aside
@@ -290,6 +310,19 @@ of 48"); approved, they book the new documents. *Now: not yet.*
 - [ ] nothing is learned without an approval
 
 *Stands on:* 73, 74, M11.
+
+**114. Re-interview** — the owner or the office, or Rhea offering it · any topic of the interview, any day
+"We bought a car", "we are a VAT payer now", "fuel goes to another account" → Rhea opens that topic,
+shows what she was told, when and by whom, asks only what changes, shows what the change would do to
+the books, and the new answers apply from a date as new versions, the past keeping the old ones
+(KK, 2026-10-25). She offers one herself when the evidence shifts: a new kind of document keeps
+arriving, turnover nears the VAT limit. *Now: not yet (versions from a date, simulation and booking
+the past exist in the kernel).*
+- [ ] a change applies from its date; the months before stay booked as they were
+- [ ] the person sees what the change does to the books before approving it
+- [ ] an answer overruled never comes back
+
+*Stands on:* M11.
 
 ## C. Setting a company up
 
@@ -318,6 +351,30 @@ See the chart; add an account; set an account's tax treatment. *Now: partly — 
 - [ ] a new account can be added and is booked to
 
 ## D. Documents coming in
+
+Every way a document comes in is a channel: product, not an App. The reader is chosen by the
+document's kind, and one document is one document whichever channel brought it (built). The
+channels (KK, 2026-10-25: enumerated):
+
+| Channel | Function | Now |
+|---|---|---|
+| KSeF — purchase invoices, and sales invoices the client issued elsewhere | 22 | kernel only: the reader; nothing fetches by itself |
+| Upload on the desk — PDF, XML, a photo, a statement | 23 | kernel only |
+| Mail — an address per company | 24 | not yet |
+| The phone's camera — receipts, paper invoices | 87 | not yet |
+| A watched cloud folder — Drive, OneDrive, Dropbox | 116 | not yet |
+| Bank statement files — MT940, CAMT.053, a bank's CSV | 26, 27 | MT940 kernel only, one bank's detail lines read |
+| A live bank feed, through a licensed provider | 91 | not yet |
+| Payment gateways and marketplaces — Stripe, PayU, Przelewy24, PayPal, Allegro, Amazon | 90 | not yet |
+| The client's program — JPK_KR, JPK_PKPIR, JPK_EWP, JPK_V7, its chart | 73, 74, 104 | not yet |
+| Tables — CSV, Excel, the columns' mapping taught once | 75 | not yet |
+| Rhea's API | 111 | not yet |
+| Payroll programs' lists | 89 | not yet |
+| Cash registers and e-receipts — the day's takings | 117 | not yet |
+| E-invoice networks abroad — Peppol, XRechnung | 118 | not yet |
+
+Lookups, not documents: GUS and the VAT white list (built, read at onboarding), NBP rates (built),
+VIES (95, not yet).
 
 **22. Purchase invoices from KSeF** — Rhea, every day
 → every invoice issued to the company in KSeF, read, booked as a purchase invoice. *Now: kernel only (the reader exists; nothing fetches by itself).*
@@ -386,12 +443,13 @@ A line nobody explains → its kind (a fee, a tax, the owner's), booked. *Now: w
 Line, invoice(s) → settled; a difference booked. *Now: kernel only.*
 - [ ] the invoice shows as paid
 
-**87. A receipt from a photo** — anyone in the company · the phone, mail
-A photo or a scan → seller, date, lines and rates read; up to 450 zł with the buyer's NIP, taken as
-a simplified invoice; booked by its rules. *Now: not yet (the PDF reader reads invoices).*
-*Built as an App* (100).
+**87. A receipt or a paper invoice from the phone** — anyone in the company · the phone's camera, mail
+A photo or a scan → seller, date, lines and rates read; a receipt up to 450 zł with the buyer's NIP
+taken as a simplified invoice; booked by its App. *Now: not yet (the PDF reader reads invoices).*
 - [ ] a receipt with the buyer's NIP under 450 zł lands in the VAT purchase register
 - [ ] the same receipt sent twice, also as another photo, is one (93)
+
+*Built as an App* (100) for what it books; the camera is a channel.
 
 **88. An invoice from abroad** — Rhea
 An invoice in another language or currency → read; import of services, intra-EU acquisition (WNT) or
@@ -401,11 +459,23 @@ reverse charge are not in the pack).*
 - [ ] a German software subscription books output and input VAT in the same month
 - [ ] the NBP rate of the working day before is used, and named
 
-**89. A payroll list** — the accountant · upload
+*Built as an App* (100); reading the language is the channel's.
+
+**89. A payroll list from a payroll program** — the accountant · upload, mail
 The payroll program's list → its column totals checked against its rows; the entries booked
-(salaries, ZUS, PIT, PPK). Payroll itself is not computed. *Now: not yet.*
-*Built as an App* (100).
+(salaries, ZUS, PIT, PPK). *Now: not yet.*
 - [ ] a list whose totals do not tie is stopped, the column named
+
+*Built as an App* (100), the list coming through a channel. Calculating payroll is a business pack's
+(119).
+
+**119. Payroll calculated** — the accountant or the client's HR · Kadry i płace
+Employees, contracts, the month's time and absences → gross to net, ZUS, the PIT advance, PPK, the
+payroll list and its bookings. *Now: not yet.*
+- [ ] a month's list matches a payroll program's for the same employees
+
+*Business pack* (Kadry i płace, KK, 2026-10-25): Apps on M8; the law's rates and limits are the
+market pack's data.
 
 **90. Payouts from payment gateways and marketplaces** — Rhea
 A payout from Stripe, PayU, PayPal or Allegro, with the operator's report → the sales it pays, the
@@ -418,12 +488,28 @@ fee (a cost) and the returns, each sale paired with its invoice. *Now: not yet.*
 only).*
 - [ ] a line in the bank appears within minutes, once
 
-**92. The KSeF number in transfers** (from 1 January 2027) — Rhea
+**92. The KSeF number in transfers** (from 1 January 2027) — Rhea, part of the KSeF invoice (product)
 Paying: the transfer title carries the invoice's KSeF number, or one collective identifier for
 several invoices of one supplier. Receiving: a payment is paired by the KSeF number in its title.
 *Now: not yet.*
 - [ ] a payment with a KSeF number in its title pairs with that invoice without a person
 - [ ] a payment order for three invoices of one supplier carries one collective identifier
+
+**116. A watched cloud folder** — the client · its Drive, OneDrive or Dropbox folder
+A file dropped in the company's folder → read into that company, once. *Now: not yet.*
+- [ ] a file dropped twice is one document
+- [ ] client A's folder never feeds client B
+
+**117. Cash registers and e-receipts** — Rhea, daily
+The day's takings from online cash registers and e-receipts → sales by rate, booked; the takings
+paired with the deposits and card settlements. *Now: not yet (to verify: what the Ministry's central
+repository of online cash registers gives a taxpayer).*
+- [ ] a day's takings by rate equal the register's daily report
+
+**118. E-invoices from networks abroad** — Rhea, with each country's invoicing pack
+Peppol, Germany's XRechnung and ZUGFeRD and the like → read as invoices, in a company whose
+country's pack is installed. *Now: not yet.*
+- [ ] an XRechnung invoice books like a KSeF one
 
 ## D2. Checking a document (every document, in and out)
 
@@ -487,10 +573,16 @@ asked about. *Now: partly (one purchase invoice is one fact, by the seller's NIP
 every door).*
 - [ ] the same receipt as two photos is stopped before it is booked
 
-**94. A supplier's bank account changed** — Rhea, on every cost document
-An account on the invoice other than the supplier's earlier ones → the invoice is held and the change
-asked about before anything is paid. *Now: not yet.*
-- [ ] an invoice with a new account from a known supplier is held, the change named
+**94. A supplier's bank account changed** — Rhea, on every cost document, and again when payments are prepared
+An account on the invoice other than the supplier's earlier ones → one of three (Claude's proposal,
+2026-10-25): on the white list for the same NIP, a note only; not on the white list, held before
+payment (paid above 15,000 zł, it loses the tax-cost deduction and can make the company liable for
+the supplier's VAT); the invoice came as a PDF by mail rather than through KSeF, held until a person
+confirms the change by phoning the supplier on a number already known (a swapped account arrives by
+mail; a KSeF invoice comes from the supplier's own authorised session). Each confirmation is a fact:
+who, when, how. The comparison is the base's; the white list is the Polish pack's. *Now: not yet.*
+- [ ] an invoice with a new account off the white list is held, the change named
+- [ ] a confirmed change is kept with who confirmed it and how, and the account is known from then
 
 **95. VIES check** — Rhea, on every EU counterparty
 → the counterparty's VAT number checked in VIES on the day and kept with the document (an intra-EU
@@ -499,7 +591,9 @@ supply at 0% needs it). *Now: not yet.*
 
 **96. An invoice against its order and goods receipt** — Rhea, on a purchase invoice
 The invoice's lines against the order and the PZ → quantities and prices agree, or the differences
-are shown. *Now: to verify (the warehouse pack keeps the PZ and its lines).*
+are shown. *Now: kernel only (the matching engine's three-way, 2026-10-11, `TestMatchingThreeWay`: the order's,
+the receipts' and the invoice's lines; the quantity allocated, the price within 2 %, the difference
+booked).* Product; Apps use it.
 - [ ] an invoice for more than was received is held, the line named
 
 ## E. Documents going out
@@ -728,14 +822,13 @@ arrives. *Now: partly (the result is in her morning; no forecast).*
 
 *Built as an App;* stands on M8.
 
-**99. Reminders to pay** — Rhea, after the due date
-An unpaid sales invoice → a reminder by mail (then SMS) on the company's schedule, stopped when the
-money arrives; each reminder a fact, never sent twice. A phone call by voice later, if wanted. *Now:
-not yet.*
+**99. Collections** — Rhea, after the due date
+Reminders by mail and SMS on the company's schedule, stopped when the money arrives; promises to pay
+kept; a phone call by voice later, if wanted. *Now: not yet.*
 - [ ] paid the day before, no reminder goes
 - [ ] the same step never sends twice
 
-*Built as an App;* stands on M8, sending through M12.
+*Business pack* (collections, to be designed, KK, 2026-10-25): Apps on M8, sending through M12.
 
 ## M. Rhea learning
 
