@@ -195,9 +195,39 @@ Mail with documents → the documents kept in that client. *Now: not yet.*
 - [ ] mail to the client's address lands in that client only
 
 **25. Enter a cost invoice by hand** — the accountant · not yet on the desk
-Supplier, number, dates, lines, VAT → a purchase invoice booked. *Now: not yet.*
+The document as it is — supplier, number, dates, its totals by rate as printed (and its lines, when
+they are wanted) — then the booking: rows by what each part is for, each with its net, its VAT and
+how much of the VAT may be deducted → a purchase invoice in the VAT register and the books.
+*Now: not yet.*
 - [ ] it is in the VAT purchase register and the books
 - [ ] the same invoice twice is refused
+- [ ] one invoice split into two costs books two rows; their nets add up to the invoice's net
+- [ ] a car used privately too: half the VAT deducted, the other half in the cost
+
+*What Rhea must learn* — each a rule with its warrant, drafted by Rhea from the sources
+(`reports/Invoices in practice 2026-10.md`), checked, and approved by KK as an accountant would;
+*exists* marks a rule that does a part of it today, at one rate per invoice.
+- C1 *The document as it is.* The VAT of each rate is taken as the supplier printed it, never
+  worked out again; Rhea warns when a rate's VAT is off its net by more than the rounding.
+  Fakturowanie — Polska.
+- C2 *The month of the deduction:* the later of the supply and the receipt of the invoice (VAT act
+  art. 86 ust. 10, 10b). Podstawa. *Exists* (the purchase invoice's VAT period).
+- C3 *What each part is for decides where it goes:* in full books a cost account by category, or
+  goods and materials, or a fixed asset; in KPiR a column — goods, incidental costs, other expenses
+  (the KPiR regulation of 6 September 2025, columns *to verify*). Pełna księgowość; KPiR. *Exists*
+  in part (a supplier's cost account, else 403).
+- C4 *How much VAT may be deducted:* all, none, or 50% for a passenger car used for the business
+  and privately (art. 86a); the deductible part to input VAT (221), the rest to the cost with the
+  net. Podstawa decides the share; the regime books it.
+- C5 *Fixed asset or other purchase,* for the JPK: K_40/K_41 or K_42/K_43 (the Ministry's JPK_V7
+  brochure, 1 February 2026). Podstawa. *Exists* for other purchases only.
+- C6 *The booking in full books:* each row's net to its account, the deductible VAT to 221, the
+  gross to the supplier (202). Pełna księgowość. *Exists* at one account per invoice.
+- *Lessons from the accountant,* as company rules: "this supplier's invoices go to 402-03", "fuel
+  for this car at 50%", "this one is a fixed asset" — proposed after the accountant has decided the
+  same way, kept once approved.
+
+*Stands on:* M2's lines input, and the purchase invoice keeping its booking rows.
 
 **26. Bank statement in** — the accountant · not yet on the desk
 An MT940 file → its lines, matched to the invoices they pay. *Now: kernel only.*
@@ -219,9 +249,41 @@ Line, invoice(s) → settled; a difference booked. *Now: kernel only.*
 ## E. Documents going out
 
 **30. Issue a sales invoice** — the owner or the accountant · not yet on the desk
-Buyer, lines, dates, VAT → the invoice, its number, booked. *Now: not yet (the kernel books an invoice from its fact; there is no form).*
+Buyer (by NIP), dates, lines — item, unit, quantity, unit price, discount, rate, codes — payment
+→ the invoice with its number, its totals by rate worked out by Rhea, booked, sent to KSeF.
+*Now: not yet (the kernel books an invoice from its fact; there is no form).*
 - [ ] the invoice gets the next number
 - [ ] it is in the VAT sales register and the books
+- [ ] lines at 23% and 8% give a total for each rate, VAT worked out on each rate's sum
+- [ ] a discount shows on its line: price before, the discount, the value after
+
+*What Rhea must learn* — each a rule with its warrant, drafted by Rhea from the sources, checked,
+approved by KK; *exists* marks a rule that does a part of it today, at one rate per invoice.
+- S1 *The number:* the next in the company's series, identifying the invoice once (VAT act art.
+  106e ust. 1 pkt 2). Fakturowanie — Polska.
+- S2 *A line's value:* quantity × net unit price, less its discount unless the discount is already
+  inside the price (art. 106e ust. 1 pkt 8–11); on an invoice priced gross, from the gross unit
+  price (ust. 7–8, *to verify*). Fakturowanie — Polska.
+- S3 *The totals by rate:* each rate's net is the sum of its lines' nets, its VAT that sum times the
+  rate, rounded to the grosz (art. 106e ust. 1 pkt 14, ust. 11) — or each line's VAT stated and
+  added up (ust. 10), as the invoice says. Fakturowanie — Polska.
+- S4 *The rate of each line,* and for an exempt line the legal basis of the exemption on the
+  invoice (art. 106e ust. 1 pkt 19, *to verify*). Fakturowanie — Polska.
+- S5 *An invoice in another currency:* the VAT in złoty at the NBP rate of the working day before
+  (*to verify* the article). Podstawa. *Exists* (the invoice's złoty amounts).
+- S6 *The month the VAT is due:* by the date of supply or the invoice's (art. 19a). Podstawa.
+  *Exists* (the sales invoice's VAT period).
+- S7 *Split payment:* the mark where an item of annex 15 and over 15,000 zł gross (*to verify*).
+  Fakturowanie — Polska.
+- S8 *The booking in full books:* the gross to the customer (201), the net to sales by kind
+  (goods, services, other), the VAT to 222. Pełna księgowość. *Exists* at one rate.
+- S9 *The entry in KPiR:* the net to the sales column. KPiR.
+- S10 *The VAT register and the JPK by rate:* each rate's net and VAT in its pair (K_19/K_20 for
+  23%, K_17/K_18 for 8%, …). Podstawa. *Exists* at one rate.
+- S11 *Sent to KSeF,* the KSeF number kept on the invoice. Fakturowanie — Polska. *Exists* (the
+  channel, KSeF's test system).
+
+*Stands on:* M2's lines input, the sales invoice keeping its lines, M5 for sending.
 
 **31. Send it to KSeF** — Rhea, on issue
 → the KSeF number, or the reason it was refused. *Now: kernel only (tested on KSeF's test system).*
