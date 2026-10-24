@@ -34,7 +34,8 @@ their words, it is marked* my reading.
   the client's past bookings. Then the agent asks the client what the history does not settle.
   The answers become rules in plain words. Before a contract they show, in numbers, how many
   documents would go through by themselves. Rhea adopted the same design on 2026-10-08, but the
-  live interview is not built, and FUNCTIONS.md has no function for it. See "Onboarding".
+  live interview is not built, and FUNCTIONS.md had no function for it (now 85). See
+  "Onboarding".
 - **They sell against rules by name.** Their post of 2026-10-23 says rule-based automation
   "starts generating its own work". New case → new rule → new exception → new fix. Rhea will
   be asked this question.
@@ -228,7 +229,8 @@ warrant, and every implementation can be replayed.
 
 ## What flowMEE does that FUNCTIONS.md does not name
 
-Candidates only, for you to decide on; not added to FUNCTIONS.md.
+Added to FUNCTIONS.md the same day at KK's request, as functions 84–113, in waves that are still
+a proposal (FUNCTIONS.md, "The order of work").
 
 1. **Approval paths** for cost documents: who approves what by amount, category,
    department, supplier or project; several steps; substitutes; reminders and escalations;

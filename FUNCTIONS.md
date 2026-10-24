@@ -15,6 +15,26 @@ How to read one function:
   *not yet*; *to verify* — I could not confirm it from the code.
 - **The boxes** are its tests: tick one when you have tried it and it does what it says.
 
+## The order of work: catch up with flowMEE, then pass it
+
+*Proposed by Claude, 2026-10-24, at KK's request; waiting for KK.* What flowMEE has and Rhea lacks:
+`reports/autoMEE compared to Rhea.md` (internal: it names a competitor). The two new working parts
+are designed in `EXPORT.md` (Rhea beside the office's program) and `API.md` (Rhea's API).
+
+**Machinery first.** A piece of machinery is finished before any function stands on it: its boxes
+ticked, `./scripts/check.sh` green, replay identical, an independent review read. Each wave starts
+with its machinery and ends with its functions; no function is built on a piece still being built.
+
+| Wave | Machinery first | Then the functions | Done when | Against flowMEE |
+|---|---|---|---|---|
+| 1. Documents in, checked, booked right | M7, M3, M5 | 20, 22–27, 29–31, 55, 77, 78, 80–82, 87, 88, 92–95 | a client's month of KSeF invoices and bank statements comes in by itself, is checked and booked by rules at several rates, and a person sees only the questions | catches up on their core: intake, checks, dekretacja, the bank |
+| 2. Beside the office's program, and onboarding | M1, M9, M12, M10 | 11, 14, 15, 21, 70, 73–76, 84–86, 103–113 | an office keeps Optima, runs a client in Rhea and imports the month; a new client is set up by interview, the share Rhea books by herself shown before it commits | catches up on how they sell, and passes them: Rhea keeps the books, compares them with the program's each month, and the office can move its books over |
+| 3. Cost control and money | M8, M11, M13 | 32, 33, 60, 79, 89–91, 96, 97, 99–102 | costs carry MPK and pass their paths; payouts, receipts and payroll lists book; reminders go once | catches up on the rest of their list |
+| 4. Rhea's books for everyone | M4, M6 | 34, 35, 42–48, 51–54, 56, 58, 61–63, 71, 72, 83, 98 | an office closes a sole trader's and a company's month in Rhea and sends the JPK with its UPO | passes them for good: they leave all of this to the program |
+
+*Waits for KK:* the chart design (M1 opens wave 2; export needs each company's own chart); the
+questions at the end of EXPORT.md and API.md.
+
 ## Machinery — what the functions stand on
 
 Each piece names the functions (by number below) it unlocks, and is built in this order. A piece
@@ -30,33 +50,101 @@ of machinery is built only for the functions it names.
   Unlocks: 17, 18, and every function a pack brings to some companies and not others.
 - **A definition belongs to the packs that declare it; words merged from every pack a company has**
   (c26aa46, a638021). Unlocks: splitting a pack without renaming anything.
+- **M2. A form for any action** — the desk draws the form from the action's own definition (its
+  inputs, their types, what is required), offers it where the company has the action and the person
+  may, and shows what the kernel answers; no face code per function. Unlocks: 7, 8, 9, 15, 16, 19,
+  25, 29, 30, 32, 33, 35, 40, 41, 43, 45, 61, 63, 70. Done in rheaface 83d4806 — in the search
+  box and on a record's sheet; on the desk today for 7, 8, 9, 16, 19, 40, 41, 61, 63, whose actions
+  exist; 25, 30, 32, 33, 35, 43, 45 wait for their own actions to be written in their packs; 29 and 70
+  are the kernel's own actions, not opened by the desk.
+  - [ ] a pack's new action appears on the desk with its form, with no change to the face
+  - [ ] the form is offered only where the company has the action and the person may open it
+  - [ ] what the kernel refuses is said in Polish, field by field
 
-**To build**
+**To build** — in the order of the waves above.
+
+*Wave 1*
+
+**M7. Documents with lines and several rates** — a document keeps its lines (item, unit,
+quantity, unit price, discount, rate, codes); the form takes lines (M2's lines input); rules run per
+line; VAT worked out by rate (S3) or taken as printed (C1); the registers, the JPK and the bookings
+by rate; each line booked by what it is for. Several rates on one invoice: KK, DECISIONS 2026-10-24.
+Unlocks: 25, 30, 32, 77, 78, 81, 82, 87, 88, 97, 101, 106.
+- [ ] an invoice at 23% and 8% gives a register row and the right VAT for each rate
+- [ ] a purchase invoice split into two costs books two rows whose nets add up to the invoice's net
+- [ ] replay reproduces the same lines and bookings
+
+**M3. Channels that run by themselves** — KSeF fetched every day, a statement read when it
+arrives, mail per client read into its client; each pass the company's own, each document once.
+Unlocks: 22, 23, 24, 26, 27, 87 (a receipt sent by mail), 91 (a live bank feed, through a
+licensed provider).
+- [ ] an invoice issued in KSeF is in the books next morning without anyone asking
+- [ ] the same document arriving twice is one document
+
+**M5. Sending to the state from the desk** — the company's KSeF connection set up on the desk,
+the JPK sent with its UPO kept, a note to the client. Unlocks: 20, 31, 52, 60. For a company whose books are kept in the office's program (103), the
+JPK part is off: the program sends it.
+- [ ] a company connects its KSeF on the desk; its token or certificate is never another's
+- [ ] the JPK is sent and its UPO kept with the month
+
+
+*Wave 2*
 
 **M1. Split the Poland pack** into Polska — podstawa, Fakturowanie — Polska, Pełna księgowość and
 Środki trwałe — Polska (step 3, parts 3–5): each company's own chart, the six links from the base
 back into full books cut, the cut itself. *Waits for:* the chart design, agreed with KK first.
-Unlocks: 21, 42–48, 53, 54.
+Unlocks: 21, 42–48, 53, 54, and 103–109: a company whose books are kept in the office's program
+has that program's chart as its own (EXPORT.md).
 - [ ] a sole trader's invoice is never booked into full books
 - [ ] a full-books company's books are exactly as before the split (replay)
 - [ ] each company's chart is its own
 
-**M2. A form for any action** — the desk draws the form from the action's own definition (its
-inputs, their types, what is required), offers it where the company has the action and the person
-may, and shows what the kernel answers; no face code per function. Unlocks: 7, 8, 9, 15, 16, 19,
-25, 29, 30, 32, 33, 35, 40, 41, 43, 45, 61, 63, 70. *Now: done (rheaface 83d4806) — in the search
-box and on a record's sheet; on the desk today for 7, 8, 9, 16, 19, 40, 41, 61, 63, whose actions
-exist; 25, 30, 32, 33, 35, 43, 45 wait for their own actions to be written in their packs; 29 and 70
-are the kernel's own actions, not opened by the desk.*
-- [ ] a pack's new action appears on the desk with its form, with no change to the face
-- [ ] the form is offered only where the company has the action and the person may open it
-- [ ] what the kernel refuses is said in Polish, field by field
+**M9. Export to the office's program** (EXPORT.md) — for each company, where its books are kept;
+a writer per program in the market's code (Optima first), the entries in the company's own chart; a
+batch is a fact, nothing is exported twice, a change after export travels as a correction, the
+program's answer is a fact. Unlocks: 103–109. *Waits for:* M1 (each company's own chart).
+- [ ] the same month exported twice adds nothing, also from two exports at once
+- [ ] replay after a month of exports exports nothing
+- [ ] a real Optima takes the file and its register totals by rate equal Rhea's
 
-**M3. Channels that run by themselves** — KSeF fetched every day, a statement read when it
-arrives, mail per client read into its client; each pass the company's own, each document once.
-Unlocks: 22, 23, 24, 26, 27.
-- [ ] an invoice issued in KSeF is in the books next morning without anyone asking
-- [ ] the same document arriving twice is one document
+**M12. The interview loop** (DIRECTION, "Implementation by interview", step 6) — the client's
+evidence in, the pack's rules over it, what is left unexplained grouped and asked about largest
+first, every turn a fact, the agent's drafts approved as one set, the share explained shown
+throughout. Unlocks: 85, 86.
+- [ ] the simulated clients are done in every run, now through the desk
+- [ ] the share explained equals the count in the books
+
+**M10. Rhea's API** (API.md) — `/v1` over the same kernel functions the desk uses; a key is a
+grant like a person's; every write carries its idempotency key; events from a cursor and by
+subscription; each company's spec drawn from its packs; a program never approves. Unlocks: 110–113,
+and the export's connector.
+- [ ] the isolation walk passes over `/v1` with two companies
+- [ ] a key cannot approve a rule, a bundle, a pack, a lesson or a booking decision
+- [ ] the same write twice is one fact, also from several goroutines
+
+*Wave 3*
+
+**M8. Codes on a booking line** — cost centre (MPK), project and the like (T-codes), each
+declared by the pack that needs it, set by a rule or by a person on a path, split by keys, carried
+into the books, the reports and the export; a new structure from a date. Unlocks: 98 by MPK, 101,
+102, 106 with MPK.
+- [ ] a line split by a key books rows whose amounts add up to the line's, to the grosz
+- [ ] a report by code equals the books
+
+**M11. Paths through people** — a document waits on people in turn, by its amount, category, MPK
+or supplier; substitutes; deadlines and reminders; the path is a definition, versioned and approved
+like a rule; every step is a fact. Unlocks: 79 (a person's "received"), 100, 102 (what is
+committed).
+- [ ] a rejected document books nothing
+- [ ] a path's new version applies from its date; documents on their way keep the old one
+
+**M13. Messages out** — mail (then SMS) to a person or a client, from a question, a path, a
+close or a due date; each message is a fact and never sent twice; the answer comes back through a
+door. Unlocks: 60, 99, the reminders of 100.
+- [ ] each step sends once, also when two passes run at once
+- [ ] replay sends nothing
+
+*Wave 4*
 
 **M4. A checklist screen** — items computed from the books, each opening what it is about, the
 open ones holding a close back. Unlocks: 58, later the year's close (61, 62).
@@ -69,11 +157,6 @@ herself (invariant 3) — the draft waits for a person. Unlocks: 83, and with it
 been taught yet.
 - [ ] her question carries no client data
 - [ ] the draft names its sources, primary law first, and what is still to verify
-
-**M5. Sending to the state from the desk** — the company's KSeF connection set up on the desk,
-the JPK sent with its UPO kept, a note to the client. Unlocks: 20, 31, 52, 60.
-- [ ] a company connects its KSeF on the desk; its token or certificate is never another's
-- [ ] the JPK is sent and its UPO kept with the month
 
 ---
 
@@ -159,6 +242,33 @@ Accountant, client → the accountant works in that client. *Now: kernel only (t
 Books (full, KPiR, ryczałt), VAT status (active, exempt), income tax (CIT, skala, liniowy, ryczałt), urząd skarbowy → what the company's books and returns follow. *Now: on the desk through its generic form (M2) — not yet tried with this action.*
 - [ ] the form is shown on the company's page
 - [ ] Rhea proposes the packs the form needs
+
+**84. One list of questions across all clients** — the office's accountant · Dziś, the office's desk
+→ every client's documents and bank lines waiting for a person, in one list, each opening in its own
+client. *Now: to verify (the kernel serves an office's scope; Dziś is drawn per company).*
+- [ ] a question of client A opens in client A, never in B
+- [ ] answered, it leaves the list for everyone in the office
+
+**85. Set a new client up by interview** — Rhea, with the client's owner or the office · the new company's desk
+The client's last months (KSeF invoices, bank statements, the chart and the year's entries from its
+program) → the pack's rules run over them; what they leave unexplained is asked about, the largest
+group first; the answers become rules, approved as one set; the share Rhea books by herself shown
+at every step, and before the client commits (DIRECTION, "Implementation by interview",
+2026-10-08). *Now: not yet (simulated clients only: 8 of 8 runs done).*
+- [ ] before anything is approved, the owner sees how many of their documents Rhea would book by herself
+- [ ] each question says how many documents its answer would explain
+- [ ] done means nothing left unexplained, counting what was knowingly set aside
+
+*Stands on:* M12, M3, the readers of 73 and 74 for the history.
+
+**86. Learn from the client's past bookings** — Rhea, at the start
+The past year's entries from the client's program (JPK_KR, JPK_PKPIR) → the rules that would
+reproduce them, each proposed with how many past entries it explains ("this supplier to 402-03: 48
+of 48"); approved, they book the new documents. *Now: not yet.*
+- [ ] a proposed rule reproduces the past entries it claims, and the count is shown
+- [ ] nothing is learned without an approval
+
+*Stands on:* 73, 74, M12.
 
 ## C. Setting a company up
 
@@ -254,6 +364,43 @@ A line nobody explains → its kind (a fee, a tax, the owner's), booked. *Now: w
 Line, invoice(s) → settled; a difference booked. *Now: kernel only.*
 - [ ] the invoice shows as paid
 
+**87. A receipt from a photo** — anyone in the company · the phone, mail
+A photo or a scan → seller, date, lines and rates read; up to 450 zł with the buyer's NIP, taken as
+a simplified invoice; booked by its rules. *Now: not yet (the PDF reader reads invoices).*
+- [ ] a receipt with the buyer's NIP under 450 zł lands in the VAT purchase register
+- [ ] the same receipt sent twice, also as another photo, is one (93)
+
+**88. An invoice from abroad** — Rhea
+An invoice in another language or currency → read; import of services, intra-EU acquisition (WNT) or
+import of goods recognised; reverse charge in both VAT registers; the exchange rate for VAT and for
+income tax, each by its rule. *Now: partly (currencies, pl v19–v22; import of services, WNT and
+reverse charge are not in the pack).*
+- [ ] a German software subscription books output and input VAT in the same month
+- [ ] the NBP rate of the working day before is used, and named
+
+**89. A payroll list** — the accountant · upload
+The payroll program's list → its column totals checked against its rows; the entries booked
+(salaries, ZUS, PIT, PPK). Payroll itself is not computed. *Now: not yet.*
+- [ ] a list whose totals do not tie is stopped, the column named
+
+**90. Payouts from payment gateways and marketplaces** — Rhea
+A payout from Stripe, PayU, PayPal or Allegro, with the operator's report → the sales it pays, the
+fee (a cost) and the returns, each sale paired with its invoice. *Now: not yet.*
+- [ ] a payout's sales, fees and returns add up to the amount on the bank line
+- [ ] the fee is booked as a cost, never netted off the sales
+
+**91. A live bank feed** — Rhea, through a licensed account-information provider
+→ the company's bank lines as they happen, not once a day from a file. *Now: not yet (statement files
+only).*
+- [ ] a line in the bank appears within minutes, once
+
+**92. The KSeF number in transfers** (from 1 January 2027) — Rhea
+Paying: the transfer title carries the invoice's KSeF number, or one collective identifier for
+several invoices of one supplier. Receiving: a payment is paired by the KSeF number in its title.
+*Now: not yet.*
+- [ ] a payment with a KSeF number in its title pairs with that invoice without a person
+- [ ] a payment order for three invoices of one supplier carries one collective identifier
+
 ## D2. Checking a document (every document, in and out)
 
 An accountant checks every document before it reaches the books: formally, arithmetically and on
@@ -309,6 +456,28 @@ never taught it, and the question reaches Rhea's staff).*
 - [ ] her search never carries the client's name, NIP or amounts
 - [ ] approved once, the next such document is booked without asking
 
+**93. Duplicate check** — Rhea, on every document
+The same document twice, whatever door it came through, is one document; a near duplicate (the same
+receipt photographed twice; the same seller, amount and date under another number) is stopped and
+asked about. *Now: partly (one purchase invoice is one fact, by the seller's NIP and its number, from
+every door).*
+- [ ] the same receipt as two photos is stopped before it is booked
+
+**94. A supplier's bank account changed** — Rhea, on every cost document
+An account on the invoice other than the supplier's earlier ones → the invoice is held and the change
+asked about before anything is paid. *Now: not yet.*
+- [ ] an invoice with a new account from a known supplier is held, the change named
+
+**95. VIES check** — Rhea, on every EU counterparty
+→ the counterparty's VAT number checked in VIES on the day and kept with the document (an intra-EU
+supply at 0% needs it). *Now: not yet.*
+- [ ] an intra-EU supply to an invalid VAT number is not at 0%
+
+**96. An invoice against its order and goods receipt** — Rhea, on a purchase invoice
+The invoice's lines against the order and the PZ → quantities and prices agree, or the differences
+are shown. *Now: to verify (the warehouse pack keeps the PZ and its lines).*
+- [ ] an invoice for more than was received is held, the line named
+
 ## E. Documents going out
 
 **30. Issue a sales invoice** — the owner or the accountant · not yet on the desk
@@ -360,6 +529,12 @@ The invoice, what changes → a correction invoice, booked, sent to KSeF. *Now: 
 **33. Recurring invoices** — the owner · not yet on the desk
 A template, a cadence → each month's invoice drafted for approval. *Now: not yet (the type exists).*
 - [ ] next month's invoice is drafted by itself
+
+**97. Other kinds of invoice** — the owner or the accountant · not yet on the desk
+Advance (zaliczkowa), final (rozliczeniowa), RR for a farmer, pro forma (not an invoice: nothing is
+booked), each with its KSeF type. *Now: not yet.*
+- [ ] the final invoice deducts the advances invoiced before it
+- [ ] a pro forma books nothing
 
 ## F. Full books (spółki)
 
@@ -515,6 +690,22 @@ A question → the answer, from the books, every figure opening its source. *Now
 → who owes, how long. *Now: works.*
 - [ ] the ages match the invoices' dates
 
+**98. The result live, with a forecast to the month's end** — the owner · Dziś, Księgi
+→ the profit and loss as documents arrive, every line opening its documents; the costs still to come
+(rent, subscriptions, payroll) forecast from the past and marked as forecast until their document
+arrives. *Now: partly (the result is in her morning; no forecast).*
+- [ ] a forecast line is replaced by the real one when its document arrives
+- [ ] every figure opens its source
+
+**99. Reminders to pay** — Rhea, after the due date
+An unpaid sales invoice → a reminder by mail (then SMS) on the company's schedule, stopped when the
+money arrives; each reminder a fact, never sent twice. A phone call by voice later, if wanted. *Now:
+not yet.*
+- [ ] paid the day before, no reminder goes
+- [ ] the same step never sends twice
+
+*Stands on:* M13.
+
 ## M. Rhea learning
 
 **69. Approve or refuse what Rhea learned** — the owner or the office · Dziś
@@ -544,3 +735,101 @@ A lesson, the clients → each gets it as its own. *Now: kernel only.*
 
 **76. Opening balances** — the accountant · *Now: not yet.*
 - [ ] the trial balance opens with them
+
+## O. Approvals and cost control
+
+**100. Approval paths** — the owner sets them; the people on the path approve · the desk, the phone
+A path in words ("costs above 10,000 zł to the CFO; IT costs to the IT manager") → each cost
+document waits on its people in turn, a substitute during an absence, a reminder when it waits too
+long; each approval a fact with who and when; a rejected document books nothing. *Now: not yet
+(substitutes exist for rights, 8).*
+- [ ] above the threshold, the second approver sees it only after the first
+- [ ] a substitute approves during the days, not after
+- [ ] a path's change applies from its date; documents on their way keep the old path
+
+*Stands on:* M11, M13.
+
+**101. Cost centres (MPK) and projects** — the accountant, or a person on the path · on the document's lines
+Each line's cost centre and project, set by a rule or by a person; a line split by a key (area,
+headcount, a share) → the books and the reports by MPK and project. *Now: not yet.*
+- [ ] a line split 60/40 books two rows whose nets add up to the line's
+- [ ] the report by MPK equals the books
+
+*Stands on:* M8.
+
+**102. Budgets** — the owner · Księgi
+A budget per MPK or project per month → spent, committed (approved, not yet booked), left, and a
+warning before the limit. *Now: not yet.*
+- [ ] the warning comes before the document that passes the limit is booked
+
+*Stands on:* M8, M11.
+
+## P. Beside the office's program (EXPORT.md)
+
+For a company whose books are kept in the office's program, Rhea books and exports; the JPK, the
+taxes and the close are the program's (51–54, 56, 58–63 are off for that company).
+
+**103. Where the books are kept** — the office · the company's page
+In Rhea, or in the office's program (Optima first), from a date. *Now: not yet.*
+- [ ] a company whose books are in the program is offered no JPK to send and no month to close
+
+**104. Read the client's chart and lists from its program** — the office · when the client is set up
+The program's export (chart, counterparties, categories, MPK; the JPK_KR) → the company's own
+accounts and lists in Rhea. *Now: not yet.*
+- [ ] every account of the program's chart is the company's own, none another's
+
+*Stands on:* M1.
+
+**105. The account for each of Rhea's bookings** — the accountant · once per company, or once for the office's clients that share a chart
+→ each of Rhea's bookings has its account in the client's chart; a booking without one waits as a
+question. *Now: not yet.*
+- [ ] nothing is exported to an account the client's chart does not have
+
+**106. Export the month to the program** — the accountant · Księgi → „Eksport do programu”
+A period → the file the program imports (Optima: into its VAT registers through the JPK file first);
+the batch kept as a fact. *Now: not yet (the JPK_V7M writer exists, kernel only).*
+- [ ] the same month exported twice adds nothing
+- [ ] Optima's register totals by rate equal Rhea's
+
+*Stands on:* M9, M7.
+
+**107. The program's answer, and changes after export** — the accountant (the import report), or the connector
+→ the program's document numbers kept; its refusals as questions; a document changed after export
+goes as a correction in the next batch. *Now: not yet.*
+- [ ] a correction never travels as a second original
+
+**108. Compare the program's books with Rhea's** — Rhea, each month
+The program's own JPK_V7 (and JPK_KR) → what is missing, changed, typed in twice, or in another
+period. *Now: not yet.*
+- [ ] a document typed in by hand in the program is found
+
+*Stands on:* 73.
+
+**109. Move the books to Rhea** — the office · the company's page
+From a date, Rhea's books are the official ones; the export stops; the opening balances are checked
+against the program's closing ones. *Now: not yet.*
+- [ ] the opening balances equal the program's closing balances
+
+## Q. Rhea's API (API.md)
+
+**110. A key for a program** — the owner or the office · Ludzie → „Programy”
+A name, a role, the companies, from when → a key shown once; withdrawn, it opens nothing. *Now: not
+yet.*
+- [ ] a key of company A reads nothing of B
+- [ ] a key cannot approve
+
+**111. Send a document, get back the result** — a program · the API
+A file with its idempotency key → what Rhea read, checked and booked, or the question waiting.
+*Now: not yet (the intake doors exist).*
+- [ ] the same document sent twice is one
+
+**112. Be told what happened** — a program · the API
+A subscription → each new fact of the kinds asked for, signed, retried until answered; or read from a
+cursor. *Now: not yet.*
+- [ ] a program that missed a day reads on from where it stopped
+
+**113. Read any view, call any action** — a program · the API
+→ every view and action the company's packs give it, with the same rights and refusals as a person;
+a pack's new view or action is there with no code change. *Now: not yet (the desk's own API does this
+for the face).*
+- [ ] a pack's new action appears in the company's API spec
