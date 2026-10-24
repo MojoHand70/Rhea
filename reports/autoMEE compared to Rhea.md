@@ -230,7 +230,10 @@ warrant, and every implementation can be replayed.
 ## What flowMEE does that FUNCTIONS.md does not name
 
 Added to FUNCTIONS.md the same day at KK's request, as functions 84–113, in waves that are still
-a proposal (FUNCTIONS.md, "The order of work").
+a proposal (FUNCTIONS.md, "The order of work"). KK the same evening: approval paths, MPK, budgets
+and the live P&L (items 1–3 and 13) are not functions to build by hand. Each is a SmartApp: every
+document type with its workflow is an App, and a company's own kind of record is an App with only
+its data tables. They come with the App machinery, which goes first.
 
 1. **Approval paths** for cost documents: who approves what by amount, category,
    department, supplier or project; several steps; substitutes; reminders and escalations;

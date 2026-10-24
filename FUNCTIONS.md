@@ -14,6 +14,8 @@ How to read one function:
   of it works; *kernel only* — Rhea can do it, but there is nothing on the desk for a person;
   *not yet*; *to verify* — I could not confirm it from the code.
 - **The boxes** are its tests: tick one when you have tried it and it does what it says.
+- **Built as an App** marks a document type, a flow or a company's own table: an App on M8, shipped
+  standard and reshaped by the client. Everything else is product.
 
 ## The order of work: catch up with flowMEE, then pass it
 
@@ -21,18 +23,27 @@ How to read one function:
 `reports/autoMEE compared to Rhea.md` (internal: it names a competitor). The two new working parts
 are designed in `EXPORT.md` (Rhea beside the office's program) and `API.md` (Rhea's API).
 
+**Apps are how Rhea grows** (KK, 2026-10-24). Every invoice type and every document type, with its
+workflow, is a SmartApp: its variables and formulas decide, for one, who approves an invoice. A
+company's own kind of record (MPK, projects, budgets) is a SmartApp too, with only its data tables
+defined: "Rhea, please add a new data object called MPK…". Rhea ships standard Apps, and the client
+changes their design for any logic and any data. So approval paths, MPK, budgets and the live result
+are not built by hand: they are Apps on the App machinery (M8), which comes first. What is not an
+App is product: the law's channels, the checks, the export, the API.
+
 **Machinery first.** A piece of machinery is finished before any function stands on it: its boxes
 ticked, `./scripts/check.sh` green, replay identical, an independent review read. Each wave starts
 with its machinery and ends with its functions; no function is built on a piece still being built.
 
 | Wave | Machinery first | Then the functions | Done when | Against flowMEE |
 |---|---|---|---|---|
-| 1. Documents in, checked, booked right | M7, M3, M5 | 20, 22–27, 29–31, 55, 77, 78, 80–82, 87, 88, 92–95 | a client's month of KSeF invoices and bank statements comes in by itself, is checked and booked by rules at several rates, and a person sees only the questions | catches up on their core: intake, checks, dekretacja, the bank |
-| 2. Beside the office's program, and onboarding | M1, M9, M12, M10 | 11, 14, 15, 21, 70, 73–76, 84–86, 103–113 | an office keeps Optima, runs a client in Rhea and imports the month; a new client is set up by interview, the share Rhea books by herself shown before it commits | catches up on how they sell, and passes them: Rhea keeps the books, compares them with the program's each month, and the office can move its books over |
-| 3. Cost control and money | M8, M11, M13 | 32, 33, 60, 79, 89–91, 96, 97, 99–102 | costs carry MPK and pass their paths; payouts, receipts and payroll lists book; reminders go once | catches up on the rest of their list |
-| 4. Rhea's books for everyone | M4, M6 | 34, 35, 42–48, 51–54, 56, 58, 61–63, 71, 72, 83, 98 | an office closes a sole trader's and a company's month in Rhea and sends the JPK with its UPO | passes them for good: they leave all of this to the program |
+| 1. The App machinery | M8, M7 | 100 (the first standard Apps), 101 (MPK and projects, as tables) | KK's MPK sentence becomes an approved App with its table, carried on a booking line; a cost invoice's App sends it for approval by a formula; lines at several rates book right | what none of them has: any logic and any data, per client, approved and replayable |
+| 2. Documents in, checked, booked right | M3, M5 | 20, 22–27, 29–31, 55, 77–82, 87, 88, 92–95 | a client's month of KSeF invoices and bank statements comes in by itself, is checked and booked by the invoice Apps, and a person sees only the questions | catches up on their core: intake, checks, dekretacja, the bank |
+| 3. Beside the office's program, and onboarding | M1, M9, M11, M10 | 11, 14, 15, 21, 70, 73–76, 84–86, 103–113 | an office keeps Optima, runs a client in Rhea and imports the month; a new client is set up by interview, the share Rhea books by herself shown before it commits | catches up on how they sell, and passes them: Rhea keeps the books, compares them with the program's each month, and the office can move its books over |
+| 4. Cost control and money | M12 | 32, 33, 60, 89–91, 96–99, 102 | the standard Apps for corrections, recurring invoices, receipts, payroll lists, budgets, reminders and the live result run for a client; a reminder goes once | catches up on the rest of their list |
+| 5. Rhea's books for everyone | M6 | 34, 35, 42–48, 51–54, 56, 58, 61–63, 71, 72, 83 | an office closes a sole trader's and a company's month in Rhea and sends the JPK with its UPO | passes them for good: they leave all of this to the program |
 
-*Waits for KK:* the chart design (M1 opens wave 2; export needs each company's own chart); the
+*Waits for KK:* the chart design (M1 opens wave 3; export needs each company's own chart); the
 questions at the end of EXPORT.md and API.md.
 
 ## Machinery — what the functions stand on
@@ -65,6 +76,29 @@ of machinery is built only for the functions it names.
 
 *Wave 1*
 
+**M8. SmartApps** (DIRECTION, "Rhea Apps and business packs" and "The App designer", 2026-10-23;
+APPS.md, steps 2–6) — the App as one definition: variables and formulas; a visualization (a table
+edited in its tab, a form, a board, a statement); its own data tables; a workflow (states,
+transitions, actions, who may do what in each state, a running process keeping its version and
+moved to a new one by default); triggers and autonomy (act, propose, earn it); connectors; the
+designer (anyone asks, Rhea drafts, a designer or the owner puts it into production). A company's
+own kind of record is an App with only its data tables defined (KK, 2026-10-24): fields, a code
+fixed once made and a name that can change, a hierarchy, links to other tables, records other Apps
+use and a booking line carries. Every invoice type and document type, with its workflow, is an App
+(KK, 2026-10-24); who approves is a formula in it, not a machine of its own. An App is approved like
+any definition; running it is business, recorded as facts. Unlocks: 98–102, 58, and every document
+type as an App (25, 30, 32, 33, 87, 89, 97).
+- [ ] KK's sentence — "add MPK: it can make hierarchies, it has a code and a name; once created the
+  code cannot change, because bookings use it, but the MPK can be renamed; an MPK belongs to a
+  business function and a region; we already have regions, so join them" — becomes an approved
+  App with its table, edited in its tab
+- [ ] a booking line carries an MPK, and a report by MPK equals the books
+- [ ] a cost invoice's App sends it for approval by a formula over its amount, category, MPK and
+  supplier; a rejected invoice books nothing
+- [ ] a running process moves to its App's new version by default; a breaking change is answered
+  in the draft before the version can go to production
+- [ ] an App's table is its company's own (the isolation walk); replay reproduces identical state
+
 **M7. Documents with lines and several rates** — a document keeps its lines (item, unit,
 quantity, unit price, discount, rate, codes); the form takes lines (M2's lines input); rules run per
 line; VAT worked out by rate (S3) or taken as printed (C1); the registers, the JPK and the bookings
@@ -73,6 +107,8 @@ Unlocks: 25, 30, 32, 77, 78, 81, 82, 87, 88, 97, 101, 106.
 - [ ] an invoice at 23% and 8% gives a register row and the right VAT for each rate
 - [ ] a purchase invoice split into two costs books two rows whose nets add up to the invoice's net
 - [ ] replay reproduces the same lines and bookings
+
+*Wave 2*
 
 **M3. Channels that run by themselves** — KSeF fetched every day, a statement read when it
 arrives, mail per client read into its client; each pass the company's own, each document once.
@@ -87,8 +123,7 @@ JPK part is off: the program sends it.
 - [ ] a company connects its KSeF on the desk; its token or certificate is never another's
 - [ ] the JPK is sent and its UPO kept with the month
 
-
-*Wave 2*
+*Wave 3*
 
 **M1. Split the Poland pack** into Polska — podstawa, Fakturowanie — Polska, Pełna księgowość and
 Środki trwałe — Polska (step 3, parts 3–5): each company's own chart, the six links from the base
@@ -107,7 +142,7 @@ program's answer is a fact. Unlocks: 103–109. *Waits for:* M1 (each company's 
 - [ ] replay after a month of exports exports nothing
 - [ ] a real Optima takes the file and its register totals by rate equal Rhea's
 
-**M12. The interview loop** (DIRECTION, "Implementation by interview", step 6) — the client's
+**M11. The interview loop** (DIRECTION, "Implementation by interview", step 6) — the client's
 evidence in, the pack's rules over it, what is left unexplained grouped and asked about largest
 first, every turn a fact, the agent's drafts approved as one set, the share explained shown
 throughout. Unlocks: 85, 86.
@@ -122,33 +157,15 @@ and the export's connector.
 - [ ] a key cannot approve a rule, a bundle, a pack, a lesson or a booking decision
 - [ ] the same write twice is one fact, also from several goroutines
 
-*Wave 3*
+*Wave 4*
 
-**M8. Codes on a booking line** — cost centre (MPK), project and the like (T-codes), each
-declared by the pack that needs it, set by a rule or by a person on a path, split by keys, carried
-into the books, the reports and the export; a new structure from a date. Unlocks: 98 by MPK, 101,
-102, 106 with MPK.
-- [ ] a line split by a key books rows whose amounts add up to the line's, to the grosz
-- [ ] a report by code equals the books
-
-**M11. Paths through people** — a document waits on people in turn, by its amount, category, MPK
-or supplier; substitutes; deadlines and reminders; the path is a definition, versioned and approved
-like a rule; every step is a fact. Unlocks: 79 (a person's "received"), 100, 102 (what is
-committed).
-- [ ] a rejected document books nothing
-- [ ] a path's new version applies from its date; documents on their way keep the old one
-
-**M13. Messages out** — mail (then SMS) to a person or a client, from a question, a path, a
+**M12. Messages out** — mail (then SMS) to a person or a client, from a question, a path, a
 close or a due date; each message is a fact and never sent twice; the answer comes back through a
 door. Unlocks: 60, 99, the reminders of 100.
 - [ ] each step sends once, also when two passes run at once
 - [ ] replay sends nothing
 
-*Wave 4*
-
-**M4. A checklist screen** — items computed from the books, each opening what it is about, the
-open ones holding a close back. Unlocks: 58, later the year's close (61, 62).
-- [ ] the month's checklist lists what blocks the close, and empties as it is done
+*Wave 5*
 
 **M6. Rhea's research step** — when a document meets no rule, Rhea may search the web (the acts,
 the Ministry's pages, interpretations, guides) with a question that carries no client data, and
@@ -157,6 +174,10 @@ herself (invariant 3) — the draft waits for a person. Unlocks: 83, and with it
 been taught yet.
 - [ ] her question carries no client data
 - [ ] the draft names its sources, primary law first, and what is still to verify
+
+**M4. The month's checklist** — no longer machinery of its own: an App on M8 (58), its items
+computed from the books, each opening what it is about, the open ones holding a close back.
+- [ ] the month's checklist lists what blocks the close, and empties as it is done
 
 ---
 
@@ -259,7 +280,7 @@ at every step, and before the client commits (DIRECTION, "Implementation by inte
 - [ ] each question says how many documents its answer would explain
 - [ ] done means nothing left unexplained, counting what was knowingly set aside
 
-*Stands on:* M12, M3, the readers of 73 and 74 for the history.
+*Stands on:* M11, M3, the readers of 73 and 74 for the history.
 
 **86. Learn from the client's past bookings** — Rhea, at the start
 The past year's entries from the client's program (JPK_KR, JPK_PKPIR) → the rules that would
@@ -268,7 +289,7 @@ of 48"); approved, they book the new documents. *Now: not yet.*
 - [ ] a proposed rule reproduces the past entries it claims, and the count is shown
 - [ ] nothing is learned without an approval
 
-*Stands on:* 73, 74, M12.
+*Stands on:* 73, 74, M11.
 
 ## C. Setting a company up
 
@@ -317,6 +338,7 @@ The document as it is — supplier, number, dates, its totals by rate as printed
 they are wanted) — then the booking: rows by what each part is for, each with its net, its VAT and
 how much of the VAT may be deducted → a purchase invoice in the VAT register and the books.
 *Now: not yet.*
+*Built as an App* (100).
 - [ ] it is in the VAT purchase register and the books
 - [ ] the same invoice twice is refused
 - [ ] one invoice split into two costs books two rows; their nets add up to the invoice's net
@@ -367,6 +389,7 @@ Line, invoice(s) → settled; a difference booked. *Now: kernel only.*
 **87. A receipt from a photo** — anyone in the company · the phone, mail
 A photo or a scan → seller, date, lines and rates read; up to 450 zł with the buyer's NIP, taken as
 a simplified invoice; booked by its rules. *Now: not yet (the PDF reader reads invoices).*
+*Built as an App* (100).
 - [ ] a receipt with the buyer's NIP under 450 zł lands in the VAT purchase register
 - [ ] the same receipt sent twice, also as another photo, is one (93)
 
@@ -381,6 +404,7 @@ reverse charge are not in the pack).*
 **89. A payroll list** — the accountant · upload
 The payroll program's list → its column totals checked against its rows; the entries booked
 (salaries, ZUS, PIT, PPK). Payroll itself is not computed. *Now: not yet.*
+*Built as an App* (100).
 - [ ] a list whose totals do not tie is stopped, the column named
 
 **90. Payouts from payment gateways and marketplaces** — Rhea
@@ -484,6 +508,7 @@ are shown. *Now: to verify (the warehouse pack keeps the PZ and its lines).*
 Buyer (by NIP), dates, lines — item, unit, quantity, unit price, discount, rate, codes — payment
 → the invoice with its number, its totals by rate worked out by Rhea, booked, sent to KSeF.
 *Now: not yet (the kernel books an invoice from its fact; there is no form).*
+*Built as an App* (100).
 - [ ] the invoice gets the next number
 - [ ] it is in the VAT sales register and the books
 - [ ] lines at 23% and 8% give a total for each rate, VAT worked out on each rate's sum
@@ -524,15 +549,18 @@ approved by KK; *exists* marks a rule that does a part of it today, at one rate 
 
 **32. Correct an invoice** — the owner or the accountant · not yet on the desk
 The invoice, what changes → a correction invoice, booked, sent to KSeF. *Now: to verify.*
+*Built as an App* (100).
 - [ ] the correction refers to its invoice and corrects the registers
 
 **33. Recurring invoices** — the owner · not yet on the desk
 A template, a cadence → each month's invoice drafted for approval. *Now: not yet (the type exists).*
+*Built as an App* (100).
 - [ ] next month's invoice is drafted by itself
 
 **97. Other kinds of invoice** — the owner or the accountant · not yet on the desk
 Advance (zaliczkowa), final (rozliczeniowa), RR for a farmer, pro forma (not an invoice: nothing is
 booked), each with its KSeF type. *Now: not yet.*
+*Built as an App* (100).
 - [ ] the final invoice deducts the advances invoiced before it
 - [ ] a pro forma books nothing
 
@@ -643,6 +671,7 @@ The owner's basis → what to pay, when. *Now: not yet.*
 
 **58. The month-close checklist** — the accountant · Dziś or Zamknięcie miesiąca
 → what is left before the month can close: documents waiting, bank lines unexplained, VAT checked. *Now: not yet.*
+*Built as an App* (100).
 - [ ] each item opens what it is about
 - [ ] the month cannot close while an item is open, unless the accountant says so
 
@@ -697,6 +726,8 @@ arrives. *Now: partly (the result is in her morning; no forecast).*
 - [ ] a forecast line is replaced by the real one when its document arrives
 - [ ] every figure opens its source
 
+*Built as an App;* stands on M8.
+
 **99. Reminders to pay** — Rhea, after the due date
 An unpaid sales invoice → a reminder by mail (then SMS) on the company's schedule, stopped when the
 money arrives; each reminder a fact, never sent twice. A phone call by voice later, if wanted. *Now:
@@ -704,7 +735,7 @@ not yet.*
 - [ ] paid the day before, no reminder goes
 - [ ] the same step never sends twice
 
-*Stands on:* M13.
+*Built as an App;* stands on M8, sending through M12.
 
 ## M. Rhea learning
 
@@ -736,33 +767,39 @@ A lesson, the clients → each gets it as its own. *Now: kernel only.*
 **76. Opening balances** — the accountant · *Now: not yet.*
 - [ ] the trial balance opens with them
 
-## O. Approvals and cost control
+## O. Apps: the standard flows and a company's own tables
 
-**100. Approval paths** — the owner sets them; the people on the path approve · the desk, the phone
-A path in words ("costs above 10,000 zł to the CFO; IT costs to the IT manager") → each cost
-document waits on its people in turn, a substitute during an absence, a reminder when it waits too
-long; each approval a fact with who and when; a rejected document books nothing. *Now: not yet
-(substitutes exist for rights, 8).*
-- [ ] above the threshold, the second approver sees it only after the first
-- [ ] a substitute approves during the days, not after
-- [ ] a path's change applies from its date; documents on their way keep the old path
+**100. Standard Apps for the common flows** — Rhea ships them; the client's designer reshapes them · Aplikacje
+Five to ten sample Apps, each a document type with its workflow; the client may change any logic
+and any data in them. Proposed first ten: the cost invoice (read, checked, sent for approval by a
+formula, booked), the sales invoice (issued, sent to KSeF), the correction, the recurring invoice,
+the receipt and the expense claim, the payroll list, the budget, the month's checklist, the live
+result, the office's monthly settlement with its client. *Now: not yet (APPS.md maps today's tabs
+into Apps, step 1).*
+- [ ] who approves a cost invoice is a formula the client changes, with no change to the code
+- [ ] a client's changed App moves its running invoices to the new version, or keeps them, as
+  the designer chose
 
-*Stands on:* M11, M13.
+*Built as an App;* stands on M8.
 
-**101. Cost centres (MPK) and projects** — the accountant, or a person on the path · on the document's lines
-Each line's cost centre and project, set by a rule or by a person; a line split by a key (area,
-headcount, a share) → the books and the reports by MPK and project. *Now: not yet.*
+**101. A company's own tables: MPK, projects, regions…** — the owner or the accountant asks Rhea in words · Aplikacje
+"Rhea, please add MPK…" → an App with only its data tables: fields, a code fixed once made and a
+name that can change, a hierarchy, links to the tables the company already has; edited in its tab;
+its records used by other Apps and carried on booking lines, a line split by keys. *Now: partly
+(Rhea drafts new record types for approval; a field is fixed at birth unless declared changeable;
+links between types exist; no hierarchy, no editable tab, no code on a booking line).*
+- [ ] KK's MPK sentence (M8) gives the table he described
 - [ ] a line split 60/40 books two rows whose nets add up to the line's
 - [ ] the report by MPK equals the books
 
-*Stands on:* M8.
+*Built as an App;* stands on M8.
 
-**102. Budgets** — the owner · Księgi
+**102. Budgets** — the owner · Aplikacje
 A budget per MPK or project per month → spent, committed (approved, not yet booked), left, and a
 warning before the limit. *Now: not yet.*
 - [ ] the warning comes before the document that passes the limit is booked
 
-*Stands on:* M8, M11.
+*Built as an App* (a table of budgets and the formulas over it); stands on M8.
 
 ## P. Beside the office's program (EXPORT.md)
 
