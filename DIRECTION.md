@@ -3962,9 +3962,40 @@ role rather than their id.
 
 *Built 2026-10-24:* the kernel in five commits (d0e3264 what a pack is, 39f976a installs as facts,
 a7dc65f rules chosen by install, 7311a07 what a company is served, e6a3d85 the catalog), the face's
-Pakiety tab and Dziś card in rheaface a4b055c; the live walk installs a pack from Pakiety. Not yet:
-after an install dated back, Rhea proposing to book the facts already recorded since that day (the
-backfill exists and respects installs; nothing proposes it yet).
+Pakiety tab and Dziś card in rheaface a4b055c; the live walk installs a pack from Pakiety. After an
+install dated back, what waited for a rule is booked by the install itself, and Pakiety proposes
+booking what other rules had booked and the new pack books further — the backfill the company
+approves for itself (87fc2f2, rheaface 9b53b44).
+
+**Step 3 designed: splitting the Poland pack (2026-10-24).** Four packs come out of today's:
+Polska — podstawa (market), Fakturowanie — Polska (market, needs Podstawa), Pełna księgowość
+(regime, needs Podstawa) and Środki trwałe — Polska (module, needs Podstawa) — the classification
+of the readiness review, §3, with Rachunki i karty already in the core. In this order, each part
+with its failing test first:
+
+1. *A definition belongs to the packs whose files declare it.* Loading a pack records every
+   definition its file declares — rules, doors, types, views, the identical ones included — with
+   the pack's version, effective when that version is approved; which pack a definition belongs to
+   is read from there, no longer from who wrote its row (a rule carried into a new pack unchanged
+   still names its old pack as its writer). A pack names the packs it succeeds, so it may carry
+   their rules forward and change them. Nothing is renamed: every rule id, view id, door name and
+   master-data key stays as it is — a renamed rule would leave the old and the new both active,
+   a double booking.
+2. *Words from every pack the company has*, merged: the core's, then the market's, the regime's,
+   the modules'.
+3. *Each company's own chart* (D3): the regime brings its country's standard chart as a proposal;
+   installing makes it the company's; Helios's present chart becomes Helios's. A-codes declared by
+   the packs that need them (tax treatment, statement line, the JPK_KR_PD tag); each account's
+   role, and Rhea's rules booking to roles, never to numbers.
+4. *The six links from the base back into full books cut*: VAT is settled when a month closes,
+   whatever the books; the tax calendar reads declarations each regime fills; a matching
+   difference carries its kind and the regime books it (the kernel no longer asks for an account);
+   the supplier's cost account moves to the regime; the words and the warrant split.
+5. *The cut*: four pack files, installed per company; every company that runs today's Poland pack
+   gets the four installed from the beginning, so its books stay as they are — a replay proves it;
+   tests change only where they name a bundle or a count.
+
+Then step 4, KPiR.
 
 Each pack declares its Apps as it is built or split (`APPS.md` is the register they start from).
 The target catalog these packs grow into — a vision, measured against the AI-native newcomers and
