@@ -5247,3 +5247,10 @@ invoice — as the invoice record, the VAT registers, the bookings, the KSeF inv
 JPK all do today — or several rates from the start, KK: *"Several rates on one invoice is very
 common. It must be b)."* So invoices are issued and entered with lines at their own rates, and
 every place that reads an invoice's VAT reads it rate by rate.
+
+## 2026-10-24 — A cost invoice's rules C1–C6 approved for now (KK)
+
+KK, of the six rules FUNCTIONS.md lists for entering a cost invoice (function 25: the document's VAT
+as printed, the month of the deduction, what each part is for, how much VAT may be deducted, fixed
+asset or other purchase, the booking in full books): *"OK, we can approve C1 to C6 for now."* KK is
+not an accountant; the rules stay at the packs' initial stage until the profession reviews them.
