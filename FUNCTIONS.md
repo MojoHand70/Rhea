@@ -62,6 +62,14 @@ Unlocks: 22, 23, 24, 26, 27.
 open ones holding a close back. Unlocks: 58, later the year's close (61, 62).
 - [ ] the month's checklist lists what blocks the close, and empties as it is done
 
+**M6. Rhea's research step** — when a document meets no rule, Rhea may search the web (the acts,
+the Ministry's pages, interpretations, guides) with a question that carries no client data, and
+returns what she found with its sources, and a draft rule whose warrant they are; she writes nothing
+herself (invariant 3) — the draft waits for a person. Unlocks: 83, and with it every rule she has not
+been taught yet.
+- [ ] her question carries no client data
+- [ ] the draft names its sources, primary law first, and what is still to verify
+
 **M5. Sending to the state from the desk** — the company's KSeF connection set up on the desk,
 the JPK sent with its UPO kept, a note to the client. Unlocks: 20, 31, 52, 60.
 - [ ] a company connects its KSeF on the desk; its token or certificate is never another's
@@ -245,6 +253,61 @@ A line nobody explains → its kind (a fee, a tax, the owner's), booked. *Now: w
 **29. Pair a payment with an invoice by hand** — the accountant · not yet on the desk
 Line, invoice(s) → settled; a difference booked. *Now: kernel only.*
 - [ ] the invoice shows as paid
+
+## D2. Checking a document (every document, in and out)
+
+An accountant checks every document before it reaches the books: formally, arithmetically and on
+its substance, then the tax questions, then decides how it is booked (dekretacja). Rhea does the same
+with rules — each check a rule that runs on every document and records what it found, with its
+warrant; what she cannot check herself she asks a person, and the answer is a fact.
+
+**77. Formal check** — Rhea, on every document
+Does it carry what its kind must — for any accounting document the type, number, parties, what
+happened, its value, the dates (UoR art. 21); for an invoice also NIPs, the number in its series,
+dates of issue and supply, lines, rates (VAT act art. 106e) → passed, or what is missing named. *Now:
+not yet.*
+- [ ] an invoice without the buyer's NIP is stopped, the missing item named
+
+**78. Arithmetic check** — Rhea, on every document
+Quantity × price, the lines' values, each rate's net and VAT, the gross agree to the grosz (UoR art.
+22) → passed, or where it is off. *Now: not yet.*
+- [ ] a line whose value is not quantity × price is shown, with the difference
+
+**79. Substantive check** — Rhea, then a person
+Did it happen, does it concern the business, was it received? Rhea checks what the books know — an
+order, a goods receipt, a contract, a supplier the company works with, a cost that fits its
+business — and asks the person responsible for the rest; the answer is recorded. *Now: not yet.*
+- [ ] an invoice from a supplier the company never bought from is asked about
+- [ ] the person's "yes, received" is kept with the invoice
+
+**80. Counterparty check** — Rhea, on every document
+The supplier is an active VAT taxpayer; above 15,000 zł its bank account is on the white list
+(CIT art. 15d, PIT art. 22p, Ordynacja art. 117ba); split payment where it is required; the invoice
+came through KSeF. *Now: partly (the white list is read when a company is added).*
+- [ ] a payment above 15,000 zł to an account off the white list is stopped before it is made
+
+**81. VAT deduction check** — Rhea, on every cost invoice
+Does the invoice give the right to deduct (VAT act art. 86), or is it one of those that do not (art.
+88)? → deductible in full, in part, or not. *Now: not yet.*
+- [ ] an invoice for an exempt sale is not deducted
+
+**82. Dekretacja** — Rhea proposes, the accountant decides
+The month and the way of booking — accounts or KPiR column, the VAT register — proposed by the
+booking rules (C1–C6, S8–S10); the accountant's approval is the signature the act asks for (UoR art.
+21 ust. 1a): who, when, kept as a fact. After the same decision approved enough times, a lesson
+books it by itself. *Now: not yet.*
+- [ ] every booked invoice shows who decided how it was booked, and when
+
+**83. Rhea looks up what she was not taught** — Rhea
+When no rule checks or books a document, she searches as an accountant would — the acts first, the
+Ministry's explanations, interpretations, professional guides — never with the client's data in her
+question; she writes down what she found with its sources, drafts the rule with that warrant, and
+proposes it: to the office for its client, to Rhea's staff for every company. Approved, it is a rule,
+kept for good — and learned once for everyone it applies to. *Now: not yet (today she says she was
+never taught it, and the question reaches Rhea's staff).*
+- [ ] a document no rule books gets a proposed rule, its sources named
+- [ ] her search never carries the client's name, NIP or amounts
+- [ ] approved once, the next such document is booked without asking
 
 ## E. Documents going out
 
