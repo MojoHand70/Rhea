@@ -5254,3 +5254,23 @@ KK, of the six rules FUNCTIONS.md lists for entering a cost invoice (function 25
 as printed, the month of the deduction, what each part is for, how much VAT may be deducted, fixed
 asset or other purchase, the booking in full books): *"OK, we can approve C1 to C6 for now."* KK is
 not an accountant; the rules stay at the packs' initial stage until the profession reviews them.
+
+## 2026-10-25 — A client's finer accounts: a default, then lessons (KK)
+
+Asked what happens when a client's chart has several accounts where Rhea's standard has one — the
+example was 401-001 IT services and 401-002 legal services under one "external services" — (a) one
+account is the default and the accountant's lessons pick the others, or (b) Rhea asks each time
+until taught, KK: *"Yes a) is a good choice. In this case there should be a rule 'Check if from
+invoice line description or supplier name or invoice description you can reason the type of
+service, if yes, assign cost to proper account.' There might be a cascading rule then: 'if this
+supplier then IT cost'."* How the reasoning step stands with invariant 3 (model output never runs
+with authority) is put to KK the same day; not settled here.
+
+## 2026-10-25 — Helios gets a full, new Polish pack (KK)
+
+Asked whether Helios keeps its present chart as its own or is rebuilt, KK: *"Helios is our role
+model demo company, it should have a full mint Polish Pack."* With it, KK asked for research toward
+a model Polish chart of accounts that satisfies Polish GAAP (the Accounting Act and the national
+standards, KSR), with enough analytical accounts for the complete statements and every submission
+the law requires ("F1 or similar (check)"). Started the same day in three strands under
+`research_notes/Model Polish chart of accounts/`.
