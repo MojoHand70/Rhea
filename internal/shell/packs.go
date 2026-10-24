@@ -24,7 +24,7 @@ type catalogEntry struct {
 	// EveryCompany: the pack runs for every company of the installation —
 	// nothing to install, nothing to switch off.
 	EveryCompany bool `json:"every_company"`
-	// Brings counts what the pack holds, its versions together.
+	// Brings counts what the pack's approved version declares.
 	Brings struct {
 		Types int `json:"types"`
 		Views int `json:"views"`
@@ -55,7 +55,7 @@ func (s *Server) handlePacks(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 500, err)
 		return
 	}
-	members, err := s.Store.PackMembers(ctx)
+	members, err := s.Store.PackDeclarations(ctx) // what each version declares, carried definitions included
 	if err != nil {
 		writeErr(w, 500, err)
 		return

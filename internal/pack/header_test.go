@@ -40,7 +40,10 @@ func packFile(t *testing.T, header map[string]any, typ string) string {
 	t.Helper()
 	m := map[string]any{"version": 1, "description": "a test pack", "stage": "initial",
 		"disclaimer": "A test pack.", "history": []map[string]any{{"versions": "1", "changes": "first"}},
-		"object_types": []map[string]any{{"name": typ, "version": 1, "fields": []map[string]any{{"name": "n", "type": "string"}}}}}
+		"object_types": []map[string]any{}}
+	if typ != "" {
+		m["object_types"] = []map[string]any{{"name": typ, "version": 1, "fields": []map[string]any{{"name": "n", "type": "string"}}}}
+	}
 	for k, v := range header {
 		m[k] = v
 	}

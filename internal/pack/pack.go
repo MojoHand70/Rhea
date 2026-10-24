@@ -37,10 +37,14 @@ type Manifest struct {
 	// market it serves; the packs that must be approved before it; for the
 	// whole installation or per company. Kept with the bundle approving
 	// the version; a pack file without a kind (an old test's) keeps none.
-	Kind        string            `json:"kind,omitempty"`
-	Market      string            `json:"market,omitempty"`
-	Needs       []string          `json:"needs,omitempty"`
-	Install     string            `json:"install,omitempty"`
+	Kind    string   `json:"kind,omitempty"`
+	Market  string   `json:"market,omitempty"`
+	Needs   []string `json:"needs,omitempty"`
+	Install string   `json:"install,omitempty"`
+	// Succeeds names the packs this one takes over from (DIRECTION
+	// 2026-10-24, step 3): their rules and doors it carries are its own to
+	// change, and what it carries it holds in their place.
+	Succeeds    []string          `json:"succeeds,omitempty"`
 	Requires    []string          `json:"requires,omitempty"`
 	ObjectTypes []core.ObjectType `json:"object_types,omitempty"`
 	ViewDefs    []core.ViewDef    `json:"view_defs,omitempty"`
@@ -246,9 +250,9 @@ func load(ctx context.Context, s *store.Store, b []byte, actor string, alongside
 	}
 
 	var header *core.PackHeader
-	if m.Kind != "" || m.Install != "" || len(m.Needs) > 0 {
+	if m.Kind != "" || m.Install != "" || len(m.Needs) > 0 || len(m.Succeeds) > 0 {
 		header = &core.PackHeader{Pack: m.Pack, Version: m.Version, Kind: m.Kind, Market: m.Market, Needs: m.Needs, Install: m.Install,
-			Description: m.Description}
+			Description: m.Description, Succeeds: m.Succeeds}
 		if err := header.Validate(); err != nil {
 			return sum, err
 		}
@@ -266,6 +270,29 @@ func load(ctx context.Context, s *store.Store, b []byte, actor string, alongside
 		}
 	}
 
+	// the pack's own rules and doors, and those of the packs it succeeds
+	owns := func(createdBy string) bool {
+		if packOwns(createdBy, m.Pack) {
+			return true
+		}
+		for _, p := range m.Succeeds {
+			if packOwns(createdBy, p) {
+				return true
+			}
+		}
+		return false
+	}
+	// what this version declares, the definitions already on the record
+	// included (DIRECTION 2026-10-24, step 3): a definition belongs to the
+	// packs whose files declare it; a rule or door evolved locally since is
+	// not the pack's, and is not declared
+	var declared []core.Member
+	for _, t := range m.ObjectTypes {
+		declared = append(declared, core.Member{Kind: core.KindObjectType, Name: t.Name, Version: t.Version})
+	}
+	for _, v := range m.ViewDefs {
+		declared = append(declared, core.Member{Kind: core.KindViewDef, Name: v.ID, Version: v.Version})
+	}
 	var members []core.Member
 	packTypes := map[string]core.ObjectType{}
 	for _, t := range m.ObjectTypes {
@@ -321,13 +348,14 @@ func load(ctx context.Context, s *store.Store, b []byte, actor string, alongside
 			switch {
 			case sameRule(have, r):
 				// already present, this version or an earlier one with the same content
+				declared = append(declared, core.Member{Kind: core.KindRule, Name: have.ID, Version: have.Version})
 				if adopted, err := adopt(ctx, s, have.Status, core.Member{Kind: core.KindRule, Name: have.ID, Version: have.Version}, &members, &sum); err != nil {
 					return sum, err
 				} else if !adopted {
 					sum.Skipped++
 				}
 				continue
-			case !packOwns(have.CreatedBy, m.Pack):
+			case !owns(have.CreatedBy):
 				// evolved locally since: not the pack's to touch
 				sum.Conflicts = append(sum.Conflicts, fmt.Sprintf("rule %s v%d (by %s)", have.ID, have.Version, have.CreatedBy))
 				continue
@@ -383,6 +411,7 @@ func load(ctx context.Context, s *store.Store, b []byte, actor string, alongside
 			return sum, fmt.Errorf("rule %s: %w", r.RuleID, err)
 		}
 		members = append(members, core.Member{Kind: core.KindRule, Name: rule.ID, Version: rule.Version})
+		declared = append(declared, core.Member{Kind: core.KindRule, Name: rule.ID, Version: rule.Version})
 		if upgrade {
 			sum.Upgraded++
 		} else {
@@ -395,13 +424,14 @@ func load(ctx context.Context, s *store.Store, b []byte, actor string, alongside
 		if have, err := s.GetActivity(ctx, a.Name); err == nil {
 			switch {
 			case sameActivity(have, a):
+				declared = append(declared, core.Member{Kind: core.KindActivity, Name: have.Name, Version: have.Version})
 				if adopted, err := adopt(ctx, s, have.Status, core.Member{Kind: core.KindActivity, Name: have.Name, Version: have.Version}, &members, &sum); err != nil {
 					return sum, err
 				} else if !adopted {
 					sum.Skipped++
 				}
 				continue
-			case !packOwns(have.CreatedBy, m.Pack):
+			case !owns(have.CreatedBy):
 				sum.Conflicts = append(sum.Conflicts, fmt.Sprintf("activity %s v%d (by %s)", have.Name, have.Version, have.CreatedBy))
 				continue
 			}
@@ -418,6 +448,7 @@ func load(ctx context.Context, s *store.Store, b []byte, actor string, alongside
 			return sum, fmt.Errorf("activity %s: %w", a.Name, err)
 		}
 		members = append(members, core.Member{Kind: core.KindActivity, Name: act.Name, Version: act.Version})
+		declared = append(declared, core.Member{Kind: core.KindActivity, Name: act.Name, Version: act.Version})
 		if upgrade {
 			sum.Upgraded++
 		} else {
@@ -425,7 +456,9 @@ func load(ctx context.Context, s *store.Store, b []byte, actor string, alongside
 		}
 	}
 
-	if len(members) > 0 {
+	// A version that declares only what is on the record already still has
+	// a version to approve: its approval makes its declarations its own.
+	if len(members) > 0 || header != nil && !loaded {
 		warrant := m.Warrant
 		if warrant != nil {
 			if err := warrant.ValidateProposed(); err != nil {
@@ -445,6 +478,10 @@ func load(ctx context.Context, s *store.Store, b []byte, actor string, alongside
 			return sum, err
 		}
 		sum.Bundle = b.ID
+	}
+
+	if err := store.DeclarePack(ctx, s.Pool, m.Pack, m.Version, declared); err != nil {
+		return sum, err
 	}
 
 	// A pack's facts are the installation's — the chart of accounts, the

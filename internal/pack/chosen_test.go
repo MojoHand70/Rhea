@@ -88,13 +88,24 @@ func TestRulesAreChosenByWhatTheCompanyInstalled(t *testing.T) {
 func approveFile(t *testing.T, s *store.Store, x *exec.Executor, header map[string]any, typ string) {
 	t.Helper()
 	ctx := context.Background()
-	sum, err := pack.Load(ctx, s, packFile(t, header, typ), "test")
+	sum, err := loadFile(t, s, header, typ)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, _, errs, err := x.ApproveBundle(ctx, sum.Bundle, "krzysztof", "2026-01-01"); err != nil || len(errs) != 0 {
 		t.Fatalf("approve %s: %v %v", sum.Bundle, err, errs)
 	}
+}
+
+// loadFile writes a small pack and loads it: with typ, one type of its own
+// unless the header names its types.
+func loadFile(t *testing.T, s *store.Store, header map[string]any, typ ...string) (pack.Summary, error) {
+	t.Helper()
+	name := ""
+	if len(typ) > 0 {
+		name = typ[0]
+	}
+	return pack.Load(context.Background(), s, packFile(t, header, name), "test")
 }
 
 func assertReplayIdentical(t *testing.T, x *exec.Executor) {

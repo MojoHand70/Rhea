@@ -17,11 +17,10 @@ import (
 // company's own — is offered as before; acting for no company (the
 // operator's own tools) is offered everything.
 type Offer struct {
-	all        bool
-	perCompany map[string]bool // the packs installed per company
-	seen       map[string]bool // ... of which the company has an install, open or ended
-	running    map[string]bool // ... of which the company has one standing on the day
-	held       map[[2]string][]string
+	all     bool
+	h       holding
+	seen    map[string]bool // packs the company has an install of, open or ended
+	running map[string]bool // ... of which one stands on the day
 }
 
 // Offered is the offer for a company on a day. The day decides only which
@@ -30,38 +29,14 @@ func Offered(ctx context.Context, st *store.Store, company, day string) (Offer, 
 	if company == "" {
 		return Offer{all: true}, nil
 	}
-	packs, err := st.ApprovedPacks(ctx)
+	h, err := readHolding(ctx, st)
 	if err != nil {
 		return Offer{}, err
 	}
-	o := Offer{perCompany: map[string]bool{}, seen: map[string]bool{}, running: map[string]bool{}, held: map[[2]string][]string{}}
-	for p, h := range packs {
-		if h != nil && h.Install == core.InstallCompany {
-			o.perCompany[p] = true
-		}
+	if !h.perCo {
+		return Offer{all: true}, nil // nothing is installed per company: nothing to hold back
 	}
-	if len(o.perCompany) == 0 {
-		o.all = true // nothing is installed per company: nothing to hold back
-		return o, nil
-	}
-	members, err := st.PackMembers(ctx)
-	if err != nil {
-		return Offer{}, err
-	}
-	other := map[[2]string]bool{} // held by a pack every company has
-	for p, ms := range members {
-		for _, m := range ms {
-			k := [2]string{m.Kind, m.Name}
-			if o.perCompany[p] {
-				o.held[k] = append(o.held[k], p)
-			} else {
-				other[k] = true
-			}
-		}
-	}
-	for k := range other {
-		delete(o.held, k)
-	}
+	o := Offer{h: h, seen: map[string]bool{}, running: map[string]bool{}}
 	objs, err := st.ObjectsByType(store.WithCompany(ctx, company), "installed_pack")
 	if err != nil {
 		return Offer{}, err
@@ -83,47 +58,38 @@ func (x *Executor) Offered(ctx context.Context, company string) (Offer, error) {
 	return Offered(ctx, x.Store, company, x.today())
 }
 
-func (o Offer) def(kind, name string) bool {
-	if o.all {
-		return true
-	}
-	packs, ok := o.held[[2]string{kind, name}]
-	if !ok {
-		return true
-	}
-	for _, p := range packs {
-		if o.seen[p] {
-			return true
-		}
-	}
-	return false
-}
+func (o Offer) seenAt(p string) bool    { return o.seen[p] }
+func (o Offer) runningAt(p string) bool { return o.running[p] }
 
 // View says whether a screen is offered.
-func (o Offer) View(id string) bool { return o.def(core.KindViewDef, id) }
+func (o Offer) View(id string) bool { return o.all || o.h.allows(core.KindViewDef, id, o.seenAt) }
 
 // Type says whether a type is offered.
-func (o Offer) Type(name string) bool { return o.def(core.KindObjectType, name) }
-
-// Rule says whether a rule is shown — the company has an install of its pack.
-func (o Offer) Rule(r core.Rule) bool {
-	p, ok := PackOf(r.CreatedBy)
-	return o.all || !ok || r.Company != "" || !o.perCompany[p] || o.seen[p]
+func (o Offer) Type(name string) bool {
+	return o.all || o.h.allows(core.KindObjectType, name, o.seenAt)
 }
 
-// Runs says whether a rule runs for the company on the day — its pack stands.
+// Rule says whether a rule is shown — the company has an install of a pack holding it.
+func (o Offer) Rule(r core.Rule) bool {
+	return o.all || r.Company != "" || o.h.allows(core.KindRule, r.ID, o.seenAt)
+}
+
+// Runs says whether a rule runs for the company on the day — a pack holding it stands.
 func (o Offer) Runs(r core.Rule) bool {
-	p, ok := PackOf(r.CreatedBy)
-	return o.all || !ok || r.Company != "" || !o.perCompany[p] || o.running[p]
+	return o.all || r.Company != "" || o.h.allows(core.KindRule, r.ID, o.runningAt)
 }
 
 // Door says whether a door is open to the company on the day.
 func (o Offer) Door(a core.Activity) bool {
-	p, ok := PackOf(a.CreatedBy)
-	return o.all || !ok || !o.perCompany[p] || o.running[p]
+	return o.all || o.h.allows(core.KindActivity, a.Name, o.runningAt)
 }
 
-// PackOf names the pack a definition came from ("pack:<name>").
+// DoorPacks names the packs holding a door, for a refusal to say.
+func (o Offer) DoorPacks(a core.Activity) []string {
+	return o.h.of[[2]string{core.KindActivity, a.Name}]
+}
+
+// PackOf names the pack a definition's row was written by ("pack:<name>").
 func PackOf(createdBy string) (string, bool) {
 	return strings.CutPrefix(createdBy, "pack:")
 }

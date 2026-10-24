@@ -106,7 +106,7 @@ func TestAppendOnlyInvariant(t *testing.T) {
 	}
 	// Every append-only table, both triggers, enabled always (a superuser's
 	// session_replication_role cannot switch them off), and TRUNCATE refused.
-	for _, table := range []string{"event", "rule", "object_type", "view_def", "activity", "bundle", "blob"} {
+	for _, table := range []string{"event", "rule", "object_type", "view_def", "activity", "bundle", "blob", "pack_member"} {
 		for _, trig := range []string{table + "_append_only", table + "_no_truncate"} {
 			var enabled string
 			if err := s.Pool.QueryRow(ctx, `SELECT tgenabled FROM pg_trigger WHERE tgname = $1`, trig).Scan(&enabled); err != nil || enabled != "A" {

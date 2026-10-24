@@ -36,6 +36,7 @@ var backupTables = []struct{ name, order string }{
 	{"rule", "rule_id, version"},
 	{"activity", "name, version"},
 	{"bundle", "bundle_id, version"},
+	{"pack_member", "pack, pack_version, kind, name"},
 	{"blob", "hash"},
 	{"event", "event_id"},
 }

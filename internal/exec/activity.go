@@ -231,8 +231,7 @@ func (x *Executor) TriggerActivity(ctx context.Context, name string, inputs map[
 			return Triggered{}, err
 		}
 		if !offer.Door(act) {
-			p, _ := PackOf(act.CreatedBy)
-			return Triggered{}, &rights.ErrRefused{Door: act.Name, Company: company, Reason: fmt.Sprintf("the pack %s is not installed here — %s is not offered", p, act.Name)}
+			return Triggered{}, &rights.ErrRefused{Door: act.Name, Company: company, Reason: fmt.Sprintf("the pack %s is not installed here — %s is not offered", strings.Join(offer.DoorPacks(act), " or "), act.Name)}
 		}
 	}
 	// The face says who, the kernel says whether (DIRECTION 2026-10-19,

@@ -52,6 +52,10 @@ type PackHeader struct {
 	Install string   `json:"install"`
 	// Description is the pack's own, in its market's language.
 	Description string `json:"description,omitempty"`
+	// Succeeds names the packs this one takes over from: their rules and
+	// doors it carries are its own to change, and it holds what it carries
+	// in their place (DIRECTION 2026-10-24, step 3).
+	Succeeds []string `json:"succeeds,omitempty"`
 }
 
 // The kinds a pack may be, and how it may be installed.
@@ -165,7 +169,9 @@ func (b Bundle) Validate() error {
 	if b.ID == "" {
 		return fmt.Errorf("bundle needs an id")
 	}
-	if len(b.Members) == 0 {
+	if len(b.Members) == 0 && b.Pack == nil {
+		// a pack's version may declare only what is on the record already:
+		// its approval is the version's, with nothing new to activate
 		return fmt.Errorf("bundle %s has no members", b.ID)
 	}
 	seen := map[[2]string]bool{}

@@ -156,6 +156,18 @@ ALTER TABLE bundle ADD COLUMN IF NOT EXISTS company TEXT;
 -- What the pack a bundle approves a version of says it is (core.PackHeader):
 -- the installation's catalog (DIRECTION 2026-10-24, step 2).
 ALTER TABLE bundle ADD COLUMN IF NOT EXISTS pack JSONB;
+-- What each version of a pack declares (DIRECTION 2026-10-24, step 3): every
+-- definition its file names — the ones already on the record included — so a
+-- definition belongs to the packs whose files declare it, not to whoever
+-- wrote its row. Effective with the version's approval; append-only.
+CREATE TABLE IF NOT EXISTS pack_member (
+    pack         TEXT NOT NULL,
+    pack_version INT  NOT NULL,
+    kind         TEXT NOT NULL,
+    name         TEXT NOT NULL,
+    version      INT  NOT NULL,
+    PRIMARY KEY (pack, pack_version, kind, name)
+);
 
 -- The blob store (DIRECTION 2026-10-10, "the file is the fact"): every file
 -- a door or a channel receives, kept whole under its content hash. A
@@ -205,7 +217,7 @@ $$ LANGUAGE plpgsql;
 DO $$
 DECLARE t TEXT;
 BEGIN
-    FOREACH t IN ARRAY ARRAY['event','rule','object_type','view_def','activity','bundle','blob'] LOOP
+    FOREACH t IN ARRAY ARRAY['event','rule','object_type','view_def','activity','bundle','blob','pack_member'] LOOP
         IF NOT EXISTS (
             SELECT 1 FROM pg_trigger WHERE tgname = t || '_append_only'
         ) THEN
@@ -396,7 +408,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS event_company_dedup_key ON event (COALESCE(com
 DO $$
 DECLARE t TEXT;
 BEGIN
-    FOREACH t IN ARRAY ARRAY['event','rule','object_type','view_def','activity','bundle','blob'] LOOP
+    FOREACH t IN ARRAY ARRAY['event','rule','object_type','view_def','activity','bundle','blob','pack_member'] LOOP
         EXECUTE format('ALTER TABLE %I ENABLE ALWAYS TRIGGER %I', t, t || '_append_only');
         EXECUTE format('ALTER TABLE %I ENABLE ALWAYS TRIGGER %I', t, t || '_no_truncate');
     END LOOP;

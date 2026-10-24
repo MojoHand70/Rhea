@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -338,4 +339,78 @@ func (s *Store) ApprovedPackVersions(ctx context.Context) ([]core.Bundle, error)
 		out = append(out, b)
 	}
 	return out, rows.Err()
+}
+
+// DeclarePack records what a version of a pack declares (DIRECTION
+// 2026-10-24, step 3), in one statement. A reload records nothing new.
+func DeclarePack(ctx context.Context, q Querier, pack string, version int, members []core.Member) error {
+	if len(members) == 0 {
+		return nil
+	}
+	kinds, names, versions := make([]string, len(members)), make([]string, len(members)), make([]int32, len(members))
+	for i, m := range members {
+		kinds[i], names[i], versions[i] = m.Kind, m.Name, int32(m.Version)
+	}
+	if _, err := q.Exec(ctx, `
+		INSERT INTO pack_member (pack, pack_version, kind, name, version)
+		SELECT $1, $2, k, n, v FROM unnest($3::text[], $4::text[], $5::int[]) AS d(k, n, v)
+		ON CONFLICT DO NOTHING`, pack, version, kinds, names, versions); err != nil {
+		return fmt.Errorf("pack %s v%d declares what it holds: %w", pack, version, err)
+	}
+	return nil
+}
+
+// PackDeclarations is what the newest approved version of every pack
+// declares, by the pack's name, in one read. A version approved before packs
+// recorded their declarations (white01's Poland pack v44) is read from what
+// its approved bundles hold, every version's together.
+func (s *Store) PackDeclarations(ctx context.Context) (map[string][]core.Member, error) {
+	versions, err := s.ApprovedPackVersions(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var packs []string
+	var nums []int32
+	for _, b := range versions {
+		name := strings.TrimPrefix(b.CreatedBy, "pack:")
+		v := 0
+		if b.Pack != nil {
+			v = b.Pack.Version
+		} else if i := strings.LastIndex(b.ID, "-v"); i >= 0 {
+			v, _ = strconv.Atoi(b.ID[i+2:])
+		}
+		packs, nums = append(packs, name), append(nums, int32(v))
+	}
+	out := map[string][]core.Member{}
+	rows, err := s.Pool.Query(ctx, `
+		SELECT pm.pack, pm.kind, pm.name, pm.version FROM pack_member pm
+		JOIN unnest($1::text[], $2::int[]) AS a(pack, pack_version) USING (pack, pack_version)`, packs, nums)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var p string
+		var m core.Member
+		if err := rows.Scan(&p, &m.Kind, &m.Name, &m.Version); err != nil {
+			return nil, err
+		}
+		out[p] = append(out[p], m)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	var held map[string][]core.Member
+	for _, p := range packs {
+		if len(out[p]) > 0 {
+			continue
+		}
+		if held == nil {
+			if held, err = s.PackMembers(ctx); err != nil {
+				return nil, err
+			}
+		}
+		out[p] = held[p]
+	}
+	return out, nil
 }

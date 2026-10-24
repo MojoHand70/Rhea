@@ -129,46 +129,45 @@ func (x *Executor) checkSwitchOff(ctx context.Context, ev core.Event) error {
 }
 
 // byInstall keeps of a company's rule set those that may run for its fact
-// dated date: a rule of a pack installed per company only where the company
-// had the pack installed on that day; every other rule — the core's, a pack's
-// for the whole installation, the company's own, Rhea's others — as it was.
-// The installation's own facts (master data, no company) meet every pack's.
+// dated date: a rule held only by packs installed per company runs only where
+// the company had one of them installed on that day; every other rule — the
+// core's, a pack's for the whole installation, the company's own, Rhea's
+// others — as it was. The installation's own facts (master data, no company)
+// meet every pack's.
 func (x *Executor) byInstall(ctx context.Context, rules []core.Rule, company, date string, installed func(pack, date string) (bool, error)) ([]core.Rule, error) {
 	if company == "" {
 		return rules, nil
 	}
-	var packs map[string]*core.PackHeader
+	// only packs write rules as "pack:…" — a rule carried unchanged into a
+	// successor keeps its writer — so a set with none has nothing to hold
+	// back, and nothing is read
+	if !slices.ContainsFunc(rules, func(r core.Rule) bool { return strings.HasPrefix(r.CreatedBy, "pack:") }) {
+		return rules, nil
+	}
+	h, err := readHolding(ctx, x.Store)
+	if err != nil {
+		return nil, err
+	}
+	if !h.perCo {
+		return rules, nil
+	}
 	in := map[string]bool{}
-	out := make([]core.Rule, 0, len(rules))
-	for _, r := range rules {
-		p, ok := strings.CutPrefix(r.CreatedBy, "pack:")
-		if !ok || r.Company != "" {
-			out = append(out, r)
-			continue
-		}
-		if packs == nil {
-			var err error
-			if packs, err = x.Store.ApprovedPacks(ctx); err != nil {
-				return nil, err
-			}
-		}
-		if h := packs[p]; h == nil || h.Install != core.InstallCompany {
-			out = append(out, r)
-			continue
-		}
+	var failed error
+	on := func(p string) bool {
 		yes, seen := in[p]
-		if !seen {
-			var err error
-			if yes, err = installed(p, date); err != nil {
-				return nil, err
-			}
+		if !seen && failed == nil {
+			yes, failed = installed(p, date)
 			in[p] = yes
 		}
-		if yes {
+		return yes
+	}
+	out := make([]core.Rule, 0, len(rules))
+	for _, r := range rules {
+		if r.Company != "" || h.allows(core.KindRule, r.ID, on) {
 			out = append(out, r)
 		}
 	}
-	return out, nil
+	return out, failed
 }
 
 // installedIn answers, from a chain's view of the company's records, whether
