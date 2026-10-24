@@ -3983,7 +3983,8 @@ with its failing test first:
    a double booking.
 2. *Words from every pack the company has*, merged: the core's, then the market's, the regime's,
    the modules'.
-3. *Each company's own chart* (D3): the regime brings its country's standard chart as a proposal;
+3. *Each company's own chart* (D3) — *its design under discussion since 2026-10-24, see the D3
+   brief; what follows is the first proposal, not decided*: the regime brings its country's standard chart as a proposal;
    installing makes it the company's; Helios's present chart becomes Helios's. A-codes declared by
    the packs that need them (tax treatment, statement line, the JPK_KR_PD tag); each account's
    role, and Rhea's rules booking to roles, never to numbers.
@@ -4060,7 +4061,13 @@ later, based on interview can be modified by a client."*
   §3: today the Poland pack's `account` v2 exists only to add `tax_treatment`. KK corrected the
   first reading: codes on the transaction — cost centre, project — are T-codes, a different thing
   and not this decision (they belong to Controlling, later).
-- *Rhea's rules book to what an account is for, not to its number.* A rule books "receivables from
+- *Under discussion since 2026-10-24, not decided:* how Rhea's rules reach a company's own accounts.
+  The bullet below is my proposal of 2026-10-23; KK's direction since is that there is no shared
+  chart — a company has its own books and shares only Rhea's common rules — and that a company
+  with its own chart teaches Rhea which of its accounts is which (her rule books to 401, the
+  client keeps 401-001). The design waits until it is checked against the architecture and the
+  law and agreed with KK (FUNCTIONS.md, M1).
+- *Rhea's rules book to what an account is for, not to its number* (proposed, not decided). A rule books "receivables from
   customers" or "cost of external services"; the company's chart says which of its accounts plays
   that role, the standard's mapping being the default — the role carried as one more account
   attribute, declared by the regime pack. Without it a client's changed chart breaks Rhea's rules.
