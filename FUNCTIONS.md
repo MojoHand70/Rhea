@@ -43,7 +43,7 @@ with its machinery and ends with its functions; no function is built on a piece 
 | 2. Documents in, checked, booked right | M3, M5 | 20, 22–27, 29–31, 55, 77–82, 87, 88, 92–95, 116 | a client's month of KSeF invoices and bank statements comes in by itself, is checked and booked by the invoice Apps, and a person sees only the questions | catches up on their core: intake, checks, dekretacja, the bank |
 | 3. Beside the office's program, and onboarding | M1, M9, M11, M10 | 11, 14, 15, 21, 70, 73–76, 84–86, 103–114 | an office keeps Optima, runs a client in Rhea and imports the month; a new client is set up by interview, the share Rhea books by herself shown before it commits | catches up on how they sell, and passes them: Rhea keeps the books, compares them with the program's each month, and the office can move its books over |
 | 4. Cost control and money | M12 | 32, 33, 60, 89–91, 96–98, 102, 115, 117 | the standard Apps for corrections, recurring invoices, receipts, payroll lists, budgets and the live result run for a client; the office asks its clients and a reminder reaches each once | catches up on the rest of their list |
-| 5. Rhea's books for everyone | M6 | 34, 35, 42–48, 51–54, 56, 58, 61–63, 71, 72, 83 | an office closes a sole trader's and a company's month in Rhea and sends the JPK with its UPO | passes them for good: they leave all of this to the program |
+| 5. Rhea's books for everyone | M6 | 34, 35, 42–48, 51–54, 56, 58, 61–63, 71, 72, 83, 120, 121 | an office closes a sole trader's and a company's month in Rhea and sends the JPK with its UPO | passes them for good: they leave all of this to the program |
 
 *Outside the waves:* business packs, designed on M8 once it stands — collections (99), payroll
 (119); with each country's invoicing pack — 118.
@@ -785,11 +785,24 @@ The owner's basis → what to pay, when. *Now: not yet.*
 - [ ] the result equals the year's profit and loss
 
 **62. Financial statements (bilans, rachunek zysków i strat)** — the chief accountant · not yet on the desk
-*Now: not yet (the result is shown; the statements are not drawn).*
+Drawn by the positions each account names in the model chart, and sent as the e-sprawozdanie XML
+(SFJINZ(2), SFJMAZ(2) or SFJMIZ(2) by the company's size). *Now: not yet (the result is shown; the
+statements are not drawn).*
 - [ ] they balance and match the trial balance
 
 **63. Distribute the result** — the owners · the search box, or the record's sheet · *Now: on the desk through its generic form (M2) — not yet tried with this action.*
 - [ ] the distribution is booked as decided
+
+**120. The JPK_KR_PD file** — the accountant · Księgi → JPK, once a year
+The year's books → JPK_KR_PD, every account carrying its tags from the chart (one of the Ministry's
+244 statement tags, a tax tag where the account serves the tax), the book-to-tax bridge, and
+JPK_ST_KR with the fixed assets' tax and book values side by side; due by the end of the seventh
+month after the tax year — for companies filing VAT monthly first for 2026 (31 July 2027), for
+everyone from 2027. *Now: not yet.*
+- [ ] the file passes the Ministry's schema
+- [ ] every account in it carries its tag from the chart; none is tagged by hand
+
+*Stands on:* the model chart (`reports/Model Polish chart of accounts 2026-10.md`), M1.
 
 ## L. Reports and questions
 
@@ -812,6 +825,13 @@ A question → the answer, from the books, every figure opening its source. *Now
 **68. Receivables and payables** — anyone · Dziś, Księgi
 → who owes, how long. *Now: works.*
 - [ ] the ages match the invoices' dates
+
+**121. GUS reports from the books** — Rhea, quarterly or half-yearly, and yearly
+F-01/I-01 (50 or more people quarterly, 10–49 half-yearly) and SP (yearly, 10 or more) → filled from
+the books: the P&L by nature, the splits F-01 asks for (energy, subcontracting, wages from employment
+contracts, training, travel, insurance, excise, exports, provisions, receivables written off), the
+capital spending. *Now: not yet.*
+- [ ] F-01's P&L lines equal the books' comparative P&L for the same months
 
 **98. The result live, with a forecast to the month's end** — the owner · Dziś, Księgi
 → the profit and loss as documents arrive, every line opening its documents; the costs still to come
