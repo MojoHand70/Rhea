@@ -44,7 +44,10 @@ Unlocks: 21, 42–48, 53, 54.
 **M2. A form for any action** — the desk draws the form from the action's own definition (its
 inputs, their types, what is required), offers it where the company has the action and the person
 may, and shows what the kernel answers; no face code per function. Unlocks: 7, 8, 9, 15, 16, 19,
-25, 29, 30, 32, 33, 35, 40, 41, 43, 45, 61, 63, 70.
+25, 29, 30, 32, 33, 35, 40, 41, 43, 45, 61, 63, 70. *Now: done (rheaface 83d4806) — in the search
+box and on a record's sheet; on the desk today for 7, 8, 9, 16, 19, 40, 41, 61, 63, whose actions
+exist; 25, 30, 32, 33, 35, 43, 45 wait for their own actions to be written in their packs; 29 and 70
+are the kernel's own actions, not opened by the desk.*
 - [ ] a pack's new action appears on the desk with its form, with no change to the face
 - [ ] the form is offered only where the company has the action and the person may open it
 - [ ] what the kernel refuses is said in Polish, field by field
@@ -98,18 +101,18 @@ An unused link → the link opens nothing, the person's access ends. *Now: works
 - [ ] the person is off the list
 - [ ] nobody can end their own access
 
-**7. Change a person's role** — the owner · Ludzie
-Person, new role → from today they may what the new role allows. *Now: kernel only.*
+**7. Change a person's role** — the owner · the search box, or the record's sheet
+Person, new role → from today they may what the new role allows. *Now: on the desk through its generic form (M2) — not yet tried with this action.*
 - [ ] the new role shows in „Kto ma dostęp”
 - [ ] what the old role allowed and the new does not is refused
 
-**8. Appoint a substitute** — the owner · Ludzie
-Who is away, who stands in, from–to → the substitute holds the absent person's rights for those days. *Now: kernel only (ending one works on the desk).*
+**8. Appoint a substitute** — the owner · the search box, or the record's sheet
+Who is away, who stands in, from–to → the substitute holds the absent person's rights for those days. *Now: on the desk through its generic form (M2) — not yet tried with this action.*
 - [ ] the substitute acts in the company during the days, not after
 - [ ] the substitution shows in „Kto ma dostęp”
 
-**9. Team groups** — the office's owner · Ludzie
-A group's name, its people, its clients → a supervisor sees the group's work. *Now: kernel only.*
+**9. Team groups** — the office's owner · the search box, or the record's sheet
+A group's name, its people, its clients → a supervisor sees the group's work. *Now: on the desk through its generic form (M2) — not yet tried with this action.*
 - [ ] a person sees the clients of their group
 
 ## B. Offices and clients
@@ -144,8 +147,8 @@ NIP → the client company (from GUS and the VAT list), the office's mandate ove
 Accountant, client → the accountant works in that client. *Now: kernel only (through groups).*
 - [ ] an accountant sees only the clients given to them
 
-**16. Record the company's form** — the owner or the office · not yet on the desk
-Books (full, KPiR, ryczałt), VAT status (active, exempt), income tax (CIT, skala, liniowy, ryczałt), urząd skarbowy → what the company's books and returns follow. *Now: kernel only (the form at onboarding records the legal form alone).*
+**16. Record the company's form** — the owner or the office · the search box, or the record's sheet
+Books (full, KPiR, ryczałt), VAT status (active, exempt), income tax (CIT, skala, liniowy, ryczałt), urząd skarbowy → what the company's books and returns follow. *Now: on the desk through its generic form (M2) — not yet tried with this action.*
 - [ ] the form is shown on the company's page
 - [ ] Rhea proposes the packs the form needs
 
@@ -161,8 +164,8 @@ A pack, from which day → its rules book the company's facts from that day. *No
 Last day → it books nothing after; what it booked stays readable. *Now: works.*
 - [ ] its actions are gone; its screens stay
 
-**19. The company's bank accounts** — the owner or the office · not yet on the desk
-Bank, IBAN, currency, purpose → statements are read into the right account. *Now: kernel only.*
+**19. The company's bank accounts** — the owner or the office · the search box, or the record's sheet
+Bank, IBAN, currency, purpose → statements are read into the right account. *Now: on the desk through its generic form (M2) — not yet tried with this action.*
 - [ ] each account is listed with its bank and currency
 
 **20. Connect KSeF** — the owner · not yet on the desk
@@ -260,13 +263,13 @@ Supplier, account → that supplier's invoices booked there from today. *Now: wo
 From which month, how many months → each month's part booked at its end. *Now: works.*
 - [ ] each month takes its part; the remainder is shown
 
-**40. Fixed assets** — the accountant · not yet on the desk
-Accept (OT), depreciation each month, dispose (LT). *Now: kernel only.*
+**40. Fixed assets** — the accountant · the search box, or the record's sheet
+Accept (OT), depreciation each month, dispose (LT). *Now: on the desk through its generic form (M2) — not yet tried with this action.*
 - [ ] depreciation is booked each month by itself
 - [ ] the register lists each asset with its value
 
-**41. Provisions, write-downs, loans, FX revaluation** — the accountant · not yet on the desk
-*Now: kernel only.*
+**41. Provisions, write-downs, loans, FX revaluation** — the accountant · the search box, or the record's sheet
+*Now: on the desk through its generic form (M2) — not yet tried with this action.*
 - [ ] each is offered where it applies and booked
 
 ## G. KPiR and ryczałt (sole traders)
@@ -354,15 +357,15 @@ The owner's basis → what to pay, when. *Now: not yet.*
 
 ## K. Year close
 
-**61. Close the year** — the chief accountant · not yet on the desk
-→ cost and revenue accounts closed into the result. *Now: kernel only.*
+**61. Close the year** — the chief accountant · the search box, or the record's sheet
+→ cost and revenue accounts closed into the result. *Now: on the desk through its generic form (M2) — not yet tried with this action.*
 - [ ] the result equals the year's profit and loss
 
 **62. Financial statements (bilans, rachunek zysków i strat)** — the chief accountant · not yet on the desk
 *Now: not yet (the result is shown; the statements are not drawn).*
 - [ ] they balance and match the trial balance
 
-**63. Distribute the result** — the owners · not yet on the desk · *Now: kernel only.*
+**63. Distribute the result** — the owners · the search box, or the record's sheet · *Now: on the desk through its generic form (M2) — not yet tried with this action.*
 - [ ] the distribution is booked as decided
 
 ## L. Reports and questions
