@@ -154,6 +154,48 @@ type WordsSpec struct {
 	Notes []string `json:"notes,omitempty"`
 }
 
+// Merge lays later words over these (DIRECTION 2026-10-24, step 3): a
+// company's words are its packs' together — the core's, then the market's,
+// the regime's, the modules', the business packs' — the later naming a
+// thing over the earlier; notes are kept from every pack, once each.
+func (w *WordsSpec) Merge(o WordsSpec) {
+	if o.Lang != "" {
+		w.Lang = o.Lang
+	}
+	if len(o.Types) > 0 && w.Types == nil {
+		w.Types = map[string]TypeWords{}
+	}
+	for k, v := range o.Types {
+		w.Types[k] = v
+	}
+	over := func(dst *map[string]string, src map[string]string) {
+		if len(src) > 0 && *dst == nil {
+			*dst = map[string]string{}
+		}
+		for k, v := range src {
+			(*dst)[k] = v
+		}
+	}
+	over(&w.Fields, o.Fields)
+	over(&w.Events, o.Events)
+	over(&w.Doors, o.Doors)
+	over(&w.AccountGroups, o.AccountGroups)
+	over(&w.Views, o.Views)
+	for f, vals := range o.Values {
+		if w.Values == nil {
+			w.Values = map[string]map[string]string{}
+		}
+		inner := w.Values[f]
+		over(&inner, vals)
+		w.Values[f] = inner
+	}
+	for _, n := range o.Notes {
+		if !slices.Contains(w.Notes, n) {
+			w.Notes = append(w.Notes, n)
+		}
+	}
+}
+
 // TypeWords names one type and says which shape it takes and what kind of
 // thing it is.
 type TypeWords struct {

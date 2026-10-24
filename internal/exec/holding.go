@@ -87,3 +87,43 @@ func (h holding) allows(kind, name string, installed func(pack string) bool) boo
 	}
 	return false
 }
+
+// kindRank orders a company's packs as their words are laid over each other.
+var kindRank = map[string]int{"core": 0, "market": 1, "regime": 2, "module": 3, "business": 4}
+
+// ViewRanks says, for the screens a pack holds, where the pack stands in
+// that order (DIRECTION 2026-10-24, step 3): its kind's place, a pack that
+// does not say its kind counted as a market's; a screen of no pack is last.
+func ViewRanks(ctx context.Context, st *store.Store) (func(viewID string) int, error) {
+	headers, err := st.ApprovedPacks(ctx)
+	if err != nil {
+		return nil, err
+	}
+	decl, err := st.PackDeclarations(ctx)
+	if err != nil {
+		return nil, err
+	}
+	rank := map[string]int{}
+	for p, ms := range decl {
+		r := kindRank["market"]
+		if h := headers[p]; h != nil {
+			if k, ok := kindRank[h.Kind]; ok {
+				r = k
+			}
+		}
+		for _, m := range ms {
+			if m.Kind != core.KindViewDef {
+				continue
+			}
+			if have, ok := rank[m.Name]; !ok || r < have {
+				rank[m.Name] = r
+			}
+		}
+	}
+	return func(id string) int {
+		if r, ok := rank[id]; ok {
+			return r
+		}
+		return len(kindRank)
+	}, nil
+}

@@ -507,7 +507,7 @@ func (s *Server) handleView(w http.ResponseWriter, r *http.Request) {
 	case "queue":
 		s.serveQueue(ctx, w, vd)
 	case "words":
-		s.serveWords(w, vd)
+		s.serveWords(ctx, w, vd)
 	case "statement":
 		s.serveStatement(ctx, w, vd, r.URL.Query().Get("object_id"))
 	case "report":

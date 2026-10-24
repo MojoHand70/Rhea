@@ -63,22 +63,14 @@ func (s *Server) handleCollection(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, c)
 }
 
-// words is the market's names for what the kernel holds, from the active
-// words view; nil without one.
+// words is the names of what the kernel holds, as the company's packs give
+// them: their words screens merged; nil without one.
 func (s *Server) words(ctx context.Context) *core.WordsSpec {
-	vds, err := s.effectiveViewDefs(ctx)
+	w, err := s.mergedWords(ctx) // every pack's the company has, merged
 	if err != nil {
 		return nil
 	}
-	for _, v := range vds {
-		if v.Notion == "words" {
-			var w core.WordsSpec
-			if json.Unmarshal(v.Spec, &w) == nil {
-				return &w
-			}
-		}
-	}
-	return nil
+	return w
 }
 
 // books are the books the active rules post to (literal books only).
