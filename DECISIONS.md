@@ -5239,3 +5239,11 @@ The spec is silent on how a server gets the core; the simplest that keeps the in
   out of order, a rule would run over a definition nobody approved.
 - Left for step 3, with the loader's succession: moving Rachunki i karty's rules and doors out of
   the Poland pack, and cutting the law (Polish fields) out of what moved.
+
+## 2026-10-24 — An invoice carries several VAT rates (KK)
+
+Asked whether the first version of issuing and entering invoices should hold one VAT rate per
+invoice — as the invoice record, the VAT registers, the bookings, the KSeF invoice (FA(3)) and the
+JPK all do today — or several rates from the start, KK: *"Several rates on one invoice is very
+common. It must be b)."* So invoices are issued and entered with lines at their own rates, and
+every place that reads an invoice's VAT reads it rate by rate.
