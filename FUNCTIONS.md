@@ -548,12 +548,28 @@ Does the invoice give the right to deduct (VAT act art. 86), or is it one of tho
 88)? → deductible in full, in part, or not. *Now: not yet.*
 - [ ] an invoice for an exempt sale is not deducted
 
-**82. Dekretacja** — Rhea proposes, the accountant decides
-The month and the way of booking — accounts or KPiR column, the VAT register — proposed by the
-booking rules (C1–C6, S8–S10); the accountant's approval is the signature the act asks for (UoR art.
-21 ust. 1a): who, when, kept as a fact. After the same decision approved enough times, a lesson
-books it by itself. *Now: not yet.*
-- [ ] every booked invoice shows who decided how it was booked, and when
+**82. Dekretacja: Rhea books, the accountant presses one button** — Rhea, then the accountant · Dziś
+Since the last check, Rhea sorts every new document into three groups (KK, 2026-10-25):
+1. *booked by a rule* — an approved rule covers it, so it is booked, certain: the same document is
+   always booked the same way, and every figure names its rule;
+2. *drafted by Rhea* — no rule covers it, but she can tell from its lines, the supplier or the
+   description what it is: a draft booking with her confidence and her reason ("hosting serwera —
+   IT, 0.9");
+3. *not placed* — neither; a question saying what she could not tell.
+
+Dziś shows how many new documents came and how many fell into each group, with the lists. The
+accountant approves the drafts with one button (or one by one, or corrects one); the approval is the
+signature on how they are booked (UoR art. 21: who and when), and a draft reaches the books only once
+approved (invariant 3). When the same draft has been approved for the same supplier a few times,
+Rhea proposes the rule, and from then on such documents fall into the first group: the first group's
+share, per client and per month, is the measure of the automation. *To verify with an accountant:*
+whether bookings made by a rule need a person's signature too; if so, the same button signs the
+day's rule bookings at once. *Now: partly (rules book what they cover; what no rule explains waits on
+the worklist; drafts with their confidence, the counts and the one button not yet).*
+- [ ] Dziś says how many new documents came since the last check, and how many fell into each group
+- [ ] one button approves every draft shown; each approval is kept with who and when
+- [ ] a draft never reaches the books without an approval
+- [ ] after the same draft is approved three times for one supplier, Rhea proposes the rule
 
 **83. Rhea looks up what she was not taught** — Rhea
 When no rule checks or books a document, she searches as an accountant would — the acts first, the
