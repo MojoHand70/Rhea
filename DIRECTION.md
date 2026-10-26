@@ -3747,7 +3747,8 @@ so nothing is interpreted per click; values are computed when facts happen, not 
 only what is on screen is drawn; speed budgets are checks. The face shows a definition as a
 page — its variables and where each comes from, the state diagram, who may do what, a live
 preview on the company's own data — and the same page is the sandbox while Rhea and the person
-design it.
+design it. The format as agreed (KK, 2026-10-26) is in `APPS.md`, "The App definition";
+the sketches below were its first draft.
 
 **Two Apps, sketched.**
 

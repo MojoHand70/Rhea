@@ -5275,7 +5275,7 @@ standards, KSR), with enough analytical accounts for the complete statements and
 the law requires ("F1 or similar (check)"). Started the same day in three strands under
 `research_notes/Model Polish chart of accounts/`.
 
-## 2026-10-26 — An App is one definition holding its parts, and it may have several tabs (KK)
+## 2026-10-26 — An App is one definition holding its parts; it may have several tabs, one level deep (KK)
 
 Asked how an App is written — (A) a label naming its parts, which stay where they are in the pack,
 or (B) one definition holding its parts (its data, screens, actions, rules), which the kernel
@@ -5284,3 +5284,7 @@ App of its own or one App may have several (Faktury sprzedaży: the list, one in
 Należności do pilnowania), KK: *"yes, app can have several tabs"*. So APPS.md's step 1 changes from
 grouping the parts by name to moving them into App definitions, proven by the unpacked Apps
 equalling today's approved definitions.
+
+Asked whether tabs inside a desk tab may nest further, the proposal being one level and never
+deeper — an App's tabs inside its desk tab, a record's tabs inside its own — KK: *"Yes, one-level
+limit is something I would like to suggest."*
