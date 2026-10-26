@@ -5337,5 +5337,6 @@ Asked for the mouse's back button to return to the tab one came from, as in Alph
 choices and took both (*"let's do all 4 in order"*). Back undoes what was in front, not only which
 group has the focus: a number clicked opens its record beside, and back puts that side back on what
 it showed and the table in front again; a tab closed since is passed over, never opened again. At the
-start of the trail back stays on the desk, never leaving it for the sign-in page. (rheaface 227f7e4;
-the keys Alt [ ] are the face's pick, Alt ← → staying the previous and next tab.)
+start of the trail back stays on the desk, never leaving it for the sign-in page. (rheaface 227f7e4.)
+The keys are Alt [ and Alt ], Alt ← → staying the previous and next tab; offered Alt ← for back as
+browsers have it, KK: *"we can stay with these keyboard shortcuts"*.
