@@ -157,6 +157,11 @@ type WordsSpec struct {
 	// Nav Bar's sections in order, each section what a person reaches for
 	// first at the top. A later pack's activity of the same id adds to it.
 	Activities []NavActivity `json:"activities,omitempty"`
+	// Asks are the questions a face offers before a person has asked any,
+	// by what is in front: "today", a kind's list ("list:sales_invoice"),
+	// its board ("flow:sales_invoice"), a company's page ("company"), a
+	// view ("view:wynik") — in the market's language, the face knowing none.
+	Asks map[string][]string `json:"asks,omitempty"`
 	// Notes say how this market's books are read — what a payment to social
 	// security is, which amount is in the home currency, which month an
 	// invoice counts in (2026-10-18): market knowledge for whoever reads the
@@ -194,6 +199,18 @@ func (w *WordsSpec) Merge(o WordsSpec) {
 	over(&w.Apps, o.Apps)
 	for _, a := range o.Activities {
 		w.arrange(a)
+	}
+	for in, qs := range o.Asks {
+		if w.Asks == nil {
+			w.Asks = map[string][]string{}
+		}
+		have := slices.Clone(w.Asks[in])
+		for _, q := range qs {
+			if !slices.Contains(have, q) {
+				have = append(have, q)
+			}
+		}
+		w.Asks[in] = have
 	}
 	for f, vals := range o.Values {
 		if w.Values == nil {
@@ -396,6 +413,16 @@ func (w WordsSpec) Check() error {
 	}
 	if err := w.checkArrangement(); err != nil {
 		return err
+	}
+	for in, qs := range w.Asks {
+		if strings.TrimSpace(in) == "" {
+			return fmt.Errorf("words: questions to start with about no screen")
+		}
+		for i, q := range qs {
+			if strings.TrimSpace(q) == "" {
+				return fmt.Errorf("words: question %d to start with over %s is empty", i+1, in)
+			}
+		}
 	}
 	for f, vals := range w.Values {
 		for k, v := range vals {

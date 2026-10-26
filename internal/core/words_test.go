@@ -133,3 +133,29 @@ func TestWordsArrangeTheApps(t *testing.T) {
 		}
 	}
 }
+
+// TestWordsOfferQuestionsToStart: the questions a face offers before a
+// person has asked any are a market's words, in its language, by what is in
+// front (APPS.md, step 5) — the face knows none. A later pack's join an
+// earlier's, each once; an empty question is refused.
+func TestWordsOfferQuestionsToStart(t *testing.T) {
+	var w WordsSpec
+	if err := json.Unmarshal([]byte(`{"lang": "pl", "asks": {"today": ["Co dziś czeka na moją decyzję?"], "list:sales_invoice": ["Które faktury są po terminie?"]}}`), &w); err != nil {
+		t.Fatal(err)
+	}
+	if err := w.Check(); err != nil || len(w.Asks["today"]) != 1 {
+		t.Fatalf("questions to start with: %+v %v", w.Asks, err)
+	}
+	w.Merge(WordsSpec{Lang: "pl", Asks: map[string][]string{"today": {"Co dziś czeka na moją decyzję?", "Ile mam na rachunku?"}}})
+	if got := w.Asks["today"]; len(got) != 2 || got[1] != "Ile mam na rachunku?" || len(w.Asks["list:sales_invoice"]) != 1 {
+		t.Fatalf("a later pack's questions join, each once: %+v", w.Asks)
+	}
+	for what, bad := range map[string]WordsSpec{
+		"an empty question":         {Lang: "pl", Asks: map[string][]string{"today": {" "}}},
+		"questions about no screen": {Lang: "pl", Asks: map[string][]string{"": {"Ile mam na rachunku?"}}},
+	} {
+		if err := bad.Check(); err == nil {
+			t.Errorf("%s: not refused", what)
+		}
+	}
+}
