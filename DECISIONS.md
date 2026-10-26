@@ -5393,3 +5393,26 @@ normal bank account"*); **payment gateways** under Banki (FUNCTIONS 90); **emplo
   desk; their Nav Bar items are left out until it draws those notions, and Dziś shows their work as cards
   meanwhile. Rachunki bankowe got two plain lists (its statement lines, its accounts) so Banki opens on
   something. Neither touches isolation or concurrency.
+
+## 2026-10-27 — Klienci and Dostawcy are role records of one firm (KK)
+
+Asked where a firm's terms as our client and as our supplier live (APPS.md, "Klienci i Dostawcy"), with
+Agencja Nova paying us in 14 days and paid by us in 30, KK chose **A**: *"Let's go for option A"* — the firm
+is one record (its identity), and "client" and "supplier" are records of their own pointing at it, each with
+its own data and history.
+
+*Claude, the spec silent:*
+- **No kernel change.** The proposal said the rule language would have to learn "one record per firm"; it
+  already can: a rule's condition reads the world, so "this firm has no client record yet" is
+  `count(c in objects(client, company, …)) = 0` — the way a cost is spread once per invoice.
+- **The roles are the core's**, in every market: Klienci (`client`) and Dostawcy (`supplier`) are core Apps;
+  a market's words name them and its arrangement places them (Klienci under Sprzedaż, Dostawcy under
+  Koszty).
+- **A role is learnt from what happens**: a firm's first sales invoice makes its client record, dated by
+  the invoice; its first purchase invoice its supplier record. The terms are set through a door each:
+  a client's payment terms, discount, credit limit, price list and account manager; a supplier's payment
+  terms and whether its invoices need approval.
+- **Left where they are for now**, each moving when its rule is next changed: the supplier's default cost
+  account (on the firm since "Inne konto kosztów", which books by it today), and the `contractor` kind (only
+  a bank line uses it). Adding a client by hand before any invoice waits too: a door naming a firm that is
+  already a client would leave a fact no rule explains.
