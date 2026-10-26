@@ -6,7 +6,7 @@
   "tabs": [
     {
       "view_id": "slownik",
-      "version": 17,
+      "version": 18,
       "notion": "words",
       "title": "Słownik",
       "domain": "finance",
@@ -1183,6 +1183,15 @@
           "invoice-by-customer": "Sprzedaż według nabywców",
           "intercompany-positions": "Rozrachunki wewnątrz grupy",
           "who-can-do-what": "Kto co może"
+        },
+        "apps": {
+          "invoices": "Faktury",
+          "journal": "Dziennik",
+          "trial-balance": "Zestawienie obrotów i sald",
+          "period-close": "Zamknięcie miesiąca",
+          "people": "Ludzie",
+          "documents": "Dokumenty",
+          "packs": "Pakiety"
         }
       }
     }

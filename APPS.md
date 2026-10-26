@@ -196,7 +196,7 @@ reader — have doors and no tabs and stay as they are until step 5 makes them c
 |---|---|---|---|---|---|---|---|---|---|
 | `documents` | Documents | 1 | platform | issued-documents | — | received_document, issued_document | — | — | 3 |
 
-**Poland** — `packs/pl/pack.json` v45, 24 Apps.
+**Poland** — `packs/pl/pack.json` v46, 24 Apps.
 
 | App | title | v | layer | tabs | record | keeps | uses | doors | rules |
 |---|---|---|---|---|---|---|---|---|---|

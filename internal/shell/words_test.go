@@ -157,6 +157,28 @@ func TestThePackSpeaks(t *testing.T) {
 			}
 		}
 	}
+	// and every App she is served: the pack's own titled in Polish, another
+	// pack's (the core's, the common packs', in English) named in the words
+	_, ownApps, err := pack.ReadFile(filepath.Join("..", "..", "packs", "pl", "pack.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	oursApp := map[string]bool{}
+	for _, a := range ownApps {
+		oursApp[a.ID] = true
+	}
+	var apps []struct {
+		ID string `json:"app"`
+	}
+	get("/api/apps", &apps)
+	if len(apps) == 0 {
+		t.Fatal("no App is served")
+	}
+	for _, a := range apps {
+		if !oursApp[a.ID] && w.Apps[a.ID] == "" {
+			missing = append(missing, "the title of App "+a.ID)
+		}
+	}
 	if len(missing) > 0 {
 		t.Fatalf("the pack leaves unnamed: %s", strings.Join(missing, ", "))
 	}

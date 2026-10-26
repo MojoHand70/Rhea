@@ -1,12 +1,17 @@
 {
   "pack": "pl",
-  "version": 45,
+  "version": 46,
   "kind": "market",
   "market": "PL",
   "install": "installation",
   "stage": "initial",
   "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
   "history": [
+    {
+      "versions": "46",
+      "date": "2026-10-26",
+      "changes": "Słownik nazywa po polsku aplikacje, które przyniósł rdzeń i pakiety wspólne: Faktury, Dziennik, Zestawienie obrotów i sald, Zamknięcie miesiąca, Ludzie, Dokumenty, Pakiety — tak jak nazywa ich widoki."
+    },
     {
       "versions": "45",
       "date": "2026-10-26",
