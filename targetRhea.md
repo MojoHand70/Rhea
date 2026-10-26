@@ -1,5 +1,5 @@
 1. All Financial Accounting
-2. All Controlling, FP&A, Management Accounting
+2. All Controlling, FP&A, Management Accounting, Forecasting
 3. Sales, Order Management and Invoicing, Financial SCM
 4. Purchasing and Procurement
 5. Warehousing, WMS 
@@ -13,5 +13,6 @@
 13. Plant Management
 14. Quality Mangement
 15. CRM
+16. Case Management
 
 for all the above we need Rhea Apps based on smart documents.

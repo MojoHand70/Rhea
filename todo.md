@@ -8,13 +8,25 @@
 - proactive monitoring (eg. submission dates)
 - repetitive BAU habits
 - issue an invoice
-- smart documents calculation engine
+- smart documents calculation engine + every tab is an app (has it's definition)
 - Splitting it into areas like sales, purchasing, bank, tax and fleet would give the collection the separate databases you described. 
 
 - mapping engine
 - import openning balances
 - statements
 - import from another system
+- documents in by themselves — the accountant's capacity is the key (KK 2026-10-22); found in the code that day
+  - KSeF purchase invoices are not fetched: the reader books FA files placed in the store (packs/pl/ksef-inbound.json: fetching "comes with the client"); fetch per client under the office's KSeF authorisation, on the session the sending side already opens
+  - no upload in the face: every document comes in through `rhea intake` on the command line
+  - no mail intake: an address per client, the file is the fact, the reader picked by kind (the decision-model line below is its sorter)
+  - banks: any bank's MT940 is read and checked, but the :86: detail line is split only in the simulator's dialect — a real bank's line becomes one title, so matching by the payer's account never fires; one parser for the Polish sub-field layout, confirmed on one real statement per bank (PKO BP, Pekao, mBank, ING, Santander, Millennium, BNP Paribas, Alior, Credit Agricole); a live feed later, through a licensed account-information provider
+  - no CSV or Excel: one table reader, the column mapping taught once per source and kept (the mapping engine above)
+  - no migration: readers for JPK_KR (companies), JPK_PKPIR / JPK_EWP (sole traders) and past JPK_V7 — one reader per statutory file covers every program; the JPK_KR reader also serves the KSeF check for big companies (KSeF vs their books: unbooked invoices, VAT without a KSeF invoice, duplicates, payments over 15 000 zł off the white list)
+  - every PDF the model reads waits for a person (gate at 1.00) — trust earned per lesson, DIRECTION "The learning process"
+  - lessons per company, not per office: set_cost_account, set_tax_treatment, classify_bank_operation said again for every client — same brief
+  - she could propose from the document and waits to be told: a fixed asset, a cost spread over months
+  - the month's end by hand: close, JPK downloaded and sent elsewhere, the client told what to pay — send the JPK under the office's signature, the note "you pay X by the 25th" to the client
+  - the measure: the accountant's touches per document and minutes per client-month, wrong amounts zero — in the business generator
 - law watching - build a law watch (KK 2026-10-19: later, together with "biegły rewident")
   - as an accountant does it: watch the official sources → find the rules resting on the changed article → draft the rule's next version from the day the law applies → approval → tell the owner what it means for them
   - sources: Poland — the Sejm's ELI service lists every act's amending acts with dates (checked on the VAT act: Dz.U. 2026 poz. 1270, in force in stages 1 Dec 2026 – 1 Jul 2028), draft laws on legislacja.gov.pl, the Ministry's KSeF/JPK pages; US — the Watch line on every point of packs/us/REVIEW.md

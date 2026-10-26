@@ -5,6 +5,9 @@
 		},
 		{
 			"path": "../../../rheamktg"
+		},
+		{
+			"path": "../../../rheaface"
 		}
 	],
 	"settings": {}
