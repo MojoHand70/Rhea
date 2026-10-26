@@ -26,9 +26,10 @@ type App struct {
 	Data []string `json:"data,omitempty"`
 	Uses []string `json:"uses,omitempty"`
 	// Tabs, in order: the first opens it. An App with none opens on the
-	// list of its first kind of record.
+	// list of its first kind of record, kept or else used.
 	Tabs []AppTab `json:"tabs,omitempty"`
-	// Record: what one of its records shows, in a desk tab of its own.
+	// Record: what one of its records shows, in a desk tab of its own — a
+	// kind it keeps, or one it uses (a market's App over the core's kind).
 	Record  *AppRecord `json:"record,omitempty"`
 	Actions []string   `json:"actions,omitempty"` // its doors
 	Rules   []string   `json:"rules,omitempty"`
@@ -71,7 +72,7 @@ func (a App) Validate() error {
 	if !slices.Contains(AppLayers, a.Layer) {
 		return fmt.Errorf("app %s: layer %q is not one of %v", a.ID, a.Layer, AppLayers)
 	}
-	if len(a.Tabs) == 0 && a.Record == nil && len(a.Data) == 0 {
+	if len(a.Tabs) == 0 && a.Record == nil && len(a.Data) == 0 && len(a.Uses) == 0 {
 		return fmt.Errorf("app %s: shows nothing — give it a tab or a kind of record", a.ID)
 	}
 	for what, names := range map[string][]string{"kind of record": append(slices.Clone(a.Data), a.Uses...), "door": a.Actions, "rule": a.Rules} {
@@ -114,8 +115,8 @@ func (a App) Validate() error {
 		return err
 	}
 	if r := a.Record; r != nil {
-		if !slices.Contains(a.Data, r.Of) {
-			return fmt.Errorf("app %s: its record is of %q, which it does not keep", a.ID, r.Of)
+		if !slices.Contains(a.Data, r.Of) && !slices.Contains(a.Uses, r.Of) {
+			return fmt.Errorf("app %s: its record is of %q, which it neither keeps nor uses", a.ID, r.Of)
 		}
 		if len(r.Tabs) == 0 {
 			return fmt.Errorf("app %s: its record shows no tab", a.ID)

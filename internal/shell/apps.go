@@ -22,8 +22,10 @@ type appServed struct {
 // company has, as the person may see it. An App opens on its first tab, so a
 // person who may not see that tab is not served the App; within it, a view's
 // tab they may not see is left out, and a screen of the desk stays — it draws
-// only what the kernel serves it. An App with no view among its tabs opens on
-// the list of its first kind of record.
+// only what the kernel serves it. An App with no tab opens on the list of its
+// first kind of record, kept or else used, and is served where that list may
+// be seen; one whose tabs are all the desk's opens on its first, and sits where
+// that list would.
 func (s *Server) handleApps(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	apps, err := s.Store.LatestApps(ctx)
@@ -83,6 +85,10 @@ func (s *Server) handleApps(w http.ResponseWriter, r *http.Request) {
 		}
 		sv := appServed{App: a}
 		sv.Tabs = visible(a.Tabs)
+		var kindList *core.ViewDef // the list of its first kind of record, kept or else used
+		if kinds := append(append([]string(nil), a.Data...), a.Uses...); len(kinds) > 0 {
+			kindList = listOf[kinds[0]]
+		}
 		switch {
 		case first != "":
 			v := seen(first)
@@ -90,13 +96,14 @@ func (s *Server) handleApps(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			sv.Domain, sv.Function = v.Domain, v.Function
-		case len(a.Data) > 0:
-			l := listOf[a.Data[0]]
-			if l == nil || !s.mayView(ctx, l) {
+		case len(a.Tabs) == 0 && kindList != nil:
+			if !s.mayView(ctx, kindList) {
 				continue
 			}
-			sv.Domain, sv.Function = l.Domain, l.Function
-			sv.Tabs = append([]core.AppTab{{View: l.ID, Title: l.Title}}, sv.Tabs...)
+			sv.Domain, sv.Function = kindList.Domain, kindList.Function
+			sv.Tabs = []core.AppTab{{View: kindList.ID, Title: kindList.Title}}
+		case kindList != nil:
+			sv.Domain, sv.Function = kindList.Domain, kindList.Function
 		}
 		if a.Record != nil {
 			rec := core.AppRecord{Of: a.Record.Of, Tabs: visible(a.Record.Tabs)}

@@ -21,6 +21,15 @@ func TestAppValidate(t *testing.T) {
 	if err := (App{ID: "stawki-vat", Version: 1, Title: "Stawki VAT", Layer: "law", Data: []string{"vat_rate"}}).Validate(); err != nil {
 		t.Fatalf("data alone: %v", err)
 	}
+	// a market's App shows the record of a kind the core keeps, and one with
+	// rules alone opens on the list of the first kind it uses
+	if err := (App{ID: "rechnungen", Version: 1, Title: "Ausgangsrechnungen", Layer: "law", Uses: []string{"sales_invoice"},
+		Record: &AppRecord{Of: "sales_invoice", Tabs: []AppTab{{View: "rechnung-detail"}}}}).Validate(); err != nil {
+		t.Fatalf("the record of a kind used: %v", err)
+	}
+	if err := (App{ID: "kontenrahmen", Version: 1, Title: "Kontenrahmen", Layer: "law", Uses: []string{"account"}, Rules: []string{"de-register-account"}}).Validate(); err != nil {
+		t.Fatalf("rules over a kind used: %v", err)
+	}
 
 	bad := []struct {
 		why  string
@@ -31,13 +40,13 @@ func TestAppValidate(t *testing.T) {
 		{"no version", func(a *App) { a.Version = 0 }},
 		{"no title", func(a *App) { a.Title = " " }},
 		{"an unknown layer", func(a *App) { a.Layer = "market" }},
-		{"nothing to show", func(a *App) { a.Tabs, a.Record, a.Data = nil, nil, nil }},
+		{"nothing to show", func(a *App) { a.Tabs, a.Record, a.Data, a.Uses = nil, nil, nil, nil }},
 		{"a tab both a view and the desk's", func(a *App) { a.Tabs[0].Desk = "flow" }},
 		{"a tab neither", func(a *App) { a.Tabs[0] = AppTab{Title: "Lista"} }},
 		{"a desk tab without its title", func(a *App) { a.Tabs[1].Title = "" }},
 		{"a desk screen that is not a name", func(a *App) { a.Tabs[1].Desk = "the flow" }},
 		{"a view twice", func(a *App) { a.Record.Tabs[1].View = "sales-invoice-list" }},
-		{"a record of another App's kind", func(a *App) { a.Record.Of = "company" }},
+		{"a record of a kind it neither keeps nor uses", func(a *App) { a.Record.Of = "vat_rate" }},
 		{"a record with no tab", func(a *App) { a.Record.Tabs = nil }},
 		{"a kind kept and used", func(a *App) { a.Uses = append(a.Uses, "sales_invoice") }},
 		{"a kind kept twice", func(a *App) { a.Data = append(a.Data, "sales_invoice") }},

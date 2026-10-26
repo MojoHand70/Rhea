@@ -54,6 +54,15 @@ func TestAppsAreTheCompanysAndThePersons(t *testing.T) {
 					"effect": map[string]any{"object": map[string]any{"type": "tally_test", "fields": map[string]any{"what": "=$.what"}}}}}}},
 		"liczenie-raport": map[string]any{"app": "liczenie-raport", "version": 1, "title": "Raport zliczeń", "layer": "business",
 			"uses": []string{"tally_test"}, "tabs": []any{byWhat}},
+		// rules alone over a kind another App keeps: it opens on that kind's list
+		"liczenie-z-banku": map[string]any{"app": "liczenie-z-banku", "version": 1, "title": "Zliczenia z banku", "layer": "business",
+			"uses": []string{"tally_test"},
+			"rules": []any{map[string]any{"rule_id": "tally-from-bank", "priority": 100, "effective_from": "2026-01-01", "description": "Zliczenie z banku",
+				"spec": map[string]any{"match": map[string]any{"event_type": "tally.banked"},
+					"effect": map[string]any{"object": map[string]any{"type": "tally_test", "fields": map[string]any{"what": "=$.what"}}}}}}},
+		// every tab the desk's: it opens on its first
+		"tablica": map[string]any{"app": "tablica", "version": 1, "title": "Tablica", "layer": "platform",
+			"uses": []string{"tally_test"}, "tabs": []any{map[string]any{"desk": "board", "title": "Tablica"}}},
 	}
 	dir := t.TempDir()
 	write := func(name string, v any) {
@@ -70,7 +79,7 @@ func TestAppsAreTheCompanysAndThePersons(t *testing.T) {
 	}
 	write("pack.json", map[string]any{"pack": "tally-apps", "version": 1, "kind": "module", "install": "company",
 		"description": "a test pack of Apps", "stage": "initial", "disclaimer": "A test pack.",
-		"history": []map[string]any{{"versions": "1", "changes": "first"}}, "apps": []string{"liczenie", "liczenie-raport"}})
+		"history": []map[string]any{{"versions": "1", "changes": "first"}}, "apps": []string{"liczenie", "liczenie-raport", "liczenie-z-banku", "tablica"}})
 	for name, a := range apps {
 		write("apps/"+name+".json", a)
 	}
@@ -147,6 +156,13 @@ func TestAppsAreTheCompanysAndThePersons(t *testing.T) {
 	}
 	if r, ok := got["liczenie-raport"]; !ok || r.Function != "analysis" || !equalTabs(r.Tabs, []tab{{View: "tally-by-what", Title: "Zliczenia według rodzaju"}}) {
 		t.Fatalf("and the report App: %+v", got)
+	}
+
+	if z, ok := got["liczenie-z-banku"]; !ok || !equalTabs(z.Tabs, []tab{{View: "tally-list", Title: "Zliczenia"}}) || z.Domain != "work" {
+		t.Fatalf("rules alone open on the list of the kind they use: %+v", got["liczenie-z-banku"])
+	}
+	if tb, ok := got["tablica"]; !ok || !equalTabs(tb.Tabs, []tab{{Desk: "board", Title: "Tablica"}}) || tb.Domain != "work" {
+		t.Fatalf("the desk's tabs alone open on the first: %+v", got["tablica"])
 	}
 
 	got = appsOf("celina", a)
