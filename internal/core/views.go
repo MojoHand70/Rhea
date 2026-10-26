@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"unicode/utf8"
 )
 
 // Derived default views (DIRECTION 2026-10-03/05): an ObjectType already says
@@ -151,6 +152,11 @@ type WordsSpec struct {
 	// brought in another (2026-10-26): the core's Journal is Dziennik where
 	// the Poland pack is.
 	Apps map[string]string `json:"apps,omitempty"`
+	// Activities arrange the Apps on a face as this market's people work
+	// (KK 2026-10-26): the Activity Bar's activities in order, each with its
+	// Nav Bar's sections in order, each section what a person reaches for
+	// first at the top. A later pack's activity of the same id adds to it.
+	Activities []NavActivity `json:"activities,omitempty"`
 	// Notes say how this market's books are read — what a payment to social
 	// security is, which amount is in the home currency, which month an
 	// invoice counts in (2026-10-18): market knowledge for whoever reads the
@@ -186,6 +192,9 @@ func (w *WordsSpec) Merge(o WordsSpec) {
 	over(&w.AccountGroups, o.AccountGroups)
 	over(&w.Views, o.Views)
 	over(&w.Apps, o.Apps)
+	for _, a := range o.Activities {
+		w.arrange(a)
+	}
 	for f, vals := range o.Values {
 		if w.Values == nil {
 			w.Values = map[string]map[string]string{}
@@ -199,6 +208,142 @@ func (w *WordsSpec) Merge(o WordsSpec) {
 			w.Notes = append(w.Notes, n)
 		}
 	}
+}
+
+// NavActivity is one activity of a face: an icon on its Activity Bar, and
+// the sections of the Nav Bar it opens (a door is an Activity, not this).
+type NavActivity struct {
+	ID       string       `json:"id"`
+	Title    string       `json:"title"`
+	Icon     string       `json:"icon,omitempty"` // a name from the face's set; a face lacking it draws its own default
+	Key      string       `json:"key,omitempty"`  // the letter after Alt Q
+	End      bool         `json:"end,omitempty"`  // at the bar's far end, where settings sit
+	Sections []NavSection `json:"sections"`
+}
+
+// NavSection is one section of an activity's Nav Bar; one with no title
+// holds items above the titled ones. Rest marks the one section, of the
+// whole arrangement, that takes the Apps no activity places — a pack's
+// these words do not know yet: a function is never hidden (KK 2026-10-26).
+type NavSection struct {
+	ID    string    `json:"id,omitempty"`
+	Title string    `json:"title,omitempty"`
+	Items []NavItem `json:"items,omitempty"`
+	Rest  bool      `json:"rest,omitempty"`
+}
+
+// NavItem opens an App — on one of its tabs where Tab names it (a view's id,
+// or "desk:" and a screen the desk draws) — or the list of one kind of
+// record. Title names it where the App's or the kind's own name would not
+// say what it opens.
+type NavItem struct {
+	App   string `json:"app,omitempty"`
+	Tab   string `json:"tab,omitempty"`
+	Kind  string `json:"kind,omitempty"`
+	Title string `json:"title,omitempty"`
+}
+
+// arrange lays a later pack's activity over these words: one of a new id
+// joins the bar; one of a known id takes its title, icon and key where it
+// gives them, its sections joining by id (a section with none is added),
+// each item once. Nothing of the later pack's own words is shared.
+func (w *WordsSpec) arrange(a NavActivity) {
+	i := slices.IndexFunc(w.Activities, func(x NavActivity) bool { return x.ID == a.ID })
+	if i < 0 {
+		a.Sections = slices.Clone(a.Sections)
+		for j := range a.Sections {
+			a.Sections[j].Items = slices.Clone(a.Sections[j].Items)
+		}
+		w.Activities = append(w.Activities, a)
+		return
+	}
+	have := &w.Activities[i]
+	if a.Title != "" {
+		have.Title = a.Title
+	}
+	if a.Icon != "" {
+		have.Icon = a.Icon
+	}
+	if a.Key != "" {
+		have.Key = a.Key
+	}
+	have.End = have.End || a.End
+	for _, s := range a.Sections {
+		j := -1
+		if s.ID != "" {
+			j = slices.IndexFunc(have.Sections, func(x NavSection) bool { return x.ID == s.ID })
+		}
+		if j < 0 {
+			s.Items = slices.Clone(s.Items)
+			have.Sections = append(have.Sections, s)
+			continue
+		}
+		hs := &have.Sections[j]
+		if s.Title != "" {
+			hs.Title = s.Title
+		}
+		hs.Rest = hs.Rest || s.Rest
+		for _, it := range s.Items {
+			if !slices.Contains(hs.Items, it) {
+				hs.Items = append(hs.Items, it)
+			}
+		}
+	}
+}
+
+// checkArrangement refuses an arrangement a face could not draw.
+func (w WordsSpec) checkArrangement() error {
+	ids, rest := map[string]bool{}, 0
+	for i, a := range w.Activities {
+		switch {
+		case !appName.MatchString(a.ID):
+			return fmt.Errorf("words: activity %d: its id %q is a name — lowercase letters, digits and hyphens", i+1, a.ID)
+		case ids[a.ID]:
+			return fmt.Errorf("words: activity %s is arranged twice", a.ID)
+		case strings.TrimSpace(a.Title) == "":
+			return fmt.Errorf("words: activity %s has no title", a.ID)
+		case a.Icon != "" && !appName.MatchString(a.Icon):
+			return fmt.Errorf("words: activity %s: its icon %q is a name", a.ID, a.Icon)
+		case a.Key != "" && utf8.RuneCountInString(a.Key) != 1:
+			return fmt.Errorf("words: activity %s: its key %q is one letter", a.ID, a.Key)
+		case len(a.Sections) == 0:
+			return fmt.Errorf("words: activity %s holds nothing", a.ID)
+		}
+		ids[a.ID] = true
+		sections := map[string]bool{}
+		for j, s := range a.Sections {
+			where := fmt.Sprintf("activity %s, section %d", a.ID, j+1)
+			if s.ID != "" {
+				if !appName.MatchString(s.ID) || sections[s.ID] {
+					return fmt.Errorf("words: %s: its id %q is a name, once in its activity", where, s.ID)
+				}
+				sections[s.ID] = true
+			}
+			if s.Rest {
+				rest++
+			} else if len(s.Items) == 0 {
+				return fmt.Errorf("words: %s holds nothing", where)
+			}
+			for k, it := range s.Items {
+				switch {
+				case it.App == "" && it.Kind == "":
+					return fmt.Errorf("words: %s, item %d opens nothing: name an App or a kind of record", where, k+1)
+				case it.App != "" && it.Kind != "":
+					return fmt.Errorf("words: %s, item %d is both App %s and kind %s", where, k+1, it.App, it.Kind)
+				case it.Tab != "" && it.App == "":
+					return fmt.Errorf("words: %s, item %d: tab %s of no App", where, k+1, it.Tab)
+				case it.Title != "" && strings.TrimSpace(it.Title) == "":
+					return fmt.Errorf("words: %s, item %d has an empty title", where, k+1)
+				case slices.Contains(s.Items[:k], it):
+					return fmt.Errorf("words: %s, item %d is there twice", where, k+1)
+				}
+			}
+		}
+	}
+	if rest > 1 {
+		return fmt.Errorf("words: %d sections take the Apps placed nowhere; one does", rest)
+	}
+	return nil
 }
 
 // TypeWords names one type and says which shape it takes and what kind of
@@ -248,6 +393,9 @@ func (w WordsSpec) Check() error {
 		if strings.TrimSpace(n) == "" {
 			return fmt.Errorf("words: note %d is empty", i+1)
 		}
+	}
+	if err := w.checkArrangement(); err != nil {
+		return err
 	}
 	for f, vals := range w.Values {
 		for k, v := range vals {
