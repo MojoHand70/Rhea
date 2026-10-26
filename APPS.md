@@ -302,6 +302,42 @@ the face's check and the live walk guard what the person sees.
    what a record shows); the queue and matching screens (Do zrobienia, Należności do pilnowania, the bank's pairing)
    are not drawn by the desk yet and their items wait, shown meanwhile as Dziś's cards.
 
+## Klienci i Dostawcy — the first new App (proposal, for KK)
+
+*Claude, 2026-10-26, after KK's answers (DECISIONS): the order is the Activity Bar first (step 5, done), then
+the new Apps one at a time, Klienci and Dostawcy first. KK: "physically we can keep 1 table of Kontrahenci,
+but I would like to see our Clients separate from our Suppliers ... they might have different properties in
+the future, like trade conditions, account manager, price list". Nothing below is decided.*
+
+**What exists.** One kind, `company` (name, NIP, address, IBAN, VAT status — and our own company's
+settings: its cost, tax, ZUS and owner accounts), which every invoice names: a sales invoice's `buyer`, a
+purchase invoice's `supplier`. A second kind, `contractor` (payment terms in days, cash method, "very
+important"), which only a bank line refers to. Kontrahenci lists `company`, buyers and suppliers together.
+
+**The question, in business terms.** Agencja Nova buys from us and, once a year, sells us a service. Its
+NIP, name and address are one; as our client it pays in 14 days, has a 5 % discount and Anna looks after
+it; as our supplier we pay it in 30 days and book its invoices to 402. Where do the 14 days and the 30
+days live?
+
+- **A. Role records.** Agencja Nova is one firm; "client" and "supplier" are two records of their own
+  pointing at it, each with its own data and history (terms changed from a date, who changed them). The
+  first sales invoice to a firm makes its client record, the first purchase invoice its supplier record.
+  The standard of the large systems: SAP replaced its separate customer and vendor masters with one
+  Business Partner holding roles. Cost: the rule language learns "one record per firm" — today a rule
+  either changes a record or makes a new one per fact, so the second invoice would make a second client.
+- **B. The roles' data on the firm.** One record per firm, as today, with the client's fields and the
+  supplier's fields on it, and a date for each role it holds (client since, supplier since), set by the
+  first invoice of each kind. Klienci and Dostawcy are two Apps over the same kind, each listing the firms
+  holding its role, with its own columns. No kernel change; the firm's record grows with every property.
+
+**Recommendation: A**, because KK expects the properties to grow (price lists, account managers, credit
+limits) and each needs its own history; the kernel's part is small and general ("a record per key"), and
+B's growth is what made "Kontrahenci" old school. Either way: the two lists sit under Sprzedaż and Koszty
+(the arrangement already has their sections), the firm's page shows both roles, and `contractor` folds into
+the roles (its payment terms are the client's or the supplier's). Built on KK's choice, in this order: the
+kernel's record per key (if A), the two kinds and their rules, the lists and words, the arrangement, a
+firm's page with both roles; each with its test, replay identical.
+
 **Before the split, for KK.** "Core, market packs and business packs" (DIRECTION) splits the Poland
 pack into Podstawa, Pełna księgowość and Środki trwałe — Polska, then adds KPiR and ryczałt.
 Proposed: rewrite the packs as Apps first, so the split moves whole Apps between packs rather than

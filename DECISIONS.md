@@ -5367,9 +5367,9 @@ On the same exchange KK set what the new Apps are: **clients apart from supplier
 can keep 1 table of Kontrahenci, but I would like to see our Clients separate from our Suppliers ...
 they might have different properties in the future, like trade conditions, account manager, price
 list ... the Kontrahenci only is very 'old school' ... We want Rhea to understand business in a
-natural way"*: one firm (its identity, from GUS and the VAT list), the roles of client and supplier
-each a record of its own with its own data, the role learnt from what happens (a firm's first sales
-invoice makes it a client); **cards apart from bank accounts** (*"Karty app will not work the same as
+natural way"* (how — role records of one firm, or the roles' data on the firm's one record; a role
+learnt from a firm's first invoice — is Claude's proposal, not yet KK's decision: APPS.md, "Klienci i
+Dostawcy"); **cards apart from bank accounts** (*"Karty app will not work the same as
 normal bank account"*); **payment gateways** under Banki (FUNCTIONS 90); **employees** (FUNCTIONS 89,
 119); the statutory reports *"whatever is required"* (FUNCTIONS 62, 120, 121).
 
