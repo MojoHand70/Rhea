@@ -195,12 +195,37 @@ func Load(ctx context.Context, s *store.Store, file, actor string) (Summary, err
 	if err != nil {
 		return Summary{}, err
 	}
-	dir := filepath.Dir(file)
-	m, apps, err := parse(b, func(name string) ([]byte, error) { return os.ReadFile(filepath.Join(dir, filepath.FromSlash(name))) })
+	m, apps, err := parse(b, beside(file))
 	if err != nil {
 		return Summary{}, err
 	}
 	return load(ctx, s, m, apps, actor, nil)
+}
+
+// beside reads the files next to a pack file: its apps/ folder.
+func beside(file string) func(name string) ([]byte, error) {
+	dir := filepath.Dir(file)
+	return func(name string) ([]byte, error) { return os.ReadFile(filepath.Join(dir, filepath.FromSlash(name))) }
+}
+
+// ReadFile reads a pack file as the loader does, without a database: a pack
+// written as Apps comes back with its Apps' parts where a pack keeps them, and
+// its Apps as the kernel keeps them, in order. For whatever reads a pack
+// outside the loader — the exam's harness, rhea pack -flatten.
+func ReadFile(file string) (Manifest, []core.App, error) {
+	b, err := os.ReadFile(file)
+	if err != nil {
+		return Manifest{}, nil, err
+	}
+	m, us, err := parse(b, beside(file))
+	if err != nil {
+		return m, nil, err
+	}
+	var apps []core.App
+	for _, u := range us {
+		apps = append(apps, u.app)
+	}
+	return m, apps, nil
 }
 
 // parse reads a pack file, its Apps' parts put where a pack's parts are;

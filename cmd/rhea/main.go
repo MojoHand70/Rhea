@@ -90,6 +90,28 @@ func main() {
 		}
 		return
 	}
+	// A pack read as the loader reads it, with no database: a pack written as
+	// Apps printed with its parts where a pack keeps them and its Apps beside
+	// them, for the tools that read packs outside the kernel (rhea pack
+	// -flatten FILE).
+	if len(os.Args) >= 3 && os.Args[1] == "pack" && os.Args[2] == "-flatten" {
+		if len(os.Args) != 4 {
+			log.Fatal("usage: rhea pack -flatten FILE")
+		}
+		m, apps, err := pack.ReadFile(os.Args[3])
+		if err != nil {
+			log.Fatal(err)
+		}
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", " ")
+		if err := enc.Encode(struct {
+			pack.Manifest
+			AppDefinitions []core.App `json:"app_definitions,omitempty"`
+		}{m, apps}); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
 	// A backup is verified where it lies, with no database: its end line
 	// names what it carried (rhea backup -verify FILE).
 	if len(os.Args) >= 3 && os.Args[1] == "backup" && os.Args[2] == "-verify" {

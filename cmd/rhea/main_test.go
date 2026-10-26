@@ -25,6 +25,11 @@ func TestBinarySmoke(t *testing.T) {
 	if err != nil || !strings.Contains(string(out), "pibr-exam") {
 		t.Fatalf("rhea run: %v\n%s", err, out)
 	}
+	// a pack read as the loader reads it, with no database
+	out, err = exec.Command(bin, "pack", "-flatten", filepath.Join("..", "..", "packs", "de", "pack.json")).CombinedOutput()
+	if err != nil || !strings.Contains(string(out), `"pack": "de"`) || !strings.Contains(string(out), `"view_id": "rechnungen-list"`) {
+		t.Fatalf("rhea pack -flatten: %v\n%s", err, out)
+	}
 	if _, err := os.Stat(bin); err != nil {
 		t.Fatal(err)
 	}

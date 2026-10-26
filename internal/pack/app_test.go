@@ -302,3 +302,44 @@ func TestAppsPackRefusals(t *testing.T) {
 		t.Fatalf("bytes alone: %v", err)
 	}
 }
+
+// Outside the loader, a pack written as Apps reads as one written before them
+// (pack.ReadFile; rhea pack -flatten for the face's tools): the same parts,
+// each where a pack keeps it, and its Apps beside them.
+func TestReadFileFlattensApps(t *testing.T) {
+	flat, none, err := pack.ReadFile(writePack(t, notesHeader(false), nil))
+	if err != nil || len(none) != 0 {
+		t.Fatalf("a flat pack: %v %v", none, err)
+	}
+	got, apps, err := pack.ReadFile(writePack(t, notesHeader(true), notesApps()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(apps) != 2 || apps[0].ID != "notatki" || apps[1].ID != "podsumowanie" {
+		t.Fatalf("its Apps, in order: %+v", apps)
+	}
+	same := func(a, b any) bool {
+		var x, y any
+		ja, _ := json.Marshal(a)
+		jb, _ := json.Marshal(b)
+		json.Unmarshal(ja, &x)
+		json.Unmarshal(jb, &y)
+		return reflect.DeepEqual(x, y)
+	}
+	type parts struct {
+		T, V, R, A, E any
+	}
+	viewSpecs := func(vs []core.ViewDef) []any {
+		var out []any
+		for _, v := range vs {
+			var spec any
+			json.Unmarshal(v.Spec, &spec)
+			out = append(out, map[string]any{"id": v.ID, "version": v.Version, "notion": v.Notion, "title": v.Title, "domain": v.Domain, "function": v.Function, "spec": spec})
+		}
+		return out
+	}
+	if !same(parts{flat.ObjectTypes, viewSpecs(flat.ViewDefs), flat.Rules, flat.Activities, flat.Events},
+		parts{got.ObjectTypes, viewSpecs(got.ViewDefs), got.Rules, got.Activities, got.Events}) {
+		t.Fatalf("the parts differ from the flat pack's:\n%+v\n%+v", flat, got)
+	}
+}
