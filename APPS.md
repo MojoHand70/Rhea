@@ -279,8 +279,8 @@ the face's check and the live walk guard what the person sees.
    unclear, the ownership rule decides and the row is corrected.
 4. **The desk** — *done 2026-10-26* (rheaface db6cbd6, 4460b4e; the Poland pack names the core's Apps,
    a807a86). Left as it stands: a record opens with its own tabs only where its App gives it more than one
-   the desk draws, and none does yet (the pack's detail views wait for step 2); an App none of whose
-   lists has a row yet stays out of the drawer, as an empty list did before. The drawer lists Apps; an App opens as one desk tab with its tabs, a record in its
+   the desk draws, and none does yet (the pack's detail views wait for step 2). An empty list and its
+   App stay in sight, marked ∅ (KK, DECISIONS 2026-10-26; rheaface bd67e52). The drawer lists Apps; an App opens as one desk tab with its tabs, a record in its
    own with its tabs, one level; a tab pulled out into a desk tab of its own; a desk saved before
    still opens, a view's id leading to its App; an App's page of what it consists of — the
    designer page's first, read-only form. Gallery first, then the face's check and the live walk.
