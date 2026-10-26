@@ -5330,3 +5330,12 @@ Asked whether an App whose lists have no rows yet should stay out of the drawer,
 did — a new company would not see Faktury sprzedaży until its first invoice — KK: *"no, if list is
 empty, we need no data glyph, we should not hide functions"*. So the desk offers every list and every
 App whatever it holds, and an empty one carries a sign that it is empty, never hidden.
+
+## 2026-10-26 — Back walks what was in front; at its start it stays on the desk (KK)
+
+Asked for the mouse's back button to return to the tab one came from, as in Alpha, KK was offered two
+choices and took both (*"let's do all 4 in order"*). Back undoes what was in front, not only which
+group has the focus: a number clicked opens its record beside, and back puts that side back on what
+it showed and the table in front again; a tab closed since is passed over, never opened again. At the
+start of the trail back stays on the desk, never leaving it for the sign-in page. (rheaface 227f7e4;
+the keys Alt [ ] are the face's pick, Alt ← → staying the previous and next tab.)
