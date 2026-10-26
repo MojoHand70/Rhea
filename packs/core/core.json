@@ -1,12 +1,17 @@
 {
   "pack": "core",
-  "version": 3,
+  "version": 4,
   "kind": "core",
   "install": "installation",
   "description": "Core: what Rhea is with nothing installed — the ledger's vocabulary (company, account, posting, the period's lock, exchange rates), the invoice's common shape and its tax rate, contractors, Rachunki i karty's bank accounts, bank lines and settlements, and tasks. Market-neutral; the kernel carries it in its binary and rhea init drafts what a database lacks.",
   "stage": "initial",
   "disclaimer": "This pack was prepared by artificial intelligence (AI). It is an initial version: its definitions may contain errors and will change as accountants, tax advisers and auditors review them.",
   "history": [
+    {
+      "versions": "4",
+      "date": "2026-10-26",
+      "changes": "The platform's own screens as Apps (step 5 of the Apps): Today, the day's decisions and her words; My company, the company's own page; Desk and look, the desk's settings. Each is a screen the desk draws, now an App a market's words can place on the Activity Bar like any other. No other definition changes."
+    },
     {
       "versions": "3",
       "date": "2026-10-26",
@@ -32,6 +37,7 @@
     "scope": "all markets"
   },
   "apps": [
+    "today",
     "invoices",
     "parties",
     "chart-of-accounts",
@@ -44,6 +50,8 @@
     "purchase-invoices",
     "bank-accounts",
     "tasks",
-    "packs"
+    "packs",
+    "my-company",
+    "settings"
   ]
 }

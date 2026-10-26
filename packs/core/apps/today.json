@@ -1,0 +1,12 @@
+{
+  "app": "today",
+  "version": 1,
+  "title": "Today",
+  "layer": "platform",
+  "tabs": [
+    {
+      "desk": "today",
+      "title": "Today"
+    }
+  ]
+}

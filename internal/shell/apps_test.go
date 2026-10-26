@@ -144,6 +144,17 @@ func TestAppsAreTheCompanysAndThePersons(t *testing.T) {
 		}
 	}
 
+	// the platform's own screens are the core's Apps (step 5 of the Apps): every
+	// person of every company is served them, each a screen the desk draws
+	for _, who := range [][2]string{{"olga", b}, {"kk", a}, {"celina", a}} {
+		mine := appsOf(who[0], who[1])
+		for id, screen := range map[string]string{"today": "today", "my-company": "company", "settings": "settings"} {
+			if p, ok := mine[id]; !ok || len(p.Tabs) != 1 || p.Tabs[0].Desk != screen {
+				t.Fatalf("%s in %s is served the platform's %s on the desk's %s: %+v", who[0], who[1], id, screen, mine[id])
+			}
+		}
+	}
+
 	got := appsOf("kk", a)
 	l, ok := got["liczenie"]
 	if !ok || l.Title != "Liczenie" || l.Domain != "work" || l.Function != "documents" {

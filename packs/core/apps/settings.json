@@ -1,0 +1,12 @@
+{
+  "app": "settings",
+  "version": 1,
+  "title": "Desk and look",
+  "layer": "platform",
+  "tabs": [
+    {
+      "desk": "settings",
+      "title": "Desk and look"
+    }
+  ]
+}

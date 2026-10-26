@@ -121,7 +121,7 @@ func TestACoreAlreadyThereDraftsNothing(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, sum := range sums {
-		added := sum.Pack == "core" && sum.Types == 1 && sum.Views == 0 && sum.Rules == 2 && sum.Activities == 2 && sum.Apps == 13 && sum.Bundle == "pack-core-v3"
+		added := sum.Pack == "core" && sum.Types == 1 && sum.Views == 0 && sum.Rules == 2 && sum.Activities == 2 && sum.Apps == 16 && sum.Bundle == "pack-core-v4"
 		if !added && (sum.Bundle != "" || sum.Types+sum.Views+sum.Rules+sum.Activities+sum.Upgraded != 0) || len(sum.Conflicts) != 0 {
 			t.Fatalf("init drafted more than the core added since on a database that holds it: %+v", sum)
 		}

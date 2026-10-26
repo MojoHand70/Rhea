@@ -1,0 +1,15 @@
+{
+  "app": "my-company",
+  "version": 1,
+  "title": "My company",
+  "layer": "platform",
+  "uses": [
+    "company"
+  ],
+  "tabs": [
+    {
+      "desk": "company",
+      "title": "My company"
+    }
+  ]
+}
