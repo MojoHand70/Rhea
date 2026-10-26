@@ -197,9 +197,15 @@ func TestAppsUnpackIntoTodaysDefinitions(t *testing.T) {
 		t.Fatalf("unpacked differs from today's:\nwant %s\ngot  %s", wb, gb)
 	}
 
-	apps, err := appsS.LatestApps(ctx)
+	all, err := appsS.LatestApps(ctx)
 	if err != nil {
 		t.Fatal(err)
+	}
+	var apps []core.App // the notes pack's, beside the core's own
+	for _, a := range all {
+		if a.ID == "notatki" || a.ID == "podsumowanie" {
+			apps = append(apps, a)
+		}
 	}
 	wantApps := []core.App{
 		{ID: "notatki", Version: 1, Title: "Notatki", Layer: "business", Data: []string{"note"},
@@ -212,7 +218,7 @@ func TestAppsUnpackIntoTodaysDefinitions(t *testing.T) {
 	if !reflect.DeepEqual(apps, wantApps) {
 		t.Fatalf("the Apps, approved: %+v", apps)
 	}
-	if flatApps, _ := flatS.LatestApps(ctx); len(flatApps) != 0 {
+	if flatApps, _ := flatS.LatestApps(ctx); slices.ContainsFunc(flatApps, func(a core.App) bool { return a.ID == "notatki" || a.ID == "podsumowanie" }) {
 		t.Fatalf("a flat pack brings no App: %+v", flatApps)
 	}
 	decl, err := appsS.PackDeclarations(ctx)
@@ -341,5 +347,52 @@ func TestReadFileFlattensApps(t *testing.T) {
 	if !same(parts{flat.ObjectTypes, viewSpecs(flat.ViewDefs), flat.Rules, flat.Activities, flat.Events},
 		parts{got.ObjectTypes, viewSpecs(got.ViewDefs), got.Rules, got.Activities, got.Events}) {
 		t.Fatalf("the parts differ from the flat pack's:\n%+v\n%+v", flat, got)
+	}
+}
+
+// A pack's App may show another pack's screen by naming it, {"view": id}: the
+// screen stays the other pack's, declared by it alone, and the App lists it
+// among its tabs. Refused: a name nothing has defined, a name of a screen of
+// the same pack (that screen is one of its Apps' own), a name carrying a
+// view's parts as well.
+func TestAppNamesAnotherPacksScreen(t *testing.T) {
+	ctx := context.Background()
+	s, x := withCore(t)
+	apps := notesApps()
+	apps["podsumowanie"].(map[string]any)["tabs"] = []any{noteByText, map[string]any{"view": "account-list"}}
+	sum, err := pack.Load(ctx, s, writePack(t, notesHeader(true), apps), "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, errs, err := x.ApproveBundle(ctx, sum.Bundle, "krzysztof", "2026-01-01"); err != nil || len(errs) != 0 {
+		t.Fatalf("approve: %v %v", err, errs)
+	}
+	a, _, err := s.GetAppVersion(ctx, "podsumowanie", 1)
+	if err != nil || len(a.Tabs) != 2 || a.Tabs[1] != (core.AppTab{View: "account-list"}) {
+		t.Fatalf("the App lists the core's screen: %+v %v", a, err)
+	}
+	decl, err := s.PackDeclarations(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if slices.Contains(decl["notes"], core.Member{Kind: core.KindViewDef, Name: "account-list", Version: 1}) {
+		t.Fatalf("a screen named is not declared by the pack naming it: %+v", decl["notes"])
+	}
+
+	s2, _ := withCore(t)
+	for _, c := range []struct {
+		why  string
+		tab  map[string]any
+		says string
+	}{
+		{"a screen nothing defines", map[string]any{"view": "no-such-list"}, "no-such-list"},
+		{"a screen of the same pack", map[string]any{"view": "note-list"}, "note-list"},
+		{"a name carrying a view's parts", map[string]any{"view": "account-list", "notion": "list"}, "account-list"},
+	} {
+		apps := notesApps()
+		apps["podsumowanie"].(map[string]any)["tabs"] = []any{noteByText, c.tab}
+		if _, err := pack.Load(ctx, s2, writePack(t, notesHeader(true), apps), "test"); err == nil || !strings.Contains(err.Error(), c.says) {
+			t.Errorf("%s: want a refusal naming %q, got %v", c.why, c.says, err)
+		}
 	}
 }

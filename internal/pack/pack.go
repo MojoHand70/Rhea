@@ -319,6 +319,16 @@ func load(ctx context.Context, s *store.Store, m Manifest, apps []unpacked, acto
 			return sum, fmt.Errorf("pack %s requires object type %q — load its base definitions first", m.Pack, name)
 		}
 	}
+	// a view an App names is another pack's, on the record
+	for _, u := range apps {
+		for _, v := range u.named {
+			if ok, err := s.HasViewDef(ctx, v); err != nil {
+				return sum, err
+			} else if !ok {
+				return sum, fmt.Errorf("app %s names view %s, which no pack has defined", u.app.ID, v)
+			}
+		}
+	}
 	// what an App uses is kept by another of the pack's Apps, by a pack
 	// drafted alongside, or is on the record
 	kept := map[string]bool{}

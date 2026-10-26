@@ -31,10 +31,13 @@ type AppFile struct {
 	Rules   []Rule            `json:"rules,omitempty"`
 }
 
-// AppFileTab is a tab: a view, whole, or a screen the desk draws from its own
-// code, named by desk with its title.
+// AppFileTab is a tab: a view, whole; another pack's view, named by view (a
+// later version of an App another pack keeps shows that pack's screens, which
+// stay its own); or a screen the desk draws from its own code, named by desk
+// with its title.
 type AppFileTab struct {
 	core.ViewDef
+	View string `json:"view,omitempty"`
 	Desk string `json:"desk,omitempty"`
 }
 
@@ -48,7 +51,7 @@ type AppFileRecord struct {
 // ("screens") is refused, never loaded as an App without it
 var (
 	appFileKeys   = []string{"app", "version", "title", "layer", "data", "uses", "tabs", "record", "actions", "rules"}
-	appTabKeys    = []string{"view_id", "version", "notion", "title", "domain", "function", "spec", "desk"}
+	appTabKeys    = []string{"view_id", "version", "notion", "title", "domain", "function", "spec", "view", "desk"}
 	appRecordKeys = []string{"of", "tabs"}
 )
 
@@ -106,11 +109,13 @@ func readAppFile(b []byte, name string) (AppFile, error) {
 	return f, nil
 }
 
-// unpacked is an App and the parts it holds, as the loader loads them.
+// unpacked is an App and the parts it holds, as the loader loads them, and
+// the other packs' views it names.
 type unpacked struct {
 	app   core.App
 	types []core.ObjectType
 	views []core.ViewDef
+	named []string
 	rules []Rule
 	doors []Activity
 }
@@ -126,11 +131,18 @@ func unpack(f AppFile, read func(name string) ([]byte, error)) (unpacked, error)
 	tabs := func(in []AppFileTab) ([]core.AppTab, error) {
 		var out []core.AppTab
 		for i, t := range in {
+			parts := t.ID != "" || t.Notion != "" || t.Domain != "" || t.Function != "" || len(t.Spec) > 0 || t.Version != 0
 			switch {
-			case t.Desk != "" && t.ID != "":
-				return nil, fmt.Errorf("app %s: tab %d is both view %s and the desk's %s", f.App, i+1, t.ID, t.Desk)
+			case t.Desk != "" && (t.ID != "" || t.View != ""):
+				return nil, fmt.Errorf("app %s: tab %d is both view %s%s and the desk's %s", f.App, i+1, t.ID, t.View, t.Desk)
+			case t.View != "":
+				if parts || t.Title != "" {
+					return nil, fmt.Errorf("app %s: tab %d names view %s and carries a view's parts too — a view of its own is written whole, another pack's by its name alone", f.App, i+1, t.View)
+				}
+				u.named = append(u.named, t.View)
+				out = append(out, core.AppTab{View: t.View})
 			case t.Desk != "":
-				if t.Notion != "" || t.Domain != "" || t.Function != "" || len(t.Spec) > 0 || t.Version != 0 {
+				if parts {
 					return nil, fmt.Errorf("app %s: tab %d is the desk's %s, and carries a view's parts too", f.App, i+1, t.Desk)
 				}
 				out = append(out, core.AppTab{Desk: t.Desk, Title: t.Title})
@@ -287,11 +299,18 @@ func readApps(m *Manifest, read func(name string) ([]byte, error)) ([]unpacked, 
 				return nil, err
 			}
 		}
+		out = append(out, u)
 		m.ObjectTypes = append(m.ObjectTypes, u.types...)
 		m.ViewDefs = append(m.ViewDefs, u.views...)
 		m.Rules = append(m.Rules, u.rules...)
 		m.Activities = append(m.Activities, u.doors...)
-		out = append(out, u)
+	}
+	for _, u := range out {
+		for _, v := range u.named {
+			if app, ok := owner[[2]string{"view", v}]; ok {
+				return nil, fmt.Errorf("pack %s: app %s names view %s, which is App %s's own — a screen of the pack is in one App", m.Pack, u.app.ID, v, app)
+			}
+		}
 	}
 	return out, nil
 }

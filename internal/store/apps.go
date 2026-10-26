@@ -64,3 +64,11 @@ func (s *Store) LatestApps(ctx context.Context) ([]core.App, error) {
 	}
 	return out, rows.Err()
 }
+
+// HasViewDef says whether a view is on the record, in any version and state:
+// an App of one pack may name a view another pack has drafted or approved.
+func (s *Store) HasViewDef(ctx context.Context, id string) (bool, error) {
+	var ok bool
+	err := s.Pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM view_def WHERE view_id = $1)`, id).Scan(&ok)
+	return ok, err
+}
