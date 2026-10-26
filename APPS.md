@@ -160,7 +160,7 @@ close names the core's month lock, the Poland pack's Plan kont, Kontrahenci, Fak
 VAT and Waluty name the core's screens and kinds. The channels' packs — KSeF in, MT940, NBP, the PDF
 reader — have doors and no tabs and stay as they are until step 5 makes them connectors.
 
-**Core** — `packs/core/core.json` v4, 16 Apps.
+**Core** — `packs/core/core.json` v5, 18 Apps.
 
 | App | title | v | layer | tabs | record | keeps | uses | doors | rules |
 |---|---|---|---|---|---|---|---|---|---|
@@ -180,6 +180,8 @@ reader — have doors and no tabs and stay as they are until step 5 makes them c
 | `today` | Today | 1 | platform | *desk: today* | — | — | — | — | — |
 | `my-company` | My company | 1 | platform | *desk: company* | — | — | company | — | — |
 | `settings` | Desk and look | 1 | platform | *desk: settings* | — | — | — | — | — |
+| `clients` | Clients | 1 | core | client-list | — | client | company, sales_invoice | set_client_terms | 2 |
+| `suppliers` | Suppliers | 1 | core | supplier-list | — | supplier | company, purchase_invoice | set_supplier_terms | 2 |
 
 **Ludzie** — `packs/common/people.json` v4, 1 App.
 
@@ -199,7 +201,7 @@ reader — have doors and no tabs and stay as they are until step 5 makes them c
 |---|---|---|---|---|---|---|---|---|---|
 | `documents` | Documents | 1 | platform | issued-documents | — | received_document, issued_document | — | — | 3 |
 
-**Poland** — `packs/pl/pack.json` v47, 24 Apps.
+**Poland** — `packs/pl/pack.json` v48, 24 Apps.
 
 | App | title | v | layer | tabs | record | keeps | uses | doors | rules |
 |---|---|---|---|---|---|---|---|---|---|
@@ -302,7 +304,11 @@ the face's check and the live walk guard what the person sees.
    what a record shows); the queue and matching screens (Do zrobienia, Należności do pilnowania, the bank's pairing)
    are not drawn by the desk yet and their items wait, shown meanwhile as Dziś's cards.
 
-## Klienci i Dostawcy — the first new App (proposal, for KK)
+## Klienci i Dostawcy — the first new App
+
+*Built 2026-10-27 (Rhea cd55fd9, 450e67e; rheaface 75b0c08, 6989361): KK chose **A** (DECISIONS 2026-10-27) — core
+v5's Apps `clients` and `suppliers`, the Poland pack v48 naming and placing them; no kernel language change was needed,
+only an amendment leaving out what a setting leaves out. What follows is the proposal as KK read it.*
 
 *Claude, 2026-10-26, after KK's answers (DECISIONS): the order is the Activity Bar first (step 5, done), then
 the new Apps one at a time, Klienci and Dostawcy first. KK: "physically we can keep 1 table of Kontrahenci,
