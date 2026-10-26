@@ -17,6 +17,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
+	"path/filepath"
 	"reflect"
 
 	"rhea/internal/core"
@@ -44,8 +46,13 @@ type Manifest struct {
 	// Succeeds names the packs this one takes over from (DIRECTION
 	// 2026-10-24, step 3): their rules and doors it carries are its own to
 	// change, and what it carries it holds in their place.
-	Succeeds    []string          `json:"succeeds,omitempty"`
-	Requires    []string          `json:"requires,omitempty"`
+	Succeeds []string `json:"succeeds,omitempty"`
+	Requires []string `json:"requires,omitempty"`
+	// Apps names the pack's Apps, in order (KK 2026-10-26): each a file,
+	// apps/<app>.json beside the pack's, holding its types, views, doors and
+	// rules. A pack written as Apps keeps no part outside them; one written
+	// before them keeps its parts in the lists below.
+	Apps        []string          `json:"apps,omitempty"`
 	ObjectTypes []core.ObjectType `json:"object_types,omitempty"`
 	ViewDefs    []core.ViewDef    `json:"view_defs,omitempty"`
 	Rules       []Rule            `json:"rules,omitempty"`
@@ -119,6 +126,7 @@ type Summary struct {
 	Rules      int    `json:"rules"`
 	Activities int    `json:"activities"`
 	Events     int    `json:"events"`
+	Apps       int    `json:"apps"`
 	Skipped    int    `json:"skipped"`
 	Upgraded   int    `json:"upgraded"`
 	// Adopted counts drafts already on the record that no draft or active
@@ -182,12 +190,28 @@ func BundleID(pack string, version int) string { return fmt.Sprintf("pack-%s-v%d
 // whoever runs the load — pack provenance lives in the dedup keys and the
 // rules' created_by. Order matters only once: types land before rules so
 // rule validation can see its targets.
-func Load(ctx context.Context, s *store.Store, path, actor string) (Summary, error) {
-	b, err := os.ReadFile(path)
+func Load(ctx context.Context, s *store.Store, file, actor string) (Summary, error) {
+	b, err := os.ReadFile(file)
 	if err != nil {
 		return Summary{}, err
 	}
-	return LoadBytes(ctx, s, b, actor)
+	dir := filepath.Dir(file)
+	m, apps, err := parse(b, func(name string) ([]byte, error) { return os.ReadFile(filepath.Join(dir, filepath.FromSlash(name))) })
+	if err != nil {
+		return Summary{}, err
+	}
+	return load(ctx, s, m, apps, actor, nil)
+}
+
+// parse reads a pack file, its Apps' parts put where a pack's parts are;
+// read gives a file beside it, nil when there is no file to read beside.
+func parse(b []byte, read func(name string) ([]byte, error)) (Manifest, []unpacked, error) {
+	var m Manifest
+	if err := json.Unmarshal(b, &m); err != nil {
+		return m, nil, err
+	}
+	apps, err := readApps(&m, read)
+	return m, apps, err
 }
 
 // LoadCore drafts what the database lacks of the core the kernel ships
@@ -205,15 +229,15 @@ func LoadCore(ctx context.Context, s *store.Store, actor string) ([]Summary, err
 		if err != nil {
 			return sums, err
 		}
-		sum, err := load(ctx, s, b, actor, before)
+		m, apps, err := parse(b, func(name string) ([]byte, error) { return packs.FS.ReadFile(path.Join(path.Dir(f), name)) })
+		if err != nil {
+			return sums, fmt.Errorf("core %s: %w", f, err)
+		}
+		sum, err := load(ctx, s, m, apps, actor, before)
 		if err != nil {
 			return sums, fmt.Errorf("core %s: %w", f, err)
 		}
 		sums = append(sums, sum)
-		var m Manifest
-		if err := json.Unmarshal(b, &m); err != nil {
-			return sums, err
-		}
 		for _, t := range m.ObjectTypes {
 			before[t.Name] = t
 		}
@@ -222,17 +246,18 @@ func LoadCore(ctx context.Context, s *store.Store, actor string) ([]Summary, err
 }
 
 // LoadBytes loads a pack file's contents (Load's body).
+// A pack written as Apps is loaded from its file (Load), its Apps beside it.
 func LoadBytes(ctx context.Context, s *store.Store, b []byte, actor string) (Summary, error) {
-	return load(ctx, s, b, actor, nil)
-}
-
-// load is LoadBytes with the types of packs drafted alongside, which this
-// pack's rules may name before they are approved.
-func load(ctx context.Context, s *store.Store, b []byte, actor string, alongside map[string]core.ObjectType) (Summary, error) {
-	var m Manifest
-	if err := json.Unmarshal(b, &m); err != nil {
+	m, apps, err := parse(b, nil)
+	if err != nil {
 		return Summary{}, err
 	}
+	return load(ctx, s, m, apps, actor, nil)
+}
+
+// load loads a parsed pack, with the types of packs drafted alongside, which
+// this pack's rules may name before they are approved.
+func load(ctx context.Context, s *store.Store, m Manifest, apps []unpacked, actor string, alongside map[string]core.ObjectType) (Summary, error) {
 	if m.Pack == "" {
 		return Summary{}, fmt.Errorf("pack file needs a pack name")
 	}
@@ -267,6 +292,22 @@ func load(ctx context.Context, s *store.Store, b []byte, actor string, alongside
 	for _, name := range m.Requires {
 		if _, err := s.GetObjectType(ctx, name); err != nil {
 			return sum, fmt.Errorf("pack %s requires object type %q — load its base definitions first", m.Pack, name)
+		}
+	}
+	// what an App uses is kept by another of the pack's Apps, by a pack
+	// drafted alongside, or is on the record
+	kept := map[string]bool{}
+	for _, t := range m.ObjectTypes {
+		kept[t.Name] = true
+	}
+	for _, u := range apps {
+		for _, name := range u.app.Uses {
+			if kept[name] || alongside[name].Name != "" {
+				continue
+			}
+			if _, err := s.GetObjectType(ctx, name); err != nil {
+				return sum, fmt.Errorf("app %s uses %s, which no App of pack %s keeps and nothing approved defines", u.app.ID, name, m.Pack)
+			}
 		}
 	}
 
@@ -454,6 +495,32 @@ func load(ctx context.Context, s *store.Store, b []byte, actor string, alongside
 		} else {
 			sum.Activities++
 		}
+	}
+
+	// The Apps last, binding the parts above by name; an App is gated and
+	// versioned as a view is.
+	for _, u := range apps {
+		a := u.app
+		declared = append(declared, core.Member{Kind: core.KindApp, Name: a.ID, Version: a.Version})
+		if have, status, err := s.GetAppVersion(ctx, a.ID, a.Version); err == nil {
+			if !sameJSON(have, a) {
+				return sum, fmt.Errorf("app %s v%d differs from the one stored — bump the App's version", a.ID, a.Version)
+			}
+			if adopted, err := adopt(ctx, s, status, core.Member{Kind: core.KindApp, Name: a.ID, Version: a.Version}, &members, &sum); err != nil {
+				return sum, err
+			} else if !adopted {
+				sum.Skipped++
+			}
+			continue
+		}
+		if err := changed("app " + a.ID); err != nil {
+			return sum, err
+		}
+		if err := store.InsertAppRow(ctx, s.Pool, a, core.StatusDraft); err != nil {
+			return sum, fmt.Errorf("app %s: %w", a.ID, err)
+		}
+		members = append(members, core.Member{Kind: core.KindApp, Name: a.ID, Version: a.Version})
+		sum.Apps++
 	}
 
 	// A version that declares only what is on the record already still has

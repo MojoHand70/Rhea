@@ -149,17 +149,19 @@ func (w Warrant) ValidateStored() error {
 
 // Member points at one draft definition row.
 type Member struct {
-	Kind    string `json:"kind"` // rule | activity | object_type | view_def
-	Name    string `json:"name"` // rule_id, activity name, type name, view_id
+	Kind    string `json:"kind"` // rule | activity | object_type | view_def | app
+	Name    string `json:"name"` // rule_id, activity name, type name, view_id, app id
 	Version int    `json:"version"`
 }
 
-// Definition kinds a bundle can carry: the four versioned vocabularies.
+// Definition kinds a bundle can carry: the four versioned vocabularies, and
+// the Apps that bind them (KK 2026-10-26).
 const (
 	KindRule       = "rule"
 	KindActivity   = "activity"
 	KindObjectType = "object_type"
 	KindViewDef    = "view_def"
+	KindApp        = "app"
 )
 
 // Validate checks a bundle's shape: known kinds, no member twice, at least
@@ -176,7 +178,7 @@ func (b Bundle) Validate() error {
 	}
 	seen := map[[2]string]bool{}
 	for _, m := range b.Members {
-		if !slices.Contains([]string{KindRule, KindActivity, KindObjectType, KindViewDef}, m.Kind) {
+		if !slices.Contains([]string{KindRule, KindActivity, KindObjectType, KindViewDef, KindApp}, m.Kind) {
 			return fmt.Errorf("bundle %s: unknown member kind %q", b.ID, m.Kind)
 		}
 		if m.Name == "" || m.Version < 1 {

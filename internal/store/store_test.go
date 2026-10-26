@@ -106,7 +106,7 @@ func TestAppendOnlyInvariant(t *testing.T) {
 	}
 	// Every append-only table, both triggers, enabled always (a superuser's
 	// session_replication_role cannot switch them off), and TRUNCATE refused.
-	for _, table := range []string{"event", "rule", "object_type", "view_def", "activity", "bundle", "blob", "pack_member"} {
+	for _, table := range []string{"event", "rule", "object_type", "view_def", "activity", "bundle", "blob", "pack_member", "app"} {
 		for _, trig := range []string{table + "_append_only", table + "_no_truncate"} {
 			var enabled string
 			if err := s.Pool.QueryRow(ctx, `SELECT tgenabled FROM pg_trigger WHERE tgname = $1`, trig).Scan(&enabled); err != nil || enabled != "A" {
@@ -135,6 +135,17 @@ func TestAppendOnlyInvariant(t *testing.T) {
 	}
 	if _, err := s.Pool.Exec(ctx, `UPDATE object_type SET status = 'active'`); err == nil {
 		t.Fatal("UPDATE on object_type succeeded — invariant 1 broken")
+	}
+	// An App binds a pack's parts (KK 2026-10-26): gated like a view, its
+	// approval appends the active row of the same version.
+	if err := store.InsertAppRow(ctx, s.Pool, core.App{ID: "a", Version: 1, Title: "A", Layer: "core", Data: []string{"t"}}, core.StatusDraft); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Pool.Exec(ctx, `UPDATE app SET status = 'active'`); err == nil {
+		t.Fatal("UPDATE on app succeeded — invariant 1 broken")
+	}
+	if _, err := s.Pool.Exec(ctx, `DELETE FROM app`); err == nil {
+		t.Fatal("DELETE on app succeeded — invariant 1 broken")
 	}
 	// The blob store joins the family (DIRECTION 2026-10-10): a file is kept
 	// whole under its hash, and never changed or removed.

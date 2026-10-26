@@ -169,6 +169,20 @@ CREATE TABLE IF NOT EXISTS pack_member (
     PRIMARY KEY (pack, pack_version, kind, name)
 );
 
+-- Apps (KK 2026-10-26, APPS.md "The App definition"): what binds a pack's
+-- parts — its kinds of record, tabs, record, doors and rules, each by name —
+-- into one small program. Versioned and gated as a view is: approval appends
+-- the active row of the same version, never flips the draft. The
+-- installation's, as views are; a company's own Apps come with the designer.
+CREATE TABLE IF NOT EXISTS app (
+    app_id     TEXT NOT NULL,
+    version    INT NOT NULL,
+    status     TEXT NOT NULL CHECK (status IN ('draft','active','superseded')),
+    spec       JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (app_id, version, status)
+);
+
 -- The blob store (DIRECTION 2026-10-10, "the file is the fact"): every file
 -- a door or a channel receives, kept whole under its content hash. A
 -- document.received event names a row here, and the store refuses the event
@@ -217,7 +231,7 @@ $$ LANGUAGE plpgsql;
 DO $$
 DECLARE t TEXT;
 BEGIN
-    FOREACH t IN ARRAY ARRAY['event','rule','object_type','view_def','activity','bundle','blob','pack_member'] LOOP
+    FOREACH t IN ARRAY ARRAY['event','rule','object_type','view_def','activity','bundle','blob','pack_member','app'] LOOP
         IF NOT EXISTS (
             SELECT 1 FROM pg_trigger WHERE tgname = t || '_append_only'
         ) THEN
@@ -408,7 +422,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS event_company_dedup_key ON event (COALESCE(com
 DO $$
 DECLARE t TEXT;
 BEGIN
-    FOREACH t IN ARRAY ARRAY['event','rule','object_type','view_def','activity','bundle','blob','pack_member'] LOOP
+    FOREACH t IN ARRAY ARRAY['event','rule','object_type','view_def','activity','bundle','blob','pack_member','app'] LOOP
         EXECUTE format('ALTER TABLE %I ENABLE ALWAYS TRIGGER %I', t, t || '_append_only');
         EXECUTE format('ALTER TABLE %I ENABLE ALWAYS TRIGGER %I', t, t || '_no_truncate');
     END LOOP;

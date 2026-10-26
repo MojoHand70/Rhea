@@ -74,6 +74,13 @@ func (s *Server) bundleViewWith(ctx context.Context, b core.Bundle, k *network.K
 			}
 			mv.Summary = fmt.Sprintf("%s · %s", v.Notion, v.Title)
 			mv.Definition = json.RawMessage(v.Spec)
+		case core.KindApp:
+			a, _, err := s.Store.GetAppVersion(ctx, m.Name, m.Version)
+			if err != nil {
+				return out, err
+			}
+			mv.Summary = fmt.Sprintf("App · %s · %d tabs, %d kinds of record, %d rules", a.Title, len(a.Tabs), len(a.Data), len(a.Rules))
+			mv.Definition = a
 		}
 		out.Definitions = append(out.Definitions, mv)
 	}

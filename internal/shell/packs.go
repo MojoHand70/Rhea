@@ -30,6 +30,7 @@ type catalogEntry struct {
 		Views int `json:"views"`
 		Rules int `json:"rules"`
 		Doors int `json:"doors"`
+		Apps  int `json:"apps"`
 	} `json:"brings"`
 	// Installed is the company's install of the pack — the standing one,
 	// else the last it switched off; nil when it has none.
@@ -104,6 +105,8 @@ func (s *Server) handlePacks(w http.ResponseWriter, r *http.Request) {
 				e.Brings.Rules++
 			case core.KindActivity:
 				e.Brings.Doors++
+			case core.KindApp:
+				e.Brings.Apps++
 			}
 		}
 		if !e.EveryCompany {

@@ -33,6 +33,7 @@ import (
 var backupTables = []struct{ name, order string }{
 	{"object_type", "name, version"},
 	{"view_def", "view_id, version"},
+	{"app", "app_id, version, status"},
 	{"rule", "rule_id, version"},
 	{"activity", "name, version"},
 	{"bundle", "bundle_id, version"},

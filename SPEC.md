@@ -90,6 +90,13 @@ hints. The notion library:
 
 The shell renders ViewDefs generically; there are no hand-written screens per object.
 
+### App
+A small program bound as one definition (KK, 2026-10-23 and 2026-10-26; `APPS.md`): the
+kinds of record it keeps and uses, its tabs in order, what one of its records shows, its
+activities and its rules. Its file holds the parts whole; loading unpacks them into the
+definitions above, and the App binds them by name — versioned, gated and approved with its
+pack like a view. Tabs nest one level: an App's inside its tab, a record's inside its own.
+
 ## §3 Boundaries
 
 ```
@@ -109,7 +116,7 @@ kernel        →  validates, stores, executes; the only writer of state
 ## §4 Storage
 
 - **PostgreSQL** — the system of record and write side: `event` (append-only), `rule`,
-  `object_type`, `view_def` (all versioned, append-only), plus the `object` projection
+  `object_type`, `view_def`, `app` (all versioned, append-only), plus the `object` projection
   cache (rebuildable, the one non-append table, owned exclusively by the kernel's
   replayer/executor).
 - **DuckDB** — the read/analysis side: projections built by replaying the event log;

@@ -668,6 +668,14 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 				writes = append(writes, func(tx store.Querier) error {
 					return store.InsertViewDefRow(ctx, tx, v, core.StatusActive)
 				})
+			case core.KindApp:
+				a, _, err := x.Store.GetAppVersion(ctx, m.Name, m.Version)
+				if err != nil {
+					return nil, err
+				}
+				writes = append(writes, func(tx store.Querier) error {
+					return store.InsertAppRow(ctx, tx, a, core.StatusActive)
+				})
 			}
 		}
 		approval, _ := json.Marshal(map[string]any{

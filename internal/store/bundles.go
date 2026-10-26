@@ -185,6 +185,9 @@ func (s *Store) MemberStatus(ctx context.Context, m core.Member) (string, error)
 	case core.KindViewDef:
 		_, status, err := s.GetViewDefVersion(ctx, m.Name, m.Version)
 		return status, err
+	case core.KindApp:
+		_, status, err := s.GetAppVersion(ctx, m.Name, m.Version)
+		return status, err
 	}
 	return "", fmt.Errorf("unknown member kind %q", m.Kind)
 }

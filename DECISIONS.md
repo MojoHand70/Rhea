@@ -5288,3 +5288,18 @@ equalling today's approved definitions.
 Asked whether tabs inside a desk tab may nest further, the proposal being one level and never
 deeper — an App's tabs inside its desk tab, a record's tabs inside its own — KK: *"Yes, one-level
 limit is something I would like to suggest."*
+
+## 2026-10-26 — How the kernel keeps an App (Claude, the spec silent)
+
+- **An App is kept by name.** Its row names its kinds of record, views, doors and rules; their
+  versions stay their own rows, so a new version of a rule or a view moves no App. Why: one place
+  for each version, and no App bump for every rule upgrade.
+- **Gated and kept as a view is**: a draft row, the active row of the same version at approval,
+  append-only, in the backup; for the whole installation, with no company column. A company's own
+  Apps come with the designer, and the table gains its company then, as `rule` did.
+- **A pack is written either as Apps or as before**, never both: a pack of Apps keeps no type,
+  view, door or rule outside them. Why: the conversion is whole per pack, and "every part in one
+  App" is checkable.
+- **A rule writes only what its App keeps or names in its uses** (a new record, an amendment, the
+  journal's postings), and every kind used is kept by another App of the pack or already approved.
+  Why: what an App touches is read from its definition, not discovered from its rules.
