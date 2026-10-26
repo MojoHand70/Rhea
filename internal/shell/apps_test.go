@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -137,8 +138,10 @@ func TestAppsAreTheCompanysAndThePersons(t *testing.T) {
 		return out
 	}
 
-	if got := appsOf("olga", b); len(got) != 0 {
-		t.Fatalf("beta, which did not install the pack, is served its Apps: %+v", got)
+	for name := range appsOf("olga", b) { // the core's Apps are every company's
+		if strings.HasPrefix(name, "liczenie") || name == "tablica" {
+			t.Fatalf("beta, which did not install the pack, is served its App %s", name)
+		}
 	}
 
 	got := appsOf("kk", a)

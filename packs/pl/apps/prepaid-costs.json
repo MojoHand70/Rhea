@@ -1,0 +1,416 @@
+{
+  "app": "prepaid-costs",
+  "version": 1,
+  "title": "Rozliczenia międzyokresowe",
+  "layer": "law",
+  "data": [
+    {
+      "name": "prepaid_cost",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "start",
+      "fields": [
+        {
+          "name": "invoice",
+          "type": "ref<purchase_invoice>",
+          "required": true
+        },
+        {
+          "name": "account",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "start",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "months",
+          "type": "int",
+          "required": true
+        },
+        {
+          "name": "end",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "active",
+            "done"
+          ]
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ],
+      "lifecycle": {
+        "field": "status",
+        "transitions": {
+          "active": [
+            "done"
+          ]
+        }
+      },
+      "amendable": [
+        "status"
+      ]
+    },
+    {
+      "name": "prepaid_release",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "period",
+      "fields": [
+        {
+          "name": "prepaid",
+          "type": "ref<prepaid_cost>",
+          "required": true
+        },
+        {
+          "name": "invoice",
+          "type": "ref<purchase_invoice>",
+          "required": true
+        },
+        {
+          "name": "account",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "period",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "released",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "closed_on",
+          "type": "date",
+          "required": true
+        }
+      ]
+    }
+  ],
+  "uses": [
+    "posting"
+  ],
+  "tabs": [
+    {
+      "view_id": "rmk",
+      "version": 1,
+      "notion": "analysis",
+      "title": "Koszty rozliczane w czasie (RMK)",
+      "domain": "finance",
+      "function": "rmk",
+      "spec": {
+        "sql_file": "rmk.sql",
+        "columns": [
+          {
+            "field": "invoice",
+            "label": "Faktura",
+            "type": "string"
+          },
+          {
+            "field": "supplier",
+            "label": "Dostawca",
+            "type": "string"
+          },
+          {
+            "field": "account",
+            "label": "Konto",
+            "type": "string"
+          },
+          {
+            "field": "start",
+            "label": "Od",
+            "type": "date"
+          },
+          {
+            "field": "until",
+            "label": "Do",
+            "type": "date"
+          },
+          {
+            "field": "amount",
+            "label": "Kwota",
+            "type": "money"
+          },
+          {
+            "field": "released",
+            "label": "W kosztach",
+            "type": "money"
+          },
+          {
+            "field": "remaining",
+            "label": "Zostało",
+            "type": "money"
+          }
+        ]
+      }
+    }
+  ],
+  "actions": [
+    {
+      "name": "spread_cost",
+      "domain": "finance",
+      "description": "Firma mówi, że faktura zakupu dotyczy kilku miesięcy (np. roczne ubezpieczenie od 1 października: start 2026-10-01, 12 miesięcy) — koszt schodzi na 640 i wraca w koszty po równo co miesiąc; konto i kwota, gdy inne niż konto dostawcy i netto faktury",
+      "spec": {
+        "inputs": [
+          {
+            "name": "invoice",
+            "type": "ref<purchase_invoice>",
+            "required": true
+          },
+          {
+            "name": "start",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "months",
+            "type": "int",
+            "required": true
+          },
+          {
+            "name": "account",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "amount",
+            "type": "money",
+            "required": false
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "cost.spread",
+        "who": [
+          "human"
+        ]
+      }
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "pl-spread-cost",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Koszt rozłożony w czasie (RMK czynne): faktura zakupu, która dotyczy kilku miesięcy (roczne ubezpieczenie, licencja, abonament z góry), schodzi z kosztów na 640 i wraca w koszty po równo w każdym miesiącu okresu — konto kosztu jak dostawcy, inaczej 403; kwota jak netto faktury w złotych, chyba że podano inną; co najmniej dwa miesiące; jedna faktura rozkłada się raz",
+      "spec": {
+        "match": {
+          "event_type": "cost.spread",
+          "where": [
+            {
+              "formula": "=$.months >= 2 and count(p in objects(prepaid_cost, invoice, $.invoice)) = 0"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "prepaid_cost",
+            "fields": {
+              "invoice": "=$.invoice",
+              "account": "=coalesce($.account, coalesce($.invoice.supplier.cost_account, \"403\"))",
+              "amount": "=coalesce($.amount, coalesce($.invoice.net_pln, $.invoice.net))",
+              "start": "=$.start",
+              "months": "=$.months",
+              "end": "=add_months($.start, $.months) - 1",
+              "status": "active",
+              "book": "pl-stat"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz.U. 2026 poz. 522) art. 39 ust. 1: jednostki dokonują czynnych rozliczeń międzyokresowych kosztów, jeżeli dotyczą one przyszłych okresów sprawozdawczych; art. 6 ust. 2: współmierność przychodów i kosztów",
+          "KSR 16 pkt 12.10: poniżej progu istotności kosztu można nie rozliczać w czasie — próg ustala polityka jednostki; tu decyduje osoba, która rozkłada fakturę",
+          "przegląd FB-18: koszt opłacony z góry ponad próg idzie na 640 i reguła rozlicza go co miesiąc przez okres, którego dotyczy"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-prepaid-cost",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Koszt rozłożony w czasie przechodzi z kosztów na rozliczenia międzyokresowe: Wn 640 / Ma konto kosztu, w dniu rozłożenia",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "prepaid_cost"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "lines": [
+              {
+                "account": "640",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "=$.state.account",
+                "credit": "=$.state.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "wzorcowy plan kont: 640 czynne rozliczenia międzyokresowe kosztów"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-release-prepaid-costs",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Gdy zaczyna się miesiąc, każdy koszt rozkładany w czasie oddaje swoją część za miesiąc, który się skończył: narastająco — kwota razy miesiące okresu, które już minęły, przez wszystkie jego miesiące, minus to, co już wróciło w koszty; ostatni miesiąc dopełnia do kwoty; koszt rozłożony później oddaje od razu miesiące, które minęły",
+      "spec": {
+        "match": {
+          "event_type": "time.month_opened",
+          "where": [
+            {
+              "formula": "=count(p in objects(prepaid_cost, status, \"active\")) > 0"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "prepaid_release",
+            "each": "=objects(prepaid_cost, status, \"active\")",
+            "fields": {
+              "prepaid": "=$.line.object_id",
+              "invoice": "=$.line.state.invoice",
+              "account": "=$.line.state.account",
+              "period": "=month($.doc.date - 1)",
+              "amount": "=max((if(min(max(months_between($.line.state.start, $.doc.date - 1) + 1, 0), $.line.state.months) >= $.line.state.months, $.line.state.amount, round($.line.state.amount * min(max(months_between($.line.state.start, $.doc.date - 1) + 1, 0), $.line.state.months) / $.line.state.months, 2, half_up))) - (sum(r in objects(prepaid_release, prepaid, $.line.object_id) : r.amount)), 0)",
+              "released": "=if(min(max(months_between($.line.state.start, $.doc.date - 1) + 1, 0), $.line.state.months) >= $.line.state.months, $.line.state.amount, round($.line.state.amount * min(max(months_between($.line.state.start, $.doc.date - 1) + 1, 0), $.line.state.months) / $.line.state.months, 2, half_up))",
+              "closed_on": "=$.doc.date - 1"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz.U. 2026 poz. 522) art. 39 ust. 1 i 3: odpisy czynnych rozliczeń międzyokresowych kosztów następują stosownie do upływu czasu",
+          "ustawa o CIT art. 15 ust. 4d: koszty pośrednie dotyczące okresu przekraczającego rok podatkowy są kosztem proporcjonalnie do długości okresu — tu koszt podatkowy idzie za księgowym, miesiąc po miesiącu"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-prepaid-release",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Część kosztu rozłożonego w czasie wraca w koszty na ostatni dzień swojego miesiąca: Wn konto kosztu / Ma 640",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "prepaid_release"
+            },
+            {
+              "formula": "=$.state.amount > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.closed_on",
+            "lines": [
+              {
+                "account": "=$.state.account",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "640",
+                "credit": "=$.state.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz.U. 2026 poz. 522) art. 39 ust. 1: rozliczenie stosownie do upływu czasu — koszt miesiąca w jego miesiącu"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-finish-prepaid-cost",
+      "priority": 300,
+      "effective_from": "2026-01-01",
+      "description": "Koszt rozłożony w czasie, który wrócił w koszty cały, jest rozliczony i nie bierze udziału w następnych miesiącach",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "prepaid_release"
+            },
+            {
+              "formula": "=$.state.released >= $.state.prepaid.amount"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "prepaid_cost",
+            "target": "=$.state.prepaid",
+            "set": {
+              "status": "done"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

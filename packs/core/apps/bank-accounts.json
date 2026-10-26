@@ -1,0 +1,224 @@
+{
+  "app": "bank-accounts",
+  "version": 1,
+  "title": "Bank accounts and cards",
+  "layer": "core",
+  "data": [
+    {
+      "name": "bank_account",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "name",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "number",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "bank",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "bank_operation",
+      "version": 3,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "title",
+      "fields": [
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "direction",
+          "type": "enum",
+          "values": [
+            "credit",
+            "debit"
+          ],
+          "required": true
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "counterparty",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "counterparty_account",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "account",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "contractor",
+          "type": "ref<contractor>",
+          "required": false
+        },
+        {
+          "name": "kind",
+          "type": "enum",
+          "values": [
+            "transfer",
+            "card",
+            "fee",
+            "other",
+            "interest",
+            "tax",
+            "zus",
+            "own",
+            "owner"
+          ],
+          "required": false
+        },
+        {
+          "name": "open",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "settlement_status",
+          "type": "enum",
+          "values": [
+            "unsettled",
+            "settled",
+            "private"
+          ],
+          "required": true
+        }
+      ],
+      "lifecycle": {
+        "field": "settlement_status",
+        "transitions": {
+          "unsettled": [
+            "unsettled",
+            "settled",
+            "private"
+          ],
+          "settled": [
+            "unsettled"
+          ]
+        }
+      },
+      "amendable": [
+        "kind",
+        "open"
+      ]
+    },
+    {
+      "name": "settlement",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "fields": [
+        {
+          "name": "operation",
+          "type": "ref<bank_operation>",
+          "required": true
+        },
+        {
+          "name": "document_type",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "document_id",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "matching_difference",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "fields": [
+        {
+          "name": "matching",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "kind",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "direction",
+          "type": "enum",
+          "values": [
+            "short",
+            "over",
+            "up",
+            "down"
+          ],
+          "required": true
+        },
+        {
+          "name": "account",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        }
+      ]
+    }
+  ]
+}

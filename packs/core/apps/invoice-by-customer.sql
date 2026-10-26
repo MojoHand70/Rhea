@@ -1,0 +1,1 @@
+SELECT json_extract_string(c.state, '$.name') AS customer, COUNT(*) AS invoices, SUM(CAST(json_extract(i.state, '$.total') AS BIGINT)) AS total FROM objects i JOIN objects c ON json_extract_string(i.state, '$.customer') = c.object_id WHERE i.object_type = 'invoice' AND c.object_type = 'company' GROUP BY 1 ORDER BY total DESC

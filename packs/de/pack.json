@@ -1,12 +1,17 @@
 {
   "pack": "de",
-  "version": 3,
+  "version": 4,
   "kind": "market",
   "market": "DE",
   "install": "installation",
   "stage": "initial",
   "disclaimer": "Dieses Paket wurde von künstlicher Intelligenz (KI) erstellt. Es ist eine erste Fassung: Die Regeln können Fehler enthalten und werden sich ändern, sobald Buchhalter, Steuerberater und Wirtschaftsprüfer sie prüfen.",
   "history": [
+    {
+      "versions": "4",
+      "date": "2026-10-26",
+      "changes": "Als Apps geschrieben: Kontenrahmen SKR03 und Ausgangsrechnungen, über die Kontenarten des Kerns. Keine Definition ändert sich; freigegeben werden die Apps selbst."
+    },
     {
       "versions": "3",
       "date": "2026-10-05",
@@ -31,249 +36,9 @@
     "vat_rate",
     "sales_invoice"
   ],
-  "object_types": [],
-  "view_defs": [
-    {
-      "view_id": "rechnungen-list",
-      "version": 1,
-      "notion": "list",
-      "title": "Ausgangsrechnungen",
-      "domain": "finance",
-      "function": "documents",
-      "spec": {
-        "object_type": "sales_invoice",
-        "columns": [
-          {
-            "field": "number",
-            "label": "Nummer"
-          },
-          {
-            "field": "issue_date",
-            "label": "Datum"
-          },
-          {
-            "field": "buyer",
-            "label": "Käufer"
-          },
-          {
-            "field": "net",
-            "label": "Netto"
-          },
-          {
-            "field": "vat",
-            "label": "USt"
-          },
-          {
-            "field": "gross",
-            "label": "Brutto"
-          }
-        ]
-      }
-    },
-    {
-      "view_id": "rechnung-detail",
-      "version": 1,
-      "notion": "detail",
-      "title": "Ausgangsrechnung",
-      "domain": "finance",
-      "function": "documents",
-      "spec": {
-        "object_type": "sales_invoice",
-        "sections": [
-          {
-            "title": "Rechnung",
-            "fields": [
-              "number",
-              "issue_date"
-            ]
-          },
-          {
-            "title": "Parteien",
-            "fields": [
-              "buyer"
-            ]
-          },
-          {
-            "title": "Beträge",
-            "fields": [
-              "net",
-              "vat",
-              "gross",
-              "vat_rate",
-              "currency"
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "view_id": "ust-je-monat",
-      "version": 3,
-      "notion": "analysis",
-      "title": "Umsatzsteuer je Monat",
-      "domain": "finance",
-      "function": "vat",
-      "spec": {
-        "sql": "SELECT month, rate, n AS net, v AS vat, g AS gross FROM (SELECT substr(json_extract_string(i.state,'$.issue_date'),1,7) AS month, json_extract_string(r.state,'$.code') AS rate, SUM(CAST(json_extract(i.state,'$.net') AS BIGINT)) AS n, SUM(CAST(json_extract(i.state,'$.vat') AS BIGINT)) AS v, SUM(CAST(json_extract(i.state,'$.gross') AS BIGINT)) AS g FROM objects i JOIN objects r ON json_extract_string(i.state,'$.vat_rate') = r.object_id JOIN objects c ON json_extract_string(i.state,'$.seller') = c.object_id WHERE c.object_type = 'company' AND json_extract_string(c.state,'$.country') = 'DE' AND i.object_type = 'sales_invoice' AND r.object_type = 'vat_rate' GROUP BY 1, 2) ORDER BY month, rate",
-        "columns": [
-          {
-            "field": "month",
-            "label": "Monat",
-            "type": "string"
-          },
-          {
-            "field": "rate",
-            "label": "Satz",
-            "type": "string"
-          },
-          {
-            "field": "net",
-            "label": "Netto",
-            "type": "money"
-          },
-          {
-            "field": "vat",
-            "label": "USt",
-            "type": "money"
-          },
-          {
-            "field": "gross",
-            "label": "Brutto",
-            "type": "money"
-          }
-        ]
-      }
-    }
-  ],
-  "rules": [
-    {
-      "rule_id": "de-register-account",
-      "priority": 10,
-      "effective_from": "2026-01-01",
-      "description": "Ein Konto aus dem Kontenrahmen wird zum account-Objekt",
-      "spec": {
-        "match": {
-          "event_type": "account.created",
-          "where": [
-            {
-              "path": "$.market",
-              "op": "eq",
-              "value": "de"
-            }
-          ]
-        },
-        "effect": {
-          "object": {
-            "type": "account",
-            "fields": {
-              "code": "=$.code",
-              "name": "=$.name",
-              "type": "=$.type"
-            }
-          }
-        }
-      }
-    },
-    {
-      "rule_id": "de-register-vat-rate",
-      "priority": 10,
-      "effective_from": "2026-01-01",
-      "description": "Ein Umsatzsteuersatz wird zum vat_rate-Objekt",
-      "spec": {
-        "match": {
-          "event_type": "vat_rate.defined",
-          "where": [
-            {
-              "path": "$.market",
-              "op": "eq",
-              "value": "de"
-            }
-          ]
-        },
-        "effect": {
-          "object": {
-            "type": "vat_rate",
-            "fields": {
-              "code": "=$.code",
-              "name": "=$.name",
-              "percent": "=$.percent"
-            }
-          }
-        }
-      }
-    },
-    {
-      "rule_id": "de-book-sales-invoice",
-      "priority": 100,
-      "effective_from": "2026-01-01",
-      "description": "Eine ausgestellte EUR-Rechnung wird zum sales_invoice-Dokument",
-      "spec": {
-        "match": {
-          "event_type": "sales.invoice.issued",
-          "where": [
-            {
-              "path": "$.market",
-              "op": "eq",
-              "value": "de"
-            }
-          ]
-        },
-        "effect": {
-          "object": {
-            "type": "sales_invoice",
-            "fields": {
-              "number": "=$.number",
-              "issue_date": "=$.issue_date",
-              "buyer": "=ref(company, vat_id, $.buyer_nip)",
-              "net": "=$.net",
-              "vat": "=$.vat",
-              "gross": "=$.gross",
-              "vat_rate": "=ref(vat_rate, code, $.vat_rate)",
-              "currency": "=$.currency",
-              "seller": "=ref(company, vat_id, $.seller_nip)"
-            }
-          }
-        }
-      }
-    },
-    {
-      "rule_id": "de-post-sales-invoice",
-      "priority": 200,
-      "effective_from": "2026-01-01",
-      "description": "EUR-Rechnung bucht: 1400 brutto / 8400 netto, 1776 USt",
-      "spec": {
-        "match": {
-          "event_type": "sales.invoice.issued",
-          "where": [
-            {
-              "path": "$.market",
-              "op": "eq",
-              "value": "de"
-            }
-          ]
-        },
-        "effect": {
-          "postings": {
-            "currency": "=$.currency",
-            "lines": [
-              {
-                "account": "1400",
-                "debit": "=$.gross"
-              },
-              {
-                "account": "8400",
-                "credit": "=$.net"
-              },
-              {
-                "account": "1776",
-                "credit": "=$.vat"
-              }
-            ],
-            "book": "de-stat"
-          }
-        }
-      }
-    }
+  "apps": [
+    "chart-of-accounts-skr03",
+    "sales-invoices-de"
   ],
   "events": [
     {

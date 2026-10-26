@@ -1,0 +1,46 @@
+{
+  "app": "tax-calendar",
+  "version": 1,
+  "title": "Terminy podatkowe",
+  "layer": "law",
+  "tabs": [
+    {
+      "view_id": "kalendarz-podatkowy",
+      "version": 2,
+      "notion": "analysis",
+      "title": "Terminy podatkowe",
+      "domain": "finance",
+      "function": "briefing",
+      "spec": {
+        "sql_file": "kalendarz-podatkowy.sql",
+        "columns": [
+          {
+            "field": "due",
+            "label": "Termin",
+            "type": "date"
+          },
+          {
+            "field": "what",
+            "label": "Co",
+            "type": "string"
+          },
+          {
+            "field": "period",
+            "label": "Za okres",
+            "type": "string"
+          },
+          {
+            "field": "amount",
+            "label": "Kwota",
+            "type": "money"
+          },
+          {
+            "field": "note",
+            "label": "Uwaga",
+            "type": "string"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,1033 @@
+{
+  "app": "sales-invoices",
+  "version": 2,
+  "title": "Faktury sprzedaży",
+  "layer": "law",
+  "data": [
+    {
+      "name": "sales_invoice",
+      "version": 8,
+      "domain": "finance",
+      "is_document": true,
+      "label_field": "number",
+      "fields": [
+        {
+          "name": "number",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "issue_date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "sale_date",
+          "type": "date",
+          "required": false
+        },
+        {
+          "name": "seller",
+          "type": "ref<company>",
+          "required": true
+        },
+        {
+          "name": "buyer",
+          "type": "ref<company>",
+          "required": true
+        },
+        {
+          "name": "net",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "vat",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "gross",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "vat_rate",
+          "type": "ref<vat_rate>",
+          "required": true
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "intragroup",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "seller_nip",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "buyer_nip",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "open",
+          "type": "money",
+          "required": false
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "values": [
+            "open",
+            "paid"
+          ],
+          "required": false
+        },
+        {
+          "name": "vat_period",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "net_pln",
+          "type": "money",
+          "required": false
+        },
+        {
+          "name": "vat_pln",
+          "type": "money",
+          "required": false
+        },
+        {
+          "name": "kind",
+          "type": "enum",
+          "required": false,
+          "values": [
+            "services",
+            "goods",
+            "materials",
+            "fixed_asset",
+            "other"
+          ],
+          "description": "co sprzedano: usługi (700), towary (730), materiały, środek trwały albo inne (760)"
+        }
+      ],
+      "lifecycle": {
+        "field": "status",
+        "transitions": {
+          "open": [
+            "open",
+            "paid"
+          ],
+          "paid": [
+            "open"
+          ]
+        }
+      },
+      "amendable": [
+        "open"
+      ]
+    },
+    {
+      "name": "ksef_submission",
+      "version": 3,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "ksef_ref",
+      "fields": [
+        {
+          "name": "invoice",
+          "type": "ref<sales_invoice>",
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "accepted",
+            "rejected"
+          ]
+        },
+        {
+          "name": "ksef_ref",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "upo",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "reason",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "invoice_hash",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "sent_at",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "accepted_at",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "recurring_invoice_template",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "name",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "template_invoice",
+          "type": "ref<sales_invoice>"
+        },
+        {
+          "name": "day_of_month",
+          "type": "int"
+        },
+        {
+          "name": "issue_from",
+          "type": "date"
+        },
+        {
+          "name": "issue_to",
+          "type": "date"
+        },
+        {
+          "name": "next_issue",
+          "type": "date"
+        },
+        {
+          "name": "active",
+          "type": "enum",
+          "values": [
+            "yes",
+            "no"
+          ]
+        },
+        {
+          "name": "send_to_ksef",
+          "type": "enum",
+          "values": [
+            "yes",
+            "no"
+          ]
+        },
+        {
+          "name": "send_email",
+          "type": "enum",
+          "values": [
+            "yes",
+            "no"
+          ]
+        }
+      ]
+    }
+  ],
+  "uses": [
+    "posting",
+    "task"
+  ],
+  "tabs": [
+    {
+      "view_id": "sales-invoice-list",
+      "version": 1,
+      "notion": "list",
+      "title": "Faktury sprzedaży",
+      "domain": "finance",
+      "function": "documents",
+      "spec": {
+        "object_type": "sales_invoice",
+        "columns": [
+          {
+            "field": "number",
+            "label": "Numer"
+          },
+          {
+            "field": "issue_date",
+            "label": "Data"
+          },
+          {
+            "field": "buyer",
+            "label": "Nabywca"
+          },
+          {
+            "field": "net",
+            "label": "Netto"
+          },
+          {
+            "field": "vat",
+            "label": "VAT"
+          },
+          {
+            "field": "gross",
+            "label": "Brutto"
+          }
+        ]
+      }
+    },
+    {
+      "desk": "flow",
+      "title": "Przepływ"
+    },
+    {
+      "view_id": "naleznosci-do-pilnowania",
+      "version": 1,
+      "notion": "queue",
+      "title": "Należności do pilnowania",
+      "domain": "finance",
+      "function": "briefing",
+      "spec": {
+        "object_type": "sales_invoice",
+        "where": [
+          {
+            "path": "$.state.status",
+            "op": "eq",
+            "value": "open"
+          }
+        ],
+        "rank": "=$.today - $.state.issue_date",
+        "columns": [
+          "number",
+          "buyer",
+          "issue_date",
+          "gross",
+          "open"
+        ],
+        "limit": 50
+      }
+    },
+    {
+      "view_id": "ksef-submissions",
+      "version": 2,
+      "notion": "list",
+      "title": "Wysyłki KSeF",
+      "domain": "finance",
+      "function": "ksef",
+      "spec": {
+        "object_type": "ksef_submission",
+        "columns": [
+          {
+            "field": "invoice",
+            "label": "Faktura"
+          },
+          {
+            "field": "status",
+            "label": "Status"
+          },
+          {
+            "field": "ksef_ref",
+            "label": "Numer KSeF"
+          },
+          {
+            "field": "sent_at",
+            "label": "Przyjęto w KSeF"
+          },
+          {
+            "field": "upo",
+            "label": "UPO (sesja)"
+          },
+          {
+            "field": "date",
+            "label": "Data"
+          }
+        ]
+      }
+    }
+  ],
+  "record": {
+    "of": "sales_invoice",
+    "tabs": [
+      {
+        "desk": "document-sheet",
+        "title": "Faktura"
+      },
+      {
+        "view_id": "sales-invoice-detail",
+        "version": 1,
+        "notion": "detail",
+        "title": "Faktura sprzedaży",
+        "domain": "finance",
+        "function": "documents",
+        "spec": {
+          "object_type": "sales_invoice",
+          "sections": [
+            {
+              "title": "Faktura",
+              "fields": [
+                "number",
+                "issue_date"
+              ]
+            },
+            {
+              "title": "Strony",
+              "fields": [
+                "buyer"
+              ]
+            },
+            {
+              "title": "Kwoty",
+              "fields": [
+                "net",
+                "vat",
+                "gross",
+                "vat_rate",
+                "currency"
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "actions": [
+    {
+      "name": "ksef",
+      "domain": "finance",
+      "description": "Kanał KSeF: wysyłka faktur sprzedaży do Krajowego Systemu e-Faktur jedną sesją interaktywną (API 2.0, FA(3)); dowód (numer KSeF, UPO) wraca jako ksef.invoice.submitted, odmowa jako ksef.invoice.rejected — oba stają się obiektem ksef_submission",
+      "spec": {
+        "inputs": [],
+        "emits": "ksef.invoice.submitted",
+        "who": [
+          "adapter"
+        ],
+        "channel": {
+          "adapter": "ksef",
+          "code_version": 2,
+          "format": "KSeF API 2.0, sesja interaktywna, FA(3), jedna sesja na przebieg",
+          "identity": "klucz ksef/submit/<id faktury> dla przyjęcia; ksef/reject/<id faktury>/<skrót XML> dla odmowy",
+          "confidence": {
+            "policy": "exact"
+          },
+          "events": [
+            "ksef.invoice.submitted",
+            "ksef.invoice.rejected"
+          ],
+          "volume": "documents",
+          "market": "pl"
+        }
+      },
+      "version": 2
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "pl-book-sales-invoice",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Wystawiona faktura sprzedaży staje się dokumentem sales_invoice; kwota otwarta zaczyna się od brutto, status od open; data sprzedaży to data dostawy lub wykonania usługi, a gdy faktura jej nie podaje — data wystawienia; okres VAT = miesiąc obowiązku podatkowego, czyli miesiąc sprzedaży (nie wystawienia); netto i VAT w złotych po kursie średnim NBP z ostatniego dnia roboczego przed dniem sprzedaży (dla PLN — te same kwoty); rodzaj sprzedaży (kind) mówi, co sprzedano — bez wskazania: usługi",
+      "spec": {
+        "match": {
+          "event_type": "sales.invoice.issued",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "sales_invoice",
+            "fields": {
+              "number": "=$.number",
+              "issue_date": "=$.issue_date",
+              "buyer": "=ref(company, vat_id, $.buyer_nip)",
+              "net": "=$.net",
+              "vat": "=$.vat",
+              "gross": "=$.gross",
+              "vat_rate": "=ref(vat_rate, code, $.vat_rate)",
+              "currency": "=$.currency",
+              "seller": "=ref(company, vat_id, $.seller_nip)",
+              "intragroup": "=$.intragroup",
+              "seller_nip": "=$.seller_nip",
+              "buyer_nip": "=$.buyer_nip",
+              "open": "=$.gross",
+              "status": "open",
+              "vat_period": "=month(coalesce($.sale_date, $.issue_date))",
+              "sale_date": "=coalesce($.sale_date, $.issue_date)",
+              "net_pln": "=round($.net * fx($.currency, \"PLN\", coalesce($.sale_date, $.issue_date)), 2, half_up)",
+              "vat_pln": "=round($.vat * fx($.currency, \"PLN\", coalesce($.sale_date, $.issue_date)), 2, half_up)",
+              "kind": "=coalesce($.kind, \"services\")"
+            }
+          }
+        }
+      },
+      "version": 4,
+      "warrant": {
+        "basis": "statute",
+        "citations": [
+          "ustawa o VAT art. 19a ust. 1: „Obowiązek podatkowy powstaje z chwilą dokonania dostawy towarów lub wykonania usługi”",
+          "ustawa o VAT art. 106i ust. 1: fakturę wystawia się nie później niż 15. dnia miesiąca następującego po miesiącu dostawy — stąd sprzedaż wrześniowa z fakturą październikową należy do września",
+          "FA(3) P_6 (art. 106e ust. 1 pkt 6): „Data dokonania lub zakończenia dostawy towarów lub wykonania usługi (...) o ile taka data jest określona i różni się od daty wystawienia faktury”",
+          "poza tą regułą (kolejne wersje): usługi okresowe (art. 19a ust. 3), media, najem i stała obsługa (ust. 5 pkt 4, ust. 7), zaliczki (ust. 8)",
+          "ustawa o VAT art. 31a ust. 1: kwoty w walucie obcej przelicza się na złote według kursu średniego NBP z ostatniego dnia roboczego poprzedzającego dzień powstania obowiązku podatkowego",
+          "ustawa o VAT art. 106e ust. 11: kwota podatku na fakturze w walucie obcej jest wykazana w złotych",
+          "ustawa o rachunkowości art. 30 ust. 2 pkt 2: po kursie średnim NBP z dnia poprzedzającego; ustawa o CIT art. 12 ust. 2, ustawa o PIT art. 11a ust. 1: przychód — po kursie z ostatniego dnia roboczego przed jego dniem",
+          "kurs „dnia d” w Rhea to kurs, po którym przelicza się dokument z dnia d (kanał pl-nbp publikuje go z tabeli z ostatniego dnia roboczego przed d) — stąd fx(waluta, \"PLN\", dzień sprzedaży)"
+        ],
+        "scope": "pl"
+      }
+    },
+    {
+      "rule_id": "pl-post-sales-invoice",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Faktura sprzedaży z VAT księguje się: 201 brutto / 700 netto, 222 VAT; w walucie obcej — po kursie z dnia sprzedaży, tym samym co VAT w złotych — gdy sprzedano usługi (faktura bez rodzaju to usługi)",
+      "spec": {
+        "match": {
+          "event_type": "sales.invoice.issued",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            },
+            {
+              "formula": "=$.vat > 0"
+            },
+            {
+              "formula": "=coalesce($.kind, \"services\") = \"services\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "currency": "=$.currency",
+            "lines": [
+              {
+                "account": "201",
+                "debit": "=$.gross"
+              },
+              {
+                "account": "700",
+                "credit": "=$.net"
+              },
+              {
+                "account": "222",
+                "credit": "=$.vat"
+              }
+            ],
+            "book": "pl-stat",
+            "convert": {
+              "to": "PLN",
+              "date": "=coalesce($.sale_date, $.issue_date)",
+              "rounding": "half_up",
+              "rounding_account": "756"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "practice",
+        "scope": "pl",
+        "citations": [
+          "wzorcowy plan kont dla małych i średnich przedsiębiorstw: Wn 201 rozrachunki z odbiorcami / Ma 70x przychody ze sprzedaży, Ma 222 VAT należny",
+          "ustawa o rachunkowości art. 30 ust. 2 pkt 2: po kursie średnim NBP z dnia poprzedzającego; ustawa o CIT art. 12 ust. 2, ustawa o PIT art. 11a ust. 1: przychód — po kursie z ostatniego dnia roboczego przed jego dniem"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-sales-invoice-no-vat",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Faktura sprzedaży bez VAT (zwolniona, 0%, sprzedawca zwolniony) księguje się: 201 brutto / 700 netto — bez linii VAT, której kwota byłaby zerem; w walucie obcej — po kursie z dnia sprzedaży, tym samym co VAT w złotych — gdy sprzedano usługi (faktura bez rodzaju to usługi)",
+      "spec": {
+        "match": {
+          "event_type": "sales.invoice.issued",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            },
+            {
+              "formula": "=not ($.vat > 0)"
+            },
+            {
+              "formula": "=coalesce($.kind, \"services\") = \"services\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "currency": "=$.currency",
+            "lines": [
+              {
+                "account": "201",
+                "debit": "=$.gross"
+              },
+              {
+                "account": "700",
+                "credit": "=$.net"
+              }
+            ],
+            "book": "pl-stat",
+            "convert": {
+              "to": "PLN",
+              "date": "=coalesce($.sale_date, $.issue_date)",
+              "rounding": "half_up",
+              "rounding_account": "756"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "citations": [
+          "ustawa o VAT art. 113 ust. 1 (zwolnienie podmiotowe) i art. 43 (zwolnienia przedmiotowe): sprzedaż bez podatku należnego",
+          "wzorcowy plan kont: Wn 201 / Ma 70x",
+          "ustawa o rachunkowości art. 30 ust. 2 pkt 2: po kursie średnim NBP z dnia poprzedzającego; ustawa o CIT art. 12 ust. 2, ustawa o PIT art. 11a ust. 1: przychód — po kursie z ostatniego dnia roboczego przed jego dniem"
+        ],
+        "scope": "pl"
+      }
+    },
+    {
+      "rule_id": "pl-post-sales-invoice-goods",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Faktura sprzedaży towarów z VAT księguje się: 201 brutto / 730 Sprzedaż towarów netto, 222 VAT",
+      "spec": {
+        "match": {
+          "event_type": "sales.invoice.issued",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            },
+            {
+              "formula": "=$.vat > 0"
+            },
+            {
+              "formula": "=coalesce($.kind, \"services\") = \"goods\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "currency": "=$.currency",
+            "lines": [
+              {
+                "account": "201",
+                "debit": "=$.gross"
+              },
+              {
+                "account": "730",
+                "credit": "=$.net"
+              },
+              {
+                "account": "222",
+                "credit": "=$.vat"
+              }
+            ],
+            "book": "pl-stat",
+            "convert": {
+              "to": "PLN",
+              "date": "=coalesce($.sale_date, $.issue_date)",
+              "rounding": "half_up",
+              "rounding_account": "756"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "wzorcowy plan kont: 700 Sprzedaż produktów (usług), 730 Sprzedaż towarów, 731 Wartość sprzedanych towarów w cenie zakupu, 760 Pozostałe przychody operacyjne, 761 Pozostałe koszty operacyjne, 310 Materiały, 330 Towary, 349 Odpisy aktualizujące wartość zapasów",
+          "ustawa o VAT art. 19a ust. 1 i art. 106e: obowiązek podatkowy i treść faktury jak dla każdej sprzedaży"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-sales-invoice-goods-no-vat",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Faktura sprzedaży towarów bez VAT księguje się: 201 brutto / 730 netto — bez linii VAT, której kwota byłaby zerem",
+      "spec": {
+        "match": {
+          "event_type": "sales.invoice.issued",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            },
+            {
+              "formula": "=not ($.vat > 0)"
+            },
+            {
+              "formula": "=coalesce($.kind, \"services\") = \"goods\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "currency": "=$.currency",
+            "lines": [
+              {
+                "account": "201",
+                "debit": "=$.gross"
+              },
+              {
+                "account": "730",
+                "credit": "=$.net"
+              }
+            ],
+            "book": "pl-stat",
+            "convert": {
+              "to": "PLN",
+              "date": "=coalesce($.sale_date, $.issue_date)",
+              "rounding": "half_up",
+              "rounding_account": "756"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "wzorcowy plan kont: 700 Sprzedaż produktów (usług), 730 Sprzedaż towarów, 731 Wartość sprzedanych towarów w cenie zakupu, 760 Pozostałe przychody operacyjne, 761 Pozostałe koszty operacyjne, 310 Materiały, 330 Towary, 349 Odpisy aktualizujące wartość zapasów"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-sales-invoice-other",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Faktura sprzedaży materiałów, środka trwałego albo innego składnika z VAT księguje się: 201 brutto / 760 Pozostałe przychody operacyjne netto, 222 VAT — to nie jest przychód ze sprzedaży produktów ani towarów",
+      "spec": {
+        "match": {
+          "event_type": "sales.invoice.issued",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            },
+            {
+              "formula": "=$.vat > 0"
+            },
+            {
+              "formula": "=coalesce($.kind, \"services\") = \"materials\" or coalesce($.kind, \"services\") = \"fixed_asset\" or coalesce($.kind, \"services\") = \"other\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "currency": "=$.currency",
+            "lines": [
+              {
+                "account": "201",
+                "debit": "=$.gross"
+              },
+              {
+                "account": "760",
+                "credit": "=$.net"
+              },
+              {
+                "account": "222",
+                "credit": "=$.vat"
+              }
+            ],
+            "book": "pl-stat",
+            "convert": {
+              "to": "PLN",
+              "date": "=coalesce($.sale_date, $.issue_date)",
+              "rounding": "half_up",
+              "rounding_account": "756"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 3 ust. 1 pkt 32: pozostałe koszty i przychody operacyjne to koszty i przychody związane pośrednio z działalnością operacyjną, w szczególności z tytułu „zbycia środków trwałych […], a także materiałów” (lit. b) — sprzedaż materiałów i środków trwałych nie jest przychodem ze sprzedaży produktów ani towarów",
+          "wzorcowy plan kont: 700 Sprzedaż produktów (usług), 730 Sprzedaż towarów, 731 Wartość sprzedanych towarów w cenie zakupu, 760 Pozostałe przychody operacyjne, 761 Pozostałe koszty operacyjne, 310 Materiały, 330 Towary, 349 Odpisy aktualizujące wartość zapasów"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-sales-invoice-other-no-vat",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Faktura sprzedaży materiałów, środka trwałego albo innego składnika bez VAT księguje się: 201 brutto / 760 netto",
+      "spec": {
+        "match": {
+          "event_type": "sales.invoice.issued",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            },
+            {
+              "formula": "=not ($.vat > 0)"
+            },
+            {
+              "formula": "=coalesce($.kind, \"services\") = \"materials\" or coalesce($.kind, \"services\") = \"fixed_asset\" or coalesce($.kind, \"services\") = \"other\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "currency": "=$.currency",
+            "lines": [
+              {
+                "account": "201",
+                "debit": "=$.gross"
+              },
+              {
+                "account": "760",
+                "credit": "=$.net"
+              }
+            ],
+            "book": "pl-stat",
+            "convert": {
+              "to": "PLN",
+              "date": "=coalesce($.sale_date, $.issue_date)",
+              "rounding": "half_up",
+              "rounding_account": "756"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 3 ust. 1 pkt 32: pozostałe koszty i przychody operacyjne to koszty i przychody związane pośrednio z działalnością operacyjną, w szczególności z tytułu „zbycia środków trwałych […], a także materiałów” (lit. b) — sprzedaż materiałów i środków trwałych nie jest przychodem ze sprzedaży produktów ani towarów",
+          "wzorcowy plan kont: 700 Sprzedaż produktów (usług), 730 Sprzedaż towarów, 731 Wartość sprzedanych towarów w cenie zakupu, 760 Pozostałe przychody operacyjne, 761 Pozostałe koszty operacyjne, 310 Materiały, 330 Towary, 349 Odpisy aktualizujące wartość zapasów"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-cost-of-goods-sold",
+      "priority": 110,
+      "effective_from": "2026-01-01",
+      "description": "Sprzedane towary schodzą z zapasów w cenie zakupu, którą podaje faktura (carrying_value): Wn 731 Wartość sprzedanych towarów / Ma 330 Towary, w dniu sprzedaży",
+      "spec": {
+        "match": {
+          "event_type": "sales.invoice.issued",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            },
+            {
+              "formula": "=coalesce($.kind, \"services\") = \"goods\""
+            },
+            {
+              "path": "$.carrying_value",
+              "op": "exists"
+            },
+            {
+              "formula": "=$.carrying_value > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=coalesce($.sale_date, $.issue_date)",
+            "lines": [
+              {
+                "account": "731",
+                "debit": "=$.carrying_value"
+              },
+              {
+                "account": "330",
+                "credit": "=$.carrying_value"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 42 ust. 2: wynik działalności operacyjnej to różnica między przychodami netto ze sprzedaży produktów i towarów a wartością sprzedanych produktów i towarów „wycenionych w kosztach wytworzenia albo cenach nabycia, albo zakupu” — wartość sprzedanych towarów schodzi z zapasów, gdy przychód jest rozpoznany",
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 28 ust. 1 pkt 6: „rzeczowe składniki aktywów obrotowych – według cen nabycia lub kosztów wytworzenia nie wyższych od cen ich sprzedaży netto na dzień bilansowy”",
+          "wzorcowy plan kont: 700 Sprzedaż produktów (usług), 730 Sprzedaż towarów, 731 Wartość sprzedanych towarów w cenie zakupu, 760 Pozostałe przychody operacyjne, 761 Pozostałe koszty operacyjne, 310 Materiały, 330 Towary, 349 Odpisy aktualizujące wartość zapasów"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-cost-of-materials-sold",
+      "priority": 110,
+      "effective_from": "2026-01-01",
+      "description": "Sprzedane materiały schodzą z zapasów w cenie nabycia, którą podaje faktura (carrying_value): Wn 761 Pozostałe koszty operacyjne / Ma 310 Materiały, w dniu sprzedaży",
+      "spec": {
+        "match": {
+          "event_type": "sales.invoice.issued",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            },
+            {
+              "formula": "=coalesce($.kind, \"services\") = \"materials\""
+            },
+            {
+              "path": "$.carrying_value",
+              "op": "exists"
+            },
+            {
+              "formula": "=$.carrying_value > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=coalesce($.sale_date, $.issue_date)",
+            "lines": [
+              {
+                "account": "761",
+                "debit": "=$.carrying_value"
+              },
+              {
+                "account": "310",
+                "credit": "=$.carrying_value"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 3 ust. 1 pkt 32: pozostałe koszty i przychody operacyjne to koszty i przychody związane pośrednio z działalnością operacyjną, w szczególności z tytułu „zbycia środków trwałych […], a także materiałów” (lit. b) — sprzedaż materiałów i środków trwałych nie jest przychodem ze sprzedaży produktów ani towarów",
+          "wzorcowy plan kont: 700 Sprzedaż produktów (usług), 730 Sprzedaż towarów, 731 Wartość sprzedanych towarów w cenie zakupu, 760 Pozostałe przychody operacyjne, 761 Pozostałe koszty operacyjne, 310 Materiały, 330 Towary, 349 Odpisy aktualizujące wartość zapasów"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-record-ksef-submission",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Potwierdzenie wysyłki do KSeF staje się obiektem ksef_submission ze statusem accepted: numer KSeF, UPO, skrót wysłanego XML, czas przyjęcia przez KSeF (dzień wystawienia faktury ustrukturyzowanej) i czas nadania numeru",
+      "spec": {
+        "match": {
+          "event_type": "ksef.invoice.submitted"
+        },
+        "effect": {
+          "object": {
+            "type": "ksef_submission",
+            "fields": {
+              "invoice": "=ref(sales_invoice, number, $.number)",
+              "status": "accepted",
+              "ksef_ref": "=$.ksef_ref",
+              "upo": "=$.upo",
+              "invoice_hash": "=$.invoice_hash",
+              "date": "=$.date",
+              "sent_at": "=$.sent_at",
+              "accepted_at": "=$.accepted_at"
+            }
+          }
+        }
+      },
+      "version": 3
+    },
+    {
+      "rule_id": "pl-record-ksef-rejection",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Odmowa KSeF staje się obiektem ksef_submission ze statusem rejected (kod i słowa Ministerstwa, skrót odrzuconego XML) — ten sam XML nie idzie drugi raz",
+      "spec": {
+        "match": {
+          "event_type": "ksef.invoice.rejected"
+        },
+        "effect": {
+          "object": {
+            "type": "ksef_submission",
+            "fields": {
+              "invoice": "=ref(sales_invoice, number, $.number)",
+              "status": "rejected",
+              "reason": "=$.reason",
+              "invoice_hash": "=$.invoice_hash",
+              "date": "=$.date"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-ksef-rejection-task",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Odrzucona przez KSeF faktura staje się zadaniem na dziś (kategoria: faktury, priorytet wysoki) z powodem odmowy — decyduje człowiek",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "ksef_submission"
+            },
+            {
+              "path": "$.state.status",
+              "op": "eq",
+              "value": "rejected"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "task",
+            "fields": {
+              "title": "Faktura odrzucona przez KSeF",
+              "status": "open",
+              "due_date": "=$.state.date",
+              "priority": "high",
+              "category": "invoices",
+              "description": "=$.state.reason"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

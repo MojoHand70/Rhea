@@ -1,0 +1,37 @@
+{
+  "app": "stocktake",
+  "version": 1,
+  "title": "Inwentaryzacja",
+  "layer": "law",
+  "data": [
+    {
+      "name": "stocktake",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "fields": [
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "comment",
+          "type": "string"
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "values": [
+            "open",
+            "closed"
+          ]
+        },
+        {
+          "name": "value",
+          "type": "money"
+        }
+      ]
+    }
+  ]
+}

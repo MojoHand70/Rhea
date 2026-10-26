@@ -1,0 +1,1190 @@
+{
+  "app": "words",
+  "version": 1,
+  "title": "Słownik",
+  "layer": "platform",
+  "tabs": [
+    {
+      "view_id": "slownik",
+      "version": 17,
+      "notion": "words",
+      "title": "Słownik",
+      "domain": "finance",
+      "function": "language",
+      "spec": {
+        "lang": "pl",
+        "types": {
+          "account": {
+            "label": "Konto",
+            "plural": "Konta",
+            "shape": "ledger",
+            "kind": "master"
+          },
+          "bank_account": {
+            "label": "Rachunek bankowy",
+            "plural": "Rachunki bankowe",
+            "shape": "card",
+            "kind": "master"
+          },
+          "bank_operation": {
+            "label": "Pozycja wyciągu",
+            "plural": "Pozycje wyciągu",
+            "shape": "paper",
+            "kind": "entry"
+          },
+          "company": {
+            "label": "Firma",
+            "plural": "Firmy",
+            "shape": "card",
+            "kind": "master"
+          },
+          "contractor": {
+            "label": "Kontrahent",
+            "plural": "Kontrahenci",
+            "shape": "card",
+            "kind": "master"
+          },
+          "fixed_asset": {
+            "label": "Środek trwały",
+            "plural": "Środki trwałe",
+            "shape": "card",
+            "kind": "master"
+          },
+          "fx_rate": {
+            "label": "Kurs waluty",
+            "plural": "Kursy walut",
+            "shape": "card",
+            "kind": "master"
+          },
+          "invoice": {
+            "label": "Faktura",
+            "plural": "Faktury",
+            "shape": "paper",
+            "kind": "document"
+          },
+          "issued_document": {
+            "label": "Dokument wydany",
+            "plural": "Dokumenty wydane",
+            "shape": "card",
+            "kind": "document"
+          },
+          "ksef_submission": {
+            "label": "Wysyłka do KSeF",
+            "plural": "Wysyłki do KSeF",
+            "shape": "card",
+            "kind": "entry"
+          },
+          "lease_contract": {
+            "label": "Umowa leasingu",
+            "plural": "Umowy leasingu",
+            "shape": "card",
+            "kind": "master"
+          },
+          "matching_difference": {
+            "label": "Różnica rozliczenia",
+            "plural": "Różnice rozliczeń",
+            "shape": "card",
+            "kind": "entry"
+          },
+          "mileage_entry": {
+            "label": "Wpis ewidencji przebiegu",
+            "plural": "Ewidencja przebiegu",
+            "shape": "card",
+            "kind": "entry"
+          },
+          "period_lock": {
+            "label": "Zamknięcie miesiąca",
+            "plural": "Zamknięte miesiące",
+            "shape": "card",
+            "kind": "entry"
+          },
+          "person": {
+            "label": "Osoba",
+            "plural": "Osoby",
+            "shape": "card",
+            "kind": "master"
+          },
+          "posting": {
+            "label": "Zapis księgowy",
+            "plural": "Zapisy księgowe",
+            "shape": "card",
+            "kind": "entry"
+          },
+          "purchase_invoice": {
+            "label": "Faktura zakupu",
+            "plural": "Faktury zakupu",
+            "shape": "paper",
+            "kind": "document"
+          },
+          "received_document": {
+            "label": "Dokument przyjęty",
+            "plural": "Dokumenty przyjęte",
+            "shape": "card",
+            "kind": "document"
+          },
+          "recurring_invoice_template": {
+            "label": "Szablon faktury cyklicznej",
+            "plural": "Szablony faktur cyklicznych",
+            "shape": "card",
+            "kind": "master"
+          },
+          "sales_invoice": {
+            "label": "Faktura sprzedaży",
+            "plural": "Faktury sprzedaży",
+            "shape": "paper",
+            "kind": "document"
+          },
+          "settlement": {
+            "label": "Rozliczenie",
+            "plural": "Rozliczenia",
+            "shape": "card",
+            "kind": "entry"
+          },
+          "stocktake": {
+            "label": "Inwentaryzacja",
+            "plural": "Inwentaryzacje",
+            "shape": "card",
+            "kind": "entry"
+          },
+          "task": {
+            "label": "Zadanie",
+            "plural": "Zadania",
+            "shape": "card",
+            "kind": "entry"
+          },
+          "task_schedule": {
+            "label": "Harmonogram zadań",
+            "plural": "Harmonogramy zadań",
+            "shape": "card",
+            "kind": "master"
+          },
+          "tax_declaration": {
+            "label": "Deklaracja podatkowa",
+            "plural": "Deklaracje podatkowe",
+            "shape": "card",
+            "kind": "document"
+          },
+          "vat_rate": {
+            "label": "Stawka VAT",
+            "plural": "Stawki VAT",
+            "shape": "card",
+            "kind": "master"
+          },
+          "vat_settlement": {
+            "label": "Rozliczenie VAT",
+            "plural": "Rozliczenia VAT",
+            "shape": "statement",
+            "kind": "entry"
+          },
+          "vehicle": {
+            "label": "Pojazd",
+            "plural": "Pojazdy",
+            "shape": "card",
+            "kind": "master"
+          },
+          "cit_advance": {
+            "label": "Zaliczka na CIT",
+            "plural": "Zaliczki na CIT",
+            "shape": "statement",
+            "kind": "entry"
+          },
+          "cit_status": {
+            "label": "Status CIT na rok",
+            "plural": "Statusy CIT",
+            "shape": "card",
+            "kind": "master"
+          },
+          "cit_limit": {
+            "label": "Limity CIT na rok",
+            "plural": "Limity CIT",
+            "shape": "card",
+            "kind": "master"
+          },
+          "prepaid_cost": {
+            "label": "Koszt rozliczany w czasie (RMK)",
+            "plural": "Koszty rozliczane w czasie (RMK)",
+            "shape": "card",
+            "kind": "master"
+          },
+          "prepaid_release": {
+            "label": "Część RMK za miesiąc",
+            "plural": "Części RMK za miesiące",
+            "shape": "card",
+            "kind": "entry"
+          },
+          "depreciation_charge": {
+            "label": "Odpis amortyzacyjny za miesiąc",
+            "plural": "Odpisy amortyzacyjne",
+            "shape": "card",
+            "kind": "entry"
+          },
+          "result_distribution": {
+            "label": "Podział wyniku",
+            "plural": "Podziały wyniku",
+            "shape": "card",
+            "kind": "entry"
+          },
+          "year_close_cost": {
+            "label": "Zamknięcie roku – konto kosztów",
+            "plural": "Zamknięcie roku – konta kosztów",
+            "shape": "card",
+            "kind": "entry"
+          },
+          "year_close_revenue": {
+            "label": "Zamknięcie roku – konto przychodów",
+            "plural": "Zamknięcie roku – konta przychodów",
+            "shape": "card",
+            "kind": "entry"
+          },
+          "year_close_tax": {
+            "label": "Zamknięcie roku – podatek dochodowy",
+            "plural": "Zamknięcie roku – podatek dochodowy",
+            "shape": "card",
+            "kind": "entry"
+          },
+          "provision": {
+            "label": "Rezerwa",
+            "plural": "Rezerwy",
+            "shape": "card",
+            "kind": "entry"
+          },
+          "receivable_write_down": {
+            "label": "Odpis aktualizujący należność",
+            "plural": "Odpisy aktualizujące należności",
+            "shape": "card",
+            "kind": "entry"
+          },
+          "role": {
+            "label": "Rola",
+            "plural": "Role",
+            "shape": "card",
+            "kind": "master"
+          },
+          "membership": {
+            "label": "Członkostwo",
+            "plural": "Członkostwa",
+            "shape": "card",
+            "kind": "master"
+          },
+          "mandate": {
+            "label": "Umocowanie biura",
+            "plural": "Umocowania biur",
+            "shape": "card",
+            "kind": "master"
+          },
+          "substitution": {
+            "label": "Zastępstwo",
+            "plural": "Zastępstwa",
+            "shape": "card",
+            "kind": "master"
+          },
+          "group": {
+            "label": "Grupa",
+            "plural": "Grupy",
+            "shape": "card",
+            "kind": "master"
+          },
+          "inventory_write_down": {
+            "label": "Odpis aktualizujący zapasy",
+            "plural": "Odpisy aktualizujące zapasy",
+            "shape": "card",
+            "kind": "entry"
+          },
+          "asset_advance": {
+            "label": "Zaliczka na środek trwały",
+            "plural": "Zaliczki na środki trwałe",
+            "shape": "card",
+            "kind": "entry"
+          },
+          "loan": {
+            "label": "Pożyczka",
+            "plural": "Pożyczki",
+            "shape": "card",
+            "kind": "master"
+          },
+          "deferred_tax": {
+            "label": "Odroczony podatek dochodowy",
+            "plural": "Odroczony podatek dochodowy",
+            "shape": "card",
+            "kind": "entry"
+          },
+          "fx_revaluation": {
+            "label": "Wycena bilansowa walut",
+            "plural": "Wyceny bilansowe walut",
+            "shape": "card",
+            "kind": "entry"
+          },
+          "liquidation_measurement": {
+            "label": "Wycena bez założenia kontynuacji",
+            "plural": "Wyceny bez założenia kontynuacji",
+            "shape": "card",
+            "kind": "entry"
+          },
+          "policy_adjustment": {
+            "label": "Zmiana zasad rachunkowości",
+            "plural": "Zmiany zasad rachunkowości",
+            "shape": "card",
+            "kind": "entry"
+          },
+          "development_costs": {
+            "label": "Prace rozwojowe",
+            "plural": "Prace rozwojowe",
+            "shape": "card",
+            "kind": "master"
+          },
+          "year_close_clearing": {
+            "label": "Zamknięcie roku – konto rozliczeniowe",
+            "plural": "Zamknięcie roku – konta rozliczeniowe",
+            "shape": "card",
+            "kind": "entry"
+          }
+        },
+        "fields": {
+          "accepted_at": "Przyjęta",
+          "accepted_date": "Data przyjęcia",
+          "account": "Konto",
+          "active": "Aktywny",
+          "address": "Adres",
+          "amortization_type": "Metoda amortyzacji",
+          "amount": "Kwota",
+          "assignee": "Osoba odpowiedzialna",
+          "bank": "Bank",
+          "base": "Podstawa",
+          "birth_date": "Data urodzenia",
+          "book": "Księga",
+          "books": "Forma ksiąg",
+          "buyer": "Nabywca",
+          "buyer_nip": "NIP nabywcy",
+          "cadence": "Cykl",
+          "carried_in": "Nadwyżka z poprzedniego miesiąca",
+          "cash_method": "Metoda kasowa",
+          "category": "Kategoria",
+          "closed_on": "Zamknięty na dzień",
+          "code": "Kod",
+          "coefficient": "Współczynnik",
+          "comment": "Komentarz",
+          "contractor": "Kontrahent",
+          "cost_account": "Konto kosztów",
+          "counterparty": "Druga strona",
+          "counterparty_account": "Rachunek drugiej strony",
+          "country": "Kraj",
+          "currency": "Waluta",
+          "customer": "Odbiorca",
+          "date": "Data",
+          "day_of_month": "Dzień miesiąca",
+          "default": "Domyślny",
+          "deputy": "Zastępca",
+          "description": "Opis",
+          "direction": "Kierunek",
+          "document_id": "Dokument",
+          "document_type": "Rodzaj dokumentu",
+          "due_date": "Termin",
+          "email": "E-mail",
+          "end": "Koniec",
+          "engine_capacity": "Pojemność silnika",
+          "entry": "Zapis",
+          "family_name": "Nazwisko",
+          "form_from": "Forma od dnia",
+          "given_name": "Imię",
+          "gross": "Brutto",
+          "handle": "Identyfikator",
+          "hash": "Skrót",
+          "iban": "Rachunek",
+          "income_tax": "Podatek dochodowy",
+          "initial_value": "Wartość początkowa",
+          "input_vat": "VAT naliczony razem",
+          "intragroup": "W grupie",
+          "invoice": "Faktura",
+          "invoice_date": "Data faktury",
+          "invoice_hash": "Skrót dokumentu",
+          "issue_date": "Data wystawienia",
+          "issue_from": "Wystawiaj od",
+          "issue_to": "Wystawiaj do",
+          "kind": "Rodzaj",
+          "km": "Kilometry",
+          "ksef_ref": "Numer KSeF",
+          "kst": "Symbol KŚT",
+          "last_run": "Ostatnio",
+          "legal_form": "Forma prawna",
+          "line": "Linia",
+          "liquidation_date": "Data likwidacji",
+          "liquidation_reason": "Przyczyna likwidacji",
+          "matching": "Polityka rozliczeń",
+          "media_type": "Rodzaj pliku",
+          "mirror_of": "Lustro faktury",
+          "month": "Miesiąc",
+          "name": "Nazwa",
+          "net": "Netto",
+          "net_pln": "Netto w złotych",
+          "next_issue": "Następne wystawienie",
+          "next_run": "Następnie",
+          "nip": "NIP",
+          "number": "Numer",
+          "open": "Do zapłaty",
+          "operation": "Operacja",
+          "output_vat": "VAT należny",
+          "owner": "Właściciel",
+          "owner_account": "Prywatny rachunek właściciela",
+          "ownership": "Własność",
+          "params": "Parametry",
+          "payment_status": "Status płatności",
+          "payment_term_days": "Termin płatności (dni)",
+          "percent": "Procent",
+          "period": "Okres",
+          "prior_balance_depreciation": "Umorzenie bilansowe przed przyjęciem",
+          "prior_tax_depreciation": "Umorzenie podatkowe przed przyjęciem",
+          "priority": "Pilność",
+          "purchase_date": "Data zakupu",
+          "purchase_net": "Zakupy netto",
+          "purchase_vat": "VAT naliczony",
+          "quote": "Kurs",
+          "rate": "Stawka",
+          "reason": "Powód",
+          "received_date": "Data otrzymania",
+          "received_on": "Otrzymano",
+          "registration": "Numer rejestracyjny",
+          "regon": "REGON",
+          "requester": "Zlecający",
+          "role": "Rola",
+          "route_end": "Dokąd",
+          "route_start": "Skąd",
+          "sale_date": "Data sprzedaży",
+          "sales_net_0": "Sprzedaż netto 0%",
+          "sales_net_23": "Sprzedaż netto 23%",
+          "sales_net_5": "Sprzedaż netto 5%",
+          "sales_net_8": "Sprzedaż netto 8%",
+          "sales_net_exempt": "Sprzedaż zwolniona",
+          "sales_vat_23": "VAT 23%",
+          "sales_vat_5": "VAT 5%",
+          "sales_vat_8": "VAT 8%",
+          "seller": "Sprzedawca",
+          "seller_nip": "NIP sprzedawcy",
+          "send_email": "Wysyłaj e-mailem",
+          "send_to_ksef": "Wysyłaj do KSeF",
+          "sent_at": "Wysłana",
+          "settlement_status": "Rozliczenie",
+          "side": "Strona",
+          "size": "Rozmiar",
+          "source": "Źródło",
+          "start": "Początek",
+          "status": "Status",
+          "supplier": "Dostawca",
+          "tax_account": "Mikrorachunek podatkowy",
+          "tax_office": "Urząd skarbowy",
+          "template_invoice": "Faktura wzorcowa",
+          "title": "Tytuł",
+          "total": "Razem",
+          "tx_amount": "Kwota w walucie",
+          "tx_currency": "Waluta operacji",
+          "type": "Typ",
+          "upo": "UPO",
+          "value": "Wartość",
+          "vat": "VAT",
+          "vat_carry": "Do przeniesienia",
+          "vat_deducted": "VAT odliczony",
+          "vat_deduction_limit": "Limit odliczenia VAT",
+          "vat_due": "Do zapłaty",
+          "vat_exemption_basis": "Podstawa zwolnienia",
+          "vat_id": "NIP",
+          "vat_period": "Okres VAT",
+          "vat_pln": "VAT w złotych",
+          "vat_rate": "Stawka VAT",
+          "vat_status": "Status VAT",
+          "vehicle": "Pojazd",
+          "very_important": "Bardzo ważne",
+          "writer": "Rodzaj pliku",
+          "zus_account": "Rachunek składkowy ZUS",
+          "reference": "Tytuł",
+          "lines": "Pozycje",
+          "market": "Rynek",
+          "payment_days": "Termin płatności (dni)",
+          "supplier_nip": "NIP dostawcy",
+          "item": "Towar lub usługa",
+          "qty": "Ilość",
+          "price": "Cena",
+          "unit": "Jednostka",
+          "bank_operation.open": "Nierozliczone",
+          "bank_operation.account": "Rachunek",
+          "bank_operation.title": "Tytuł",
+          "company.kind": "Rola",
+          "purchase_invoice.owner": "Nabywca",
+          "matching_difference.account": "Konto",
+          "vat_settlement.vat_due": "Do zapłaty",
+          "vat_rate.code": "Stawka",
+          "account.tax_treatment": "Dla podatku dochodowego",
+          "cit_limit.year_start": "Rok podatkowy od",
+          "cit_limit.small_taxpayer_limit": "Limit małego podatnika (sprzedaż brutto roku poprzedniego)",
+          "cit_limit.in_year_limit": "Limit przychodów w roku dla stawki 9%",
+          "cit_status.company": "Firma",
+          "cit_status.year_start": "Rok podatkowy od",
+          "cit_status.started_on": "Rozpoczęcie działalności",
+          "cit_status.formed_by": "Jak powstała",
+          "cit_status.reduced": "Zaliczki stawką 9%",
+          "cit_status.basis": "Podstawa",
+          "cit_advance.period": "Okres",
+          "cit_advance.year_start": "Rok podatkowy od",
+          "cit_advance.book": "Księga",
+          "cit_advance.revenue": "Przychody od początku roku",
+          "cit_advance.not_taxable": "W tym nie są przychodem podatkowym",
+          "cit_advance.costs": "Koszty od początku roku",
+          "cit_advance.non_deductible": "W tym nie są kosztem podatkowym (NKUP)",
+          "cit_advance.income": "Dochód od początku roku",
+          "cit_advance.base": "Podstawa opodatkowania",
+          "cit_advance.rate": "Stawka %",
+          "cit_advance.rate_basis": "Dlaczego ta stawka",
+          "cit_advance.tax": "Podatek od początku roku",
+          "cit_advance.advances_before": "Zaliczki za wcześniejsze miesiące",
+          "cit_advance.advance": "Zaliczka do zapłaty",
+          "cit_advance.closed_on": "Miesiąc zamknięty dnia",
+          "prepaid_cost.invoice": "Faktura",
+          "prepaid_cost.account": "Konto kosztu",
+          "prepaid_cost.amount": "Kwota",
+          "prepaid_cost.start": "Od",
+          "prepaid_cost.months": "Miesięcy",
+          "prepaid_cost.end": "Do",
+          "prepaid_cost.status": "Stan",
+          "prepaid_cost.book": "Księga",
+          "prepaid_release.prepaid": "Koszt rozliczany w czasie",
+          "prepaid_release.invoice": "Faktura",
+          "prepaid_release.account": "Konto kosztu",
+          "prepaid_release.period": "Miesiąc",
+          "prepaid_release.amount": "Wraca w koszty",
+          "prepaid_release.released": "W kosztach razem",
+          "prepaid_release.closed_on": "Na dzień",
+          "depreciation_charge.asset": "Środek trwały",
+          "depreciation_charge.period": "Miesiąc",
+          "depreciation_charge.amount": "Odpis za miesiąc",
+          "depreciation_charge.charged": "Umorzenie razem",
+          "depreciation_charge.closed_on": "Na dzień",
+          "fixed_asset.annual_rate": "Stawka roczna %",
+          "fixed_asset.start": "Amortyzacja od",
+          "result_distribution.year_end": "Rok do",
+          "result_distribution.resolution_date": "Uchwała z dnia",
+          "result_distribution.reserve": "Na kapitał zapasowy",
+          "result_distribution.dividends": "Na dywidendy (brutto)",
+          "result_distribution.loss_cover": "Pokrycie straty",
+          "year_close_cost.account": "Konto",
+          "year_close_revenue.account": "Konto",
+          "year_close_tax.account": "Konto",
+          "year_close_cost.code": "Nr konta",
+          "year_close_revenue.code": "Nr konta",
+          "year_close_tax.code": "Nr konta",
+          "year_close_cost.year_end": "Dzień bilansowy",
+          "year_close_revenue.year_end": "Dzień bilansowy",
+          "year_close_tax.year_end": "Dzień bilansowy",
+          "year_close_cost.amount": "Saldo (Wn minus Ma)",
+          "year_close_revenue.amount": "Saldo (Wn minus Ma)",
+          "year_close_tax.amount": "Saldo (Wn minus Ma)",
+          "provision.title": "Tytuł",
+          "provision.kind": "Rodzaj",
+          "provision.created_on": "Utworzona",
+          "provision.cost_account": "Konto kosztu",
+          "provision.used": "Wykorzystana",
+          "provision.released": "Rozwiązana",
+          "receivable_write_down.invoice": "Faktura",
+          "receivable_write_down.reason": "Powód",
+          "receivable_write_down.deductible": "Koszt podatkowy",
+          "receivable_write_down.settled_on": "Zakończony",
+          "role.name": "Nazwa roli",
+          "rights": "Uprawnienia",
+          "role.description": "Opis roli",
+          "membership.person": "Osoba",
+          "membership.company": "Firma",
+          "membership.role": "Rola",
+          "membership.group": "Grupa",
+          "membership.from": "Od dnia",
+          "membership.to": "Do dnia",
+          "membership.reason": "Powód",
+          "membership.status": "Status",
+          "membership.granted_by": "Nadał(a)",
+          "mandate.office": "Biuro rachunkowe",
+          "mandate.client": "Klient",
+          "mandate.scope": "Zakres uprawnień",
+          "mandate.from": "Od dnia",
+          "mandate.to": "Do dnia",
+          "mandate.status": "Status",
+          "mandate.granted_by": "Nadał(a)",
+          "substitution.person": "Zastępowany",
+          "substitution.deputy": "Zastępca",
+          "substitution.company": "Firma",
+          "substitution.from": "Od dnia",
+          "substitution.to": "Do dnia",
+          "substitution.status": "Status",
+          "substitution.granted_by": "Wyznaczył(a)",
+          "group.name": "Nazwa grupy",
+          "group.company": "Firma",
+          "group.description": "Opis grupy",
+          "sales_invoice.kind": "Co sprzedano",
+          "inventory_write_down.title": "Tytuł",
+          "inventory_write_down.stock_account": "Konto zapasów",
+          "inventory_write_down.carrying_value": "Wartość ewidencyjna",
+          "inventory_write_down.net_selling_price": "Cena sprzedaży netto",
+          "inventory_write_down.amount": "Odpis",
+          "inventory_write_down.reversed_on": "Cofnięty",
+          "asset_advance.title": "Tytuł",
+          "asset_advance.supplier": "Dostawca",
+          "asset_advance.amount_foreign": "Kwota w walucie",
+          "asset_advance.amount_pln": "Złote z dnia zapłaty",
+          "asset_advance.settled_on": "Rozliczona",
+          "loan.title": "Tytuł",
+          "loan.counterparty": "Kontrahent",
+          "loan.direction": "Kierunek",
+          "loan.due_date": "Termin spłaty",
+          "loan.nominal": "Wartość nominalna",
+          "loan.open": "Kwota wymaganej zapłaty",
+          "loan.interest_rate": "Oprocentowanie",
+          "deferred_tax.title": "Tytuł",
+          "deferred_tax.item": "Składnik",
+          "deferred_tax.side": "Strona bilansu",
+          "deferred_tax.carrying_value": "Wartość bilansowa",
+          "deferred_tax.tax_value": "Wartość podatkowa",
+          "deferred_tax.difference": "Różnica przejściowa",
+          "deferred_tax.kind": "Rodzaj",
+          "deferred_tax.rate": "Stawka podatku",
+          "deferred_tax.reversed_on": "Odwrócona",
+          "fx_revaluation.title": "Tytuł",
+          "fx_revaluation.balance_date": "Dzień bilansowy",
+          "fx_revaluation.storno_date": "Storno",
+          "fx_revaluation.closing_rate": "Kurs na dzień bilansowy",
+          "fx_revaluation.receivables_open": "Należności w walucie",
+          "fx_revaluation.receivables_booked_pln": "Należności po kursach dokumentów",
+          "fx_revaluation.receivables_closing_pln": "Należności po kursie bilansowym",
+          "fx_revaluation.receivables_difference": "Różnica na należnościach",
+          "fx_revaluation.payables_open": "Zobowiązania w walucie",
+          "fx_revaluation.payables_booked_pln": "Zobowiązania po kursach dokumentów",
+          "fx_revaluation.payables_closing_pln": "Zobowiązania po kursie bilansowym",
+          "fx_revaluation.payables_difference": "Różnica na zobowiązaniach",
+          "liquidation_measurement.item": "Składnik",
+          "liquidation_measurement.account": "Konto",
+          "liquidation_measurement.carrying_value": "Wartość księgowa",
+          "liquidation_measurement.net_selling_price": "Cena sprzedaży netto",
+          "liquidation_measurement.write_down": "Odpis",
+          "liquidation_measurement.reason": "Powód",
+          "policy_adjustment.title": "Tytuł",
+          "policy_adjustment.account": "Konto",
+          "policy_adjustment.side": "Strona",
+          "policy_adjustment.effective_from": "Od dnia",
+          "policy_adjustment.basis": "Podstawa",
+          "development_costs.title": "Tytuł",
+          "development_costs.unamortised": "Nieodpisane",
+          "development_costs.useful_life_years": "Okres użyteczności (lata)",
+          "year_close_clearing.account": "Konto",
+          "year_close_clearing.code": "Nr konta",
+          "year_close_clearing.year_end": "Dzień bilansowy",
+          "year_close_clearing.amount": "Saldo (Wn minus Ma)"
+        },
+        "values": {
+          "account.type": {
+            "asset": "aktywa",
+            "bank": "środki pieniężne",
+            "clearing": "rozliczeniowe",
+            "creditor": "zobowiązania",
+            "debtor": "należności",
+            "equity": "kapitał",
+            "expense": "koszty",
+            "liability": "pasywa",
+            "revenue": "przychody",
+            "tax": "podatki",
+            "income_tax": "podatek dochodowy"
+          },
+          "bank_operation.direction": {
+            "credit": "wpływ",
+            "debit": "wypływ"
+          },
+          "matching_difference.direction": {
+            "short": "niedopłata",
+            "over": "nadpłata"
+          },
+          "direction": {
+            "credit": "Ma",
+            "debit": "Wn",
+            "up": "w górę",
+            "down": "w dół",
+            "short": "niedopłata",
+            "over": "nadpłata"
+          },
+          "posting.side": {
+            "debit": "Wn",
+            "credit": "Ma"
+          },
+          "side": {
+            "debit": "Wn",
+            "credit": "Ma"
+          },
+          "company.kind": {
+            "customer": "Odbiorca",
+            "supplier": "Dostawca",
+            "self": "My"
+          },
+          "bank_operation.kind": {
+            "transfer": "Zapłata kontrahenta",
+            "card": "Karta",
+            "fee": "Opłata bankowa",
+            "other": "Inna",
+            "interest": "Odsetki",
+            "tax": "Podatek",
+            "zus": "ZUS",
+            "own": "Przelew własny",
+            "owner": "Pieniądze właściciela"
+          },
+          "kind": {
+            "car": "samochód osobowy",
+            "motorcycle": "motocykl",
+            "truck": "samochód ciężarowy",
+            "customer": "odbiorca",
+            "supplier": "dostawca",
+            "self": "my",
+            "fee": "opłata",
+            "financial": "finansowy",
+            "operational": "operacyjny",
+            "rental": "najem",
+            "interest": "odsetki",
+            "other": "inny",
+            "own": "własny",
+            "owner": "właściciel",
+            "tax": "podatek",
+            "transfer": "przelew",
+            "zus": "ZUS",
+            "card": "karta",
+            "jpk_v7": "JPK_V7",
+            "vat7": "VAT-7",
+            "pit": "PIT",
+            "pcc3": "PCC-3",
+            "zus_dra": "ZUS DRA",
+            "tolerance": "w tolerancji"
+          },
+          "sales_invoice.status": {
+            "open": "Otwarta",
+            "paid": "Zapłacona"
+          },
+          "purchase_invoice.status": {
+            "open": "Otwarta",
+            "paid": "Zapłacona"
+          },
+          "ksef_submission.status": {
+            "accepted": "Przyjęta",
+            "rejected": "Odrzucona"
+          },
+          "status": {
+            "accepted": "przyjęty",
+            "active": "aktywny",
+            "approved": "zatwierdzony",
+            "away": "nieobecny",
+            "blocked": "zablokowany",
+            "cancelled": "anulowany",
+            "closed": "zamknięty",
+            "corrected": "skorygowany",
+            "done": "zrobione",
+            "draft": "szkic",
+            "issued": "wystawiony",
+            "left": "odszedł",
+            "open": "otwarte",
+            "paid": "zapłacone",
+            "read": "przeczytany",
+            "received": "przyjęty",
+            "rejected": "odrzucony",
+            "set_aside": "odłożone"
+          },
+          "settlement_status": {
+            "private": "prywatna",
+            "settled": "rozliczona",
+            "unsettled": "czeka"
+          },
+          "legal_form": {
+            "legal_entity": "osoba prawna",
+            "natural_person": "osoba fizyczna"
+          },
+          "vat_status": {
+            "active": "czynny",
+            "exempt": "zwolniony"
+          },
+          "books": {
+            "full": "pełne księgi",
+            "kpir": "KPiR",
+            "ryczalt": "ewidencja przychodów"
+          },
+          "income_tax": {
+            "cit": "CIT",
+            "liniowy": "liniowy",
+            "ryczalt": "ryczałt",
+            "skala": "skala podatkowa"
+          },
+          "amortization_type": {
+            "degressive": "degresywna",
+            "linear": "liniowa",
+            "none": "brak",
+            "one_off": "jednorazowa"
+          },
+          "priority": {
+            "critical": "krytyczna",
+            "high": "wysoka",
+            "low": "niska",
+            "medium": "średnia",
+            "problem": "problem"
+          },
+          "category": {
+            "accounting": "księgowość",
+            "agent": "Rhea",
+            "contractor_payments": "płatności kontrahentów",
+            "invoices": "faktury",
+            "month_close": "zamknięcie miesiąca",
+            "other": "inne",
+            "reminders": "przypomnienia",
+            "taxes": "podatki"
+          },
+          "cadence": {
+            "monthly": "co miesiąc",
+            "other": "inny",
+            "weekly": "co tydzień",
+            "yearly": "co rok"
+          },
+          "payment_status": {
+            "awaiting": "oczekuje",
+            "paid": "zapłacona",
+            "partial": "częściowo",
+            "unpaid": "niezapłacona"
+          },
+          "ownership": {
+            "leasing": "leasing",
+            "own": "własny",
+            "private": "prywatny",
+            "rental": "najem"
+          },
+          "cash_method": {
+            "yes": "tak",
+            "no": "nie"
+          },
+          "very_important": {
+            "yes": "tak",
+            "no": "nie"
+          },
+          "active": {
+            "yes": "tak",
+            "no": "nie"
+          },
+          "send_to_ksef": {
+            "yes": "tak",
+            "no": "nie"
+          },
+          "send_email": {
+            "yes": "tak",
+            "no": "nie"
+          },
+          "default": {
+            "yes": "tak",
+            "no": "nie"
+          },
+          "intragroup": {
+            "yes": "tak",
+            "no": "nie"
+          },
+          "basis": {
+            "statute": "ustawa",
+            "practice": "praktyka",
+            "standard": "standard",
+            "interpretation": "interpretacja",
+            "ruling": "orzecznictwo",
+            "regulation": "rozporządzenie"
+          },
+          "account.tax_treatment": {
+            "deductible": "koszt podatkowy (KUP)",
+            "non_deductible": "nie jest kosztem podatkowym (NKUP)",
+            "taxable": "przychód podatkowy",
+            "not_taxable": "nie jest przychodem podatkowym"
+          },
+          "cit_status.formed_by": {
+            "new": "nowa działalność",
+            "transformation": "z przekształcenia",
+            "contribution": "z aportu przedsiębiorstwa"
+          },
+          "cit_status.reduced": {
+            "yes": "tak",
+            "no": "nie"
+          },
+          "prepaid_cost.status": {
+            "active": "rozliczany",
+            "done": "rozliczony"
+          },
+          "fixed_asset.status": {
+            "active": "w używaniu",
+            "depreciated": "umorzony",
+            "disposed": "zlikwidowany"
+          },
+          "provision.kind": {
+            "liability": "rezerwa na zobowiązania",
+            "accrual": "bierne RMK"
+          },
+          "provision.status": {
+            "open": "otwarta",
+            "closed": "zamknięta"
+          },
+          "receivable_write_down.reason": {
+            "insolvency": "upadłość, likwidacja, restrukturyzacja",
+            "dispute": "spór",
+            "overdue": "przeterminowana",
+            "other": "inny"
+          },
+          "receivable_write_down.deductible": {
+            "yes": "tak",
+            "no": "nie (NKUP)"
+          },
+          "receivable_write_down.status": {
+            "open": "otwarty",
+            "reversed": "spłacona — odpis rozwiązany",
+            "written_off": "należność odpisana"
+          },
+          "membership.status": {
+            "active": "aktywne",
+            "ended": "zakończone"
+          },
+          "mandate.status": {
+            "active": "aktywne",
+            "ended": "zakończone"
+          },
+          "substitution.status": {
+            "active": "aktywne",
+            "ended": "zakończone"
+          },
+          "sales_invoice.kind": {
+            "services": "usługi",
+            "goods": "towary",
+            "materials": "materiały",
+            "fixed_asset": "środek trwały",
+            "other": "inne"
+          },
+          "inventory_write_down.status": {
+            "open": "otwarty",
+            "reversed": "cofnięty"
+          },
+          "asset_advance.status": {
+            "open": "otwarta",
+            "settled": "rozliczona"
+          },
+          "loan.direction": {
+            "received": "otrzymana",
+            "granted": "udzielona"
+          },
+          "loan.status": {
+            "open": "otwarta",
+            "repaid": "spłacona"
+          },
+          "deferred_tax.side": {
+            "asset": "aktywa",
+            "liability": "pasywa"
+          },
+          "deferred_tax.kind": {
+            "liability": "rezerwa",
+            "asset": "aktywa z tytułu odroczonego podatku"
+          },
+          "deferred_tax.status": {
+            "open": "otwarta",
+            "reversed": "odwrócona"
+          },
+          "liquidation_measurement.reason": {
+            "liquidation": "likwidacja",
+            "bankruptcy": "upadłość",
+            "no_continuation_at_approval": "brak kontynuacji na dzień zatwierdzenia",
+            "transfer_division_or_sale": "przekazanie, podział lub sprzedaż"
+          },
+          "policy_adjustment.side": {
+            "debit": "Wn",
+            "credit": "Ma"
+          },
+          "development_costs.status": {
+            "active": "aktywne",
+            "written_off": "odpisane"
+          }
+        },
+        "events": {
+          "account.created": "Konto założone",
+          "bank.statement.line": "Pozycja wyciągu bankowego",
+          "bank_operation.classified": "Pozycja wyciągu nazwana",
+          "company.accounts.declared": "Firma podała swoje rachunki",
+          "company.cost_account.set": "Konto kosztów dostawcy ustalone",
+          "company.form.declared": "Firma podała swoją formę",
+          "company.identified": "Firma podała swoje dane",
+          "company.registered": "Firma zarejestrowana",
+          "delivery.received": "Dostawa przyjęta",
+          "document.issued": "Dokument wydany",
+          "document.read": "Dokument przeczytany",
+          "document.received": "Dokument przyjęty",
+          "fx.rate.published": "Kurs NBP opublikowany",
+          "ksef.invoice.rejected": "KSeF odrzucił fakturę",
+          "ksef.invoice.submitted": "KSeF przyjął fakturę",
+          "object.materialized": "Powstał obiekt",
+          "object.amended": "Obiekt zmieniony",
+          "objects.matched": "Wpłata dopasowana do dokumentu",
+          "objects.unmatched": "Dopasowanie cofnięte",
+          "period.closed": "Miesiąc zamknięty",
+          "person.deputy_appointed": "Wyznaczono zastępcę",
+          "person.identified": "Osoba podała swoje dane",
+          "person.registered": "Osoba dodana",
+          "person.status_changed": "Zmieniono status osoby",
+          "purchase.invoice.received": "Faktura zakupu otrzymana",
+          "sales.invoice.issued": "Faktura sprzedaży wystawiona",
+          "vat_rate.defined": "Stawka VAT ustalona",
+          "host.said": "Rhea powiedziała",
+          "rule.approved": "Reguła zatwierdzona",
+          "bundle.approved": "Pakiet zatwierdzony",
+          "activity.approved": "Drzwi zatwierdzone",
+          "account.tax_treatment.set": "Konto: znaczenie dla podatku dochodowego",
+          "cit_limit.defined": "Limity CIT na rok",
+          "company.cit_status.declared": "Status CIT na rok",
+          "cit_advance.recomputed": "Zaliczka na CIT przeliczona",
+          "cost.spread": "Koszt rozłożony w czasie",
+          "fixed_asset.accepted": "Przyjęcie środka trwałego do używania (OT)",
+          "fixed_asset.disposed": "Likwidacja środka trwałego (LT)",
+          "year.closed": "Zamknięcie roku obrotowego",
+          "statement.approved": "Zatwierdzenie sprawozdania finansowego",
+          "result.distributed": "Uchwała o podziale wyniku",
+          "dividend.paid": "Wypłata dywidendy",
+          "provision.created": "Utworzenie rezerwy",
+          "provision.used": "Wykorzystanie rezerwy",
+          "provision.released": "Rozwiązanie rezerwy",
+          "receivable.written_down": "Odpis aktualizujący należność",
+          "receivable.write_down.settled": "Zakończenie odpisu",
+          "role.declared": "Rola określona",
+          "role.changed": "Rola zmieniona",
+          "membership.granted": "Nadano członkostwo",
+          "membership.ended": "Zakończono członkostwo",
+          "mandate.granted": "Biuro umocowane do prowadzenia ksiąg",
+          "mandate.ended": "Umocowanie biura zakończone",
+          "substitution.appointed": "Wyznaczono zastępstwo",
+          "substitution.ended": "Zastępstwo zakończone",
+          "group.declared": "Grupa określona",
+          "access.refused": "Odmowa dostępu",
+          "access.recorded": "Logowanie odnotowane",
+          "inventory.written_down": "Odpis aktualizujący zapasy",
+          "inventory.write_down.reversed": "Cofnięcie odpisu zapasów",
+          "construction.cost_moved": "Koszt zdjęty z budowy środka trwałego",
+          "asset_advance.paid": "Zaliczka na środek trwały",
+          "asset_advance.settled": "Rozliczenie zaliczki na środek trwały",
+          "loan.received": "Pożyczka otrzymana",
+          "loan.granted": "Pożyczka udzielona",
+          "loan.repaid": "Spłata pożyczki",
+          "loan.interest_charged": "Odsetki od pożyczki",
+          "deferred_tax.recognised": "Odroczony podatek ustalony",
+          "deferred_tax.reversed": "Odroczony podatek odwrócony",
+          "fx.balances.revalued": "Wycena bilansowa rozrachunków w walucie",
+          "going_concern.measured": "Wycena bez założenia kontynuacji",
+          "cessation.provided": "Rezerwa na zaniechanie działalności",
+          "policy.changed": "Zmiana zasad rachunkowości",
+          "development_costs.capitalised": "Aktywowanie prac rozwojowych",
+          "development_costs.amortised": "Odpis prac rozwojowych",
+          "company.entered": "Firma wpisana do kartoteki"
+        },
+        "doors": {
+          "appoint_deputy": "wyznaczenie zastępcy",
+          "approve_activity": "zatwierdzenie drzwi",
+          "approve_backfill": "zatwierdzenie wyjaśnienia wstecz",
+          "approve_bundle": "zatwierdzenie pakietu",
+          "approve_rule": "zatwierdzenie reguły",
+          "classify_bank_operation": "nazwanie pozycji wyciągu",
+          "clock": "zegar",
+          "close_period": "zamknięcie miesiąca",
+          "confirm_reading": "potwierdzenie odczytu",
+          "declare_company_accounts": "rachunki firmy",
+          "declare_company_form": "forma firmy",
+          "draft_bundle": "szkic pakietu",
+          "draft_rule": "szkic reguły",
+          "host_said": "słowa Rhei",
+          "identify_company": "dane firmy",
+          "identify_person": "dane osoby",
+          "issue_document": "wydanie dokumentu",
+          "ksef": "kanał KSeF",
+          "pair_items": "dopasowanie",
+          "receive_document": "przyjęcie dokumentu",
+          "register_person": "dodanie osoby",
+          "reject_bundle": "odrzucenie pakietu",
+          "set_cost_account": "konto kosztów dostawcy",
+          "set_person_status": "status osoby",
+          "submit_event": "otwarte drzwi",
+          "unpair_items": "cofnięcie dopasowania",
+          "set_tax_treatment": "znaczenie konta dla podatku dochodowego",
+          "declare_cit_status": "status CIT na rok",
+          "recompute_cit_advance": "przeliczenie zaliczki na CIT",
+          "spread_cost": "rozłożenie kosztu w czasie (RMK)",
+          "accept_fixed_asset": "przyjęcie środka trwałego do używania (OT)",
+          "dispose_fixed_asset": "likwidacja środka trwałego (LT)",
+          "close_year": "zamknięcie roku",
+          "approve_statement": "zatwierdzenie sprawozdania",
+          "distribute_result": "podział wyniku",
+          "pay_dividend": "wypłata dywidendy",
+          "create_provision": "utworzenie rezerwy",
+          "use_provision": "wykorzystanie rezerwy",
+          "release_provision": "rozwiązanie rezerwy",
+          "write_down_receivable": "odpis aktualizujący należność",
+          "settle_write_down": "zakończenie odpisu",
+          "declare_role": "określenie roli",
+          "change_role": "zmiana roli",
+          "grant_membership": "nadanie członkostwa",
+          "end_membership": "zakończenie członkostwa",
+          "grant_mandate": "umocowanie biura",
+          "end_mandate": "zakończenie umocowania biura",
+          "appoint_substitute": "wyznaczenie zastępstwa",
+          "end_substitution": "zakończenie zastępstwa",
+          "declare_group": "określenie grupy",
+          "record_access": "odnotowanie logowania",
+          "write_down_inventory": "odpis aktualizujący zapasy",
+          "reverse_inventory_write_down": "cofnięcie odpisu zapasów",
+          "move_from_construction": "zdjęcie kosztu z budowy",
+          "pay_asset_advance": "zaliczka na środek trwały",
+          "settle_asset_advance": "rozliczenie zaliczki na środek trwały",
+          "receive_loan": "pożyczka otrzymana",
+          "grant_loan": "pożyczka udzielona",
+          "repay_loan": "spłata pożyczki",
+          "charge_loan_interest": "odsetki od pożyczki",
+          "recognise_deferred_tax": "odroczony podatek dochodowy",
+          "reverse_deferred_tax": "odwrócenie odroczonego podatku",
+          "revalue_fx_balances": "wycena bilansowa walut",
+          "measure_without_going_concern": "wycena bez założenia kontynuacji",
+          "provide_for_cessation": "rezerwa na zaniechanie działalności",
+          "adjust_for_policy_change": "zmiana zasad rachunkowości",
+          "capitalise_development_costs": "aktywowanie prac rozwojowych",
+          "amortise_development_costs": "odpis prac rozwojowych",
+          "enter_company": "wpisanie firmy"
+        },
+        "account_groups": {
+          "0": "Aktywa trwałe",
+          "1": "Środki pieniężne, rachunki bankowe i inne krótkoterminowe aktywa finansowe",
+          "2": "Rozrachunki i roszczenia",
+          "3": "Materiały i towary",
+          "4": "Koszty według rodzajów i ich rozliczenie",
+          "5": "Koszty według typów działalności i ich rozliczenie",
+          "6": "Produkty i rozliczenia międzyokresowe",
+          "7": "Przychody i koszty związane z ich osiągnięciem",
+          "8": "Kapitały (fundusze) własne, fundusze specjalne i wynik finansowy"
+        },
+        "notes": [
+          "Wpłaty do ZUS (składki) to operacje bankowe rodzaju 'zus' wychodzące (direction 'debit'), księgowane Wn 229 Rozrachunki z ZUS / Ma 130; to, co należy się ZUS, to strona Ma konta 229. Nigdy nie licz strony Ma konta 229 jako zapłaty.",
+          "Wpłaty do urzędu skarbowego (VAT, zaliczki na podatek dochodowy, inne daniny, mikrorachunek podatkowy) to operacje bankowe rodzaju 'tax' wychodzące, księgowane Wn 225 Pozostałe rozrachunki publicznoprawne.",
+          "Operacja bankowa: direction 'credit' to wpływ, 'debit' to wypływ. Rodzaj 'transfer' to zapłata handlowa: finance.settlement łączy operację z fakturą, którą płaci (document_type, document_id), z kwotą; 'own' to przelew między własnymi rachunkami (149); 'owner' to pieniądze właściciela (249); 'fee' to opłata bankowa (403); 'interest' to odsetki (750 wpływ, 751 wypływ); 'card' i 'other' nie są jeszcze wyjaśnione. settlement_status mówi, czy operacja jest rozliczona.",
+          "Zapłacone dostawcom to wychodzące przelewy rozliczone z fakturami zakupu (finance.settlement z document_type 'purchase_invoice'); otrzymane od klientów to wpływy rozliczone z fakturami sprzedaży.",
+          "Kwoty w złotych to net_pln i vat_pln na fakturach sprzedaży i zakupu: faktura w walucie obcej ma net i vat w swojej walucie; gross jest w walucie faktury.",
+          "vat_period to miesiąc VAT, w którym faktura się liczy ('YYYY-MM'), i może się różnić od miesiąca daty wystawienia. VAT miesiąc po miesiącu liczy się według vat_period; sprzedaż miesiąc po miesiącu według issue_date (sprzedaż) albo invoice_date (zakupy).",
+          "open to kwota jeszcze niezapłacona na fakturze, a status to open albo paid; należności to otwarte faktury sprzedaży, zobowiązania wobec dostawców to otwarte faktury zakupu.",
+          "Wynik przed opodatkowaniem to przychody (konta o type 'revenue') minus koszty (konta o type 'expense') w księdze 'pl-stat'; zapis liczy się w miesiącu, w którym go zaksięgowano (spóźniony dokument trafia do pierwszego otwartego miesiąca). Raport pakietu wynik-miesiace podaje go miesiąc po miesiącu.",
+          "Koszty rozliczane w czasie (RMK czynne) czekają na koncie 640 i co miesiąc przechodzą w koszty: koszt miesiąca to zapisy na kontach kosztowych w tym miesiącu, nie data faktury.",
+          "VAT za zamknięty miesiąc to finance.vat_settlement (period, output_vat, input_vat, vat_due do zapłaty, vat_carry do przeniesienia); zaliczka na CIT za miesiąc to finance.cit_advance (period, income, base, tax, advance do zapłaty).",
+          "Deklaracje i ich zapłata to finance.tax_declaration (kind jpk_v7, vat7, pit, zus_dra, pcc3, other; period, due_date, amount, payment_status).",
+          "Zamknięty miesiąc to finance.period_lock (month, book); jego zapisy już się nie zmieniają.",
+          "company.kind to 'self' dla tej firmy, 'customer' albo 'supplier' dla pozostałych."
+        ],
+        "views": {
+          "account-list": "Plan kont",
+          "company-list": "Firmy",
+          "fx-rates": "Kursy walut",
+          "invoice-list": "Faktury",
+          "purchase-invoice-list": "Faktury zakupu",
+          "journal": "Dziennik",
+          "issued-documents": "Dokumenty wydane",
+          "trial-balance": "Zestawienie obrotów i sald",
+          "group-trial-balance": "Zestawienie obrotów i sald grupy (EUR)",
+          "invoice-by-customer": "Sprzedaż według nabywców",
+          "intercompany-positions": "Rozrachunki wewnątrz grupy",
+          "who-can-do-what": "Kto co może"
+        }
+      }
+    }
+  ]
+}

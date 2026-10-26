@@ -1,0 +1,202 @@
+{
+  "app": "sales-invoices-de",
+  "version": 1,
+  "title": "Ausgangsrechnungen",
+  "layer": "law",
+  "uses": [
+    "sales_invoice",
+    "posting"
+  ],
+  "tabs": [
+    {
+      "view_id": "rechnungen-list",
+      "version": 1,
+      "notion": "list",
+      "title": "Ausgangsrechnungen",
+      "domain": "finance",
+      "function": "documents",
+      "spec": {
+        "object_type": "sales_invoice",
+        "columns": [
+          {
+            "field": "number",
+            "label": "Nummer"
+          },
+          {
+            "field": "issue_date",
+            "label": "Datum"
+          },
+          {
+            "field": "buyer",
+            "label": "Käufer"
+          },
+          {
+            "field": "net",
+            "label": "Netto"
+          },
+          {
+            "field": "vat",
+            "label": "USt"
+          },
+          {
+            "field": "gross",
+            "label": "Brutto"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "ust-je-monat",
+      "version": 3,
+      "notion": "analysis",
+      "title": "Umsatzsteuer je Monat",
+      "domain": "finance",
+      "function": "vat",
+      "spec": {
+        "sql_file": "ust-je-monat.sql",
+        "columns": [
+          {
+            "field": "month",
+            "label": "Monat",
+            "type": "string"
+          },
+          {
+            "field": "rate",
+            "label": "Satz",
+            "type": "string"
+          },
+          {
+            "field": "net",
+            "label": "Netto",
+            "type": "money"
+          },
+          {
+            "field": "vat",
+            "label": "USt",
+            "type": "money"
+          },
+          {
+            "field": "gross",
+            "label": "Brutto",
+            "type": "money"
+          }
+        ]
+      }
+    }
+  ],
+  "record": {
+    "of": "sales_invoice",
+    "tabs": [
+      {
+        "view_id": "rechnung-detail",
+        "version": 1,
+        "notion": "detail",
+        "title": "Ausgangsrechnung",
+        "domain": "finance",
+        "function": "documents",
+        "spec": {
+          "object_type": "sales_invoice",
+          "sections": [
+            {
+              "title": "Rechnung",
+              "fields": [
+                "number",
+                "issue_date"
+              ]
+            },
+            {
+              "title": "Parteien",
+              "fields": [
+                "buyer"
+              ]
+            },
+            {
+              "title": "Beträge",
+              "fields": [
+                "net",
+                "vat",
+                "gross",
+                "vat_rate",
+                "currency"
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "rules": [
+    {
+      "rule_id": "de-book-sales-invoice",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Eine ausgestellte EUR-Rechnung wird zum sales_invoice-Dokument",
+      "spec": {
+        "match": {
+          "event_type": "sales.invoice.issued",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "de"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "sales_invoice",
+            "fields": {
+              "number": "=$.number",
+              "issue_date": "=$.issue_date",
+              "buyer": "=ref(company, vat_id, $.buyer_nip)",
+              "net": "=$.net",
+              "vat": "=$.vat",
+              "gross": "=$.gross",
+              "vat_rate": "=ref(vat_rate, code, $.vat_rate)",
+              "currency": "=$.currency",
+              "seller": "=ref(company, vat_id, $.seller_nip)"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "de-post-sales-invoice",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "EUR-Rechnung bucht: 1400 brutto / 8400 netto, 1776 USt",
+      "spec": {
+        "match": {
+          "event_type": "sales.invoice.issued",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "de"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "currency": "=$.currency",
+            "lines": [
+              {
+                "account": "1400",
+                "debit": "=$.gross"
+              },
+              {
+                "account": "8400",
+                "credit": "=$.net"
+              },
+              {
+                "account": "1776",
+                "credit": "=$.vat"
+              }
+            ],
+            "book": "de-stat"
+          }
+        }
+      }
+    }
+  ]
+}

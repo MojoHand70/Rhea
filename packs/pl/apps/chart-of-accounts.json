@@ -1,0 +1,175 @@
+{
+  "app": "chart-of-accounts",
+  "version": 2,
+  "title": "Plan kont",
+  "layer": "core",
+  "data": [
+    {
+      "name": "account",
+      "version": 2,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "name",
+      "fields": [
+        {
+          "name": "code",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "type",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "asset",
+            "liability",
+            "equity",
+            "revenue",
+            "expense",
+            "debtor",
+            "creditor",
+            "tax",
+            "bank",
+            "clearing",
+            "income_tax"
+          ]
+        },
+        {
+          "name": "tax_treatment",
+          "type": "enum",
+          "required": false,
+          "values": [
+            "deductible",
+            "non_deductible",
+            "taxable",
+            "not_taxable"
+          ]
+        }
+      ],
+      "amendable": [
+        "tax_treatment"
+      ]
+    }
+  ],
+  "tabs": [
+    {
+      "view": "account-list"
+    }
+  ],
+  "record": {
+    "of": "account",
+    "tabs": [
+      {
+        "view": "account-detail"
+      },
+      {
+        "desk": "ledger-sheet",
+        "title": "Kartoteka konta"
+      }
+    ]
+  },
+  "actions": [
+    {
+      "name": "set_tax_treatment",
+      "domain": "finance",
+      "description": "Firma mówi, czym konto jest dla podatku dochodowego: koszt podatkowy (KUP) albo nie (NKUP, np. reprezentacja, kary, darowizny), przychód podatkowy albo nie; konto bez oznaczenia liczy się jako koszt albo przychód podatkowy",
+      "spec": {
+        "inputs": [
+          {
+            "name": "account",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "tax_treatment",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "deductible",
+              "non_deductible",
+              "taxable",
+              "not_taxable"
+            ]
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "account.tax_treatment.set",
+        "who": [
+          "human"
+        ]
+      }
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "pl-register-account",
+      "priority": 10,
+      "effective_from": "2026-01-01",
+      "description": "Konto z planu kont staje się obiektem account",
+      "spec": {
+        "match": {
+          "event_type": "account.created",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "account",
+            "fields": {
+              "code": "=$.code",
+              "name": "=$.name",
+              "type": "=$.type"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-set-tax-treatment",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Konto mówi, czym jest dla podatku dochodowego: koszt podatkowy albo nie (KUP, NKUP), przychód podatkowy albo nie; koszt może być tylko kosztem, przychód przychodem — inna deklaracja nie pasuje i czeka",
+      "spec": {
+        "match": {
+          "event_type": "account.tax_treatment.set",
+          "where": [
+            {
+              "formula": "=(ref(account, code, $.account).type = \"expense\" and ($.tax_treatment = \"deductible\" or $.tax_treatment = \"non_deductible\")) or (ref(account, code, $.account).type = \"revenue\" and ($.tax_treatment = \"taxable\" or $.tax_treatment = \"not_taxable\")) or (ref(account, code, $.account).type = \"income_tax\" and $.tax_treatment = \"non_deductible\")"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "account",
+            "target": "=ref(account, code, $.account)",
+            "set": {
+              "tax_treatment": "=$.tax_treatment"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o CIT (t.j. Dz.U. 2026 poz. 554) art. 15 ust. 1: kosztami uzyskania przychodów są koszty poniesione w celu osiągnięcia przychodów, z wyjątkiem kosztów wymienionych w art. 16 ust. 1",
+          "przegląd CIT-06: każde konto kosztów niesie traktowanie podatkowe; podstawa CIT to wynik księgowy plus minus oznaczone różnice"
+        ]
+      }
+    }
+  ]
+}

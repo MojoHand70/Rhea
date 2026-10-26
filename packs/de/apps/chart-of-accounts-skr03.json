@@ -1,0 +1,68 @@
+{
+  "app": "chart-of-accounts-skr03",
+  "version": 1,
+  "title": "Kontenrahmen SKR03",
+  "layer": "law",
+  "uses": [
+    "account",
+    "vat_rate"
+  ],
+  "rules": [
+    {
+      "rule_id": "de-register-account",
+      "priority": 10,
+      "effective_from": "2026-01-01",
+      "description": "Ein Konto aus dem Kontenrahmen wird zum account-Objekt",
+      "spec": {
+        "match": {
+          "event_type": "account.created",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "de"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "account",
+            "fields": {
+              "code": "=$.code",
+              "name": "=$.name",
+              "type": "=$.type"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "de-register-vat-rate",
+      "priority": 10,
+      "effective_from": "2026-01-01",
+      "description": "Ein Umsatzsteuersatz wird zum vat_rate-Objekt",
+      "spec": {
+        "match": {
+          "event_type": "vat_rate.defined",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "de"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "vat_rate",
+            "fields": {
+              "code": "=$.code",
+              "name": "=$.name",
+              "percent": "=$.percent"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

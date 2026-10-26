@@ -1,0 +1,62 @@
+{
+  "app": "tax-declarations",
+  "version": 1,
+  "title": "Deklaracje podatkowe",
+  "layer": "law",
+  "data": [
+    {
+      "name": "tax_declaration",
+      "version": 1,
+      "domain": "finance",
+      "is_document": true,
+      "label_field": "period",
+      "fields": [
+        {
+          "name": "kind",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "jpk_v7",
+            "vat7",
+            "pit",
+            "zus_dra",
+            "pcc3",
+            "other"
+          ]
+        },
+        {
+          "name": "period",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "due_date",
+          "type": "date"
+        },
+        {
+          "name": "amount",
+          "type": "money"
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "values": [
+            "draft",
+            "approved",
+            "corrected"
+          ]
+        },
+        {
+          "name": "payment_status",
+          "type": "enum",
+          "values": [
+            "unpaid",
+            "awaiting",
+            "paid",
+            "partial"
+          ]
+        }
+      ]
+    }
+  ]
+}

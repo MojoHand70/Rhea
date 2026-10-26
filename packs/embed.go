@@ -5,7 +5,7 @@ package packs
 
 import "embed"
 
-//go:embed core/core.json common/people.json common/periods.json common/documents.json
+//go:embed core/core.json core/apps common/people.json common/periods.json common/documents.json common/apps
 var FS embed.FS
 
 // Core is what rhea init loads, in the order they are approved: Ludzie

@@ -1,0 +1,413 @@
+{
+  "app": "fx-rates",
+  "version": 2,
+  "title": "Waluty",
+  "layer": "law",
+  "data": [
+    {
+      "name": "fx_revaluation",
+      "version": 1,
+      "domain": "finance",
+      "label_field": "title",
+      "fields": [
+        {
+          "name": "title",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "balance_date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "storno_date",
+          "type": "date",
+          "required": true,
+          "description": "pierwszy dzień następnego roku: dzień storna i dzień, pod którym kanał NBP trzyma kurs ogłoszony na dzień bilansowy"
+        },
+        {
+          "name": "closing_rate",
+          "type": "decimal",
+          "required": true,
+          "description": "kurs średni NBP obowiązujący na dzień bilansowy"
+        },
+        {
+          "name": "receivables_open",
+          "type": "money",
+          "required": true,
+          "description": "otwarte należności z faktur sprzedaży w walucie"
+        },
+        {
+          "name": "receivables_booked_pln",
+          "type": "money",
+          "required": true,
+          "description": "ich złote po kursach z dni sprzedaży"
+        },
+        {
+          "name": "receivables_closing_pln",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "receivables_difference",
+          "type": "money",
+          "required": true,
+          "description": "dodatnia = zysk kursowy, ujemna = strata"
+        },
+        {
+          "name": "payables_open",
+          "type": "money",
+          "required": true,
+          "description": "otwarte zobowiązania z faktur zakupu w walucie"
+        },
+        {
+          "name": "payables_booked_pln",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "payables_closing_pln",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "payables_difference",
+          "type": "money",
+          "required": true,
+          "description": "dodatnia = strata kursowa (zobowiązanie urosło), ujemna = zysk"
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ]
+    }
+  ],
+  "uses": [
+    "fx_rate",
+    "posting"
+  ],
+  "tabs": [
+    {
+      "view": "fx-rates"
+    },
+    {
+      "view_id": "wycena-bilansowa-walut",
+      "version": 1,
+      "notion": "list",
+      "title": "Wycena bilansowa walut",
+      "domain": "finance",
+      "function": "rozrachunki",
+      "spec": {
+        "object_type": "fx_revaluation",
+        "columns": [
+          {
+            "field": "currency",
+            "label": "Waluta"
+          },
+          {
+            "field": "balance_date",
+            "label": "Dzień bilansowy"
+          },
+          {
+            "field": "closing_rate",
+            "label": "Kurs"
+          },
+          {
+            "field": "receivables_open",
+            "label": "Należności w walucie"
+          },
+          {
+            "field": "receivables_difference",
+            "label": "Różnica na należnościach"
+          },
+          {
+            "field": "payables_open",
+            "label": "Zobowiązania w walucie"
+          },
+          {
+            "field": "payables_difference",
+            "label": "Różnica na zobowiązaniach"
+          },
+          {
+            "field": "storno_date",
+            "label": "Storno"
+          }
+        ]
+      }
+    }
+  ],
+  "actions": [
+    {
+      "name": "revalue_fx_balances",
+      "domain": "finance",
+      "description": "Na dzień bilansowy kończący rok księgowy wycenia otwarte należności i zobowiązania w walucie obcej po kursie średnim NBP obowiązującym na ten dzień (art. 30 ust. 1 pkt 1 UoR): różnice kursowe wobec kursów z dni dokumentów idą w przychody albo koszty finansowe (art. 30 ust. 4), a pierwszego dnia następnego roku storno je cofa, by zapłata liczyła różnicę zrealizowaną od kursu dokumentu; jedna wycena na walutę",
+      "spec": {
+        "inputs": [
+          {
+            "name": "balance_date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "currency",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "fx.balances.revalued",
+        "who": [
+          "human"
+        ]
+      }
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "pl-revalue-fx-balances",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Wycena bilansowa jednej waluty staje się obiektem fx_revaluation: otwarte należności i zobowiązania w tej walucie, ich złote po kursach z dni dokumentów, ich złote po kursie na dzień bilansowy i różnica po każdej stronie",
+      "spec": {
+        "match": {
+          "event_type": "fx.balances.revalued",
+          "where": [
+            {
+              "formula": "=$.currency <> \"PLN\""
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "fx_revaluation",
+            "fields": {
+              "title": "Wycena bilansowa rozrachunków w walucie obcej",
+              "currency": "=$.currency",
+              "balance_date": "=$.balance_date",
+              "storno_date": "=start_of_year(add_months($.balance_date, 1))",
+              "closing_rate": "=fx($.currency, \"PLN\", start_of_year(add_months($.balance_date, 1)))",
+              "receivables_open": "=sum(i in objects(sales_invoice, status, \"open\") where i.currency = $.currency : i.open)",
+              "receivables_booked_pln": "=sum(i in objects(sales_invoice, status, \"open\") where i.currency = $.currency : round(i.open * fx(i.currency, \"PLN\", i.sale_date), 2, half_up))",
+              "receivables_closing_pln": "=round(sum(i in objects(sales_invoice, status, \"open\") where i.currency = $.currency : i.open) * fx($.currency, \"PLN\", start_of_year(add_months($.balance_date, 1))), 2, half_up)",
+              "receivables_difference": "=round(sum(i in objects(sales_invoice, status, \"open\") where i.currency = $.currency : i.open) * fx($.currency, \"PLN\", start_of_year(add_months($.balance_date, 1))), 2, half_up) - sum(i in objects(sales_invoice, status, \"open\") where i.currency = $.currency : round(i.open * fx(i.currency, \"PLN\", i.sale_date), 2, half_up))",
+              "payables_open": "=sum(i in objects(purchase_invoice, status, \"open\") where i.currency = $.currency : i.open)",
+              "payables_booked_pln": "=sum(i in objects(purchase_invoice, status, \"open\") where i.currency = $.currency : round(i.open * fx(i.currency, \"PLN\", i.sale_date), 2, half_up))",
+              "payables_closing_pln": "=round(sum(i in objects(purchase_invoice, status, \"open\") where i.currency = $.currency : i.open) * fx($.currency, \"PLN\", start_of_year(add_months($.balance_date, 1))), 2, half_up)",
+              "payables_difference": "=round(sum(i in objects(purchase_invoice, status, \"open\") where i.currency = $.currency : i.open) * fx($.currency, \"PLN\", start_of_year(add_months($.balance_date, 1))), 2, half_up) - sum(i in objects(purchase_invoice, status, \"open\") where i.currency = $.currency : round(i.open * fx(i.currency, \"PLN\", i.sale_date), 2, half_up))",
+              "book": "pl-stat"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 30 ust. 1 pkt 1: nie rzadziej niż na dzień bilansowy wycenia się wyrażone w walutach obcych „składniki aktywów (z wyłączeniem udziałów w jednostkach podporządkowanych wycenianych metodą praw własności) i pasywów – po obowiązującym na ten dzień średnim kursie ogłoszonym dla danej waluty przez Narodowy Bank Polski” (pytanie I-28 egzaminu 2025)",
+          "ustawa o rachunkowości art. 30 ust. 2: operacje w walutach obcych ujmuje się na dzień ich przeprowadzenia po kursie średnim NBP z dnia poprzedzającego — kurs dokumentu, od którego liczy się różnicę",
+          "kanał pl-nbp (packs/pl/nbp.json) trzyma pod każdym dniem kurs z ostatniego dnia roboczego przed nim, więc kurs ogłoszony na dzień bilansowy — obowiązujący na ten dzień — jest kursem pod pierwszym dniem następnego roku; storno tego dnia to praktyka wyceny bilansowej, która zostawia rozrachunkom kursy dokumentów"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-fx-revaluation-receivables",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Należności w walucie na dzień bilansowy: kurs wzrósł — Wn 201 / Ma 750 (zysk), spadł — Wn 751 / Ma 201 (strata), w kwocie różnicy",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "fx_revaluation"
+            },
+            {
+              "formula": "=$.state.receivables_difference <> 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.balance_date",
+            "lines": [
+              {
+                "account": "=if($.state.receivables_difference > 0, \"201\", \"751\")",
+                "debit": "=abs($.state.receivables_difference)"
+              },
+              {
+                "account": "=if($.state.receivables_difference > 0, \"750\", \"201\")",
+                "credit": "=abs($.state.receivables_difference)"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 30 ust. 1 pkt 1: nie rzadziej niż na dzień bilansowy wycenia się wyrażone w walutach obcych „składniki aktywów (z wyłączeniem udziałów w jednostkach podporządkowanych wycenianych metodą praw własności) i pasywów – po obowiązującym na ten dzień średnim kursie ogłoszonym dla danej waluty przez Narodowy Bank Polski” (pytanie I-28 egzaminu 2025)",
+          "ustawa o rachunkowości art. 30 ust. 4: różnice kursowe dotyczące aktywów i pasywów wyrażonych w walutach obcych, „powstałe na dzień ich wyceny oraz przy zapłacie należności i zobowiązań w walutach obcych”, zalicza się odpowiednio do przychodów lub kosztów finansowych",
+          "wzorcowy plan kont: 201 Rozrachunki z odbiorcami, 202 Rozrachunki z dostawcami, 750 Przychody finansowe, 751 Koszty finansowe"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-storno-fx-revaluation-receivables",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Pierwszego dnia następnego roku wycena należności cofa się: Wn 750 / Ma 201 albo Wn 201 / Ma 751 — rozrachunek wraca do kursów dokumentów",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "fx_revaluation"
+            },
+            {
+              "formula": "=$.state.receivables_difference <> 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.storno_date",
+            "lines": [
+              {
+                "account": "=if($.state.receivables_difference > 0, \"750\", \"201\")",
+                "debit": "=abs($.state.receivables_difference)"
+              },
+              {
+                "account": "=if($.state.receivables_difference > 0, \"201\", \"751\")",
+                "credit": "=abs($.state.receivables_difference)"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 30 ust. 4: różnice kursowe dotyczące aktywów i pasywów wyrażonych w walutach obcych, „powstałe na dzień ich wyceny oraz przy zapłacie należności i zobowiązań w walutach obcych”, zalicza się odpowiednio do przychodów lub kosztów finansowych",
+          "kanał pl-nbp (packs/pl/nbp.json) trzyma pod każdym dniem kurs z ostatniego dnia roboczego przed nim, więc kurs ogłoszony na dzień bilansowy — obowiązujący na ten dzień — jest kursem pod pierwszym dniem następnego roku; storno tego dnia to praktyka wyceny bilansowej, która zostawia rozrachunkom kursy dokumentów",
+          "wzorcowy plan kont: 201 Rozrachunki z odbiorcami, 202 Rozrachunki z dostawcami, 750 Przychody finansowe, 751 Koszty finansowe"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-fx-revaluation-payables",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Zobowiązania w walucie na dzień bilansowy: kurs wzrósł — Wn 751 / Ma 202 (strata), spadł — Wn 202 / Ma 750 (zysk), w kwocie różnicy",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "fx_revaluation"
+            },
+            {
+              "formula": "=$.state.payables_difference <> 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.balance_date",
+            "lines": [
+              {
+                "account": "=if($.state.payables_difference > 0, \"751\", \"202\")",
+                "debit": "=abs($.state.payables_difference)"
+              },
+              {
+                "account": "=if($.state.payables_difference > 0, \"202\", \"750\")",
+                "credit": "=abs($.state.payables_difference)"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 30 ust. 1 pkt 1: nie rzadziej niż na dzień bilansowy wycenia się wyrażone w walutach obcych „składniki aktywów (z wyłączeniem udziałów w jednostkach podporządkowanych wycenianych metodą praw własności) i pasywów – po obowiązującym na ten dzień średnim kursie ogłoszonym dla danej waluty przez Narodowy Bank Polski” (pytanie I-28 egzaminu 2025)",
+          "ustawa o rachunkowości art. 30 ust. 4: różnice kursowe dotyczące aktywów i pasywów wyrażonych w walutach obcych, „powstałe na dzień ich wyceny oraz przy zapłacie należności i zobowiązań w walutach obcych”, zalicza się odpowiednio do przychodów lub kosztów finansowych",
+          "wzorcowy plan kont: 201 Rozrachunki z odbiorcami, 202 Rozrachunki z dostawcami, 750 Przychody finansowe, 751 Koszty finansowe"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-storno-fx-revaluation-payables",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Pierwszego dnia następnego roku wycena zobowiązań cofa się: Wn 202 / Ma 751 albo Wn 750 / Ma 202",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "fx_revaluation"
+            },
+            {
+              "formula": "=$.state.payables_difference <> 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.storno_date",
+            "lines": [
+              {
+                "account": "=if($.state.payables_difference > 0, \"202\", \"750\")",
+                "debit": "=abs($.state.payables_difference)"
+              },
+              {
+                "account": "=if($.state.payables_difference > 0, \"751\", \"202\")",
+                "credit": "=abs($.state.payables_difference)"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 30 ust. 4: różnice kursowe dotyczące aktywów i pasywów wyrażonych w walutach obcych, „powstałe na dzień ich wyceny oraz przy zapłacie należności i zobowiązań w walutach obcych”, zalicza się odpowiednio do przychodów lub kosztów finansowych",
+          "kanał pl-nbp (packs/pl/nbp.json) trzyma pod każdym dniem kurs z ostatniego dnia roboczego przed nim, więc kurs ogłoszony na dzień bilansowy — obowiązujący na ten dzień — jest kursem pod pierwszym dniem następnego roku; storno tego dnia to praktyka wyceny bilansowej, która zostawia rozrachunkom kursy dokumentów",
+          "wzorcowy plan kont: 201 Rozrachunki z odbiorcami, 202 Rozrachunki z dostawcami, 750 Przychody finansowe, 751 Koszty finansowe"
+        ]
+      }
+    }
+  ]
+}

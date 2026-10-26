@@ -1,0 +1,66 @@
+{
+  "app": "vat-rates",
+  "version": 2,
+  "title": "Stawki VAT",
+  "layer": "law",
+  "uses": [
+    "vat_rate"
+  ],
+  "tabs": [
+    {
+      "view_id": "vat-rate-list",
+      "version": 1,
+      "notion": "list",
+      "title": "Stawki VAT",
+      "domain": "finance",
+      "function": "master data",
+      "spec": {
+        "object_type": "vat_rate",
+        "columns": [
+          {
+            "field": "code",
+            "label": "Kod"
+          },
+          {
+            "field": "name",
+            "label": "Nazwa"
+          },
+          {
+            "field": "percent",
+            "label": "%"
+          }
+        ]
+      }
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "pl-register-vat-rate",
+      "priority": 10,
+      "effective_from": "2026-01-01",
+      "description": "Stawka VAT staje się obiektem vat_rate",
+      "spec": {
+        "match": {
+          "event_type": "vat_rate.defined",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "vat_rate",
+            "fields": {
+              "code": "=$.code",
+              "name": "=$.name",
+              "percent": "=$.percent"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

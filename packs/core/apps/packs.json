@@ -1,0 +1,185 @@
+{
+  "app": "packs",
+  "version": 1,
+  "title": "Packs",
+  "layer": "platform",
+  "data": [
+    {
+      "name": "installed_pack",
+      "version": 1,
+      "domain": "packs",
+      "is_document": false,
+      "label_field": "pack",
+      "fields": [
+        {
+          "name": "pack",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "from",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "to",
+          "type": "date",
+          "required": false
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "installed",
+            "switched_off"
+          ]
+        },
+        {
+          "name": "installed_by",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "switched_off_by",
+          "type": "string",
+          "required": false
+        }
+      ],
+      "lifecycle": {
+        "field": "status",
+        "transitions": {
+          "installed": [
+            "switched_off"
+          ]
+        }
+      },
+      "amendable": [
+        "to",
+        "switched_off_by"
+      ]
+    }
+  ],
+  "tabs": [
+    {
+      "desk": "packs",
+      "title": "Packs"
+    }
+  ],
+  "actions": [
+    {
+      "name": "install_pack",
+      "domain": "packs",
+      "description": "Install a pack in the company from a day: its rules book the company's facts from that day",
+      "spec": {
+        "inputs": [
+          {
+            "name": "pack",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "from",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "installed_by",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "pack.installed",
+        "who": [
+          "human"
+        ],
+        "identity": [
+          "=$.pack",
+          "=$.from"
+        ]
+      }
+    },
+    {
+      "name": "switch_off_pack",
+      "domain": "packs",
+      "description": "Switch a pack off in the company from its last day; what it booked stays",
+      "spec": {
+        "inputs": [
+          {
+            "name": "installed",
+            "type": "ref<installed_pack>",
+            "required": true
+          },
+          {
+            "name": "to",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "switched_off_by",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "pack.switched_off",
+        "who": [
+          "human"
+        ]
+      }
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "core-install-pack",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "An installed pack is the company's record: which pack, from which day, who installed it",
+      "spec": {
+        "match": {
+          "event_type": "pack.installed"
+        },
+        "effect": {
+          "object": {
+            "type": "installed_pack",
+            "fields": {
+              "pack": "=$.pack",
+              "from": "=$.from",
+              "status": "installed",
+              "installed_by": "=$.installed_by"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "core-switch-off-pack",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "A pack switched off stops from its last day; what it booked stays",
+      "spec": {
+        "match": {
+          "event_type": "pack.switched_off"
+        },
+        "effect": {
+          "amend": {
+            "type": "installed_pack",
+            "target": "=$.installed",
+            "set": {
+              "status": "switched_off",
+              "to": "=$.to",
+              "switched_off_by": "=$.switched_off_by"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,217 @@
+{
+  "app": "morning",
+  "version": 1,
+  "title": "Poranek",
+  "layer": "platform",
+  "tabs": [
+    {
+      "view_id": "poranek",
+      "version": 4,
+      "notion": "narrative",
+      "title": "Poranek",
+      "domain": "finance",
+      "function": "briefing",
+      "spec": {
+        "facts": [
+          {
+            "view": "poranek-wynik",
+            "as": "wynik przed opodatkowaniem: ten miesiąc do dziś, poprzedni miesiąc, od stycznia"
+          },
+          {
+            "view": "poranek-pieniadze",
+            "as": "pieniądze: rachunek, należności z najstarszą fakturą, zobowiązania"
+          },
+          {
+            "view": "kalendarz-podatkowy",
+            "as": "najbliższe terminy podatkowe"
+          },
+          {
+            "view": "poranek-otwarte",
+            "as": "co czeka"
+          }
+        ],
+        "voice": "Po polsku, krótko, do właściciela firmy, jak najlepszy concierge. Najpierw wynik: ten miesiąc do dziś obok poprzedniego i wynik od stycznia — to wynik przed opodatkowaniem. Bieżący miesiąc jeszcze trwa: mów „do dziś”, nigdy, że się zamknął. O poprzednim miesiącu mów, że jest zamknięty, tylko gdy tak mówi jego wiersz. Wynik podawaj każdego ranka w liczbach, wszystkie trzy, także gdy się nie zmienił: nie powtarzaj sformułowań z poprzednich dni, ale liczb nie pomijaj. Zaliczka na CIT ma kwotę, gdy miesiąc jest zamknięty; gdy kwoty nie ma, powiedz dlaczego i nigdy jej nie szacuj. Potem pieniądze: ile jest na rachunku, ile nam winni (suma i najstarsza niezapłacona faktura, nie lista faktur), ile my winni dostawcom. Podatki jednym zdaniem, najpierw zaliczka na CIT, potem VAT: termin i kwota, gdy jest policzona. Na końcu tylko to, co czeka na decyzję właściciela. Bez powitań z szablonu, bez wyliczania pozycji po kolei."
+      }
+    },
+    {
+      "view_id": "poranek-ksiegowosc",
+      "version": 3,
+      "notion": "narrative",
+      "title": "Poranek księgowości",
+      "domain": "finance",
+      "function": "briefing",
+      "spec": {
+        "for": [
+          "accountant"
+        ],
+        "facts": [
+          {
+            "view": "poranek-otwarte",
+            "as": "co jest otwarte: miesiące do zamknięcia, pozycje wyciągu bez rozliczenia, zadania"
+          },
+          {
+            "view": "kalendarz-podatkowy",
+            "as": "najbliższe terminy podatkowe"
+          },
+          {
+            "view": "poranek-wynik",
+            "as": "wynik przed opodatkowaniem: ten miesiąc do dziś, poprzedni miesiąc, od stycznia"
+          }
+        ],
+        "voice": "Po polsku, rzeczowo, do głównej księgowej albo biura rachunkowego. Najpierw to, co jest otwarte: miesiące do zamknięcia, wpłaty i wypłaty bez rozliczenia (liczba i suma, nie lista), zadania po terminie. Potem najbliższe terminy podatkowe z datą i kwotą, najpierw zaliczka na CIT, potem VAT, a gdy kwoty nie ma, powiedz dlaczego: miesiąc niezamknięty albo księgi jej jeszcze nie liczą — nigdy jej nie szacuj. Wynik jednym zdaniem, w liczbach, także gdy się nie zmienił: ten miesiąc i od stycznia, przed opodatkowaniem. Miesiąc nazywaj zamkniętym tylko wtedy, gdy tak mówi jego wiersz. Bez powitań z szablonu."
+      }
+    },
+    {
+      "view_id": "rano",
+      "version": 4,
+      "notion": "analysis",
+      "title": "Rano w liczbach",
+      "domain": "finance",
+      "function": "briefing",
+      "spec": {
+        "sql_file": "rano.sql",
+        "columns": [
+          {
+            "field": "key",
+            "label": "Klucz",
+            "type": "string"
+          },
+          {
+            "field": "label",
+            "label": "Co",
+            "type": "string"
+          },
+          {
+            "field": "amount",
+            "label": "Kwota",
+            "type": "money"
+          },
+          {
+            "field": "count",
+            "label": "Ile",
+            "type": "int"
+          },
+          {
+            "field": "note",
+            "label": "Uwaga",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "poranek-wynik",
+      "version": 2,
+      "notion": "analysis",
+      "title": "Wynik: ten miesiąc, poprzedni, od stycznia",
+      "domain": "finance",
+      "function": "briefing",
+      "spec": {
+        "sql_file": "poranek-wynik.sql",
+        "columns": [
+          {
+            "field": "period",
+            "label": "Okres",
+            "type": "string"
+          },
+          {
+            "field": "revenue",
+            "label": "Przychody",
+            "type": "money"
+          },
+          {
+            "field": "costs",
+            "label": "Koszty",
+            "type": "money"
+          },
+          {
+            "field": "result",
+            "label": "Wynik przed opodatkowaniem",
+            "type": "money"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "poranek-pieniadze",
+      "version": 1,
+      "notion": "analysis",
+      "title": "Pieniądze",
+      "domain": "finance",
+      "function": "briefing",
+      "spec": {
+        "sql_file": "poranek-pieniadze.sql",
+        "columns": [
+          {
+            "field": "key",
+            "label": "Klucz",
+            "type": "string"
+          },
+          {
+            "field": "label",
+            "label": "Co",
+            "type": "string"
+          },
+          {
+            "field": "amount",
+            "label": "Kwota",
+            "type": "money"
+          },
+          {
+            "field": "count",
+            "label": "Ile",
+            "type": "int"
+          },
+          {
+            "field": "days",
+            "label": "Dni od wystawienia",
+            "type": "int"
+          },
+          {
+            "field": "note",
+            "label": "Uwaga",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "poranek-otwarte",
+      "version": 1,
+      "notion": "analysis",
+      "title": "Co jest otwarte",
+      "domain": "finance",
+      "function": "briefing",
+      "spec": {
+        "sql_file": "poranek-otwarte.sql",
+        "columns": [
+          {
+            "field": "key",
+            "label": "Klucz",
+            "type": "string"
+          },
+          {
+            "field": "label",
+            "label": "Co",
+            "type": "string"
+          },
+          {
+            "field": "count",
+            "label": "Ile",
+            "type": "int"
+          },
+          {
+            "field": "amount",
+            "label": "Kwota",
+            "type": "money"
+          },
+          {
+            "field": "note",
+            "label": "Uwaga",
+            "type": "string"
+          }
+        ]
+      }
+    }
+  ]
+}

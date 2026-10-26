@@ -1,0 +1,153 @@
+{
+  "app": "journal",
+  "version": 1,
+  "title": "Journal",
+  "layer": "core",
+  "data": [
+    {
+      "name": "posting",
+      "version": 3,
+      "domain": "finance",
+      "is_document": false,
+      "fields": [
+        {
+          "name": "entry",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "line",
+          "type": "int",
+          "required": true
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "account",
+          "type": "ref<account>",
+          "required": true
+        },
+        {
+          "name": "side",
+          "type": "enum",
+          "values": [
+            "debit",
+            "credit"
+          ],
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "tx_amount",
+          "type": "money",
+          "required": false
+        },
+        {
+          "name": "tx_currency",
+          "type": "string",
+          "required": false
+        }
+      ]
+    }
+  ],
+  "tabs": [
+    {
+      "view_id": "journal",
+      "version": 2,
+      "notion": "list",
+      "title": "Journal",
+      "domain": "finance",
+      "function": "documents",
+      "spec": {
+        "object_type": "posting",
+        "columns": [
+          {
+            "field": "entry",
+            "label": "Entry"
+          },
+          {
+            "field": "line",
+            "label": "Line"
+          },
+          {
+            "field": "book",
+            "label": "Book"
+          },
+          {
+            "field": "account",
+            "label": "Account"
+          },
+          {
+            "field": "side",
+            "label": "Side"
+          },
+          {
+            "field": "amount",
+            "label": "Amount"
+          },
+          {
+            "field": "currency",
+            "label": "Ccy"
+          },
+          {
+            "field": "date",
+            "label": "Date"
+          }
+        ]
+      }
+    }
+  ],
+  "record": {
+    "of": "posting",
+    "tabs": [
+      {
+        "view_id": "posting-detail",
+        "version": 2,
+        "notion": "detail",
+        "title": "Posting",
+        "domain": "finance",
+        "function": "documents",
+        "spec": {
+          "object_type": "posting",
+          "sections": [
+            {
+              "title": "Posting",
+              "fields": [
+                "entry",
+                "line",
+                "book",
+                "account",
+                "side"
+              ]
+            },
+            {
+              "title": "Value",
+              "fields": [
+                "amount",
+                "currency",
+                "date"
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

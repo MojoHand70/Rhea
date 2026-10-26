@@ -5303,3 +5303,23 @@ limit is something I would like to suggest."*
 - **A rule writes only what its App keeps or names in its uses** (a new record, an amendment, the
   journal's postings), and every kind used is kept by another App of the pack or already approved.
   Why: what an App touches is read from its definition, not discovered from its rules.
+
+## 2026-10-26 — Today's packs written as Apps (Claude, the spec silent)
+
+- **App ids are English**, like the kinds of record and rules (`sales-invoices`,
+  `chart-of-accounts`, `tax-calendar`); titles are in each pack's language. Why: the core's Apps
+  are shared by every market, and a market extends them under the same id.
+- **An App's versions are one sequence across packs**, as a kind of record's are: a pack that
+  brings a later version of another pack's App takes the next number and names the parts of it
+  that pack defines — its screens as tabs by name, its kinds of record in its uses (the Poland
+  pack's Plan kont names the core's account screens). Each pack declares exactly what it declared
+  before. The limit: two packs cannot both extend one App at the same number. The German pack's Apps
+  therefore use the core's kinds under ids of their own; a second market extending a core App
+  waits for Apps a company or a pack can add to (DIRECTION, "still to settle").
+- **A query longer than 200 characters sits in a .sql file beside its App, byte for byte.** Laying
+  it out for reading changes the view, so it waits for the view's next version.
+- **The channels' packs stay as they were** (KSeF in, MT940, NBP, the PDF reader): doors with no
+  tab; they become connectors in step 5.
+- Every pack written as Apps moves one version (core 3, Ludzie 4, Okresy 3, Dokumenty 5, Poland
+  45, warehouse 2, Germany 4); on a server that has the earlier versions, the new ones draft only
+  the Apps, and the house approves each.

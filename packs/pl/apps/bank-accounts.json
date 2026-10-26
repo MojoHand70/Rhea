@@ -1,0 +1,1145 @@
+{
+  "app": "bank-accounts",
+  "version": 2,
+  "title": "Rachunki i karty",
+  "layer": "law",
+  "data": [
+    {
+      "name": "bank_account",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "name",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "number",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "bank",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "bank_operation",
+      "version": 3,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "title",
+      "fields": [
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "direction",
+          "type": "enum",
+          "values": [
+            "credit",
+            "debit"
+          ],
+          "required": true
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "counterparty",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "counterparty_account",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "account",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "contractor",
+          "type": "ref<contractor>",
+          "required": false
+        },
+        {
+          "name": "kind",
+          "type": "enum",
+          "values": [
+            "transfer",
+            "card",
+            "fee",
+            "other",
+            "interest",
+            "tax",
+            "zus",
+            "own",
+            "owner"
+          ],
+          "required": false
+        },
+        {
+          "name": "open",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "settlement_status",
+          "type": "enum",
+          "values": [
+            "unsettled",
+            "settled",
+            "private"
+          ],
+          "required": true
+        }
+      ],
+      "lifecycle": {
+        "field": "settlement_status",
+        "transitions": {
+          "unsettled": [
+            "unsettled",
+            "settled",
+            "private"
+          ],
+          "settled": [
+            "unsettled"
+          ]
+        }
+      },
+      "amendable": [
+        "kind",
+        "open"
+      ]
+    },
+    {
+      "name": "settlement",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "fields": [
+        {
+          "name": "operation",
+          "type": "ref<bank_operation>",
+          "required": true
+        },
+        {
+          "name": "document_type",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "document_id",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "matching_difference",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "fields": [
+        {
+          "name": "matching",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "kind",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "direction",
+          "type": "enum",
+          "values": [
+            "short",
+            "over",
+            "up",
+            "down"
+          ],
+          "required": true
+        },
+        {
+          "name": "account",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        }
+      ]
+    }
+  ],
+  "uses": [
+    "posting",
+    "sales_invoice",
+    "purchase_invoice"
+  ],
+  "tabs": [
+    {
+      "view_id": "wplaty-do-rozliczenia",
+      "version": 1,
+      "notion": "matching",
+      "title": "Wpłaty do rozliczenia",
+      "domain": "finance",
+      "function": "rozrachunki",
+      "spec": {
+        "rule": "pl-match-incoming"
+      }
+    },
+    {
+      "view_id": "wyplaty-do-rozliczenia",
+      "version": 1,
+      "notion": "matching",
+      "title": "Wypłaty do rozliczenia",
+      "domain": "finance",
+      "function": "rozrachunki",
+      "spec": {
+        "rule": "pl-match-outgoing"
+      }
+    }
+  ],
+  "record": {
+    "of": "bank_operation",
+    "tabs": [
+      {
+        "desk": "document-sheet",
+        "title": "Operacja bankowa"
+      }
+    ]
+  },
+  "actions": [
+    {
+      "name": "classify_bank_operation",
+      "domain": "finance",
+      "description": "Osoba mówi, czym jest pozycja wyciągu, której nic nie rozliczyło: pieniądze właściciela, podatek, ZUS, przelew własny, opłata albo odsetki — pozycja przechodzi z rozrachunków z kontrahentami na swoje konto i przestaje czekać",
+      "spec": {
+        "inputs": [
+          {
+            "name": "operation",
+            "type": "ref<bank_operation>",
+            "required": true
+          },
+          {
+            "name": "kind",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "owner",
+              "tax",
+              "zus",
+              "own",
+              "fee",
+              "interest"
+            ]
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "bank_operation.classified",
+        "who": [
+          "human"
+        ]
+      }
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "pl-bank-operation",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Pozycja wyciągu bankowego staje się operacją bankową i najpierw mówi, czym jest: opłata (NCHG, NCOM) i odsetki (NINT) po kodzie banku; przelew między własnymi rachunkami, wpłata na mikrorachunek podatkowy, na rachunek składkowy ZUS, pieniądze właściciela — po rachunku drugiej strony, jak go podała firma; reszta to zapłata kontrahenta (transfer), otwarta na swoją kwotę do rozliczenia z fakturami (rynek pl: kanał bankowy pakietu stempluje go)",
+      "spec": {
+        "match": {
+          "event_type": "bank.statement.line",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "bank_operation",
+            "fields": {
+              "date": "=$.date",
+              "amount": "=$.amount",
+              "currency": "=$.currency",
+              "direction": "=$.direction",
+              "title": "=$.reference",
+              "counterparty": "=$.counterparty",
+              "counterparty_account": "=$.counterparty_account",
+              "account": "=$.account",
+              "kind": "=if(coalesce($.code, \"\") = \"NCHG\" or coalesce($.code, \"\") = \"NCOM\", \"fee\", if(coalesce($.code, \"\") = \"NINT\", \"interest\", if(any(c in objects(company, iban, coalesce($.counterparty_account, \"-\")) : c.kind = \"self\"), \"own\", if(any(c in objects(company, tax_account, coalesce($.counterparty_account, \"-\")) : c.kind = \"self\"), \"tax\", if(any(c in objects(company, zus_account, coalesce($.counterparty_account, \"-\")) : c.kind = \"self\"), \"zus\", if(any(c in objects(company, owner_account, coalesce($.counterparty_account, \"-\")) : c.kind = \"self\"), \"owner\", \"transfer\"))))))",
+              "open": "=$.amount",
+              "settlement_status": "unsettled"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "citations": [
+          "Ordynacja podatkowa art. 61b § 1 (mikrorachunek podatkowy) i ustawa o systemie ubezpieczeń społecznych art. 47 ust. 4 (rachunek składkowy): wpłata podatku i składek ma swój rachunek — po nim ją poznać",
+          "przegląd MON-07: każdą pozycję najpierw klasyfikuje się, a dopiero potem księguje i rozlicza; nieznana czeka na osobę",
+          "SWIFT MT940 :61: kod transakcji — NTRF przelew, NCHG opłata, NCOM prowizja, NINT odsetki"
+        ],
+        "scope": "pl"
+      }
+    },
+    {
+      "rule_id": "pl-post-incoming-payment",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Wpływ na rachunek księguje się: Wn 130 / Ma 201 — gdy operacja jest zapłatą kontrahenta (transfer); w walucie obcej — po kursie z dnia operacji",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "bank_operation"
+            },
+            {
+              "path": "$.state.direction",
+              "op": "eq",
+              "value": "credit"
+            },
+            {
+              "path": "$.state.kind",
+              "op": "eq",
+              "value": "transfer"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "=$.state.currency",
+            "lines": [
+              {
+                "account": "130",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "201",
+                "credit": "=$.state.amount"
+              }
+            ],
+            "convert": {
+              "to": "PLN",
+              "date": "=$.state.date",
+              "rounding": "half_up",
+              "rounding_account": "756"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-post-outgoing-payment",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Wypływ z rachunku księguje się: Wn 202 / Ma 130 — gdy operacja jest zapłatą kontrahenta (transfer); w walucie obcej — po kursie z dnia operacji",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "bank_operation"
+            },
+            {
+              "path": "$.state.direction",
+              "op": "eq",
+              "value": "debit"
+            },
+            {
+              "path": "$.state.kind",
+              "op": "eq",
+              "value": "transfer"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "=$.state.currency",
+            "lines": [
+              {
+                "account": "202",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "130",
+                "credit": "=$.state.amount"
+              }
+            ],
+            "convert": {
+              "to": "PLN",
+              "date": "=$.state.date",
+              "rounding": "half_up",
+              "rounding_account": "756"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-match-incoming",
+      "priority": 300,
+      "effective_from": "2026-01-01",
+      "description": "Wpłata rozlicza się z otwartymi fakturami sprzedaży płatnika (po IBAN): po numerze w tytule; po numerze do 2 gr różnicy (niedopłata 761, nadpłata 760); po kwocie; kilka faktur (do 4); nazwana faktura częściowo; najstarsze w kolejności — gdy operacja jest zapłatą kontrahenta (transfer); w walucie obcej — porównanie w walucie zapłaty po kursach NBP, różnica kursowa zapisana",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "bank_operation"
+            },
+            {
+              "path": "$.state.direction",
+              "op": "eq",
+              "value": "credit"
+            },
+            {
+              "path": "$.state.kind",
+              "op": "eq",
+              "value": "transfer"
+            }
+          ]
+        },
+        "effect": {
+          "matching": {
+            "name": "pl-incoming-payments",
+            "trigger": "payment",
+            "sides": [
+              {
+                "name": "payment",
+                "type": "bank_operation",
+                "open": {
+                  "money": "open"
+                },
+                "currency": "currency",
+                "date": "date",
+                "reference": "title"
+              },
+              {
+                "name": "invoice",
+                "type": "sales_invoice",
+                "items": "=objects(sales_invoice, buyer, ref(company, iban, $.state.counterparty_account))",
+                "open": {
+                  "money": "open"
+                },
+                "currency": "currency",
+                "date": "issue_date",
+                "reference": "number"
+              }
+            ],
+            "policy": [
+              {
+                "strategy": "reference"
+              },
+              {
+                "strategy": "reference",
+                "tolerance": {
+                  "money": "0.02"
+                },
+                "difference_account": "761"
+              },
+              {
+                "strategy": "exact"
+              },
+              {
+                "strategy": "subset",
+                "max_items": 4
+              },
+              {
+                "strategy": "reference",
+                "partial": true
+              },
+              {
+                "strategy": "oldest_first"
+              }
+            ],
+            "convert": {
+              "functional": "PLN",
+              "date_side": "payment",
+              "rounding": "half_up",
+              "rate_up_account": "750",
+              "rate_down_account": "751"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-match-outgoing",
+      "priority": 300,
+      "effective_from": "2026-01-01",
+      "description": "Wypłata rozlicza się z otwartymi fakturami zakupu odbiorcy przelewu (po IBAN): po numerze; po kwocie; kilka faktur; nazwana częściowo; najstarsze — gdy operacja jest zapłatą kontrahenta (transfer); w walucie obcej — porównanie w walucie zapłaty po kursach NBP, różnica kursowa zapisana",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "bank_operation"
+            },
+            {
+              "path": "$.state.direction",
+              "op": "eq",
+              "value": "debit"
+            },
+            {
+              "path": "$.state.kind",
+              "op": "eq",
+              "value": "transfer"
+            }
+          ]
+        },
+        "effect": {
+          "matching": {
+            "name": "pl-outgoing-payments",
+            "trigger": "payment",
+            "sides": [
+              {
+                "name": "payment",
+                "type": "bank_operation",
+                "open": {
+                  "money": "open"
+                },
+                "currency": "currency",
+                "date": "date",
+                "reference": "title"
+              },
+              {
+                "name": "invoice",
+                "type": "purchase_invoice",
+                "items": "=objects(purchase_invoice, supplier, ref(company, iban, $.state.counterparty_account))",
+                "open": {
+                  "money": "open"
+                },
+                "currency": "currency",
+                "date": "invoice_date",
+                "reference": "number"
+              }
+            ],
+            "policy": [
+              {
+                "strategy": "reference"
+              },
+              {
+                "strategy": "exact"
+              },
+              {
+                "strategy": "subset",
+                "max_items": 4
+              },
+              {
+                "strategy": "reference",
+                "partial": true
+              },
+              {
+                "strategy": "oldest_first"
+              }
+            ],
+            "convert": {
+              "functional": "PLN",
+              "date_side": "payment",
+              "rounding": "half_up",
+              "rate_up_account": "750",
+              "rate_down_account": "751"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-settle-sales-invoice",
+      "priority": 310,
+      "effective_from": "2026-01-01",
+      "description": "Rozliczenie przesuwa kwotę otwartą sales_invoice o przydzieloną kwotę; paid, gdy nic nie zostaje otwarte",
+      "spec": {
+        "match": {
+          "event_type": "objects.matched",
+          "where": [
+            {
+              "path": "$.matching",
+              "op": "eq",
+              "value": "pl-incoming-payments"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "sales_invoice",
+            "each": "=$.sides.invoice[*]",
+            "target": "=$.line.object_id",
+            "set": {
+              "open": "=$.line.open_after.money",
+              "status": "=if($.line.open_after.money = 0, \"paid\", \"open\")"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-settle-purchase-invoice",
+      "priority": 310,
+      "effective_from": "2026-01-01",
+      "description": "Rozliczenie przesuwa kwotę otwartą purchase_invoice o przydzieloną kwotę; paid, gdy nic nie zostaje otwarte",
+      "spec": {
+        "match": {
+          "event_type": "objects.matched",
+          "where": [
+            {
+              "path": "$.matching",
+              "op": "eq",
+              "value": "pl-outgoing-payments"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "purchase_invoice",
+            "each": "=$.sides.invoice[*]",
+            "target": "=$.line.object_id",
+            "set": {
+              "open": "=$.line.open_after.money",
+              "status": "=if($.line.open_after.money = 0, \"paid\", \"open\")"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-settle-incoming-operation",
+      "priority": 310,
+      "effective_from": "2026-01-01",
+      "description": "Rozliczenie przesuwa kwotę otwartą bank_operation o przydzieloną kwotę; settled, gdy nic nie zostaje otwarte",
+      "spec": {
+        "match": {
+          "event_type": "objects.matched",
+          "where": [
+            {
+              "path": "$.matching",
+              "op": "eq",
+              "value": "pl-incoming-payments"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "bank_operation",
+            "each": "=$.sides.payment[*]",
+            "target": "=$.line.object_id",
+            "set": {
+              "open": "=$.line.open_after.money",
+              "settlement_status": "=if($.line.open_after.money = 0, \"settled\", \"unsettled\")"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-settle-outgoing-operation",
+      "priority": 310,
+      "effective_from": "2026-01-01",
+      "description": "Rozliczenie przesuwa kwotę otwartą bank_operation o przydzieloną kwotę; settled, gdy nic nie zostaje otwarte",
+      "spec": {
+        "match": {
+          "event_type": "objects.matched",
+          "where": [
+            {
+              "path": "$.matching",
+              "op": "eq",
+              "value": "pl-outgoing-payments"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "bank_operation",
+            "each": "=$.sides.payment[*]",
+            "target": "=$.line.object_id",
+            "set": {
+              "open": "=$.line.open_after.money",
+              "settlement_status": "=if($.line.open_after.money = 0, \"settled\", \"unsettled\")"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-record-incoming-settlement",
+      "priority": 320,
+      "effective_from": "2026-01-01",
+      "description": "Każda przydzielona faktura dostaje zapis rozliczenia: operacja, dokument, kwota, data",
+      "spec": {
+        "match": {
+          "event_type": "objects.matched",
+          "where": [
+            {
+              "path": "$.matching",
+              "op": "eq",
+              "value": "pl-incoming-payments"
+            },
+            {
+              "path": "$.sides.invoice[0]",
+              "op": "exists"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "settlement",
+            "each": "=$.sides.invoice[*]",
+            "fields": {
+              "operation": "=$.doc.trigger.object_id",
+              "document_type": "=$.line.object_type",
+              "document_id": "=$.line.object_id",
+              "amount": "=$.line.allocated.money",
+              "date": "=$.root.date"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-record-outgoing-settlement",
+      "priority": 320,
+      "effective_from": "2026-01-01",
+      "description": "Każda przydzielona faktura dostaje zapis rozliczenia: operacja, dokument, kwota, data",
+      "spec": {
+        "match": {
+          "event_type": "objects.matched",
+          "where": [
+            {
+              "path": "$.matching",
+              "op": "eq",
+              "value": "pl-outgoing-payments"
+            },
+            {
+              "path": "$.sides.invoice[0]",
+              "op": "exists"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "settlement",
+            "each": "=$.sides.invoice[*]",
+            "fields": {
+              "operation": "=$.doc.trigger.object_id",
+              "document_type": "=$.line.object_type",
+              "document_id": "=$.line.object_id",
+              "amount": "=$.line.allocated.money",
+              "date": "=$.root.date"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-record-difference",
+      "priority": 320,
+      "effective_from": "2026-01-01",
+      "description": "Różnica rozliczenia staje się zapisem różnicy, z kontem: różnica groszowa w granicach tolerancji — niedopłata 761, nadpłata 760; różnica kursowa — zysk 750 (kurs wzrósł przy należności albo spadł przy zobowiązaniu), strata 751; cofnięcie rozliczenia wraca tym kontem, którym różnica weszła",
+      "spec": {
+        "match": {
+          "event_type": "objects.matched",
+          "where": [
+            {
+              "formula": "=$.matching = \"pl-incoming-payments\" or $.matching = \"pl-outgoing-payments\""
+            },
+            {
+              "path": "$.differences[0]",
+              "op": "exists"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "matching_difference",
+            "each": "=$.differences[*]",
+            "fields": {
+              "matching": "=$.doc.matching",
+              "kind": "=$.line.kind",
+              "amount": "=$.line.amount",
+              "currency": "=$.line.currency",
+              "direction": "=$.line.direction",
+              "account": "=if($.line.kind = \"fx\", if((($.line.direction = \"up\") = ($.doc.matching = \"pl-incoming-payments\")) <> (coalesce($.doc.reversal_of, 0) > 0), \"750\", \"751\"), if($.line.account = \"756\", \"756\", if(($.line.direction = \"short\") <> (coalesce($.doc.reversal_of, 0) > 0), $.line.account, \"760\")))",
+              "date": "=$.root.date"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "standard",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 4 ust. 4: uproszczenia w polityce rachunkowości, „jeżeli nie wywiera to istotnie ujemnego wpływu” na obraz jednostki — tolerancja 2 gr jest takim uproszczeniem",
+          "ustawa o rachunkowości art. 3 ust. 1 pkt 32 lit. d: pozostałe koszty i przychody operacyjne obejmują odpisanie należności i zobowiązań; różnice kursowe należą do finansowych (art. 30 ust. 4) — stąd 760/761, nie 756",
+          "ustawa o rachunkowości art. 20 ust. 5: zapis wygenerowany z danych ksiąg jest dowodem, gdy znane jest jego pochodzenie — zapis różnicy z pochodzeniem jest protokołem",
+          "pytanie otwarte (przegląd MON-19): czy różnica groszowa jest kosztem i przychodem podatkowym — praktyka interpretacyjna się różni; Rhea śledzi różnicę podatkową, nie rozstrzyga jej w księgach",
+          "ustawa o rachunkowości art. 30 ust. 4: różnice kursowe zrealizowane przy zapłacie należności i zobowiązań zalicza się do przychodów lub kosztów finansowych (750/751)"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-short-difference",
+      "priority": 330,
+      "effective_from": "2026-01-01",
+      "description": "Niedopłata w granicach tolerancji księguje się: Wn konto zapisu różnicy (761 albo 760) / Ma 201",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "matching_difference"
+            },
+            {
+              "path": "$.state.direction",
+              "op": "eq",
+              "value": "short"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "=$.state.currency",
+            "lines": [
+              {
+                "account": "=$.state.account",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "201",
+                "credit": "=$.state.amount"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-post-over-difference",
+      "priority": 330,
+      "effective_from": "2026-01-01",
+      "description": "Nadpłata w granicach tolerancji (lub cofnięta niedopłata) księguje się: Wn 201 / Ma konto zapisu różnicy (761 albo 760)",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "matching_difference"
+            },
+            {
+              "path": "$.state.direction",
+              "op": "eq",
+              "value": "over"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "=$.state.currency",
+            "lines": [
+              {
+                "account": "201",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "=$.state.account",
+                "credit": "=$.state.amount"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-post-fx-difference",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Różnica kursowa zrealizowana przy rozliczeniu wyrównuje rozrachunek (201 przy wpłacie, 202 przy wypłacie) w złotych: zysk Wn rozrachunek / Ma 750, strata Wn 751 / Ma rozrachunek; cofnięta — odwrotnie, tym samym kontem",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "matching_difference"
+            },
+            {
+              "path": "$.state.kind",
+              "op": "eq",
+              "value": "fx"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "=$.state.currency",
+            "lines": [
+              {
+                "account": "=if(($.state.direction = \"up\") = ($.state.matching = \"pl-incoming-payments\"), if($.state.matching = \"pl-incoming-payments\", \"201\", \"202\"), $.state.account)",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "=if(($.state.direction = \"up\") = ($.state.matching = \"pl-incoming-payments\"), $.state.account, if($.state.matching = \"pl-incoming-payments\", \"201\", \"202\"))",
+                "credit": "=$.state.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "citations": [
+          "ustawa o rachunkowości art. 30 ust. 4: zrealizowane różnice kursowe — przychody albo koszty finansowe",
+          "ustawa o CIT art. 15a, ustawa o PIT art. 24c: różnice kursowe z faktycznie zapłaconych kwot w walucie obcej"
+        ],
+        "scope": "pl"
+      }
+    },
+    {
+      "rule_id": "pl-explain-bank-operation",
+      "priority": 150,
+      "effective_from": "2026-01-01",
+      "description": "Operacja bankowa, która wie, czym jest (opłata, odsetki, podatek, ZUS, własny rachunek, właściciel), nie czeka na rozliczenie z fakturą: nic nie zostaje otwarte",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "bank_operation"
+            },
+            {
+              "formula": "=$.state.kind <> \"transfer\""
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "bank_operation",
+            "target": "=$.object_id",
+            "set": {
+              "open": "=0",
+              "settlement_status": "settled"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "practice",
+        "scope": "pl",
+        "citations": [
+          "rozliczenie z fakturami dotyczy zapłat kontrahentów; podatek, składka, opłata czy przelew własny są wyjaśnione tym, czym są (przegląd MON-07, MON-08, ZUS-08, MON-18)"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-explained-bank-operation",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Operacja bankowa, która wie, czym jest, księguje się po swojej stronie rachunku 130 i na swoim koncie: podatek 225, ZUS 229, przelew własny 149 (środki w drodze), właściciel 249, opłata bankowa 403, odsetki otrzymane 750, zapłacone 751; w walucie obcej — po kursie z dnia operacji",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "bank_operation"
+            },
+            {
+              "formula": "=$.state.kind <> \"transfer\" and $.state.kind <> \"card\" and $.state.kind <> \"other\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "=$.state.currency",
+            "lines": [
+              {
+                "account": "=if($.state.direction = \"debit\", if($.state.kind = \"tax\", \"225\", if($.state.kind = \"zus\", \"229\", if($.state.kind = \"own\", \"149\", if($.state.kind = \"owner\", \"249\", if($.state.kind = \"fee\", \"403\", if($.state.direction = \"credit\", \"750\", \"751\")))))), \"130\")",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "=if($.state.direction = \"debit\", \"130\", if($.state.kind = \"tax\", \"225\", if($.state.kind = \"zus\", \"229\", if($.state.kind = \"own\", \"149\", if($.state.kind = \"owner\", \"249\", if($.state.kind = \"fee\", \"403\", if($.state.direction = \"credit\", \"750\", \"751\")))))))",
+                "credit": "=$.state.amount"
+              }
+            ],
+            "convert": {
+              "to": "PLN",
+              "date": "=$.state.date",
+              "rounding": "half_up",
+              "rounding_account": "756"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "citations": [
+          "wzorcowy plan kont: 225 pozostałe rozrachunki publicznoprawne, 229 rozrachunki z ZUS, 149 środki pieniężne w drodze, 249 pozostałe rozrachunki, 403 usługi obce (opłaty bankowe), 750/751 przychody i koszty finansowe (odsetki)",
+          "ustawa o rachunkowości art. 3 ust. 1 pkt 32: odsetki są przychodami i kosztami finansowymi",
+          "przegląd OWN-03/OWN-07: pieniądze właściciela nie są przychodem ani kosztem — rozrachunek z nim (249), dopóki osoba nie powie, czym są (pożyczka, kapitał, dywidenda)"
+        ],
+        "scope": "pl"
+      }
+    },
+    {
+      "rule_id": "pl-reclassify-bank-operation",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Pozycja, o której osoba powiedziała, czym jest, przechodzi z rozrachunków z kontrahentami na swoje konto: wpływ Wn 201 / Ma konto, wypływ Wn konto / Ma 202 — o kwotę, która została otwarta",
+      "spec": {
+        "match": {
+          "event_type": "bank_operation.classified",
+          "where": [
+            {
+              "formula": "=$.operation.kind = \"transfer\" and $.operation.settlement_status = \"unsettled\" and $.operation.open > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "=$.operation.currency",
+            "lines": [
+              {
+                "account": "=if($.operation.direction = \"credit\", \"201\", if($.kind = \"tax\", \"225\", if($.kind = \"zus\", \"229\", if($.kind = \"own\", \"149\", if($.kind = \"owner\", \"249\", if($.kind = \"fee\", \"403\", if($.operation.direction = \"credit\", \"750\", \"751\")))))))",
+                "debit": "=$.operation.open"
+              },
+              {
+                "account": "=if($.operation.direction = \"credit\", if($.kind = \"tax\", \"225\", if($.kind = \"zus\", \"229\", if($.kind = \"own\", \"149\", if($.kind = \"owner\", \"249\", if($.kind = \"fee\", \"403\", if($.operation.direction = \"credit\", \"750\", \"751\")))))), \"202\")",
+                "credit": "=$.operation.open"
+              }
+            ],
+            "convert": {
+              "to": "PLN",
+              "date": "=$.operation.date",
+              "rounding": "half_up",
+              "rounding_account": "756"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "practice",
+        "scope": "pl",
+        "citations": [
+          "przegląd MON-07, OWN-03, OWN-05: pozycję, której nie rozpoznał rachunek, klasyfikuje osoba — decyzja z jej nazwiskiem jest zdarzeniem, a przeksięgowanie ją wykonuje"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-classify-bank-operation",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Pozycja, o której osoba powiedziała, czym jest, ma ten rodzaj i nie czeka już na rozliczenie z fakturą",
+      "spec": {
+        "match": {
+          "event_type": "bank_operation.classified",
+          "where": [
+            {
+              "formula": "=$.operation.kind = \"transfer\" and $.operation.settlement_status = \"unsettled\" and $.operation.open > 0"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "bank_operation",
+            "target": "=$.operation",
+            "set": {
+              "kind": "=$.kind",
+              "open": "=0",
+              "settlement_status": "settled"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "practice",
+        "scope": "pl",
+        "citations": [
+          "przegląd MON-07: nieznana pozycja czeka na osobę; jej słowo wyjaśnia pozycję"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "app": "fx-rates",
+  "version": 1,
+  "title": "FX rates",
+  "layer": "core",
+  "data": [
+    {
+      "name": "fx_rate",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "code",
+      "fields": [
+        {
+          "name": "code",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "base",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "quote",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "rate",
+          "type": "string",
+          "required": true
+        }
+      ]
+    }
+  ],
+  "tabs": [
+    {
+      "view_id": "fx-rates",
+      "version": 1,
+      "notion": "list",
+      "title": "FX rates",
+      "domain": "finance",
+      "function": "documents",
+      "spec": {
+        "object_type": "fx_rate",
+        "columns": [
+          {
+            "field": "date",
+            "label": "Date"
+          },
+          {
+            "field": "base",
+            "label": "From"
+          },
+          {
+            "field": "quote",
+            "label": "To"
+          },
+          {
+            "field": "rate",
+            "label": "Rate"
+          }
+        ]
+      }
+    }
+  ]
+}

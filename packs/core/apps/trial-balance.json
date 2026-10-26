@@ -1,0 +1,122 @@
+{
+  "app": "trial-balance",
+  "version": 1,
+  "title": "Trial balance",
+  "layer": "core",
+  "tabs": [
+    {
+      "view_id": "trial-balance",
+      "version": 2,
+      "notion": "analysis",
+      "title": "Trial balance",
+      "domain": "finance",
+      "function": "analysis",
+      "spec": {
+        "sql_file": "trial-balance.sql",
+        "columns": [
+          {
+            "field": "book",
+            "label": "Book",
+            "type": "string"
+          },
+          {
+            "field": "code",
+            "label": "Code",
+            "type": "string"
+          },
+          {
+            "field": "account",
+            "label": "Account",
+            "type": "string"
+          },
+          {
+            "field": "debit",
+            "label": "Debit",
+            "type": "money"
+          },
+          {
+            "field": "credit",
+            "label": "Credit",
+            "type": "money"
+          },
+          {
+            "field": "balance",
+            "label": "Balance",
+            "type": "money"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "group-trial-balance",
+      "version": 1,
+      "notion": "analysis",
+      "title": "Group trial balance (EUR)",
+      "domain": "finance",
+      "function": "analysis",
+      "spec": {
+        "sql_file": "group-trial-balance.sql",
+        "columns": [
+          {
+            "field": "code",
+            "label": "Code",
+            "type": "string"
+          },
+          {
+            "field": "account",
+            "label": "Account",
+            "type": "string"
+          },
+          {
+            "field": "debit",
+            "label": "Debit",
+            "type": "money"
+          },
+          {
+            "field": "credit",
+            "label": "Credit",
+            "type": "money"
+          },
+          {
+            "field": "balance",
+            "label": "Balance",
+            "type": "money"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "intercompany-positions",
+      "version": 1,
+      "notion": "analysis",
+      "title": "Intercompany positions",
+      "domain": "finance",
+      "function": "analysis",
+      "spec": {
+        "sql_file": "intercompany-positions.sql",
+        "columns": [
+          {
+            "field": "root_event",
+            "label": "Root event",
+            "type": "event"
+          },
+          {
+            "field": "receivable",
+            "label": "Receivable",
+            "type": "money"
+          },
+          {
+            "field": "payable",
+            "label": "Payable",
+            "type": "money"
+          },
+          {
+            "field": "difference",
+            "label": "Difference",
+            "type": "money"
+          }
+        ]
+      }
+    }
+  ]
+}

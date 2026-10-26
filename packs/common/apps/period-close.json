@@ -1,0 +1,65 @@
+{
+  "app": "period-close",
+  "version": 2,
+  "title": "Period close",
+  "layer": "core",
+  "uses": [
+    "period_lock"
+  ],
+  "actions": [
+    {
+      "name": "close_period",
+      "domain": "finance",
+      "description": "Close a period: any day of the month being closed, and the book. A month is closed once in a book: a second close of it is refused as done already. A closed month refuses postings per event; a market's rules settle what the month owes (VAT, filings) on this fact.",
+      "spec": {
+        "inputs": [
+          {
+            "name": "period",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "book",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "period.closed",
+        "who": [
+          "human"
+        ],
+        "identity": [
+          "=month($.period)",
+          "=$.book"
+        ]
+      }
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "lock-period",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "A closed period is a period_lock for its book: the month of the day named, the book named",
+      "spec": {
+        "match": {
+          "event_type": "period.closed"
+        },
+        "effect": {
+          "object": {
+            "type": "period_lock",
+            "fields": {
+              "month": "=month($.period)",
+              "book": "=$.book"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

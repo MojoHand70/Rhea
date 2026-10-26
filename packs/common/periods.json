@@ -1,11 +1,16 @@
 {
   "pack": "common-periods",
-  "version": 2,
+  "version": 3,
   "kind": "core",
   "install": "installation",
   "stage": "initial",
   "disclaimer": "This pack was prepared by artificial intelligence (AI). It is an initial version: its rules may contain errors and will change as accountants, tax advisers and auditors review them.",
   "history": [
+    {
+      "versions": "3",
+      "date": "2026-10-26",
+      "changes": "Written as the core's Period close App, its next version: the month's lock the core keeps, carried unchanged, with closing a month and its rule. No definition changes; what is approved is the App itself."
+    },
     {
       "versions": "2",
       "date": "2026-10-22",
@@ -18,63 +23,8 @@
     }
   ],
   "description": "Periods: closing a month is a door — a person names the month and the books, and period.closed is the fact. What a market does with it (locks, settlements, files) is the market's rules (DIRECTION 2026-10-15, \"Month end\").",
-  "object_types": [],
-  "activities": [
-    {
-      "name": "close_period",
-      "domain": "finance",
-      "description": "Close a period: any day of the month being closed, and the book. A month is closed once in a book: a second close of it is refused as done already. A closed month refuses postings per event; a market's rules settle what the month owes (VAT, filings) on this fact.",
-      "spec": {
-        "inputs": [
-          {
-            "name": "period",
-            "type": "date",
-            "required": true
-          },
-          {
-            "name": "book",
-            "type": "string",
-            "required": true
-          },
-          {
-            "name": "occurred_at",
-            "type": "date"
-          }
-        ],
-        "emits": "period.closed",
-        "who": [
-          "human"
-        ],
-        "identity": [
-          "=month($.period)",
-          "=$.book"
-        ]
-      }
-    }
+  "apps": [
+    "period-close"
   ],
-  "rules": [
-    {
-      "rule_id": "lock-period",
-      "version": 1,
-      "priority": 100,
-      "effective_from": "2026-01-01",
-      "description": "A closed period is a period_lock for its book: the month of the day named, the book named",
-      "spec": {
-        "match": {
-          "event_type": "period.closed"
-        },
-        "effect": {
-          "object": {
-            "type": "period_lock",
-            "fields": {
-              "month": "=month($.period)",
-              "book": "=$.book"
-            }
-          }
-        }
-      }
-    }
-  ],
-  "view_defs": [],
   "events": []
 }

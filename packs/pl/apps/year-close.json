@@ -1,0 +1,423 @@
+{
+  "app": "year-close",
+  "version": 1,
+  "title": "Zamknięcie roku",
+  "layer": "law",
+  "data": [
+    {
+      "name": "year_close_cost",
+      "version": 1,
+      "domain": "finance",
+      "label_field": "code",
+      "fields": [
+        {
+          "name": "account",
+          "type": "ref<account>",
+          "required": true
+        },
+        {
+          "name": "code",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "year_end",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true,
+          "description": "saldo konta na dzień bilansowy: Wn minus Ma; przechodzi na 860"
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "year_close_revenue",
+      "version": 1,
+      "domain": "finance",
+      "label_field": "code",
+      "fields": [
+        {
+          "name": "account",
+          "type": "ref<account>",
+          "required": true
+        },
+        {
+          "name": "code",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "year_end",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true,
+          "description": "saldo konta na dzień bilansowy: Wn minus Ma; przechodzi na 860"
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "year_close_tax",
+      "version": 1,
+      "domain": "finance",
+      "label_field": "code",
+      "fields": [
+        {
+          "name": "account",
+          "type": "ref<account>",
+          "required": true
+        },
+        {
+          "name": "code",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "year_end",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true,
+          "description": "saldo konta na dzień bilansowy: Wn minus Ma; przechodzi na 860"
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "year_close_clearing",
+      "domain": "finance",
+      "label_field": "code",
+      "fields": [
+        {
+          "name": "account",
+          "type": "ref<account>",
+          "required": true
+        },
+        {
+          "name": "code",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "year_end",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true,
+          "description": "saldo konta na dzień bilansowy: Wn minus Ma; przechodzi na 860"
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ],
+      "version": 1
+    }
+  ],
+  "uses": [
+    "posting"
+  ],
+  "actions": [
+    {
+      "name": "close_year",
+      "domain": "finance",
+      "description": "Firma zamyka rok obrotowy na dzień bilansowy (po wszystkich zapisach roku, przed sprawozdaniem): salda kont kosztów, przychodów i podatku dochodowego przechodzą na 860 Wynik finansowy",
+      "spec": {
+        "inputs": [
+          {
+            "name": "year_end",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "book",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "year.closed",
+        "who": [
+          "human"
+        ]
+      }
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "pl-close-year-expenses",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Zamknięcie roku: każde konto kosztów oddaje swoje saldo na dzień bilansowy (Wn minus Ma, od początku roku) jako pozycję zamknięcia, która przechodzi na 860",
+      "spec": {
+        "match": {
+          "event_type": "year.closed",
+          "where": [
+            {
+              "path": "$.book",
+              "op": "eq",
+              "value": "pl-stat"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "year_close_cost",
+            "each": "=objects(account, type, \"expense\")",
+            "fields": {
+              "account": "=$.line.object_id",
+              "code": "=$.line.state.code",
+              "year_end": "=$.doc.year_end",
+              "book": "=$.doc.book",
+              "amount": "=balance($.doc.book, $.line.state.code, start_of_year($.doc.year_end), $.doc.year_end)"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 12 ust. 2 pkt 1: „Księgi rachunkowe zamyka się […] na dzień kończący rok obrotowy”; ust. 4: ostateczne zamknięcie i otwarcie ksiąg najpóźniej w ciągu 15 dni od dnia zatwierdzenia sprawozdania",
+          "ustawa o rachunkowości art. 42 ust. 1: na wynik finansowy netto składają się wynik działalności operacyjnej (w tym pozostałe przychody i koszty operacyjne), wynik operacji finansowych i obowiązkowe obciążenia wyniku z tytułu podatku dochodowego — stąd na 860 przechodzą wszystkie konta kosztów, przychodów i podatku dochodowego",
+          "wzorcowy plan kont: 860 Wynik finansowy, 820 Rozliczenie wyniku finansowego, 801 Kapitał podstawowy, 802 Kapitał zapasowy, 241 rozrachunki z właścicielami z tytułu dywidend"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-close-year-revenues",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Zamknięcie roku: każde konto przychodów oddaje swoje saldo na dzień bilansowy (Wn minus Ma, od początku roku) jako pozycję zamknięcia, która przechodzi na 860",
+      "spec": {
+        "match": {
+          "event_type": "year.closed",
+          "where": [
+            {
+              "path": "$.book",
+              "op": "eq",
+              "value": "pl-stat"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "year_close_revenue",
+            "each": "=objects(account, type, \"revenue\")",
+            "fields": {
+              "account": "=$.line.object_id",
+              "code": "=$.line.state.code",
+              "year_end": "=$.doc.year_end",
+              "book": "=$.doc.book",
+              "amount": "=balance($.doc.book, $.line.state.code, start_of_year($.doc.year_end), $.doc.year_end)"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 12 ust. 2 pkt 1: „Księgi rachunkowe zamyka się […] na dzień kończący rok obrotowy”; ust. 4: ostateczne zamknięcie i otwarcie ksiąg najpóźniej w ciągu 15 dni od dnia zatwierdzenia sprawozdania",
+          "ustawa o rachunkowości art. 42 ust. 1: na wynik finansowy netto składają się wynik działalności operacyjnej (w tym pozostałe przychody i koszty operacyjne), wynik operacji finansowych i obowiązkowe obciążenia wyniku z tytułu podatku dochodowego — stąd na 860 przechodzą wszystkie konta kosztów, przychodów i podatku dochodowego",
+          "wzorcowy plan kont: 860 Wynik finansowy, 820 Rozliczenie wyniku finansowego, 801 Kapitał podstawowy, 802 Kapitał zapasowy, 241 rozrachunki z właścicielami z tytułu dywidend"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-close-year-income-tax",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Zamknięcie roku: każde konto podatku dochodowego oddaje swoje saldo na dzień bilansowy (Wn minus Ma, od początku roku) jako pozycję zamknięcia, która przechodzi na 860",
+      "spec": {
+        "match": {
+          "event_type": "year.closed",
+          "where": [
+            {
+              "path": "$.book",
+              "op": "eq",
+              "value": "pl-stat"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "year_close_tax",
+            "each": "=objects(account, type, \"income_tax\")",
+            "fields": {
+              "account": "=$.line.object_id",
+              "code": "=$.line.state.code",
+              "year_end": "=$.doc.year_end",
+              "book": "=$.doc.book",
+              "amount": "=balance($.doc.book, $.line.state.code, start_of_year($.doc.year_end), $.doc.year_end)"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 12 ust. 2 pkt 1: „Księgi rachunkowe zamyka się […] na dzień kończący rok obrotowy”; ust. 4: ostateczne zamknięcie i otwarcie ksiąg najpóźniej w ciągu 15 dni od dnia zatwierdzenia sprawozdania",
+          "ustawa o rachunkowości art. 42 ust. 1: na wynik finansowy netto składają się wynik działalności operacyjnej (w tym pozostałe przychody i koszty operacyjne), wynik operacji finansowych i obowiązkowe obciążenia wyniku z tytułu podatku dochodowego — stąd na 860 przechodzą wszystkie konta kosztów, przychodów i podatku dochodowego",
+          "wzorcowy plan kont: 860 Wynik finansowy, 820 Rozliczenie wyniku finansowego, 801 Kapitał podstawowy, 802 Kapitał zapasowy, 241 rozrachunki z właścicielami z tytułu dywidend"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-close-year-clearing",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Zamknięcie roku: konto rozliczeniowe (490 Rozliczenie kosztów — koszt wytworzenia na własne potrzeby, zmiana stanu produktów) oddaje swoje saldo na dzień bilansowy do wyniku, jak konta kosztów i przychodów",
+      "spec": {
+        "match": {
+          "event_type": "year.closed",
+          "where": [
+            {
+              "path": "$.book",
+              "op": "eq",
+              "value": "pl-stat"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "year_close_clearing",
+            "each": "=objects(account, type, \"clearing\")",
+            "fields": {
+              "account": "=$.line.object_id",
+              "code": "=$.line.state.code",
+              "year_end": "=$.doc.year_end",
+              "book": "=$.doc.book",
+              "amount": "=balance($.doc.book, $.line.state.code, start_of_year($.doc.year_end), $.doc.year_end)"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 12 ust. 2 pkt 1: „Księgi rachunkowe zamyka się […] na dzień kończący rok obrotowy”; ust. 4: ostateczne zamknięcie i otwarcie ksiąg najpóźniej w ciągu 15 dni od dnia zatwierdzenia sprawozdania",
+          "ustawa o rachunkowości art. 42 ust. 1: na wynik finansowy netto składają się wynik działalności operacyjnej (w tym pozostałe przychody i koszty operacyjne), wynik operacji finansowych i obowiązkowe obciążenia wyniku z tytułu podatku dochodowego — stąd na 860 przechodzą wszystkie konta kosztów, przychodów i podatku dochodowego",
+          "wzorcowy plan kont: 860 Wynik finansowy, 820 Rozliczenie wyniku finansowego, 801 Kapitał podstawowy, 802 Kapitał zapasowy, 241 rozrachunki z właścicielami z tytułu dywidend",
+          "ustawa o rachunkowości art. 33 ust. 2: koszty zakończonych prac rozwojowych na własne potrzeby, poniesione przed podjęciem produkcji lub zastosowaniem technologii, zalicza się do wartości niematerialnych i prawnych, jeżeli produkt lub technologia są ściśle ustalone, techniczna przydatność stwierdzona i udokumentowana, a koszty zostaną pokryte przychodami",
+          "wzorcowy plan kont: 020 Wartości niematerialne i prawne, 075 Umorzenie wartości niematerialnych i prawnych, 401 Amortyzacja, 490 Rozliczenie kosztów, 813 Kapitał z aktualizacji wyceny, 820 Rozliczenie wyniku finansowego, 830 Rezerwy na zobowiązania"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-year-close-debit",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Konto z saldem Wn (koszty) zamyka się na dzień bilansowy: Wn 860 / Ma konto, w kwocie salda",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "formula": "=($.object_type = \"year_close_cost\" or $.object_type = \"year_close_revenue\" or $.object_type = \"year_close_tax\" or $.object_type = \"year_close_clearing\") and $.state.amount > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.year_end",
+            "lines": [
+              {
+                "account": "860",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "=$.state.code",
+                "credit": "=$.state.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 42 ust. 1: na wynik finansowy netto składają się wynik działalności operacyjnej (w tym pozostałe przychody i koszty operacyjne), wynik operacji finansowych i obowiązkowe obciążenia wyniku z tytułu podatku dochodowego — stąd na 860 przechodzą wszystkie konta kosztów, przychodów i podatku dochodowego",
+          "wzorcowy plan kont: 860 Wynik finansowy, 820 Rozliczenie wyniku finansowego, 801 Kapitał podstawowy, 802 Kapitał zapasowy, 241 rozrachunki z właścicielami z tytułu dywidend"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-year-close-credit",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Konto z saldem Ma (przychody) zamyka się na dzień bilansowy: Wn konto / Ma 860, w kwocie salda",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "formula": "=($.object_type = \"year_close_cost\" or $.object_type = \"year_close_revenue\" or $.object_type = \"year_close_tax\" or $.object_type = \"year_close_clearing\") and $.state.amount < 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.year_end",
+            "lines": [
+              {
+                "account": "=$.state.code",
+                "debit": "=abs($.state.amount)"
+              },
+              {
+                "account": "860",
+                "credit": "=abs($.state.amount)"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 42 ust. 1: na wynik finansowy netto składają się wynik działalności operacyjnej (w tym pozostałe przychody i koszty operacyjne), wynik operacji finansowych i obowiązkowe obciążenia wyniku z tytułu podatku dochodowego — stąd na 860 przechodzą wszystkie konta kosztów, przychodów i podatku dochodowego",
+          "wzorcowy plan kont: 860 Wynik finansowy, 820 Rozliczenie wyniku finansowego, 801 Kapitał podstawowy, 802 Kapitał zapasowy, 241 rozrachunki z właścicielami z tytułu dywidend"
+        ]
+      }
+    }
+  ]
+}

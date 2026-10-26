@@ -1,0 +1,153 @@
+{
+  "app": "vehicles",
+  "version": 1,
+  "title": "Samochody i leasing",
+  "layer": "law",
+  "data": [
+    {
+      "name": "vehicle",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "registration",
+      "fields": [
+        {
+          "name": "registration",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "description",
+          "type": "string"
+        },
+        {
+          "name": "kind",
+          "type": "enum",
+          "values": [
+            "car",
+            "truck",
+            "motorcycle",
+            "other"
+          ]
+        },
+        {
+          "name": "engine_capacity",
+          "type": "int"
+        },
+        {
+          "name": "ownership",
+          "type": "enum",
+          "values": [
+            "own",
+            "leasing",
+            "rental",
+            "private"
+          ]
+        },
+        {
+          "name": "active",
+          "type": "enum",
+          "values": [
+            "yes",
+            "no"
+          ]
+        },
+        {
+          "name": "default",
+          "type": "enum",
+          "values": [
+            "yes",
+            "no"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "mileage_entry",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "fields": [
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "vehicle",
+          "type": "ref<vehicle>",
+          "required": true
+        },
+        {
+          "name": "route_start",
+          "type": "string"
+        },
+        {
+          "name": "route_end",
+          "type": "string"
+        },
+        {
+          "name": "km",
+          "type": "int",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "lease_contract",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "number",
+      "fields": [
+        {
+          "name": "number",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "kind",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "operational",
+            "financial",
+            "rental"
+          ]
+        },
+        {
+          "name": "start",
+          "type": "date"
+        },
+        {
+          "name": "end",
+          "type": "date"
+        },
+        {
+          "name": "description",
+          "type": "string"
+        },
+        {
+          "name": "net",
+          "type": "money"
+        },
+        {
+          "name": "vat",
+          "type": "money"
+        },
+        {
+          "name": "gross",
+          "type": "money"
+        },
+        {
+          "name": "vat_deduction_limit",
+          "type": "money"
+        },
+        {
+          "name": "vat_deducted",
+          "type": "money"
+        }
+      ]
+    }
+  ]
+}

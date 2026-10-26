@@ -1,0 +1,97 @@
+{
+  "app": "chart-of-accounts",
+  "version": 1,
+  "title": "Chart of accounts",
+  "layer": "core",
+  "data": [
+    {
+      "name": "account",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "name",
+      "fields": [
+        {
+          "name": "code",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "type",
+          "type": "enum",
+          "values": [
+            "asset",
+            "liability",
+            "equity",
+            "revenue",
+            "expense",
+            "debtor",
+            "creditor",
+            "tax",
+            "bank",
+            "clearing"
+          ],
+          "required": true
+        }
+      ]
+    }
+  ],
+  "tabs": [
+    {
+      "view_id": "account-list",
+      "version": 1,
+      "notion": "list",
+      "title": "Chart of accounts",
+      "domain": "finance",
+      "function": "accounting",
+      "spec": {
+        "object_type": "account",
+        "columns": [
+          {
+            "field": "code",
+            "label": "Code"
+          },
+          {
+            "field": "name",
+            "label": "Account"
+          },
+          {
+            "field": "type",
+            "label": "Type"
+          }
+        ]
+      }
+    }
+  ],
+  "record": {
+    "of": "account",
+    "tabs": [
+      {
+        "view_id": "account-detail",
+        "version": 1,
+        "notion": "detail",
+        "title": "Account",
+        "domain": "finance",
+        "function": "accounting",
+        "spec": {
+          "object_type": "account",
+          "sections": [
+            {
+              "title": "Account",
+              "fields": [
+                "code",
+                "name",
+                "type"
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

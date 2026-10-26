@@ -1,6 +1,6 @@
 {
   "pack": "pl-warehouse",
-  "version": 1,
+  "version": 2,
   "kind": "market",
   "market": "PL",
   "install": "installation",
@@ -8,13 +8,25 @@
   "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
   "history": [
     {
+      "versions": "2",
+      "date": "2026-10-26",
+      "changes": "Pakiet zapisany jako aplikacja Przyjęcia zewnętrzne (PZ). Żadna definicja się nie zmienia; zatwierdza się samą aplikację."
+    },
+    {
       "versions": "1",
       "date": "2026-10-08",
       "changes": "Pierwsze wydanie: przyjęcie zewnętrzne (PZ) — dostawa staje się dokumentem z pozycjami."
     }
   ],
   "description": "Przyjęcie zewnętrzne (PZ): dostawa staje się dokumentem PZ z pozycjami; każda pozycja przyjmuje towar na magazyn i księguje się Wn 330 / Ma 300 w cenie nabycia. Wariant: dostawa podaje wartości pozycji. Wariant z cennika — wartość pozycji liczona formułą =round($.line.qty * ref(item, sku, $.line.item).std_cost, 2, half_up) (pole std_cost typu decimal na item) — i wycena późniejsza fakturą zakupu (uzupełnienie pola value) to warianty do wyboru przez klienta.",
-  "requires": ["company", "account", "posting", "item", "location", "stock_movement"],
+  "requires": [
+    "company",
+    "account",
+    "posting",
+    "item",
+    "location",
+    "stock_movement"
+  ],
   "warrant": {
     "basis": "practice",
     "citations": [
@@ -24,71 +36,7 @@
     ],
     "scope": "PL, handel"
   },
-  "object_types": [
-    {
-      "name": "pz", "version": 1, "domain": "warehouse", "is_document": true, "label_field": "supplier_document",
-      "fields": [
-        {"name": "supplier", "type": "ref<company>", "required": true},
-        {"name": "supplier_document", "type": "string", "required": true},
-        {"name": "location", "type": "ref<location>", "required": true},
-        {"name": "date", "type": "date", "required": true},
-        {"name": "currency", "type": "string", "required": true}
-      ]
-    },
-    {
-      "name": "pz_line", "version": 1, "domain": "warehouse",
-      "fields": [
-        {"name": "document", "type": "ref<pz>", "required": true},
-        {"name": "item", "type": "ref<item>", "required": true},
-        {"name": "qty", "type": "int", "required": true},
-        {"name": "value", "type": "money", "required": true}
-      ]
-    }
-  ],
-  "view_defs": [
-    {
-      "view_id": "pz-list", "version": 1, "notion": "list", "title": "PZ — przyjęcia zewnętrzne",
-      "domain": "warehouse", "function": "przyjęcia",
-      "spec": {"object_type": "pz", "columns": [
-        {"field": "supplier_document", "label": "Dokument dostawcy"},
-        {"field": "supplier", "label": "Dostawca"},
-        {"field": "location", "label": "Magazyn"},
-        {"field": "date", "label": "Data"}
-      ]}
-    }
-  ],
-  "rules": [
-    {
-      "rule_id": "pl-pz-from-delivery", "priority": 100, "effective_from": "2026-01-01",
-      "description": "Każda dostawa staje się dokumentem PZ",
-      "spec": {"match": {"event_type": "delivery.received"},
-        "effect": {"object": {"type": "pz", "fields": {
-          "supplier": "=ref(company, name, $.supplier)", "supplier_document": "=$.document",
-          "location": "=ref(location, code, $.location)", "date": "=$.date", "currency": "=$.currency"}}}}
-    },
-    {
-      "rule_id": "pl-pz-lines", "priority": 200, "effective_from": "2026-01-01",
-      "description": "Każda dostarczona pozycja staje się pozycją PZ, wskazującą swój dokument",
-      "spec": {"match": {"event_type": "object.materialized", "where": [{"path": "$.object_type", "op": "eq", "value": "pz"}]},
-        "effect": {"object": {"type": "pz_line", "each": "=$.root.lines[*]", "fields": {
-          "document": "=$.doc.object_id", "item": "=ref(item, sku, $.line.item)",
-          "qty": "=$.line.qty", "value": "=$.line.value"}}}}
-    },
-    {
-      "rule_id": "pl-pz-line-moves-stock", "priority": 300, "effective_from": "2026-01-01",
-      "description": "Pozycja PZ przyjmuje towar na magazyn",
-      "spec": {"match": {"event_type": "object.materialized", "where": [{"path": "$.object_type", "op": "eq", "value": "pz_line"}]},
-        "effect": {"object": {"type": "stock_movement", "fields": {
-          "item": "=$.state.item", "location": "=ref(location, code, $.root.location)",
-          "direction": "in", "qty": "=$.state.qty", "date": "=$.root.date"}}}}
-    },
-    {
-      "rule_id": "pl-pz-line-posts", "priority": 310, "effective_from": "2026-01-01",
-      "description": "Pozycja PZ księguje się Wn 330 Towary / Ma 300 Rozliczenie zakupu w cenie nabycia",
-      "spec": {"match": {"event_type": "object.materialized", "where": [{"path": "$.object_type", "op": "eq", "value": "pz_line"}]},
-        "effect": {"postings": {"book": "pl-stat", "currency": "=$.root.currency", "lines": [
-          {"account": "330", "debit": "=$.state.value"},
-          {"account": "300", "credit": "=$.state.value"}]}}}
-    }
+  "apps": [
+    "goods-receipts"
   ]
 }

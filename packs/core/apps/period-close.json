@@ -1,0 +1,26 @@
+{
+  "app": "period-close",
+  "version": 1,
+  "title": "Period close",
+  "layer": "core",
+  "data": [
+    {
+      "name": "period_lock",
+      "version": 2,
+      "domain": "finance",
+      "is_document": false,
+      "fields": [
+        {
+          "name": "month",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,153 @@
+{
+  "app": "tasks",
+  "version": 1,
+  "title": "Tasks",
+  "layer": "platform",
+  "data": [
+    {
+      "name": "task",
+      "version": 2,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "title",
+      "fields": [
+        {
+          "name": "title",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "open",
+            "done",
+            "rejected",
+            "cancelled",
+            "blocked"
+          ]
+        },
+        {
+          "name": "due_date",
+          "type": "date"
+        },
+        {
+          "name": "priority",
+          "type": "enum",
+          "values": [
+            "problem",
+            "critical",
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        {
+          "name": "category",
+          "type": "enum",
+          "values": [
+            "month_close",
+            "taxes",
+            "invoices",
+            "contractor_payments",
+            "accounting",
+            "reminders",
+            "agent",
+            "other"
+          ]
+        },
+        {
+          "name": "requester",
+          "type": "ref<person>"
+        },
+        {
+          "name": "assignee",
+          "type": "ref<person>"
+        },
+        {
+          "name": "description",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "task_schedule",
+      "version": 2,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "name",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "cadence",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "weekly",
+            "monthly",
+            "yearly",
+            "other"
+          ]
+        },
+        {
+          "name": "next_run",
+          "type": "date"
+        },
+        {
+          "name": "last_run",
+          "type": "date"
+        },
+        {
+          "name": "active",
+          "type": "enum",
+          "values": [
+            "yes",
+            "no"
+          ]
+        },
+        {
+          "name": "requester",
+          "type": "ref<person>"
+        },
+        {
+          "name": "assignee",
+          "type": "ref<person>"
+        }
+      ]
+    }
+  ],
+  "tabs": [
+    {
+      "view_id": "do-zrobienia",
+      "version": 1,
+      "notion": "queue",
+      "title": "Do zrobienia dziś",
+      "domain": "finance",
+      "function": "briefing",
+      "spec": {
+        "object_type": "task",
+        "where": [
+          {
+            "path": "$.state.status",
+            "op": "eq",
+            "value": "open"
+          }
+        ],
+        "rank": "=($.today - $.state.due_date) * 10 + if($.state.priority = 'critical', 30, if($.state.priority = 'high', 20, if($.state.priority = 'medium', 10, 0)))",
+        "columns": [
+          "title",
+          "due_date",
+          "priority",
+          "category",
+          "assignee"
+        ],
+        "approvals": true
+      }
+    }
+  ]
+}

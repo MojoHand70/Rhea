@@ -1,0 +1,720 @@
+{
+  "app": "parties",
+  "version": 2,
+  "title": "Kontrahenci i moja firma",
+  "layer": "law",
+  "data": [
+    {
+      "name": "company",
+      "version": 7,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "name",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "kind",
+          "type": "enum",
+          "values": [
+            "customer",
+            "supplier",
+            "self"
+          ],
+          "required": true
+        },
+        {
+          "name": "vat_id",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "country",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "iban",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "address",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "email",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "tax_office",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "legal_form",
+          "type": "enum",
+          "required": false,
+          "values": [
+            "natural_person",
+            "legal_entity"
+          ]
+        },
+        {
+          "name": "owner",
+          "type": "ref<person>",
+          "required": false
+        },
+        {
+          "name": "vat_status",
+          "type": "enum",
+          "required": false,
+          "values": [
+            "active",
+            "exempt"
+          ]
+        },
+        {
+          "name": "vat_exemption_basis",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "books",
+          "type": "enum",
+          "required": false,
+          "values": [
+            "full",
+            "kpir",
+            "ryczalt"
+          ]
+        },
+        {
+          "name": "income_tax",
+          "type": "enum",
+          "required": false,
+          "values": [
+            "cit",
+            "skala",
+            "liniowy",
+            "ryczalt"
+          ]
+        },
+        {
+          "name": "form_from",
+          "type": "date",
+          "required": false
+        },
+        {
+          "name": "cost_account",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "tax_account",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "zus_account",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "owner_account",
+          "type": "string",
+          "required": false
+        }
+      ],
+      "amendable": [
+        "iban",
+        "address",
+        "email",
+        "tax_office",
+        "legal_form",
+        "owner",
+        "vat_status",
+        "vat_exemption_basis",
+        "books",
+        "income_tax",
+        "form_from",
+        "cost_account",
+        "tax_account",
+        "zus_account",
+        "owner_account"
+      ]
+    },
+    {
+      "name": "contractor",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "name",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "nip",
+          "type": "string"
+        },
+        {
+          "name": "regon",
+          "type": "string"
+        },
+        {
+          "name": "address",
+          "type": "string"
+        },
+        {
+          "name": "country",
+          "type": "string"
+        },
+        {
+          "name": "payment_term_days",
+          "type": "int"
+        },
+        {
+          "name": "cash_method",
+          "type": "enum",
+          "values": [
+            "yes",
+            "no"
+          ]
+        },
+        {
+          "name": "very_important",
+          "type": "enum",
+          "values": [
+            "yes",
+            "no"
+          ]
+        }
+      ]
+    }
+  ],
+  "tabs": [
+    {
+      "view": "company-list"
+    }
+  ],
+  "record": {
+    "of": "company",
+    "tabs": [
+      {
+        "view": "company-detail"
+      },
+      {
+        "desk": "company-page",
+        "title": "Firma"
+      }
+    ]
+  },
+  "actions": [
+    {
+      "name": "identify_company",
+      "domain": "finance",
+      "description": "Firma mówi, kim jest dla urzędu skarbowego: e-mail, kod urzędu (np. 1471), forma prawna (osoba fizyczna albo osoba prawna) i — dla osoby fizycznej — właściciel jako osoba",
+      "spec": {
+        "inputs": [
+          {
+            "name": "company",
+            "type": "ref<company>",
+            "required": true
+          },
+          {
+            "name": "email",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "tax_office",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "legal_form",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "natural_person",
+              "legal_entity"
+            ]
+          },
+          {
+            "name": "owner",
+            "type": "ref<person>",
+            "required": false
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "company.identified",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "declare_company_form",
+      "domain": "finance",
+      "description": "Firma mówi, czym jest, od wskazanego dnia: status VAT (czynny albo zwolniony) i — przy zwolnieniu — przepis, na którym się opiera (np. „art. 113 ust. 1 ustawy o VAT”), forma ksiąg (pełne księgi, KPiR, ewidencja ryczałtowa) i forma opodatkowania (CIT, skala, liniowy, ryczałt)",
+      "spec": {
+        "inputs": [
+          {
+            "name": "company",
+            "type": "ref<company>",
+            "required": true
+          },
+          {
+            "name": "vat_status",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "active",
+              "exempt"
+            ]
+          },
+          {
+            "name": "vat_exemption_basis",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "books",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "full",
+              "kpir",
+              "ryczalt"
+            ]
+          },
+          {
+            "name": "income_tax",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "cit",
+              "skala",
+              "liniowy",
+              "ryczalt"
+            ]
+          },
+          {
+            "name": "from",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "company.form.declared",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "declare_company_accounts",
+      "domain": "finance",
+      "description": "Firma podaje rachunki, które rozpoznają pozycje wyciągu: mikrorachunek podatkowy (z generatora na podatki.gov.pl), rachunek składkowy ZUS i prywatny rachunek właściciela — każdy tak, jak stoi na wyciągu (PL i 26 cyfr, bez spacji); pominięty zostaje, jaki był",
+      "spec": {
+        "inputs": [
+          {
+            "name": "company",
+            "type": "ref<company>",
+            "required": true
+          },
+          {
+            "name": "tax_account",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "zus_account",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "owner_account",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "company.accounts.declared",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "enter_company",
+      "domain": "finance",
+      "description": "Firma wpisana do kartoteki po NIP: nazwa, adres, rachunek i forma prawna — tak, jak podały je rejestry (GUS, Wykaz podatników VAT), albo wpisane ręcznie; REGON, KRS i ślad odpowiedzi rejestru zostają w fakcie jako jego źródło",
+      "spec": {
+        "inputs": [
+          {
+            "name": "name",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "kind",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "customer",
+              "supplier",
+              "self"
+            ]
+          },
+          {
+            "name": "vat_id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "country",
+            "type": "string"
+          },
+          {
+            "name": "address",
+            "type": "string"
+          },
+          {
+            "name": "iban",
+            "type": "string"
+          },
+          {
+            "name": "legal_form",
+            "type": "enum",
+            "values": [
+              "natural_person",
+              "legal_entity"
+            ]
+          },
+          {
+            "name": "regon",
+            "type": "string"
+          },
+          {
+            "name": "krs",
+            "type": "string"
+          },
+          {
+            "name": "source",
+            "type": "string"
+          },
+          {
+            "name": "source_ref",
+            "type": "string"
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "company.entered",
+        "who": [
+          "human"
+        ],
+        "identity": [
+          "=$.kind",
+          "=$.vat_id"
+        ]
+      }
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "pl-company-account",
+      "priority": 20,
+      "effective_from": "2026-01-01",
+      "description": "Kontrahent zarejestrowany z numerem rachunku dostaje go jako IBAN — klucz, po którym wyciąg wskazuje płatnika",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "company"
+            },
+            {
+              "path": "$.root.iban",
+              "op": "exists"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "company",
+            "target": "=$.object_id",
+            "set": {
+              "iban": "=$.root.iban"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-identify-company",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Firma bez wskazanego właściciela: e-mail, urząd skarbowy i forma prawna, jak je podała",
+      "spec": {
+        "match": {
+          "event_type": "company.identified",
+          "where": [
+            {
+              "path": "$.owner",
+              "op": "absent"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "company",
+            "target": "=$.company",
+            "set": {
+              "email": "=$.email",
+              "tax_office": "=$.tax_office",
+              "legal_form": "=$.legal_form"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-identify-company-owner",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Firma ze wskazanym właścicielem (osoba fizyczna): e-mail, urząd skarbowy, forma prawna i właściciel, jak je podała",
+      "spec": {
+        "match": {
+          "event_type": "company.identified",
+          "where": [
+            {
+              "path": "$.owner",
+              "op": "exists"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "company",
+            "target": "=$.company",
+            "set": {
+              "email": "=$.email",
+              "tax_office": "=$.tax_office",
+              "legal_form": "=$.legal_form",
+              "owner": "=$.owner"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-declare-company-form",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Firma mówi, czym jest, bez przepisu zwolnienia: czynny podatnik VAT, forma ksiąg i forma opodatkowania od wskazanej daty; deklaracja sprzeczna (ryczałt bez ewidencji ryczałtowej, CIT bez pełnych ksiąg, zwolnienie bez przepisu) nie pasuje do żadnej reguły i czeka; spółka (osoba prawna) płaci CIT i prowadzi pełne księgi, osoba fizyczna nie płaci CIT",
+      "spec": {
+        "match": {
+          "event_type": "company.form.declared",
+          "where": [
+            {
+              "path": "$.vat_exemption_basis",
+              "op": "absent"
+            },
+            {
+              "formula": "=$.vat_status = \"active\" and ($.income_tax = \"ryczalt\") = ($.books = \"ryczalt\") and ($.income_tax <> \"cit\" or $.books = \"full\") and (coalesce($.company.legal_form, \"\") <> \"legal_entity\" or ($.income_tax = \"cit\" and $.books = \"full\")) and (coalesce($.company.legal_form, \"\") <> \"natural_person\" or $.income_tax <> \"cit\")"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "company",
+            "target": "=$.company",
+            "set": {
+              "vat_status": "=$.vat_status",
+              "books": "=$.books",
+              "income_tax": "=$.income_tax",
+              "form_from": "=$.from",
+              "vat_exemption_basis": ""
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "citations": [
+          "ustawa o VAT art. 96 ust. 1 i 3: rejestracja jako podatnik VAT czynny; zwolnieni (art. 113, art. 43) mogą się zarejestrować",
+          "ustawa o VAT art. 113 ust. 1 i 4: zwolnienie podmiotowe i rezygnacja z niego przed początkiem miesiąca",
+          "ustawa o PIT art. 9a ust. 1–2: skala, chyba że podatnik złoży oświadczenie o ryczałcie albo podatku liniowym; ustawa o zryczałtowanym podatku dochodowym art. 9 ust. 3",
+          "ustawa o PIT art. 24a ust. 1 i 3: KPiR albo księgi rachunkowe; ryczałtowcy prowadzą ewidencję przychodów (ustawa o zryczałtowanym podatku dochodowym art. 15 ust. 1)",
+          "ustawa o rachunkowości art. 2 ust. 1 pkt 2 i ust. 2: księgi rachunkowe obowiązkowo powyżej progu przychodów albo z wyboru, zgłoszonego przed rokiem obrotowym",
+          "ustawa o CIT: osoba prawna płaci CIT i prowadzi księgi rachunkowe — stąd CIT tylko z pełnymi księgami"
+        ],
+        "scope": "pl"
+      }
+    },
+    {
+      "rule_id": "pl-declare-company-form-exemption",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Firma mówi, czym jest, z przepisem zwolnienia z VAT (podmiotowego — art. 113 ust. 1 — albo przedmiotowego z art. 43 ust. 1): status VAT, przepis, forma ksiąg i forma opodatkowania od wskazanej daty; przepis trafia na faktury (P_19A); spółka (osoba prawna) płaci CIT i prowadzi pełne księgi, osoba fizyczna nie płaci CIT",
+      "spec": {
+        "match": {
+          "event_type": "company.form.declared",
+          "where": [
+            {
+              "path": "$.vat_exemption_basis",
+              "op": "exists"
+            },
+            {
+              "formula": "=($.income_tax = \"ryczalt\") = ($.books = \"ryczalt\") and ($.income_tax <> \"cit\" or $.books = \"full\") and (coalesce($.company.legal_form, \"\") <> \"legal_entity\" or ($.income_tax = \"cit\" and $.books = \"full\")) and (coalesce($.company.legal_form, \"\") <> \"natural_person\" or $.income_tax <> \"cit\")"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "company",
+            "target": "=$.company",
+            "set": {
+              "vat_status": "=$.vat_status",
+              "books": "=$.books",
+              "income_tax": "=$.income_tax",
+              "form_from": "=$.from",
+              "vat_exemption_basis": "=$.vat_exemption_basis"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "citations": [
+          "ustawa o VAT art. 96 ust. 1 i 3: rejestracja jako podatnik VAT czynny; zwolnieni (art. 113, art. 43) mogą się zarejestrować",
+          "ustawa o VAT art. 113 ust. 1 i 4: zwolnienie podmiotowe i rezygnacja z niego przed początkiem miesiąca",
+          "ustawa o PIT art. 9a ust. 1–2: skala, chyba że podatnik złoży oświadczenie o ryczałcie albo podatku liniowym; ustawa o zryczałtowanym podatku dochodowym art. 9 ust. 3",
+          "ustawa o PIT art. 24a ust. 1 i 3: KPiR albo księgi rachunkowe; ryczałtowcy prowadzą ewidencję przychodów (ustawa o zryczałtowanym podatku dochodowym art. 15 ust. 1)",
+          "ustawa o rachunkowości art. 2 ust. 1 pkt 2 i ust. 2: księgi rachunkowe obowiązkowo powyżej progu przychodów albo z wyboru, zgłoszonego przed rokiem obrotowym",
+          "ustawa o CIT: osoba prawna płaci CIT i prowadzi księgi rachunkowe — stąd CIT tylko z pełnymi księgami",
+          "ustawa o VAT art. 106e ust. 1 pkt 19: faktura dokumentująca sprzedaż zwolnioną wskazuje przepis, na podstawie którego podatnik stosuje zwolnienie"
+        ],
+        "scope": "pl"
+      }
+    },
+    {
+      "rule_id": "pl-declare-company-accounts",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Rachunki firmy, jak je podała: mikrorachunek podatkowy, rachunek składkowy ZUS, rachunek właściciela; pominięty zostaje, jaki był",
+      "spec": {
+        "match": {
+          "event_type": "company.accounts.declared"
+        },
+        "effect": {
+          "amend": {
+            "type": "company",
+            "target": "=$.company",
+            "set": {
+              "tax_account": "=coalesce($.tax_account, coalesce($.company.tax_account, \"\"))",
+              "zus_account": "=coalesce($.zus_account, coalesce($.company.zus_account, \"\"))",
+              "owner_account": "=coalesce($.owner_account, coalesce($.company.owner_account, \"\"))"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "citations": [
+          "Ordynacja podatkowa art. 61b § 1: wpłata do urzędu skarbowego „przy użyciu (...) indywidualnego rachunku podatkowego (mikrorachunek podatkowy)”",
+          "ustawa o systemie ubezpieczeń społecznych art. 47 ust. 4: składki „opłaca się jedną wpłatą na przydzielony przez Zakład numer rachunku składkowego”"
+        ],
+        "scope": "pl"
+      }
+    },
+    {
+      "rule_id": "pl-enter-company",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Firma wpisana bez formy prawnej: nazwa, rodzaj, NIP, kraj, adres i rachunek, jak je wpisano",
+      "spec": {
+        "match": {
+          "event_type": "company.entered",
+          "where": [
+            {
+              "path": "$.legal_form",
+              "op": "absent"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "company",
+            "fields": {
+              "name": "=$.name",
+              "kind": "=$.kind",
+              "vat_id": "=$.vat_id",
+              "country": "=coalesce($.country, \"PL\")",
+              "address": "=coalesce($.address, \"\")",
+              "iban": "=coalesce($.iban, \"\")"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-enter-company-form",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Firma wpisana z formą prawną, jaką podał rejestr albo wpisujący: osoba fizyczna albo osoba prawna",
+      "spec": {
+        "match": {
+          "event_type": "company.entered",
+          "where": [
+            {
+              "path": "$.legal_form",
+              "op": "exists"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "company",
+            "fields": {
+              "name": "=$.name",
+              "kind": "=$.kind",
+              "vat_id": "=$.vat_id",
+              "country": "=coalesce($.country, \"PL\")",
+              "address": "=coalesce($.address, \"\")",
+              "iban": "=coalesce($.iban, \"\")",
+              "legal_form": "=$.legal_form"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

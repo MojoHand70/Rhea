@@ -1,0 +1,1186 @@
+{
+  "app": "people",
+  "version": 1,
+  "title": "People",
+  "layer": "platform",
+  "data": [
+    {
+      "name": "person",
+      "version": 2,
+      "domain": "people",
+      "is_document": false,
+      "label_field": "name",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "handle",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "role",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "active",
+            "away",
+            "left"
+          ]
+        },
+        {
+          "name": "deputy",
+          "type": "ref<person>"
+        },
+        {
+          "name": "given_name",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "family_name",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "birth_date",
+          "type": "date",
+          "required": false
+        }
+      ],
+      "lifecycle": {
+        "field": "status",
+        "transitions": {
+          "active": [
+            "away",
+            "left"
+          ],
+          "away": [
+            "active",
+            "left"
+          ]
+        }
+      },
+      "amendable": [
+        "birth_date",
+        "deputy",
+        "family_name",
+        "given_name",
+        "role"
+      ]
+    },
+    {
+      "name": "role",
+      "version": 1,
+      "domain": "people",
+      "is_document": false,
+      "label_field": "name",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "rights",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "required": false
+        }
+      ],
+      "amendable": [
+        "rights",
+        "description"
+      ]
+    },
+    {
+      "name": "membership",
+      "version": 1,
+      "domain": "people",
+      "is_document": false,
+      "label_field": "role",
+      "fields": [
+        {
+          "name": "person",
+          "type": "ref<person>",
+          "required": true
+        },
+        {
+          "name": "company",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "role",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "group",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "from",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "to",
+          "type": "date",
+          "required": false
+        },
+        {
+          "name": "reason",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "active",
+            "ended"
+          ]
+        },
+        {
+          "name": "granted_by",
+          "type": "string",
+          "required": true
+        }
+      ],
+      "lifecycle": {
+        "field": "status",
+        "transitions": {
+          "active": [
+            "ended"
+          ]
+        }
+      },
+      "amendable": [
+        "to"
+      ]
+    },
+    {
+      "name": "mandate",
+      "version": 1,
+      "domain": "people",
+      "is_document": false,
+      "label_field": "office",
+      "fields": [
+        {
+          "name": "office",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "client",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "scope",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "from",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "to",
+          "type": "date",
+          "required": false
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "active",
+            "ended"
+          ]
+        },
+        {
+          "name": "granted_by",
+          "type": "string",
+          "required": true
+        }
+      ],
+      "lifecycle": {
+        "field": "status",
+        "transitions": {
+          "active": [
+            "ended"
+          ]
+        }
+      },
+      "amendable": [
+        "to"
+      ]
+    },
+    {
+      "name": "substitution",
+      "version": 1,
+      "domain": "people",
+      "is_document": false,
+      "label_field": "deputy",
+      "fields": [
+        {
+          "name": "person",
+          "type": "ref<person>",
+          "required": true
+        },
+        {
+          "name": "deputy",
+          "type": "ref<person>",
+          "required": true
+        },
+        {
+          "name": "company",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "from",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "to",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "active",
+            "ended"
+          ]
+        },
+        {
+          "name": "granted_by",
+          "type": "string",
+          "required": true
+        }
+      ],
+      "lifecycle": {
+        "field": "status",
+        "transitions": {
+          "active": [
+            "ended"
+          ]
+        }
+      },
+      "amendable": [
+        "to"
+      ]
+    },
+    {
+      "name": "group",
+      "version": 1,
+      "domain": "people",
+      "is_document": false,
+      "label_field": "name",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "company",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "required": false
+        }
+      ],
+      "amendable": [
+        "description"
+      ]
+    }
+  ],
+  "tabs": [
+    {
+      "desk": "access",
+      "title": "Who has access"
+    },
+    {
+      "view_id": "who-can-do-what",
+      "version": 1,
+      "notion": "rights",
+      "title": "Who can do what",
+      "domain": "people",
+      "function": "rights",
+      "spec": {}
+    },
+    {
+      "desk": "invites",
+      "title": "Invitations"
+    }
+  ],
+  "actions": [
+    {
+      "name": "register_person",
+      "domain": "people",
+      "description": "Register a person: name, the handle their actions are signed with, and their role",
+      "spec": {
+        "inputs": [
+          {
+            "name": "name",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "handle",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "role",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "person.registered",
+        "who": [
+          "human"
+        ],
+        "installation": true
+      }
+    },
+    {
+      "name": "appoint_deputy",
+      "domain": "people",
+      "description": "Appoint who stands in for a person",
+      "spec": {
+        "inputs": [
+          {
+            "name": "person",
+            "type": "ref<person>",
+            "required": true
+          },
+          {
+            "name": "deputy",
+            "type": "ref<person>",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "person.deputy_appointed",
+        "who": [
+          "human"
+        ],
+        "installation": true
+      }
+    },
+    {
+      "name": "set_person_status",
+      "domain": "people",
+      "description": "Mark a person away, back, or gone",
+      "spec": {
+        "inputs": [
+          {
+            "name": "person",
+            "type": "ref<person>",
+            "required": true
+          },
+          {
+            "name": "status",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "active",
+              "away",
+              "left"
+            ]
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "person.status_changed",
+        "who": [
+          "human"
+        ],
+        "installation": true
+      }
+    },
+    {
+      "name": "identify_person",
+      "domain": "people",
+      "description": "A person says who they are to an office: given name, family name, birth date — what a natural person's tax return carries",
+      "spec": {
+        "inputs": [
+          {
+            "name": "person",
+            "type": "ref<person>",
+            "required": true
+          },
+          {
+            "name": "given_name",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "family_name",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "birth_date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "person.identified",
+        "who": [
+          "human"
+        ],
+        "installation": true
+      }
+    },
+    {
+      "name": "declare_role",
+      "domain": "people",
+      "description": "Declare a role: a name and the rights it grants, in the rights vocabulary (*, domain:<d>, door:<name>, view:<id>, type:<name>, state:<type>/<state>, sees:<group>, approves:<group>)",
+      "spec": {
+        "inputs": [
+          {
+            "name": "name",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "rights",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "description",
+            "type": "string"
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "role.declared",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "change_role",
+      "domain": "people",
+      "description": "Change a role's rights or description",
+      "spec": {
+        "inputs": [
+          {
+            "name": "role",
+            "type": "ref<role>",
+            "required": true
+          },
+          {
+            "name": "rights",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "description",
+            "type": "string"
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "role.changed",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "grant_membership",
+      "domain": "people",
+      "description": "Put a person in a company with a role from a date — an employee, an owner, a guest, the house for a day of support",
+      "spec": {
+        "inputs": [
+          {
+            "name": "person",
+            "type": "ref<person>",
+            "required": true
+          },
+          {
+            "name": "company",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "role",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "group",
+            "type": "string"
+          },
+          {
+            "name": "from",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "to",
+            "type": "date"
+          },
+          {
+            "name": "reason",
+            "type": "string"
+          },
+          {
+            "name": "granted_by",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "membership.granted",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "end_membership",
+      "domain": "people",
+      "description": "End a membership on a day; nothing is granted after it",
+      "spec": {
+        "inputs": [
+          {
+            "name": "membership",
+            "type": "ref<membership>",
+            "required": true
+          },
+          {
+            "name": "to",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "ended_by",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "membership.ended",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "grant_mandate",
+      "domain": "people",
+      "description": "Let an office keep a client's books from a date, within a scope of rights (* for everything the office's people may do)",
+      "spec": {
+        "inputs": [
+          {
+            "name": "office",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "client",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "scope",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "from",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "to",
+            "type": "date"
+          },
+          {
+            "name": "granted_by",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "mandate.granted",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "end_mandate",
+      "domain": "people",
+      "description": "End a mandate on a day",
+      "spec": {
+        "inputs": [
+          {
+            "name": "mandate",
+            "type": "ref<mandate>",
+            "required": true
+          },
+          {
+            "name": "to",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "ended_by",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "mandate.ended",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "appoint_substitute",
+      "domain": "people",
+      "description": "Hand a person's rights to a deputy between two dates, in one company or (left empty) in all of theirs",
+      "spec": {
+        "inputs": [
+          {
+            "name": "person",
+            "type": "ref<person>",
+            "required": true
+          },
+          {
+            "name": "deputy",
+            "type": "ref<person>",
+            "required": true
+          },
+          {
+            "name": "company",
+            "type": "string"
+          },
+          {
+            "name": "from",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "to",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "granted_by",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "substitution.appointed",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "end_substitution",
+      "domain": "people",
+      "description": "End a substitution on a day",
+      "spec": {
+        "inputs": [
+          {
+            "name": "substitution",
+            "type": "ref<substitution>",
+            "required": true
+          },
+          {
+            "name": "to",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "ended_by",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "substitution.ended",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "declare_group",
+      "domain": "people",
+      "description": "Declare a group of a company's people",
+      "spec": {
+        "inputs": [
+          {
+            "name": "name",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "company",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "description",
+            "type": "string"
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "group.declared",
+        "who": [
+          "human"
+        ]
+      }
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "register-person",
+      "priority": 10,
+      "effective_from": "2026-01-01",
+      "description": "A registered person becomes a person object, active from the day of registration",
+      "spec": {
+        "match": {
+          "event_type": "person.registered"
+        },
+        "effect": {
+          "object": {
+            "type": "person",
+            "fields": {
+              "name": "=$.name",
+              "handle": "=$.handle",
+              "role": "=$.role",
+              "status": "active"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "appoint-deputy",
+      "priority": 10,
+      "effective_from": "2026-01-01",
+      "description": "Appointing a deputy amends the person: work addressed to them can be routed to the deputy while they are away",
+      "spec": {
+        "match": {
+          "event_type": "person.deputy_appointed"
+        },
+        "effect": {
+          "amend": {
+            "type": "person",
+            "target": "=$.person",
+            "set": {
+              "deputy": "=$.deputy"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "move-person-status",
+      "priority": 10,
+      "effective_from": "2026-01-01",
+      "description": "A person's status moves along the declared lifecycle: active ⇄ away, either → left; the kernel refuses any other move",
+      "spec": {
+        "match": {
+          "event_type": "person.status_changed"
+        },
+        "effect": {
+          "amend": {
+            "type": "person",
+            "target": "=$.person",
+            "set": {
+              "status": "=$.status"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "identify-person",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "A person's names and birth date, as they said them",
+      "spec": {
+        "match": {
+          "event_type": "person.identified"
+        },
+        "effect": {
+          "amend": {
+            "type": "person",
+            "target": "=$.person",
+            "set": {
+              "given_name": "=$.given_name",
+              "family_name": "=$.family_name",
+              "birth_date": "=$.birth_date"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "declare-role",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "A declared role becomes a role object: a named set of rights, the pack's or a company's own",
+      "spec": {
+        "match": {
+          "event_type": "role.declared"
+        },
+        "effect": {
+          "object": {
+            "type": "role",
+            "fields": {
+              "name": "=$.name",
+              "rights": "=$.rights",
+              "description": "=coalesce($.description, \"\")"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "change-role",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Changing a role's rights amends it; what was granted under the old rights stays explained by the old version of the fact",
+      "spec": {
+        "match": {
+          "event_type": "role.changed"
+        },
+        "effect": {
+          "amend": {
+            "type": "role",
+            "target": "=$.role",
+            "set": {
+              "rights": "=$.rights",
+              "description": "=coalesce($.description, \"\")"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "grant-membership",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "A granted membership puts a person in a company with a role from a date, open-ended; the grant is signed by who granted it",
+      "spec": {
+        "match": {
+          "event_type": "membership.granted",
+          "where": [
+            {
+              "path": "$.to",
+              "op": "absent"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "membership",
+            "fields": {
+              "person": "=$.person",
+              "company": "=$.company",
+              "role": "=$.role",
+              "group": "=coalesce($.group, \"\")",
+              "from": "=$.from",
+              "reason": "=coalesce($.reason, \"\")",
+              "status": "active",
+              "granted_by": "=$.granted_by"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "grant-membership-until",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "A granted membership with a last day — a guest, a day of support, a fixed-term contract",
+      "spec": {
+        "match": {
+          "event_type": "membership.granted",
+          "where": [
+            {
+              "path": "$.to",
+              "op": "exists"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "membership",
+            "fields": {
+              "person": "=$.person",
+              "company": "=$.company",
+              "role": "=$.role",
+              "group": "=coalesce($.group, \"\")",
+              "from": "=$.from",
+              "reason": "=coalesce($.reason, \"\")",
+              "status": "active",
+              "granted_by": "=$.granted_by",
+              "to": "=$.to"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "end-membership",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "An ended membership keeps its history and grants nothing after its last day",
+      "spec": {
+        "match": {
+          "event_type": "membership.ended"
+        },
+        "effect": {
+          "amend": {
+            "type": "membership",
+            "target": "=$.membership",
+            "set": {
+              "status": "ended",
+              "to": "=$.to"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "grant-mandate",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "A granted mandate lets an office keep a client's books within a scope of rights from a date — KSeF's authorised entity",
+      "spec": {
+        "match": {
+          "event_type": "mandate.granted",
+          "where": [
+            {
+              "path": "$.to",
+              "op": "absent"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "mandate",
+            "fields": {
+              "office": "=$.office",
+              "client": "=$.client",
+              "scope": "=$.scope",
+              "from": "=$.from",
+              "status": "active",
+              "granted_by": "=$.granted_by"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "grant-mandate-until",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "A granted mandate with a last day",
+      "spec": {
+        "match": {
+          "event_type": "mandate.granted",
+          "where": [
+            {
+              "path": "$.to",
+              "op": "exists"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "mandate",
+            "fields": {
+              "office": "=$.office",
+              "client": "=$.client",
+              "scope": "=$.scope",
+              "from": "=$.from",
+              "status": "active",
+              "granted_by": "=$.granted_by",
+              "to": "=$.to"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "end-mandate",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "An ended mandate keeps its history; the office's people lose the client on its last day",
+      "spec": {
+        "match": {
+          "event_type": "mandate.ended"
+        },
+        "effect": {
+          "amend": {
+            "type": "mandate",
+            "target": "=$.mandate",
+            "set": {
+              "status": "ended",
+              "to": "=$.to"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "appoint-substitute",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "A substitution hands a person's rights to a deputy between two dates, in one company or (left empty) in every company of theirs; nothing after",
+      "spec": {
+        "match": {
+          "event_type": "substitution.appointed"
+        },
+        "effect": {
+          "object": {
+            "type": "substitution",
+            "fields": {
+              "person": "=$.person",
+              "deputy": "=$.deputy",
+              "from": "=$.from",
+              "to": "=$.to",
+              "status": "active",
+              "granted_by": "=$.granted_by",
+              "company": "=coalesce($.company, \"\")"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "end-substitution",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "An ended substitution stops on the day it is ended",
+      "spec": {
+        "match": {
+          "event_type": "substitution.ended"
+        },
+        "effect": {
+          "amend": {
+            "type": "substitution",
+            "target": "=$.substitution",
+            "set": {
+              "status": "ended",
+              "to": "=$.to"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "declare-group",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "A declared group names a set of a company's people, for rights granted at once and for a supervisor's reach",
+      "spec": {
+        "match": {
+          "event_type": "group.declared"
+        },
+        "effect": {
+          "object": {
+            "type": "group",
+            "fields": {
+              "name": "=$.name",
+              "company": "=$.company",
+              "description": "=coalesce($.description, \"\")"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

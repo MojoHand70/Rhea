@@ -1,0 +1,1119 @@
+{
+  "app": "equity",
+  "version": 1,
+  "title": "Kapitały i wynik",
+  "layer": "law",
+  "data": [
+    {
+      "name": "result_distribution",
+      "version": 1,
+      "domain": "finance",
+      "label_field": "year_end",
+      "fields": [
+        {
+          "name": "year_end",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "resolution_date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "reserve",
+          "type": "money",
+          "required": true,
+          "description": "na kapitał zapasowy"
+        },
+        {
+          "name": "dividends",
+          "type": "money",
+          "required": true,
+          "description": "na dywidendy (brutto)"
+        },
+        {
+          "name": "loss_cover",
+          "type": "money",
+          "required": true,
+          "description": "pokrycie straty z kapitału zapasowego"
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "policy_adjustment",
+      "version": 1,
+      "domain": "finance",
+      "label_field": "title",
+      "fields": [
+        {
+          "name": "title",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "account",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "side",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "debit",
+            "credit"
+          ],
+          "description": "strona, po której konto bilansowe przyjmuje korektę; 820 bierze drugą"
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "effective_from",
+          "type": "date",
+          "required": true,
+          "description": "pierwszy dzień roku obrotowego, od którego zmiana działa"
+        },
+        {
+          "name": "basis",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "liquidation_measurement",
+      "version": 1,
+      "domain": "finance",
+      "label_field": "item",
+      "fields": [
+        {
+          "name": "item",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "account",
+          "type": "string",
+          "required": true,
+          "description": "konto, które oddaje różnicę: konto składnika albo jego konto korygujące"
+        },
+        {
+          "name": "carrying_value",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "net_selling_price",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "write_down",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "reason",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "liquidation",
+            "bankruptcy",
+            "no_continuation_at_approval",
+            "transfer_division_or_sale"
+          ]
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ]
+    }
+  ],
+  "uses": [
+    "posting"
+  ],
+  "tabs": [
+    {
+      "view_id": "kapitaly",
+      "version": 1,
+      "notion": "analysis",
+      "title": "Kapitały własne",
+      "domain": "finance",
+      "function": "equity",
+      "spec": {
+        "sql_file": "kapitaly.sql",
+        "columns": [
+          {
+            "field": "code",
+            "label": "Konto",
+            "type": "string"
+          },
+          {
+            "field": "name",
+            "label": "Nazwa",
+            "type": "string"
+          },
+          {
+            "field": "balance",
+            "label": "Saldo (Ma)",
+            "type": "money"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "podzial-wyniku",
+      "version": 1,
+      "notion": "list",
+      "title": "Podział wyniku",
+      "domain": "finance",
+      "function": "equity",
+      "spec": {
+        "object_type": "result_distribution",
+        "columns": [
+          {
+            "field": "year_end",
+            "label": "Rok do"
+          },
+          {
+            "field": "resolution_date",
+            "label": "Uchwała z dnia"
+          },
+          {
+            "field": "reserve",
+            "label": "Na kapitał zapasowy"
+          },
+          {
+            "field": "dividends",
+            "label": "Na dywidendy"
+          },
+          {
+            "field": "loss_cover",
+            "label": "Pokrycie straty"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "korekty-zasad",
+      "version": 1,
+      "notion": "list",
+      "title": "Zmiany zasad rachunkowości",
+      "domain": "finance",
+      "function": "equity",
+      "spec": {
+        "object_type": "policy_adjustment",
+        "columns": [
+          {
+            "field": "title",
+            "label": "Tytuł"
+          },
+          {
+            "field": "effective_from",
+            "label": "Od dnia"
+          },
+          {
+            "field": "account",
+            "label": "Konto"
+          },
+          {
+            "field": "side",
+            "label": "Strona"
+          },
+          {
+            "field": "amount",
+            "label": "Kwota"
+          },
+          {
+            "field": "basis",
+            "label": "Podstawa"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "wycena-bez-kontynuacji",
+      "version": 1,
+      "notion": "list",
+      "title": "Wycena bez założenia kontynuacji",
+      "domain": "finance",
+      "function": "equity",
+      "spec": {
+        "object_type": "liquidation_measurement",
+        "columns": [
+          {
+            "field": "item",
+            "label": "Składnik"
+          },
+          {
+            "field": "date",
+            "label": "Dzień"
+          },
+          {
+            "field": "reason",
+            "label": "Powód"
+          },
+          {
+            "field": "carrying_value",
+            "label": "Wartość księgowa"
+          },
+          {
+            "field": "net_selling_price",
+            "label": "Cena sprzedaży netto"
+          },
+          {
+            "field": "write_down",
+            "label": "Odpis"
+          },
+          {
+            "field": "account",
+            "label": "Konto"
+          }
+        ]
+      }
+    }
+  ],
+  "actions": [
+    {
+      "name": "approve_statement",
+      "domain": "finance",
+      "description": "Organ zatwierdzający zatwierdził sprawozdanie finansowe za rok (nie później niż 6 miesięcy od dnia bilansowego): wynik przechodzi z 860 na 820 Rozliczenie wyniku finansowego w dniu zatwierdzenia",
+      "spec": {
+        "inputs": [
+          {
+            "name": "year_end",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "approved_on",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "book",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "statement.approved",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "distribute_result",
+      "domain": "finance",
+      "description": "Uchwała zgromadzenia wspólników o podziale zysku albo pokryciu straty za rok: ile na kapitał zapasowy, ile na dywidendy (brutto), ile straty pokrywa kapitał zapasowy — 0,00 tam, gdzie nic; reszta zostaje na 820 jako wynik niepodzielony",
+      "spec": {
+        "inputs": [
+          {
+            "name": "year_end",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "resolution_date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "to_reserve",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "to_dividends",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "loss_cover",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "book",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "result.distributed",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "pay_dividend",
+      "domain": "finance",
+      "description": "Wypłata dywidendy wspólnikowi: kwota brutto, dzień wypłaty i stawka zryczałtowanego podatku (19 dla osoby fizycznej i spółki bez zwolnienia; 0 przy zwolnieniu z art. 22 ust. 4 ustawy o CIT) — spółka jako płatnik potrąca podatek i odprowadza go z 225",
+      "spec": {
+        "inputs": [
+          {
+            "name": "date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "gross",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "withholding_rate",
+            "type": "decimal",
+            "required": true
+          },
+          {
+            "name": "recipient",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "dividend.paid",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "adjust_for_policy_change",
+      "domain": "finance",
+      "description": "Zmiana przyjętych zasad (polityki) rachunkowości — inna metoda wyceny rozchodu zapasów, inna zasada przewidziana ustawą — działa od pierwszego dnia roku obrotowego, a jej skutek za lata ubiegłe koryguje saldo otwarcia konta bilansowego w korespondencji z 820 zysk (strata) z lat ubiegłych (art. 8 ust. 2 UoR, KSR 7 pkt 3.12); zmiana szacunku (stawki odpisów) nie jest zmianą polityki i idzie w wynik bieżący",
+      "spec": {
+        "inputs": [
+          {
+            "name": "title",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "account",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "side",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "debit",
+              "credit"
+            ]
+          },
+          {
+            "name": "amount",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "effective_from",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "basis",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "policy.changed",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "measure_without_going_concern",
+      "domain": "finance",
+      "description": "Założenie kontynuacji działalności przestało być zasadne — w przeddzień likwidacji albo upadłości, na koniec roku gdy jednostka nie będzie kontynuowała działalności, w przeddzień przekazania, podziału lub sprzedaży bez klauzuli wartości kontynuacyjnej — i składnik aktywów wycenia się po cenie sprzedaży netto możliwej do uzyskania, nie wyższej od jego wartości księgowej; różnica idzie na kapitał z aktualizacji wyceny, nie w wynik (art. 29 ust. 1, 2 i 2a UoR); cena wyższa od wartości księgowej nic nie zmienia",
+      "spec": {
+        "inputs": [
+          {
+            "name": "item",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "account",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "carrying_value",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "net_selling_price",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "reason",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "liquidation",
+              "bankruptcy",
+              "no_continuation_at_approval",
+              "transfer_division_or_sale"
+            ]
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "going_concern.measured",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "provide_for_cessation",
+      "domain": "finance",
+      "description": "Rezerwa na przewidywane dodatkowe koszty i straty spowodowane zaniechaniem lub utratą zdolności do kontynuowania działalności — obowiązkowa, gdy wycena następuje bez założenia kontynuacji; jej utworzenie obciąża kapitał z aktualizacji wyceny (art. 29 ust. 1 i 2a UoR)",
+      "spec": {
+        "inputs": [
+          {
+            "name": "title",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "amount",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "cessation.provided",
+        "who": [
+          "human"
+        ]
+      }
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "pl-approve-statement-profit",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Zatwierdzenie sprawozdania przy zysku: wynik roku przechodzi z 860 na 820 w dniu zatwierdzenia (Wn 860 / Ma 820)",
+      "spec": {
+        "match": {
+          "event_type": "statement.approved",
+          "where": [
+            {
+              "formula": "=balance($.book, \"860\", start_of_year($.year_end), $.year_end) < 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.approved_on",
+            "lines": [
+              {
+                "account": "860",
+                "debit": "=abs(balance($.book, \"860\", start_of_year($.year_end), $.year_end))"
+              },
+              {
+                "account": "820",
+                "credit": "=abs(balance($.book, \"860\", start_of_year($.year_end), $.year_end))"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 53 ust. 1: „Roczne sprawozdanie finansowe jednostki […] podlega zatwierdzeniu przez organ zatwierdzający, nie później niż 6 miesięcy od dnia bilansowego”",
+          "Kodeks spółek handlowych (t.j. Dz. U. z 2024 r. poz. 18) art. 231 § 1–2: zwyczajne zgromadzenie wspólników w terminie sześciu miesięcy po upływie roku obrotowego rozpatruje i zatwierdza sprawozdanie finansowe oraz podejmuje uchwałę o podziale zysku albo pokryciu straty",
+          "wzorcowy plan kont: 860 Wynik finansowy, 820 Rozliczenie wyniku finansowego, 801 Kapitał podstawowy, 802 Kapitał zapasowy, 241 rozrachunki z właścicielami z tytułu dywidend"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-approve-statement-loss",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Zatwierdzenie sprawozdania przy stracie: strata roku przechodzi z 860 na 820 w dniu zatwierdzenia (Wn 820 / Ma 860)",
+      "spec": {
+        "match": {
+          "event_type": "statement.approved",
+          "where": [
+            {
+              "formula": "=balance($.book, \"860\", start_of_year($.year_end), $.year_end) > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.approved_on",
+            "lines": [
+              {
+                "account": "820",
+                "debit": "=balance($.book, \"860\", start_of_year($.year_end), $.year_end)"
+              },
+              {
+                "account": "860",
+                "credit": "=balance($.book, \"860\", start_of_year($.year_end), $.year_end)"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 53 ust. 1: „Roczne sprawozdanie finansowe jednostki […] podlega zatwierdzeniu przez organ zatwierdzający, nie później niż 6 miesięcy od dnia bilansowego”",
+          "Kodeks spółek handlowych (t.j. Dz. U. z 2024 r. poz. 18) art. 231 § 1–2: zwyczajne zgromadzenie wspólników w terminie sześciu miesięcy po upływie roku obrotowego rozpatruje i zatwierdza sprawozdanie finansowe oraz podejmuje uchwałę o podziale zysku albo pokryciu straty",
+          "wzorcowy plan kont: 860 Wynik finansowy, 820 Rozliczenie wyniku finansowego, 801 Kapitał podstawowy, 802 Kapitał zapasowy, 241 rozrachunki z właścicielami z tytułu dywidend"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-distribute-result",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Uchwała o podziale zysku albo pokryciu straty staje się obiektem result_distribution: rok, dzień uchwały, kwoty na kapitał zapasowy, dywidendy i pokrycie straty; uchwała przeznaczająca na dywidendy więcej, niż wolno przy nieodpisanych kosztach prac rozwojowych — zysk do podziału pomniejszony o nieodpisane koszty, chyba że kapitał zapasowy je pokrywa — nie pasuje do żadnej reguły i nie księguje się",
+      "spec": {
+        "match": {
+          "event_type": "result.distributed",
+          "where": [
+            {
+              "formula": "=$.to_dividends <= 0 or sum(d in objects(development_costs, status, \"active\") : d.unamortised) <= -balance(\"pl-stat\", \"802\", \"2000-01-01\", $.resolution_date) or $.to_dividends <= -balance(\"pl-stat\", \"820\", \"2000-01-01\", $.resolution_date) - sum(d in objects(development_costs, status, \"active\") : d.unamortised)"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "result_distribution",
+            "fields": {
+              "year_end": "=$.year_end",
+              "resolution_date": "=$.resolution_date",
+              "reserve": "=$.to_reserve",
+              "dividends": "=$.to_dividends",
+              "loss_cover": "=$.loss_cover",
+              "book": "=$.book"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 53 ust. 4: „Podział lub pokrycie wyniku finansowego netto jednostek niezobowiązanych do poddania badaniu rocznego sprawozdania finansowego może nastąpić po zatwierdzeniu sprawozdania finansowego przez organ zatwierdzający”; ust. 3: w jednostkach badanych — po zatwierdzeniu poprzedzonym opinią biegłego rewidenta, inaczej podział jest nieważny z mocy prawa",
+          "Kodeks spółek handlowych art. 191 § 1: „Wspólnik ma prawo do udziału w zysku wynikającym z rocznego sprawozdania finansowego i przeznaczonym do podziału uchwałą zgromadzenia wspólników”; art. 192: kwota do podziału nie może przekraczać zysku za ostatni rok, powiększonego o niepodzielone zyski z lat ubiegłych i kwoty z kapitałów zapasowego i rezerwowych utworzonych z zysku, pomniejszonego o niepokryte straty, udziały własne i kwoty, które z mocy ustawy lub umowy idą na kapitały",
+          "Kodeks spółek handlowych (t.j. Dz. U. z 2024 r. poz. 18) art. 231 § 1–2: zwyczajne zgromadzenie wspólników w terminie sześciu miesięcy po upływie roku obrotowego rozpatruje i zatwierdza sprawozdanie finansowe oraz podejmuje uchwałę o podziale zysku albo pokryciu straty",
+          "Kodeks spółek handlowych art. 191 § 4: „W przypadku gdy koszty prac rozwojowych zakwalifikowanych jako aktywa spółki nie zostały całkowicie odpisane, nie można dokonać podziału zysku odpowiadającego równowartości kwoty nieodpisanych kosztów prac rozwojowych, chyba że kwota kapitałów rezerwowych i zapasowych dostępnych do podziału i zysków z lat ubiegłych jest co najmniej równa kwocie kosztów nieodpisanych” (pytanie I-20 egzaminu 2025; art. 348 § 1 KSH dla spółki akcyjnej)"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-result-to-reserve",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Odpis z zysku na kapitał zapasowy księguje się w dniu uchwały: Wn 820 / Ma 802",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "result_distribution"
+            },
+            {
+              "formula": "=$.state.reserve > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.resolution_date",
+            "lines": [
+              {
+                "account": "820",
+                "debit": "=$.state.reserve"
+              },
+              {
+                "account": "802",
+                "credit": "=$.state.reserve"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "Kodeks spółek handlowych art. 396 § 1 (spółka akcyjna): na pokrycie straty tworzy się kapitał zapasowy, na który przelewa się co najmniej 8% zysku za rok obrotowy, dopóki nie osiągnie jednej trzeciej kapitału zakładowego; w sp. z o.o. odpis na kapitał zapasowy jest dobrowolny, jak uchwali zgromadzenie",
+          "ustawa o rachunkowości art. 36 ust. 1: kapitały własne ujmuje się w księgach z podziałem na ich rodzaje i według zasad określonych przepisami prawa, postanowieniami statutu lub umowy",
+          "wzorcowy plan kont: 860 Wynik finansowy, 820 Rozliczenie wyniku finansowego, 801 Kapitał podstawowy, 802 Kapitał zapasowy, 241 rozrachunki z właścicielami z tytułu dywidend"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-result-to-dividends",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Zysk przeznaczony na dywidendy staje się zobowiązaniem wobec wspólników w dniu uchwały: Wn 820 / Ma 241 (brutto)",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "result_distribution"
+            },
+            {
+              "formula": "=$.state.dividends > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.resolution_date",
+            "lines": [
+              {
+                "account": "820",
+                "debit": "=$.state.dividends"
+              },
+              {
+                "account": "241",
+                "credit": "=$.state.dividends"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "Kodeks spółek handlowych art. 191 § 1: „Wspólnik ma prawo do udziału w zysku wynikającym z rocznego sprawozdania finansowego i przeznaczonym do podziału uchwałą zgromadzenia wspólników”; art. 192: kwota do podziału nie może przekraczać zysku za ostatni rok, powiększonego o niepodzielone zyski z lat ubiegłych i kwoty z kapitałów zapasowego i rezerwowych utworzonych z zysku, pomniejszonego o niepokryte straty, udziały własne i kwoty, które z mocy ustawy lub umowy idą na kapitały",
+          "ustawa o rachunkowości art. 53 ust. 4: „Podział lub pokrycie wyniku finansowego netto jednostek niezobowiązanych do poddania badaniu rocznego sprawozdania finansowego może nastąpić po zatwierdzeniu sprawozdania finansowego przez organ zatwierdzający”; ust. 3: w jednostkach badanych — po zatwierdzeniu poprzedzonym opinią biegłego rewidenta, inaczej podział jest nieważny z mocy prawa",
+          "wzorcowy plan kont: 860 Wynik finansowy, 820 Rozliczenie wyniku finansowego, 801 Kapitał podstawowy, 802 Kapitał zapasowy, 241 rozrachunki z właścicielami z tytułu dywidend"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-loss-cover",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Pokrycie straty z kapitału zapasowego księguje się w dniu uchwały: Wn 802 / Ma 820",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "result_distribution"
+            },
+            {
+              "formula": "=$.state.loss_cover > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.resolution_date",
+            "lines": [
+              {
+                "account": "802",
+                "debit": "=$.state.loss_cover"
+              },
+              {
+                "account": "820",
+                "credit": "=$.state.loss_cover"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "Kodeks spółek handlowych art. 396 § 1 (spółka akcyjna): na pokrycie straty tworzy się kapitał zapasowy, na który przelewa się co najmniej 8% zysku za rok obrotowy, dopóki nie osiągnie jednej trzeciej kapitału zakładowego; w sp. z o.o. odpis na kapitał zapasowy jest dobrowolny, jak uchwali zgromadzenie",
+          "Kodeks spółek handlowych (t.j. Dz. U. z 2024 r. poz. 18) art. 231 § 1–2: zwyczajne zgromadzenie wspólników w terminie sześciu miesięcy po upływie roku obrotowego rozpatruje i zatwierdza sprawozdanie finansowe oraz podejmuje uchwałę o podziale zysku albo pokryciu straty",
+          "wzorcowy plan kont: 860 Wynik finansowy, 820 Rozliczenie wyniku finansowego, 801 Kapitał podstawowy, 802 Kapitał zapasowy, 241 rozrachunki z właścicielami z tytułu dywidend"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-pay-dividend-withheld",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Wypłata dywidendy z potrąceniem zryczałtowanego podatku: Wn 241 brutto / Ma 130 netto, Ma 225 podatek pobrany przez spółkę jako płatnika",
+      "spec": {
+        "match": {
+          "event_type": "dividend.paid",
+          "where": [
+            {
+              "formula": "=round($.gross * $.withholding_rate / 100, 2, half_up) > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.date",
+            "lines": [
+              {
+                "account": "241",
+                "debit": "=$.gross"
+              },
+              {
+                "account": "130",
+                "credit": "=$.gross - round($.gross * $.withholding_rate / 100, 2, half_up)"
+              },
+              {
+                "account": "225",
+                "credit": "=round($.gross * $.withholding_rate / 100, 2, half_up)"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o PIT (t.j. Dz. U. z 2026 r. poz. 592) art. 30a ust. 1 pkt 4: od dochodów „z dywidend i innych przychodów z tytułu udziału w zyskach osób prawnych” pobiera się 19% zryczałtowany podatek dochodowy; art. 41 ust. 4: płatnicy pobierają zryczałtowany podatek od dokonywanych wypłat z tytułów określonych w art. 30a ust. 1 pkt 1–11",
+          "ustawa o CIT (t.j. Dz. U. z 2026 r. poz. 554) art. 22 ust. 1: podatek od przychodów z dywidend i innych przychodów z tytułu udziału w zyskach osób prawnych z siedzibą w Polsce wynosi 19% uzyskanego przychodu; ust. 4: zwolnienie dla spółek z udziałem co najmniej 10% przez dwa lata — wtedy stawka 0",
+          "wzorcowy plan kont: 860 Wynik finansowy, 820 Rozliczenie wyniku finansowego, 801 Kapitał podstawowy, 802 Kapitał zapasowy, 241 rozrachunki z właścicielami z tytułu dywidend"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-pay-dividend-exempt",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Wypłata dywidendy bez podatku (stawka 0 — zwolnienie): Wn 241 / Ma 130 brutto, bez linii podatku, której kwota byłaby zerem",
+      "spec": {
+        "match": {
+          "event_type": "dividend.paid",
+          "where": [
+            {
+              "formula": "=round($.gross * $.withholding_rate / 100, 2, half_up) = 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.date",
+            "lines": [
+              {
+                "account": "241",
+                "debit": "=$.gross"
+              },
+              {
+                "account": "130",
+                "credit": "=$.gross"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o CIT (t.j. Dz. U. z 2026 r. poz. 554) art. 22 ust. 1: podatek od przychodów z dywidend i innych przychodów z tytułu udziału w zyskach osób prawnych z siedzibą w Polsce wynosi 19% uzyskanego przychodu; ust. 4: zwolnienie dla spółek z udziałem co najmniej 10% przez dwa lata — wtedy stawka 0",
+          "wzorcowy plan kont: 860 Wynik finansowy, 820 Rozliczenie wyniku finansowego, 801 Kapitał podstawowy, 802 Kapitał zapasowy, 241 rozrachunki z właścicielami z tytułu dywidend"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-record-policy-change",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Zmiana zasad rachunkowości staje się obiektem policy_adjustment: konto, strona, kwota, dzień, od którego działa, i podstawa",
+      "spec": {
+        "match": {
+          "event_type": "policy.changed",
+          "where": [
+            {
+              "formula": "=$.amount > 0"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "policy_adjustment",
+            "fields": {
+              "title": "=$.title",
+              "account": "=$.account",
+              "side": "=$.side",
+              "amount": "=$.amount",
+              "effective_from": "=$.effective_from",
+              "basis": "=$.basis",
+              "book": "pl-stat"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 8 ust. 2: jednostka może, „ze skutkiem od pierwszego dnia roku obrotowego, bez względu na datę podjęcia decyzji, zmienić dotychczas stosowane rozwiązania na inne, przewidziane ustawą” (pytanie I-23 egzaminu 2025: zmiana metody wyceny rozchodu zapasów jest zmianą polityki, zmiana stawek odpisów — zmianą szacunku)",
+          "KSR 7 pkt 3.12: zgodnie z pełnym podejściem retrospektywnym jednostka „odnosi skutki zmiany przyjętych zasad (polityki) rachunkowości na kapitał (fundusz) własny, wykazując je na mocy art. 8 ust. 2 ustawy jako zysk (stratę) z lat ubiegłych”"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-policy-change",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Skutek zmiany zasad za lata ubiegłe koryguje saldo otwarcia: Wn konto / Ma 820 albo Wn 820 / Ma konto, pierwszego dnia roku",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "policy_adjustment"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.effective_from",
+            "lines": [
+              {
+                "account": "=if($.state.side = \"debit\", $.state.account, \"820\")",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "=if($.state.side = \"debit\", \"820\", $.state.account)",
+                "credit": "=$.state.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 8 ust. 2: jednostka może, „ze skutkiem od pierwszego dnia roku obrotowego, bez względu na datę podjęcia decyzji, zmienić dotychczas stosowane rozwiązania na inne, przewidziane ustawą” (pytanie I-23 egzaminu 2025: zmiana metody wyceny rozchodu zapasów jest zmianą polityki, zmiana stawek odpisów — zmianą szacunku)",
+          "KSR 7 pkt 3.12: zgodnie z pełnym podejściem retrospektywnym jednostka „odnosi skutki zmiany przyjętych zasad (polityki) rachunkowości na kapitał (fundusz) własny, wykazując je na mocy art. 8 ust. 2 ustawy jako zysk (stratę) z lat ubiegłych”",
+          "wzorcowy plan kont: 020 Wartości niematerialne i prawne, 075 Umorzenie wartości niematerialnych i prawnych, 401 Amortyzacja, 490 Rozliczenie kosztów, 813 Kapitał z aktualizacji wyceny, 820 Rozliczenie wyniku finansowego, 830 Rezerwy na zobowiązania"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-measure-without-going-concern",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Wycena bez założenia kontynuacji staje się obiektem liquidation_measurement, gdy cena sprzedaży netto jest niższa od wartości księgowej; odpis to różnica",
+      "spec": {
+        "match": {
+          "event_type": "going_concern.measured",
+          "where": [
+            {
+              "formula": "=$.net_selling_price < $.carrying_value"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "liquidation_measurement",
+            "fields": {
+              "item": "=$.item",
+              "account": "=$.account",
+              "carrying_value": "=$.carrying_value",
+              "net_selling_price": "=$.net_selling_price",
+              "write_down": "=$.carrying_value - $.net_selling_price",
+              "date": "=$.date",
+              "reason": "=$.reason",
+              "book": "pl-stat"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 29 ust. 1: „Jeżeli założenie kontynuacji działalności […] nie jest zasadne, to wycena aktywów jednostki następuje po cenach sprzedaży netto możliwych do uzyskania, niewyższych od cen ich nabycia albo kosztów wytworzenia, pomniejszonych o dotychczasowe odpisy amortyzacyjne lub umorzeniowe, a także odpisy z tytułu trwałej utraty wartości. W takim przypadku jednostka jest również obowiązana utworzyć rezerwę na przewidywane dodatkowe koszty i straty spowodowane zaniechaniem lub utratą zdolności do kontynuowania działalności” (pytanie I-1 egzaminu 2025)",
+          "ustawa o rachunkowości art. 29 ust. 2: wycena po cenach sprzedaży netto i utworzenie rezerwy następują w szczególności w przeddzień postawienia jednostki w stan likwidacji lub ogłoszenia upadłości, na koniec roku obrotowego, jeżeli na dzień zatwierdzenia sprawozdania jednostka nie będzie kontynuowała działalności, a także w przeddzień przekazania, podziału lub sprzedaży jednostki, jeżeli umowa nie przewiduje wartości kontynuacyjnej"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-measurement-without-going-concern",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Odpis do ceny sprzedaży netto bez założenia kontynuacji: Wn 813 Kapitał z aktualizacji wyceny / Ma konto składnika, w kwocie odpisu",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "liquidation_measurement"
+            },
+            {
+              "formula": "=$.state.write_down > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.date",
+            "lines": [
+              {
+                "account": "813",
+                "debit": "=$.state.write_down"
+              },
+              {
+                "account": "=$.state.account",
+                "credit": "=$.state.write_down"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 29 ust. 2a: „Różnica powstała w wyniku wyceny oraz utworzenia rezerwy, o których mowa w ust. 1, wpływa na kapitał (fundusz) z aktualizacji wyceny” — nie w wynik finansowy; autor lekcji księgował ją w 761, ustawa mówi inaczej",
+          "wzorcowy plan kont: 020 Wartości niematerialne i prawne, 075 Umorzenie wartości niematerialnych i prawnych, 401 Amortyzacja, 490 Rozliczenie kosztów, 813 Kapitał z aktualizacji wyceny, 820 Rozliczenie wyniku finansowego, 830 Rezerwy na zobowiązania"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-cessation-provision",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Rezerwa na koszty i straty zaniechania działalności: Wn 813 Kapitał z aktualizacji wyceny / Ma 830 Rezerwy na zobowiązania",
+      "spec": {
+        "match": {
+          "event_type": "cessation.provided",
+          "where": [
+            {
+              "formula": "=$.amount > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.date",
+            "lines": [
+              {
+                "account": "813",
+                "debit": "=$.amount"
+              },
+              {
+                "account": "830",
+                "credit": "=$.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 29 ust. 1: „Jeżeli założenie kontynuacji działalności […] nie jest zasadne, to wycena aktywów jednostki następuje po cenach sprzedaży netto możliwych do uzyskania, niewyższych od cen ich nabycia albo kosztów wytworzenia, pomniejszonych o dotychczasowe odpisy amortyzacyjne lub umorzeniowe, a także odpisy z tytułu trwałej utraty wartości. W takim przypadku jednostka jest również obowiązana utworzyć rezerwę na przewidywane dodatkowe koszty i straty spowodowane zaniechaniem lub utratą zdolności do kontynuowania działalności” (pytanie I-1 egzaminu 2025)",
+          "ustawa o rachunkowości art. 29 ust. 2a: „Różnica powstała w wyniku wyceny oraz utworzenia rezerwy, o których mowa w ust. 1, wpływa na kapitał (fundusz) z aktualizacji wyceny” — nie w wynik finansowy; autor lekcji księgował ją w 761, ustawa mówi inaczej",
+          "wzorcowy plan kont: 020 Wartości niematerialne i prawne, 075 Umorzenie wartości niematerialnych i prawnych, 401 Amortyzacja, 490 Rozliczenie kosztów, 813 Kapitał z aktualizacji wyceny, 820 Rozliczenie wyniku finansowego, 830 Rezerwy na zobowiązania"
+        ]
+      }
+    }
+  ]
+}

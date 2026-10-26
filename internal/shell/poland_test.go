@@ -88,17 +88,17 @@ func TestM3PolandPack(t *testing.T) {
 	if _, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", "common", "people.json"), "test"); err != nil {
 		t.Fatal(err)
 	}
-	post("/api/bundles/pack-common-people-v3/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-common-people-v4/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	// Periods: the close_period door and the lock rule are common verbs.
 	if _, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", "common", "periods.json"), "test"); err != nil {
 		t.Fatal(err)
 	}
-	post("/api/bundles/pack-common-periods-v2/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-common-periods-v3/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	// Documents: the issued_document the JPK file becomes.
 	if _, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", "common", "documents.json"), "test"); err != nil {
 		t.Fatal(err)
 	}
-	post("/api/bundles/pack-common-documents-v4/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-common-documents-v5/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 
 	// Load the pack: 25 types (the invoices with their open amounts and
 	// dates, the bank operation, the matching difference, the company with
@@ -113,22 +113,23 @@ func TestM3PolandPack(t *testing.T) {
 	// declare_company_form, set_cost_account, declare_company_accounts,
 	// classify_bank_operation, set_tax_treatment, declare_cit_status,
 	// recompute_cit_advance, spread_cost), 49 master-data events. (The counts
-	// below are the pack as it stands; v44 added enter_company and its two rules.)
+	// below are the pack as it stands; v44 added enter_company and its two rules,
+	// v45 wrote the pack as 24 Apps.)
 	packPath := filepath.Join("..", "..", "packs", "pl", "pack.json")
 	sum, err := pack.Load(ctx, s, packPath, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 41 || sum.Views != 38 || sum.Rules != 138 || sum.Activities != 39 || sum.Events != 67 || sum.Skipped != 0 ||
-		sum.Bundle != "pack-pl-v44" {
+	if sum.Types != 41 || sum.Views != 38 || sum.Rules != 138 || sum.Activities != 39 || sum.Events != 67 || sum.Apps != 24 || sum.Skipped != 0 ||
+		sum.Bundle != "pack-pl-v45" {
 		t.Fatalf("first load: %+v", sum)
 	}
-	// Idempotent: a reload changes nothing.
+	// Idempotent: a reload changes nothing — its 24 Apps skipped with the rest.
 	sum, err = pack.Load(ctx, s, packPath, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Skipped != 323 || sum.Bundle != "" {
+	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Apps != 0 || sum.Skipped != 347 || sum.Bundle != "" {
 		t.Fatalf("reload: %+v", sum)
 	}
 
@@ -148,7 +149,7 @@ func TestM3PolandPack(t *testing.T) {
 	// Approving the pack's bundle IS the installation: its types, views and
 	// rules activate together, and the chart of accounts and the VAT rates
 	// materialize from the waiting events.
-	post("/api/bundles/pack-pl-v44/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-pl-v45/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {
 		t.Fatalf("worklist not cleared after approvals: %d", len(wl))
 	}

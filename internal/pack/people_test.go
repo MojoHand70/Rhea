@@ -27,8 +27,9 @@ func TestPeoplePack(t *testing.T) {
 		t.Fatal(err)
 	}
 	// v3 (DIRECTION 2026-10-19, "People and rights"): the person and the
-	// five notions of who may do what, the pack's roles as master data.
-	if sum.Types != 6 || sum.Rules != 15 || sum.Activities != 13 || sum.Views != 1 || sum.Events != 5 || sum.Bundle != "pack-common-people-v3" {
+	// five notions of who may do what, the pack's roles as master data; v4
+	// writes them as one App (2026-10-26).
+	if sum.Types != 6 || sum.Rules != 15 || sum.Activities != 13 || sum.Views != 1 || sum.Events != 5 || sum.Apps != 1 || sum.Bundle != "pack-common-people-v4" {
 		t.Fatalf("load: %+v", sum)
 	}
 	if _, booked, errs, err := x.ApproveBundle(ctx, sum.Bundle, "krzysztof", "2026-09-01"); err != nil || len(errs) != 0 || booked != 5 {

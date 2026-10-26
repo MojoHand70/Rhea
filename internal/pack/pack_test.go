@@ -31,12 +31,20 @@ func TestPolishPZPack(t *testing.T) {
 		}
 		var defs struct {
 			ObjectTypes []core.ObjectType `json:"object_types"`
+			ViewDefs    []core.ViewDef    `json:"view_defs"`
 		}
 		if err := json.Unmarshal(b, &defs); err != nil {
 			t.Fatal(err)
 		}
 		for _, ot := range defs.ObjectTypes {
 			if err := s.InsertObjectType(ctx, ot); err != nil {
+				t.Fatal(err)
+			}
+		}
+		// the founding screens too: the Poland pack's Apps name the core's
+		// (its chart of accounts, its companies) since it was written as Apps
+		for _, vd := range defs.ViewDefs {
+			if err := s.InsertViewDef(ctx, vd); err != nil {
 				t.Fatal(err)
 			}
 		}

@@ -1,0 +1,223 @@
+{
+  "app": "documents",
+  "version": 1,
+  "title": "Documents",
+  "layer": "platform",
+  "data": [
+    {
+      "name": "received_document",
+      "version": 2,
+      "domain": "intake",
+      "is_document": true,
+      "label_field": "name",
+      "fields": [
+        {
+          "name": "hash",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "media_type",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "size",
+          "type": "int",
+          "required": true
+        },
+        {
+          "name": "source",
+          "type": "string"
+        },
+        {
+          "name": "received_on",
+          "type": "date"
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "received",
+            "read",
+            "set_aside"
+          ]
+        }
+      ],
+      "lifecycle": {
+        "field": "status",
+        "transitions": {
+          "received": [
+            "read",
+            "set_aside"
+          ],
+          "set_aside": [
+            "received",
+            "read"
+          ]
+        }
+      }
+    },
+    {
+      "name": "issued_document",
+      "version": 1,
+      "domain": "system",
+      "is_document": true,
+      "label_field": "name",
+      "fields": [
+        {
+          "name": "hash",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "media_type",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "size",
+          "type": "int",
+          "required": true
+        },
+        {
+          "name": "writer",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "params",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "issued"
+          ]
+        }
+      ]
+    }
+  ],
+  "tabs": [
+    {
+      "view_id": "issued-documents",
+      "version": 1,
+      "notion": "list",
+      "title": "Issued documents",
+      "domain": "system",
+      "function": "documents",
+      "spec": {
+        "object_type": "issued_document",
+        "columns": [
+          {
+            "field": "name",
+            "label": "File"
+          },
+          {
+            "field": "writer",
+            "label": "Writer"
+          },
+          {
+            "field": "params",
+            "label": "Parameters"
+          },
+          {
+            "field": "size",
+            "label": "Size"
+          },
+          {
+            "field": "hash",
+            "label": "Hash"
+          }
+        ]
+      }
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "register-received-document",
+      "priority": 10,
+      "effective_from": "2026-01-01",
+      "description": "A received file becomes a received_document, waiting for a reader; the day it arrived is received_on",
+      "spec": {
+        "match": {
+          "event_type": "document.received"
+        },
+        "effect": {
+          "object": {
+            "type": "received_document",
+            "fields": {
+              "hash": "=$.file.hash",
+              "name": "=$.file.name",
+              "media_type": "=$.file.media_type",
+              "size": "=$.file.size",
+              "source": "=$.source",
+              "status": "received",
+              "received_on": "=$.date"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "mark-document-read",
+      "priority": 10,
+      "effective_from": "2026-01-01",
+      "description": "A document a channel has read moves to read: its facts are now typed events of their own, each naming the file by hash",
+      "spec": {
+        "match": {
+          "event_type": "document.read"
+        },
+        "effect": {
+          "amend": {
+            "type": "received_document",
+            "target": "=ref(received_document, hash, $.document)",
+            "set": {
+              "status": "read"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "register-issued-document",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "A file handed over through issue_document is an issued_document: what was rendered (the writer and its parameters) and the hash that seals it",
+      "spec": {
+        "match": {
+          "event_type": "document.issued"
+        },
+        "effect": {
+          "object": {
+            "type": "issued_document",
+            "fields": {
+              "hash": "=$.file.hash",
+              "name": "=$.file.name",
+              "media_type": "=$.file.media_type",
+              "size": "=$.file.size",
+              "writer": "=$.writer",
+              "params": "=$.params",
+              "status": "issued"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -130,10 +129,9 @@ func TestThePackSpeaks(t *testing.T) {
 	// or another pack's (the base seeds, the common packs, all in English) with
 	// its Polish title in the words. The kernel's own lists of a type are named
 	// by the type's words.
-	var own struct {
-		ViewDefs []core.ViewDef `json:"view_defs"`
-	}
-	if b, err := os.ReadFile(filepath.Join("..", "..", "packs", "pl", "pack.json")); err != nil || json.Unmarshal(b, &own) != nil {
+	// the pack's own views, read through its Apps (written as Apps 2026-10-26)
+	own, _, err := pack.ReadFile(filepath.Join("..", "..", "packs", "pl", "pack.json"))
+	if err != nil {
 		t.Fatalf("the Poland pack: %v", err)
 	}
 	ours := map[string]bool{}

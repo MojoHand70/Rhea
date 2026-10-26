@@ -1,0 +1,127 @@
+{
+  "app": "invoices",
+  "version": 1,
+  "title": "Invoices",
+  "layer": "core",
+  "data": [
+    {
+      "name": "invoice",
+      "version": 2,
+      "domain": "finance",
+      "is_document": true,
+      "fields": [
+        {
+          "name": "customer",
+          "type": "ref<company>",
+          "required": true
+        },
+        {
+          "name": "issue_date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "total",
+          "type": "money",
+          "required": true
+        }
+      ]
+    }
+  ],
+  "tabs": [
+    {
+      "view_id": "invoice-list",
+      "version": 1,
+      "notion": "list",
+      "title": "Invoices",
+      "domain": "finance",
+      "function": "documents",
+      "spec": {
+        "object_type": "invoice",
+        "columns": [
+          {
+            "field": "customer",
+            "label": "Customer"
+          },
+          {
+            "field": "issue_date",
+            "label": "Issue date"
+          },
+          {
+            "field": "currency",
+            "label": "Currency"
+          },
+          {
+            "field": "total",
+            "label": "Total"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "invoice-by-customer",
+      "version": 2,
+      "notion": "analysis",
+      "title": "Invoice totals by customer",
+      "domain": "finance",
+      "function": "analysis",
+      "spec": {
+        "sql_file": "invoice-by-customer.sql",
+        "columns": [
+          {
+            "field": "customer",
+            "label": "Customer",
+            "type": "string"
+          },
+          {
+            "field": "invoices",
+            "label": "Invoices",
+            "type": "int"
+          },
+          {
+            "field": "total",
+            "label": "Total",
+            "type": "money"
+          }
+        ]
+      }
+    }
+  ],
+  "record": {
+    "of": "invoice",
+    "tabs": [
+      {
+        "view_id": "invoice-detail",
+        "version": 1,
+        "notion": "detail",
+        "title": "Invoice",
+        "domain": "finance",
+        "function": "documents",
+        "spec": {
+          "object_type": "invoice",
+          "sections": [
+            {
+              "title": "Document",
+              "fields": [
+                "customer",
+                "issue_date",
+                "currency"
+              ]
+            },
+            {
+              "title": "Amounts",
+              "fields": [
+                "total"
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

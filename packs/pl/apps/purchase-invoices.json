@@ -1,0 +1,474 @@
+{
+  "app": "purchase-invoices",
+  "version": 2,
+  "title": "Faktury zakupu",
+  "layer": "law",
+  "data": [
+    {
+      "name": "purchase_invoice",
+      "version": 6,
+      "domain": "finance",
+      "is_document": true,
+      "label_field": "number",
+      "fields": [
+        {
+          "name": "number",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "invoice_date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "sale_date",
+          "type": "date",
+          "required": false
+        },
+        {
+          "name": "received_date",
+          "type": "date",
+          "required": false
+        },
+        {
+          "name": "supplier",
+          "type": "ref<company>",
+          "required": true
+        },
+        {
+          "name": "owner",
+          "type": "ref<company>",
+          "required": true
+        },
+        {
+          "name": "mirror_of",
+          "type": "ref<sales_invoice>",
+          "required": false
+        },
+        {
+          "name": "net",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "vat",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "gross",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "vat_rate",
+          "type": "ref<vat_rate>",
+          "required": false
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "open",
+          "type": "money",
+          "required": false
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "values": [
+            "open",
+            "paid"
+          ],
+          "required": false
+        },
+        {
+          "name": "vat_period",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "ksef_ref",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "net_pln",
+          "type": "money",
+          "required": false
+        },
+        {
+          "name": "vat_pln",
+          "type": "money",
+          "required": false
+        }
+      ],
+      "lifecycle": {
+        "field": "status",
+        "transitions": {
+          "open": [
+            "open",
+            "paid"
+          ],
+          "paid": [
+            "open"
+          ]
+        }
+      },
+      "amendable": [
+        "open"
+      ]
+    }
+  ],
+  "uses": [
+    "posting",
+    "company"
+  ],
+  "tabs": [
+    {
+      "view": "purchase-invoice-list"
+    }
+  ],
+  "record": {
+    "of": "purchase_invoice",
+    "tabs": [
+      {
+        "desk": "document-sheet",
+        "title": "Faktura"
+      }
+    ]
+  },
+  "actions": [
+    {
+      "name": "set_cost_account",
+      "domain": "finance",
+      "description": "Firma mówi, czym są faktury tego dostawcy: konto kosztowe z planu kont (np. 402 zużycie materiałów i energii dla paliwa, 403 usługi obce, 409 pozostałe koszty rodzajowe, 330 towary) — tam trafią jego zakupy bez dokumentu dostawy",
+      "spec": {
+        "inputs": [
+          {
+            "name": "company",
+            "type": "ref<company>",
+            "required": true
+          },
+          {
+            "name": "account",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "company.cost_account.set",
+        "who": [
+          "human"
+        ]
+      }
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "pl-book-purchase-invoice",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Faktura zakupu spoza KSeF (bez numeru KSeF) staje się dokumentem purchase_invoice: dostawca i nabywca po NIP, kwoty takie, jak podaje dokument; kwota otwarta zaczyna się od brutto, status od open; data sprzedaży u dostawcy (P_6, inaczej data faktury) i data otrzymania (KSeF: dzień nadania numeru; inny dokument: dzień, w którym wpłynął); okres VAT = późniejszy z miesięcy sprzedaży i otrzymania — najwcześniejszy, w którym wolno odliczyć; netto i VAT w złotych po kursie średnim NBP z ostatniego dnia roboczego przed dniem sprzedaży (dla PLN — te same kwoty)",
+      "spec": {
+        "match": {
+          "event_type": "purchase.invoice.received",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            },
+            {
+              "path": "$.ksef_ref",
+              "op": "absent"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "purchase_invoice",
+            "fields": {
+              "number": "=$.number",
+              "invoice_date": "=$.invoice_date",
+              "supplier": "=ref(company, vat_id, $.supplier_nip)",
+              "owner": "=ref(company, vat_id, $.buyer_nip)",
+              "net": "=$.net",
+              "vat": "=$.vat",
+              "gross": "=$.gross",
+              "vat_rate": "=ref(vat_rate, code, $.vat_rate)",
+              "currency": "=$.currency",
+              "open": "=$.gross",
+              "status": "open",
+              "vat_period": "=month(max(coalesce($.sale_date, $.invoice_date), coalesce($.received_date, $.invoice_date)))",
+              "sale_date": "=coalesce($.sale_date, $.invoice_date)",
+              "received_date": "=coalesce($.received_date, $.invoice_date)",
+              "net_pln": "=round($.net * fx($.currency, \"PLN\", coalesce($.sale_date, $.invoice_date)), 2, half_up)",
+              "vat_pln": "=round($.vat * fx($.currency, \"PLN\", coalesce($.sale_date, $.invoice_date)), 2, half_up)"
+            }
+          }
+        }
+      },
+      "version": 5,
+      "warrant": {
+        "basis": "statute",
+        "citations": [
+          "ustawa o VAT art. 86 ust. 10: prawo do odliczenia powstaje „w rozliczeniu za okres, w którym w odniesieniu do nabytych (...) towarów i usług powstał obowiązek podatkowy”",
+          "ustawa o VAT art. 86 ust. 10b pkt 1: „nie wcześniej niż w rozliczeniu za okres, w którym podatnik otrzymał fakturę”",
+          "ustawa o VAT art. 106na ust. 3: „Faktura ustrukturyzowana jest uznana za otrzymaną przy użyciu Krajowego Systemu e-Faktur w dniu przydzielenia w tym systemie numeru identyfikującego tę fakturę”",
+          "ustawa o VAT art. 86 ust. 11: późniejsze odliczenie — w jednym z trzech następnych okresów — to wybór osoby, zapisywany poprawką z powodem",
+          "poza tą regułą: dostawca na metodzie kasowej (P_16 = 1) — odliczenie dopiero w okresie zapłaty (art. 21 ust. 1)",
+          "ustawa o VAT art. 31a ust. 1: kwoty w walucie obcej przelicza się na złote według kursu średniego NBP z ostatniego dnia roboczego poprzedzającego dzień powstania obowiązku podatkowego",
+          "ustawa o VAT art. 106e ust. 11: kwota podatku na fakturze w walucie obcej jest wykazana w złotych",
+          "ustawa o rachunkowości art. 30 ust. 2 pkt 2: po kursie średnim NBP z dnia poprzedzającego; ustawa o CIT art. 12 ust. 2, ustawa o PIT art. 11a ust. 1: przychód — po kursie z ostatniego dnia roboczego przed jego dniem",
+          "kurs „dnia d” w Rhea to kurs, po którym przelicza się dokument z dnia d (kanał pl-nbp publikuje go z tabeli z ostatniego dnia roboczego przed d) — stąd fx(waluta, \"PLN\", dzień sprzedaży)"
+        ],
+        "scope": "pl"
+      }
+    },
+    {
+      "rule_id": "pl-book-purchase-invoice-ksef",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Faktura zakupu z numerem KSeF (do ewidencji JPK) staje się dokumentem purchase_invoice: dostawca i nabywca po NIP, kwoty takie, jak podaje dokument; kwota otwarta zaczyna się od brutto, status od open; data sprzedaży u dostawcy (P_6, inaczej data faktury) i data otrzymania (KSeF: dzień nadania numeru; inny dokument: dzień, w którym wpłynął); okres VAT = późniejszy z miesięcy sprzedaży i otrzymania — najwcześniejszy, w którym wolno odliczyć; netto i VAT w złotych po kursie średnim NBP z ostatniego dnia roboczego przed dniem sprzedaży (dla PLN — te same kwoty)",
+      "spec": {
+        "match": {
+          "event_type": "purchase.invoice.received",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            },
+            {
+              "path": "$.ksef_ref",
+              "op": "exists"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "purchase_invoice",
+            "fields": {
+              "number": "=$.number",
+              "invoice_date": "=$.invoice_date",
+              "supplier": "=ref(company, vat_id, $.supplier_nip)",
+              "owner": "=ref(company, vat_id, $.buyer_nip)",
+              "net": "=$.net",
+              "vat": "=$.vat",
+              "gross": "=$.gross",
+              "vat_rate": "=ref(vat_rate, code, $.vat_rate)",
+              "currency": "=$.currency",
+              "open": "=$.gross",
+              "status": "open",
+              "vat_period": "=month(max(coalesce($.sale_date, $.invoice_date), coalesce($.received_date, $.invoice_date)))",
+              "ksef_ref": "=$.ksef_ref",
+              "sale_date": "=coalesce($.sale_date, $.invoice_date)",
+              "received_date": "=coalesce($.received_date, $.invoice_date)",
+              "net_pln": "=round($.net * fx($.currency, \"PLN\", coalesce($.sale_date, $.invoice_date)), 2, half_up)",
+              "vat_pln": "=round($.vat * fx($.currency, \"PLN\", coalesce($.sale_date, $.invoice_date)), 2, half_up)"
+            }
+          }
+        }
+      },
+      "version": 3,
+      "warrant": {
+        "basis": "statute",
+        "citations": [
+          "ustawa o VAT art. 86 ust. 10: prawo do odliczenia powstaje „w rozliczeniu za okres, w którym w odniesieniu do nabytych (...) towarów i usług powstał obowiązek podatkowy”",
+          "ustawa o VAT art. 86 ust. 10b pkt 1: „nie wcześniej niż w rozliczeniu za okres, w którym podatnik otrzymał fakturę”",
+          "ustawa o VAT art. 106na ust. 3: „Faktura ustrukturyzowana jest uznana za otrzymaną przy użyciu Krajowego Systemu e-Faktur w dniu przydzielenia w tym systemie numeru identyfikującego tę fakturę”",
+          "ustawa o VAT art. 86 ust. 11: późniejsze odliczenie — w jednym z trzech następnych okresów — to wybór osoby, zapisywany poprawką z powodem",
+          "poza tą regułą: dostawca na metodzie kasowej (P_16 = 1) — odliczenie dopiero w okresie zapłaty (art. 21 ust. 1)",
+          "ustawa o VAT art. 31a ust. 1: kwoty w walucie obcej przelicza się na złote według kursu średniego NBP z ostatniego dnia roboczego poprzedzającego dzień powstania obowiązku podatkowego",
+          "ustawa o VAT art. 106e ust. 11: kwota podatku na fakturze w walucie obcej jest wykazana w złotych",
+          "ustawa o rachunkowości art. 30 ust. 2 pkt 2: po kursie średnim NBP z dnia poprzedzającego; ustawa o CIT art. 12 ust. 2, ustawa o PIT art. 11a ust. 1: przychód — po kursie z ostatniego dnia roboczego przed jego dniem",
+          "kurs „dnia d” w Rhea to kurs, po którym przelicza się dokument z dnia d (kanał pl-nbp publikuje go z tabeli z ostatniego dnia roboczego przed d) — stąd fx(waluta, \"PLN\", dzień sprzedaży)"
+        ],
+        "scope": "pl"
+      }
+    },
+    {
+      "rule_id": "pl-post-purchase-invoice",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Faktura zakupu z VAT do odliczenia (nabywca czynny podatnik VAT) księguje się: Wn koszt netto (konto dostawcy, inaczej 403; zakup z dokumentem dostawy — 300 do rozliczenia z PZ), Wn 221 VAT naliczony / Ma 202 brutto; w walucie obcej — po kursie z dnia sprzedaży, tym samym co VAT w złotych",
+      "spec": {
+        "match": {
+          "event_type": "purchase.invoice.received",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            },
+            {
+              "formula": "=$.vat > 0 and coalesce(ref(company, vat_id, $.buyer_nip).vat_status, \"active\") = \"active\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "currency": "=$.currency",
+            "lines": [
+              {
+                "account": "=if(coalesce($.for_document, \"\") <> \"\", \"300\", coalesce(ref(company, vat_id, $.supplier_nip).cost_account, \"403\"))",
+                "debit": "=$.net"
+              },
+              {
+                "account": "221",
+                "debit": "=$.vat"
+              },
+              {
+                "account": "202",
+                "credit": "=$.gross"
+              }
+            ],
+            "book": "pl-stat",
+            "convert": {
+              "to": "PLN",
+              "date": "=coalesce($.sale_date, $.invoice_date)",
+              "rounding": "half_up",
+              "rounding_account": "756"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "citations": [
+          "ustawa o VAT art. 86 ust. 1: podatnikowi przysługuje prawo do obniżenia podatku należnego o podatek naliczony — w zakresie, w jakim zakupy służą czynnościom opodatkowanym",
+          "ustawa o rachunkowości art. 3 ust. 1 pkt 31 i art. 6 ust. 1: koszty okresu ujmuje się w okresie, którego dotyczą — zakup usługi jest kosztem, nie rozliczeniem zakupu",
+          "wzorcowy plan kont: zespół 4 — koszty według rodzajów (402 zużycie materiałów i energii, 403 usługi obce, 409 pozostałe); konto 300 rozlicza zakup towarów i materiałów z ich przyjęciem (PZ) i wraca do zera",
+          "domyślne 403 dla zakupu bez dokumentu dostawy i bez konta dostawcy: najczęstszy koszt małej firmy; zysk się nie zmienia, gdy rodzaj kosztu okaże się inny — zmienia go set_cost_account",
+          "ustawa o rachunkowości art. 30 ust. 2 pkt 2: po kursie średnim NBP z dnia poprzedzającego; ustawa o CIT art. 12 ust. 2, ustawa o PIT art. 11a ust. 1: przychód — po kursie z ostatniego dnia roboczego przed jego dniem"
+        ],
+        "scope": "pl"
+      }
+    },
+    {
+      "rule_id": "pl-post-purchase-invoice-gross",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Faktura zakupu bez VAT do odliczenia — bez VAT (zw, 0%) albo kupiona przez firmę zwolnioną z VAT — księguje się brutto: Wn koszt (konto dostawcy, inaczej 403; z dokumentem dostawy — 300) / Ma 202; VAT, którego nie wolno odliczyć, jest częścią kosztu; w walucie obcej — po kursie z dnia sprzedaży, tym samym co VAT w złotych",
+      "spec": {
+        "match": {
+          "event_type": "purchase.invoice.received",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            },
+            {
+              "formula": "=not ($.vat > 0 and coalesce(ref(company, vat_id, $.buyer_nip).vat_status, \"active\") = \"active\")"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "currency": "=$.currency",
+            "lines": [
+              {
+                "account": "=if(coalesce($.for_document, \"\") <> \"\", \"300\", coalesce(ref(company, vat_id, $.supplier_nip).cost_account, \"403\"))",
+                "debit": "=$.gross"
+              },
+              {
+                "account": "202",
+                "credit": "=$.gross"
+              }
+            ],
+            "book": "pl-stat",
+            "convert": {
+              "to": "PLN",
+              "date": "=coalesce($.sale_date, $.invoice_date)",
+              "rounding": "half_up",
+              "rounding_account": "756"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "citations": [
+          "ustawa o PIT art. 23 ust. 1 pkt 43 lit. a: podatek naliczony jest kosztem, „jeżeli podatnik zwolniony jest od podatku od towarów i usług”",
+          "rozporządzenie w sprawie KPiR § 2 pkt 2: cena zakupu pomniejszona tylko o podatek „podlegający odliczeniu zgodnie z odrębnymi przepisami”",
+          "ustawa o rachunkowości art. 28 ust. 2: cena nabycia obejmuje podatek, którego nie można odliczyć",
+          "ustawa o rachunkowości art. 3 ust. 1 pkt 31 i art. 6 ust. 1: koszty okresu ujmuje się w okresie, którego dotyczą — zakup usługi jest kosztem, nie rozliczeniem zakupu",
+          "wzorcowy plan kont: zespół 4 — koszty według rodzajów (402 zużycie materiałów i energii, 403 usługi obce, 409 pozostałe); konto 300 rozlicza zakup towarów i materiałów z ich przyjęciem (PZ) i wraca do zera",
+          "ustawa o rachunkowości art. 30 ust. 2 pkt 2: po kursie średnim NBP z dnia poprzedzającego; ustawa o CIT art. 12 ust. 2, ustawa o PIT art. 11a ust. 1: przychód — po kursie z ostatniego dnia roboczego przed jego dniem"
+        ],
+        "scope": "pl"
+      }
+    },
+    {
+      "rule_id": "pl-supplier-account",
+      "priority": 110,
+      "effective_from": "2026-01-01",
+      "description": "Rachunek dostawcy z faktury zakupu (KSeF) uzupełnia IBAN kontrahenta",
+      "spec": {
+        "match": {
+          "event_type": "purchase.invoice.received",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            },
+            {
+              "path": "$.supplier_account",
+              "op": "exists"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "company",
+            "target": "=ref(company, vat_id, $.supplier_nip)",
+            "set": {
+              "iban": "=$.supplier_account"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-set-cost-account",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Konto kosztowe dostawcy, jak je podano — jeśli jest w planie kont; konto spoza planu nie pasuje i czeka",
+      "spec": {
+        "match": {
+          "event_type": "company.cost_account.set",
+          "where": [
+            {
+              "formula": "=any(a in objects(account, code, $.account) : a.code = $.account)"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "company",
+            "target": "=$.company",
+            "set": {
+              "cost_account": "=$.account"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "practice",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 10 ust. 1 pkt 3 lit. a: zakładowy plan kont ustala jednostka — przypisanie dostawcy do konta kosztów to jej wybór, zapisany jak każda reguła"
+        ]
+      }
+    }
+  ]
+}

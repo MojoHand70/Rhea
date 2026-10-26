@@ -1,0 +1,105 @@
+{
+  "app": "reports",
+  "version": 1,
+  "title": "Raporty",
+  "layer": "law",
+  "tabs": [
+    {
+      "view_id": "wynik",
+      "version": 1,
+      "notion": "analysis",
+      "title": "Wynik od początku roku",
+      "domain": "finance",
+      "function": "analysis",
+      "spec": {
+        "sql_file": "wynik.sql",
+        "columns": [
+          {
+            "field": "op",
+            "label": "",
+            "type": "string"
+          },
+          {
+            "field": "line",
+            "label": "Pozycja",
+            "type": "string"
+          },
+          {
+            "field": "amount",
+            "label": "Kwota",
+            "type": "money"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "wynik-miesiace",
+      "version": 1,
+      "notion": "analysis",
+      "title": "Wynik miesiąc po miesiącu",
+      "domain": "finance",
+      "function": "analysis",
+      "spec": {
+        "sql_file": "wynik-miesiace.sql",
+        "columns": [
+          {
+            "field": "month",
+            "label": "Miesiąc",
+            "type": "string"
+          },
+          {
+            "field": "op",
+            "label": "",
+            "type": "string"
+          },
+          {
+            "field": "line",
+            "label": "Pozycja",
+            "type": "string"
+          },
+          {
+            "field": "amount",
+            "label": "Kwota",
+            "type": "money"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "naleznosci-wiek",
+      "version": 1,
+      "notion": "analysis",
+      "title": "Należności według wieku",
+      "domain": "finance",
+      "function": "rozrachunki",
+      "spec": {
+        "sql_file": "naleznosci-wiek.sql",
+        "columns": [
+          {
+            "field": "op",
+            "label": "",
+            "type": "string"
+          },
+          {
+            "field": "bucket",
+            "label": "Wiek od wystawienia",
+            "type": "string"
+          },
+          {
+            "field": "count",
+            "label": "Faktur",
+            "type": "int"
+          },
+          {
+            "field": "open",
+            "label": "Do zapłaty",
+            "type": "money",
+            "sum_of": [
+              "open"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

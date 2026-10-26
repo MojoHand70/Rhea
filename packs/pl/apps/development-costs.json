@@ -1,0 +1,341 @@
+{
+  "app": "development-costs",
+  "version": 1,
+  "title": "Prace rozwojowe",
+  "layer": "law",
+  "data": [
+    {
+      "name": "development_costs",
+      "version": 1,
+      "domain": "finance",
+      "label_field": "title",
+      "lifecycle": {
+        "field": "status",
+        "transitions": {
+          "active": [
+            "active",
+            "written_off"
+          ]
+        }
+      },
+      "amendable": [
+        "unamortised"
+      ],
+      "fields": [
+        {
+          "name": "title",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "unamortised",
+          "type": "money",
+          "required": true,
+          "description": "nieodpisana część — ogranicza podział zysku (KSH art. 191 § 4)"
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "useful_life_years",
+          "type": "int",
+          "required": false,
+          "description": "okres ekonomicznej użyteczności; gdy nieznany, odpisy nie dłużej niż 5 lat (art. 33 ust. 3)"
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "active",
+            "written_off"
+          ]
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ]
+    }
+  ],
+  "uses": [
+    "posting"
+  ],
+  "tabs": [
+    {
+      "view_id": "prace-rozwojowe",
+      "version": 1,
+      "notion": "list",
+      "title": "Prace rozwojowe",
+      "domain": "finance",
+      "function": "fixed_assets",
+      "spec": {
+        "object_type": "development_costs",
+        "columns": [
+          {
+            "field": "title",
+            "label": "Tytuł"
+          },
+          {
+            "field": "date",
+            "label": "Aktywowane"
+          },
+          {
+            "field": "amount",
+            "label": "Kwota"
+          },
+          {
+            "field": "unamortised",
+            "label": "Nieodpisane"
+          },
+          {
+            "field": "useful_life_years",
+            "label": "Okres (lata)"
+          },
+          {
+            "field": "status",
+            "label": "Status"
+          }
+        ]
+      }
+    }
+  ],
+  "actions": [
+    {
+      "name": "capitalise_development_costs",
+      "domain": "finance",
+      "description": "Zakończone prace rozwojowe na własne potrzeby, których produkt lub technologia są ustalone, przydatność stwierdzona, a koszty mają się pokryć przychodami, przenosi się z kosztów roku do wartości niematerialnych i prawnych (art. 33 ust. 2 UoR): Wn 020 / Ma 490; odpisuje się je przez okres użyteczności, nie dłużej niż 5 lat, gdy nie da się go oszacować (ust. 3)",
+      "spec": {
+        "inputs": [
+          {
+            "name": "title",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "amount",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "useful_life_years",
+            "type": "int",
+            "required": false
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "development_costs.capitalised",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "amortise_development_costs",
+      "domain": "finance",
+      "description": "Odpis kosztów prac rozwojowych za okres: Wn 401 / Ma 075; nieodpisana część maleje, a przy zerze prace są odpisane (art. 33 ust. 3 UoR)",
+      "spec": {
+        "inputs": [
+          {
+            "name": "development_costs",
+            "type": "ref<development_costs>",
+            "required": true
+          },
+          {
+            "name": "amount",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "development_costs.amortised",
+        "who": [
+          "human"
+        ]
+      }
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "pl-record-development-costs",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Aktywowane prace rozwojowe stają się obiektem development_costs; nieodpisana część zaczyna się od całej kwoty",
+      "spec": {
+        "match": {
+          "event_type": "development_costs.capitalised",
+          "where": [
+            {
+              "formula": "=$.amount > 0"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "development_costs",
+            "fields": {
+              "title": "=$.title",
+              "amount": "=$.amount",
+              "unamortised": "=$.amount",
+              "date": "=$.date",
+              "useful_life_years": "=$.useful_life_years",
+              "status": "active",
+              "book": "pl-stat"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 33 ust. 2: koszty zakończonych prac rozwojowych na własne potrzeby, poniesione przed podjęciem produkcji lub zastosowaniem technologii, zalicza się do wartości niematerialnych i prawnych, jeżeli produkt lub technologia są ściśle ustalone, techniczna przydatność stwierdzona i udokumentowana, a koszty zostaną pokryte przychodami",
+          "ustawa o rachunkowości art. 33 ust. 3: koszty prac rozwojowych odpisuje się przez okres ekonomicznej użyteczności ich rezultatów; gdy nie można go wiarygodnie oszacować, nie dłużej niż 5 lat"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-development-costs",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Aktywowanie prac rozwojowych w wariancie porównawczym: Wn 020 Wartości niematerialne i prawne / Ma 490 Rozliczenie kosztów — koszty rodzajowe roku zostają, 490 je zdejmuje z wyniku",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "development_costs"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.date",
+            "lines": [
+              {
+                "account": "020",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "490",
+                "credit": "=$.state.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 33 ust. 2: koszty zakończonych prac rozwojowych na własne potrzeby, poniesione przed podjęciem produkcji lub zastosowaniem technologii, zalicza się do wartości niematerialnych i prawnych, jeżeli produkt lub technologia są ściśle ustalone, techniczna przydatność stwierdzona i udokumentowana, a koszty zostaną pokryte przychodami",
+          "wzorcowy plan kont: 020 Wartości niematerialne i prawne, 075 Umorzenie wartości niematerialnych i prawnych, 401 Amortyzacja, 490 Rozliczenie kosztów, 813 Kapitał z aktualizacji wyceny, 820 Rozliczenie wyniku finansowego, 830 Rezerwy na zobowiązania"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-amortise-development-costs",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Odpis zmniejsza nieodpisaną część; przy zerze prace rozwojowe są odpisane; odpis ponad nieodpisaną część nie pasuje do żadnej reguły",
+      "spec": {
+        "match": {
+          "event_type": "development_costs.amortised",
+          "where": [
+            {
+              "formula": "=$.amount > 0 and $.amount <= $.development_costs.unamortised"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "development_costs",
+            "target": "=$.development_costs",
+            "set": {
+              "unamortised": "=$.development_costs.unamortised - $.amount",
+              "status": "=if($.development_costs.unamortised - $.amount = 0, \"written_off\", \"active\")"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 33 ust. 3: koszty prac rozwojowych odpisuje się przez okres ekonomicznej użyteczności ich rezultatów; gdy nie można go wiarygodnie oszacować, nie dłużej niż 5 lat"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-development-costs-amortisation",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Odpis prac rozwojowych za okres: Wn 401 Amortyzacja / Ma 075 Umorzenie wartości niematerialnych i prawnych",
+      "spec": {
+        "match": {
+          "event_type": "development_costs.amortised",
+          "where": [
+            {
+              "formula": "=$.amount > 0 and $.amount <= $.development_costs.unamortised"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.date",
+            "lines": [
+              {
+                "account": "401",
+                "debit": "=$.amount"
+              },
+              {
+                "account": "075",
+                "credit": "=$.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 33 ust. 3: koszty prac rozwojowych odpisuje się przez okres ekonomicznej użyteczności ich rezultatów; gdy nie można go wiarygodnie oszacować, nie dłużej niż 5 lat",
+          "wzorcowy plan kont: 020 Wartości niematerialne i prawne, 075 Umorzenie wartości niematerialnych i prawnych, 401 Amortyzacja, 490 Rozliczenie kosztów, 813 Kapitał z aktualizacji wyceny, 820 Rozliczenie wyniku finansowego, 830 Rezerwy na zobowiązania"
+        ]
+      }
+    }
+  ]
+}

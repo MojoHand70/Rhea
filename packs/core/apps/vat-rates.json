@@ -1,0 +1,32 @@
+{
+  "app": "vat-rates",
+  "version": 1,
+  "title": "VAT rates",
+  "layer": "core",
+  "data": [
+    {
+      "name": "vat_rate",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "name",
+      "fields": [
+        {
+          "name": "code",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "percent",
+          "type": "int",
+          "required": true
+        }
+      ]
+    }
+  ]
+}

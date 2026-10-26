@@ -24,12 +24,8 @@ func TestALoadAdoptsOrphanDrafts(t *testing.T) {
 	ctx := context.Background()
 	s := storetest.New(t)
 	path := filepath.Join("..", "..", "packs", "common", "people.json")
-	b, err := os.ReadFile(path)
+	m, _, err := pack.ReadFile(path) // written as Apps since 2026-10-26: its parts read through them
 	if err != nil {
-		t.Fatal(err)
-	}
-	var m pack.Manifest
-	if err := json.Unmarshal(b, &m); err != nil {
 		t.Fatal(err)
 	}
 	// the orphan: the pack's first type, drafted by a load that then failed
@@ -81,11 +77,7 @@ func TestALoadAdoptsOrphanDrafts(t *testing.T) {
 func TestPackChangedWithoutBumpIsRefused(t *testing.T) {
 	ctx := context.Background()
 	s := storetest.New(t)
-	src := filepath.Join("..", "..", "packs", "common", "people.json")
-	b, err := os.ReadFile(src)
-	if err != nil {
-		t.Fatal(err)
-	}
+	b := flatPack(t, filepath.Join("..", "..", "packs", "common", "people.json"))
 	path := filepath.Join(t.TempDir(), "people.json")
 	if err := os.WriteFile(path, b, 0o644); err != nil {
 		t.Fatal(err)
@@ -125,11 +117,7 @@ func TestPackChangedWithoutBumpIsRefused(t *testing.T) {
 func TestPackTypeChangedAtSameVersionIsRefused(t *testing.T) {
 	ctx := context.Background()
 	s := storetest.New(t)
-	src := filepath.Join("..", "..", "packs", "common", "people.json")
-	b, err := os.ReadFile(src)
-	if err != nil {
-		t.Fatal(err)
-	}
+	b := flatPack(t, filepath.Join("..", "..", "packs", "common", "people.json"))
 	path := filepath.Join(t.TempDir(), "people.json")
 	if err := os.WriteFile(path, b, 0o644); err != nil {
 		t.Fatal(err)
@@ -150,4 +138,21 @@ func TestPackTypeChangedAtSameVersionIsRefused(t *testing.T) {
 	if _, err := pack.Load(ctx, s, path, "test"); err == nil || !strings.Contains(err.Error(), "bump the type's version") {
 		t.Fatalf("a changed type at the same version: %v", err)
 	}
+}
+
+// flatPack is a pack file written as it was before Apps, with the same parts:
+// what the tests that edit a pack's parts in place edit since the packs were
+// written as Apps (2026-10-26).
+func flatPack(t *testing.T, src string) []byte {
+	t.Helper()
+	m, _, err := pack.ReadFile(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.Apps = nil
+	b, err := json.Marshal(m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
 }

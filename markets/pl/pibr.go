@@ -293,12 +293,8 @@ func rulebook(paths []string) ([]core.Rule, []core.ObjectType, error) {
 	var rules []core.Rule
 	var types []core.ObjectType
 	for _, path := range paths {
-		b, err := os.ReadFile(path)
+		m, _, err := pack.ReadFile(path) // a pack written as Apps, its parts read through them
 		if err != nil {
-			return nil, nil, err
-		}
-		var m pack.Manifest
-		if err := json.Unmarshal(b, &m); err != nil {
 			return nil, nil, fmt.Errorf("%s: %w", path, err)
 		}
 		for _, r := range m.Rules {

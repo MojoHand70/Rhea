@@ -1,0 +1,1113 @@
+{
+  "app": "cit",
+  "version": 1,
+  "title": "CIT",
+  "layer": "law",
+  "data": [
+    {
+      "name": "cit_limit",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "year_start",
+      "fields": [
+        {
+          "name": "year_start",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "small_taxpayer_limit",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "in_year_limit",
+          "type": "money",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "cit_status",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "year_start",
+      "fields": [
+        {
+          "name": "company",
+          "type": "ref<company>",
+          "required": true
+        },
+        {
+          "name": "year_start",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "started_on",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "formed_by",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "new",
+            "transformation",
+            "contribution"
+          ]
+        },
+        {
+          "name": "reduced",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "yes",
+            "no"
+          ]
+        },
+        {
+          "name": "basis",
+          "type": "string",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "cit_advance",
+      "version": 2,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "period",
+      "fields": [
+        {
+          "name": "period",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "year_start",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "revenue",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "not_taxable",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "costs",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "non_deductible",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "income",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "base",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "rate",
+          "type": "int",
+          "required": true
+        },
+        {
+          "name": "rate_basis",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "tax",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "advances_before",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "advance",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "closed_on",
+          "type": "date",
+          "required": true
+        }
+      ],
+      "amendable": [
+        "advances_before",
+        "advance"
+      ]
+    },
+    {
+      "name": "deferred_tax",
+      "version": 1,
+      "domain": "finance",
+      "label_field": "title",
+      "lifecycle": {
+        "field": "status",
+        "transitions": {
+          "open": [
+            "reversed"
+          ]
+        }
+      },
+      "amendable": [
+        "reversed_on"
+      ],
+      "fields": [
+        {
+          "name": "title",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "item",
+          "type": "string",
+          "required": true,
+          "description": "składnik aktywów albo pasywów, którego dotyczy różnica"
+        },
+        {
+          "name": "side",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "asset",
+            "liability"
+          ]
+        },
+        {
+          "name": "carrying_value",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "tax_value",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "difference",
+          "type": "money",
+          "required": true,
+          "description": "różnica przejściowa, co do wartości"
+        },
+        {
+          "name": "kind",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "liability",
+            "asset"
+          ],
+          "description": "liability = rezerwa (dodatnia różnica), asset = aktywa (ujemna różnica, strata podatkowa)"
+        },
+        {
+          "name": "rate",
+          "type": "decimal",
+          "required": true,
+          "description": "stawka podatku w procentach obowiązująca w roku powstania obowiązku podatkowego (art. 37 ust. 6)"
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "open",
+            "reversed"
+          ]
+        },
+        {
+          "name": "reversed_on",
+          "type": "date",
+          "required": false
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ]
+    }
+  ],
+  "uses": [
+    "posting"
+  ],
+  "tabs": [
+    {
+      "view_id": "zaliczki-cit",
+      "version": 1,
+      "notion": "list",
+      "title": "Zaliczki na CIT",
+      "domain": "finance",
+      "function": "cit",
+      "spec": {
+        "object_type": "cit_advance",
+        "columns": [
+          {
+            "field": "period",
+            "label": "Okres"
+          },
+          {
+            "field": "revenue",
+            "label": "Przychody od początku roku"
+          },
+          {
+            "field": "costs",
+            "label": "Koszty od początku roku"
+          },
+          {
+            "field": "non_deductible",
+            "label": "W tym NKUP"
+          },
+          {
+            "field": "income",
+            "label": "Dochód"
+          },
+          {
+            "field": "rate",
+            "label": "Stawka %"
+          },
+          {
+            "field": "tax",
+            "label": "Podatek od początku roku"
+          },
+          {
+            "field": "advances_before",
+            "label": "Zaliczki wcześniej"
+          },
+          {
+            "field": "advance",
+            "label": "Zaliczka do zapłaty"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "podatek-odroczony",
+      "version": 1,
+      "notion": "list",
+      "title": "Odroczony podatek dochodowy",
+      "domain": "finance",
+      "function": "cit",
+      "spec": {
+        "object_type": "deferred_tax",
+        "columns": [
+          {
+            "field": "title",
+            "label": "Tytuł"
+          },
+          {
+            "field": "item",
+            "label": "Składnik"
+          },
+          {
+            "field": "kind",
+            "label": "Rodzaj"
+          },
+          {
+            "field": "carrying_value",
+            "label": "Wartość bilansowa"
+          },
+          {
+            "field": "tax_value",
+            "label": "Wartość podatkowa"
+          },
+          {
+            "field": "difference",
+            "label": "Różnica"
+          },
+          {
+            "field": "rate",
+            "label": "Stawka"
+          },
+          {
+            "field": "amount",
+            "label": "Kwota"
+          },
+          {
+            "field": "date",
+            "label": "Dzień"
+          },
+          {
+            "field": "status",
+            "label": "Status"
+          }
+        ]
+      }
+    }
+  ],
+  "record": {
+    "of": "cit_advance",
+    "tabs": [
+      {
+        "view_id": "zaliczka-cit",
+        "version": 1,
+        "notion": "statement",
+        "title": "Wyliczenie zaliczki na CIT",
+        "domain": "finance",
+        "function": "cit",
+        "spec": {
+          "object_type": "cit_advance",
+          "sections": [
+            {
+              "title": "Dochód od początku roku",
+              "rows": [
+                {
+                  "field": "revenue"
+                },
+                {
+                  "op": "-",
+                  "field": "not_taxable",
+                  "nonzero": true
+                },
+                {
+                  "op": "-",
+                  "field": "costs"
+                },
+                {
+                  "op": "+",
+                  "field": "non_deductible",
+                  "note": "koszty, które nie są kosztem podatkowym (NKUP)"
+                },
+                {
+                  "op": "=",
+                  "field": "income"
+                }
+              ]
+            },
+            {
+              "title": "Zaliczka",
+              "rows": [
+                {
+                  "field": "base",
+                  "note": "w pełnych złotych (Ordynacja podatkowa art. 63 § 1)"
+                },
+                {
+                  "field": "tax",
+                  "note": "według stawki w polu rate_basis"
+                },
+                {
+                  "op": "-",
+                  "field": "advances_before"
+                },
+                {
+                  "op": "=",
+                  "field": "advance",
+                  "note": "do 20. dnia następnego miesiąca"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "actions": [
+    {
+      "name": "declare_cit_status",
+      "domain": "finance",
+      "description": "Firma płacąca CIT mówi na dany rok podatkowy, kiedy rozpoczęła działalność, czy powstała jako nowa, z przekształcenia, czy z aportu przedsiębiorstwa, i ile sprzedała brutto w roku poprzednim (gdy go miała) — z tego Rhea wie, czy zaliczki liczy stawką 9%, czy 19%",
+      "spec": {
+        "inputs": [
+          {
+            "name": "company",
+            "type": "ref<company>",
+            "required": true
+          },
+          {
+            "name": "year_start",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "started_on",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "formed_by",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "new",
+              "transformation",
+              "contribution"
+            ]
+          },
+          {
+            "name": "prior_year_gross_sales",
+            "type": "money",
+            "required": false
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "company.cit_status.declared",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "recompute_cit_advance",
+      "domain": "finance",
+      "description": "Przelicz zaliczkę na CIT za zamknięty miesiąc (RRRR-MM) względem zaliczek za wcześniejsze miesiące, które są teraz w księgach — np. gdy firma powiedziała, że płaci CIT, dopiero po zamknięciu tych miesięcy; różnica księguje się dziś",
+      "spec": {
+        "inputs": [
+          {
+            "name": "period",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "cit_advance.recomputed",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "recognise_deferred_tax",
+      "domain": "finance",
+      "description": "Na dzień bilansowy księgowy stwierdza różnicę przejściową między wartością bilansową a podatkową składnika aktywów albo pasywów i podaje stawkę podatku roku, w którym obowiązek powstanie: składnik aktywów wart w bilansie więcej niż podatkowo (albo pasywów mniej) daje rezerwę na odroczony podatek, odwrotnie — aktywa z tytułu odroczonego podatku; stratę podatkową do odliczenia wpisuje się jako składnik aktywów o wartości bilansowej 0 i wartości podatkowej równej stracie; jednostka mikro i mała może od ustalania odroczonego podatku odstąpić (art. 37 ust. 1, 4–6 i 10 UoR)",
+      "spec": {
+        "inputs": [
+          {
+            "name": "title",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "item",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "side",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "asset",
+              "liability"
+            ]
+          },
+          {
+            "name": "carrying_value",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "tax_value",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "rate",
+            "type": "decimal",
+            "required": true
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "deferred_tax.recognised",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "reverse_deferred_tax",
+      "domain": "finance",
+      "description": "Różnica przejściowa odwróciła się — składnik sprzedano, zamortyzowano podatkowo, rezerwę wykorzystano, stratę odliczono — i rezerwa albo aktywa z tytułu odroczonego podatku schodzą z ksiąg w dniu odwrócenia (art. 37 ust. 8 UoR: część odroczona podatku to zmiana stanu rezerw i aktywów)",
+      "spec": {
+        "inputs": [
+          {
+            "name": "deferred_tax",
+            "type": "ref<deferred_tax>",
+            "required": true
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "deferred_tax.reversed",
+        "who": [
+          "human"
+        ]
+      }
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "pl-register-cit-limit",
+      "priority": 10,
+      "effective_from": "2026-01-01",
+      "description": "Limity CIT na rok stają się obiektem cit_limit: limit małego podatnika i limit przychodów w roku dla stawki 9%",
+      "spec": {
+        "match": {
+          "event_type": "cit_limit.defined",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "cit_limit",
+            "fields": {
+              "year_start": "=$.year_start",
+              "small_taxpayer_limit": "=$.small_taxpayer_limit",
+              "in_year_limit": "=$.in_year_limit"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o CIT (t.j. Dz.U. 2026 poz. 554) art. 4a pkt 10: mały podatnik — sprzedaż brutto roku poprzedniego do 2 000 000 euro, po kursie NBP z pierwszego dnia roboczego października, w zaokrągleniu do 1000 zł",
+          "ustawa o CIT (t.j. Dz.U. 2026 poz. 554) art. 19 ust. 1 pkt 2 lit. a: limit 2 000 000 euro po kursie NBP z pierwszego dnia roboczego roku podatkowego, w zaokrągleniu do 1000 zł",
+          "podatki.gov.pl, CIT — stawki i limity: na 2026 r. 8 517 000 zł (kurs 4,2586 z 1 października 2025) i 8 431 000 zł (kurs 4,2156 z 2 stycznia 2026)"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-declare-cit-status",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Firma płacąca CIT mówi, kiedy zaczęła działalność, jak powstała i ile sprzedała brutto w roku poprzednim; z tego wynika, czy w tym roku zaliczki liczy się stawką 9%: w roku rozpoczęcia działalności tak, chyba że spółka powstała z przekształcenia albo aportu przedsiębiorstwa (wtedy nie w tym i w następnym roku); w kolejnych latach — gdy jest małym podatnikiem; nowsza deklaracja na ten sam rok zastępuje starszą",
+      "spec": {
+        "match": {
+          "event_type": "company.cit_status.declared",
+          "where": [
+            {
+              "formula": "=$.company.income_tax = \"cit\""
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "cit_status",
+            "fields": {
+              "company": "=$.company",
+              "year_start": "=$.year_start",
+              "started_on": "=$.started_on",
+              "formed_by": "=$.formed_by",
+              "reduced": "=if(not ($.formed_by <> \"new\" and (($.started_on >= $.year_start and $.started_on < add_months($.year_start, 12)) or ($.started_on >= add_months($.year_start, -12) and $.started_on < $.year_start))) and (($.started_on >= $.year_start and $.started_on < add_months($.year_start, 12)) or any(l in objects(cit_limit, year_start, $.year_start) : coalesce($.prior_year_gross_sales, l.small_taxpayer_limit + 1) <= l.small_taxpayer_limit)), \"yes\", \"no\")",
+              "basis": "=if(($.formed_by <> \"new\" and (($.started_on >= $.year_start and $.started_on < add_months($.year_start, 12)) or ($.started_on >= add_months($.year_start, -12) and $.started_on < $.year_start))), \"spółka z przekształcenia albo aportu przedsiębiorstwa: bez 9% w roku rozpoczęcia i w następnym (art. 19 ust. 1a)\", if(($.started_on >= $.year_start and $.started_on < add_months($.year_start, 12)), \"rok rozpoczęcia działalności: 9% bez warunku małego podatnika (art. 19 ust. 1e)\", if(any(l in objects(cit_limit, year_start, $.year_start) : coalesce($.prior_year_gross_sales, l.small_taxpayer_limit + 1) <= l.small_taxpayer_limit), \"mały podatnik: sprzedaż brutto roku poprzedniego w limicie (art. 4a pkt 10, art. 19 ust. 1d)\", \"stawka podstawowa: ani rok rozpoczęcia, ani mały podatnik (art. 19 ust. 1 pkt 1)\")))"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o CIT (t.j. Dz.U. 2026 poz. 554) art. 19 ust. 1 pkt 1 i 2: 19%, a 9% dla podatników, których przychody w roku nie przekroczyły 2 000 000 euro; ust. 1d: 9% wymaga statusu małego podatnika; ust. 1e: warunek nie dotyczy roku rozpoczęcia działalności; ust. 1a: bez 9% w roku rozpoczęcia i następnym dla spółek z przekształcenia albo z wniesienia przedsiębiorstwa o wartości ponad 10 000 euro",
+          "przegląd CIT-02: status liczony z faktów; w pierwszym roku 9%, chyba że spółka powstała z przekształcenia albo aportu"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-cit-advance",
+      "priority": 110,
+      "effective_from": "2026-01-01",
+      "description": "Zamknięcie miesiąca w księdze pl-stat liczy zaliczkę na CIT narastająco od początku roku: przychody podatkowe (przychody bez kont oznaczonych jako nieprzychód) minus koszty podatkowe (koszty bez kont NKUP), podstawa w pełnych złotych, stawka 9% gdy status na ten rok na to pozwala i przychody od początku roku mieszczą się w limicie, inaczej 19%; zaliczka to podatek od początku roku minus zaliczki za wcześniejsze miesiące tego roku, nie mniej niż zero; liczy tylko firma płacąca CIT",
+      "spec": {
+        "match": {
+          "event_type": "period.closed",
+          "where": [
+            {
+              "path": "$.book",
+              "op": "eq",
+              "value": "pl-stat"
+            },
+            {
+              "formula": "=any(c in objects(company, kind, \"self\") : coalesce(c.income_tax, \"\") = \"cit\")"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "cit_advance",
+            "fields": {
+              "period": "=month($.period)",
+              "year_start": "=start_of_year($.period)",
+              "book": "=$.book",
+              "revenue": "=sum(a in objects(account, type, \"revenue\") : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))",
+              "not_taxable": "=sum(a in objects(account, type, \"revenue\") where coalesce(a.tax_treatment, \"taxable\") = \"not_taxable\" : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))",
+              "costs": "=sum(a in objects(account, type, \"expense\") : balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))",
+              "non_deductible": "=sum(a in objects(account, type, \"expense\") where coalesce(a.tax_treatment, \"deductible\") = \"non_deductible\" : balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))",
+              "income": "=((sum(a in objects(account, type, \"revenue\") : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) - (sum(a in objects(account, type, \"revenue\") where coalesce(a.tax_treatment, \"taxable\") = \"not_taxable\" : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period))))) - ((sum(a in objects(account, type, \"expense\") : balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) - (sum(a in objects(account, type, \"expense\") where coalesce(a.tax_treatment, \"deductible\") = \"non_deductible\" : balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))))",
+              "base": "=round(max(((sum(a in objects(account, type, \"revenue\") : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) - (sum(a in objects(account, type, \"revenue\") where coalesce(a.tax_treatment, \"taxable\") = \"not_taxable\" : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period))))) - ((sum(a in objects(account, type, \"expense\") : balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) - (sum(a in objects(account, type, \"expense\") where coalesce(a.tax_treatment, \"deductible\") = \"non_deductible\" : balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period))))), 0), 0, half_up)",
+              "rate": "=if((fold(s in objects(cit_status, year_start, start_of_year($.period)), r = \"no\" : s.reduced) = \"yes\") and (any(l in objects(cit_limit, year_start, start_of_year($.period)) : (sum(a in objects(account, type, \"revenue\") : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) - (sum(a in objects(account, type, \"revenue\") where coalesce(a.tax_treatment, \"taxable\") = \"not_taxable\" : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) <= l.in_year_limit)), 9, 19)",
+              "rate_basis": "=if(fold(s in objects(cit_status, year_start, start_of_year($.period)), r = \"no\" : s.reduced) = \"yes\", if(any(l in objects(cit_limit, year_start, start_of_year($.period)) : (sum(a in objects(account, type, \"revenue\") : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) - (sum(a in objects(account, type, \"revenue\") where coalesce(a.tax_treatment, \"taxable\") = \"not_taxable\" : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) <= l.in_year_limit), \"9%: status CIT na ten rok, przychody od początku roku w limicie (art. 19 ust. 1 pkt 2, art. 25 ust. 1g)\", \"19%: przychody od początku roku ponad limit (art. 19 ust. 1 pkt 2, art. 25 ust. 1g)\"), \"19%: brak statusu CIT na ten rok, który pozwala na 9% (art. 19 ust. 1 pkt 1, art. 25 ust. 1f)\")",
+              "tax": "=round((round(max(((sum(a in objects(account, type, \"revenue\") : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) - (sum(a in objects(account, type, \"revenue\") where coalesce(a.tax_treatment, \"taxable\") = \"not_taxable\" : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period))))) - ((sum(a in objects(account, type, \"expense\") : balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) - (sum(a in objects(account, type, \"expense\") where coalesce(a.tax_treatment, \"deductible\") = \"non_deductible\" : balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period))))), 0), 0, half_up)) * (if((fold(s in objects(cit_status, year_start, start_of_year($.period)), r = \"no\" : s.reduced) = \"yes\") and (any(l in objects(cit_limit, year_start, start_of_year($.period)) : (sum(a in objects(account, type, \"revenue\") : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) - (sum(a in objects(account, type, \"revenue\") where coalesce(a.tax_treatment, \"taxable\") = \"not_taxable\" : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) <= l.in_year_limit)), 9, 19)) / 100, 0, half_up)",
+              "advances_before": "=sum(c in objects(cit_advance, year_start, start_of_year($.period)) where c.period < month($.period) : c.advance)",
+              "advance": "=max((round((round(max(((sum(a in objects(account, type, \"revenue\") : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) - (sum(a in objects(account, type, \"revenue\") where coalesce(a.tax_treatment, \"taxable\") = \"not_taxable\" : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period))))) - ((sum(a in objects(account, type, \"expense\") : balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) - (sum(a in objects(account, type, \"expense\") where coalesce(a.tax_treatment, \"deductible\") = \"non_deductible\" : balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period))))), 0), 0, half_up)) * (if((fold(s in objects(cit_status, year_start, start_of_year($.period)), r = \"no\" : s.reduced) = \"yes\") and (any(l in objects(cit_limit, year_start, start_of_year($.period)) : (sum(a in objects(account, type, \"revenue\") : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) - (sum(a in objects(account, type, \"revenue\") where coalesce(a.tax_treatment, \"taxable\") = \"not_taxable\" : -balance(\"pl-stat\", a.code, start_of_year($.period), end_of_month($.period)))) <= l.in_year_limit)), 9, 19)) / 100, 0, half_up)) - (sum(c in objects(cit_advance, year_start, start_of_year($.period)) where c.period < month($.period) : c.advance)), 0)",
+              "closed_on": "=$.period"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o CIT (t.j. Dz.U. 2026 poz. 554) art. 25 ust. 1: zaliczki miesięczne jako różnica między podatkiem należnym od dochodu osiągniętego od początku roku a sumą zaliczek należnych za poprzednie miesiące; ust. 1a: do 20. dnia następnego miesiąca",
+          "ustawa o CIT (t.j. Dz.U. 2026 poz. 554) art. 25 ust. 1f i 1g: zaliczki stawką 19%, a 9% w roku rozpoczęcia działalności i u małych podatników za miesiące, w których przychody od początku roku nie przekroczyły limitu",
+          "ustawa o CIT (t.j. Dz.U. 2026 poz. 554) art. 12 ust. 1 i art. 15 ust. 1: przychody i koszty uzyskania przychodów; art. 16 ust. 1: wydatki niebędące kosztami",
+          "Ordynacja podatkowa art. 63 § 1: podstawy opodatkowania i kwoty podatków zaokrągla się do pełnych złotych",
+          "przegląd CIT-03: zaliczki miesięczne liczone regułą przy zamknięciu miesiąca, jak rozliczenie VAT; kwartalne tylko z wyboru zarządu"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-cit-advance",
+      "priority": 330,
+      "effective_from": "2026-01-01",
+      "description": "Zaliczka na CIT księguje się: Wn 870 podatek dochodowy / Ma 225 rozrachunki publicznoprawne — zapłata z mikrorachunku podatkowego zamyka ją na 225; na ostatni dzień zamykanego miesiąca — obciążenie wyniku tego miesiąca",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "cit_advance"
+            },
+            {
+              "formula": "=$.state.advance > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "lines": [
+              {
+                "account": "870",
+                "debit": "=$.state.advance"
+              },
+              {
+                "account": "225",
+                "credit": "=$.state.advance"
+              }
+            ],
+            "date": "=$.state.closed_on"
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 37 ust. 8: obciążenie wyniku finansowego obejmuje podatek dochodowy bieżący i odroczony",
+          "wzorcowy plan kont: 870 podatek dochodowy od osób prawnych, 225 pozostałe rozrachunki publicznoprawne; przegląd CIT-03: Wn 870 / Ma 22x"
+        ]
+      },
+      "version": 2
+    },
+    {
+      "rule_id": "pl-recompute-cit-advance",
+      "priority": 120,
+      "effective_from": "2026-01-01",
+      "description": "Przeliczenie zaliczki na CIT za zamknięty miesiąc: podatek od początku roku zostaje, jaki był, a zaliczki za wcześniejsze miesiące liczą się na nowo z tych, które są teraz w księgach — gdy wcześniejsze miesiące dostały zaliczki później (firma powiedziała o CIT po ich zamknięciu), zaliczka miesiąca obejmuje już tylko jego część",
+      "spec": {
+        "match": {
+          "event_type": "cit_advance.recomputed",
+          "where": [
+            {
+              "formula": "=count(c in objects(cit_advance, period, $.period)) = 1"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "cit_advance",
+            "target": "=ref(cit_advance, period, $.period)",
+            "set": {
+              "advances_before": "=sum(c in objects(cit_advance, year_start, ref(cit_advance, period, $.period).year_start) where c.period < $.period : c.advance)",
+              "advance": "=max(ref(cit_advance, period, $.period).tax - (sum(c in objects(cit_advance, year_start, ref(cit_advance, period, $.period).year_start) where c.period < $.period : c.advance)), 0)"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o CIT (t.j. Dz.U. 2026 poz. 554) art. 25 ust. 1: zaliczka to różnica między podatkiem należnym od dochodu od początku roku a sumą zaliczek należnych za poprzednie miesiące — gdy księgi poznały zaliczki wcześniejszych miesięcy później, różnicę liczy się na nowo"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-cit-advance-correction",
+      "priority": 120,
+      "effective_from": "2026-01-01",
+      "description": "Różnica z przeliczenia zaliczki na CIT księguje się w dniu przeliczenia: zaliczka mniejsza — Wn 225 / Ma 870, większa — Wn 870 / Ma 225",
+      "spec": {
+        "match": {
+          "event_type": "cit_advance.recomputed",
+          "where": [
+            {
+              "formula": "=count(c in objects(cit_advance, period, $.period)) = 1"
+            },
+            {
+              "formula": "=(ref(cit_advance, period, $.period).advance - (max(ref(cit_advance, period, $.period).tax - (sum(c in objects(cit_advance, year_start, ref(cit_advance, period, $.period).year_start) where c.period < $.period : c.advance)), 0))) <> 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "lines": [
+              {
+                "account": "=if((ref(cit_advance, period, $.period).advance - (max(ref(cit_advance, period, $.period).tax - (sum(c in objects(cit_advance, year_start, ref(cit_advance, period, $.period).year_start) where c.period < $.period : c.advance)), 0))) > 0, \"225\", \"870\")",
+                "debit": "=abs((ref(cit_advance, period, $.period).advance - (max(ref(cit_advance, period, $.period).tax - (sum(c in objects(cit_advance, year_start, ref(cit_advance, period, $.period).year_start) where c.period < $.period : c.advance)), 0))))"
+              },
+              {
+                "account": "=if((ref(cit_advance, period, $.period).advance - (max(ref(cit_advance, period, $.period).tax - (sum(c in objects(cit_advance, year_start, ref(cit_advance, period, $.period).year_start) where c.period < $.period : c.advance)), 0))) > 0, \"870\", \"225\")",
+                "credit": "=abs((ref(cit_advance, period, $.period).advance - (max(ref(cit_advance, period, $.period).tax - (sum(c in objects(cit_advance, year_start, ref(cit_advance, period, $.period).year_start) where c.period < $.period : c.advance)), 0))))"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 37 ust. 8: obciążenie wyniku podatkiem dochodowym bieżącym; korekta w okresie, w którym jej dokonano (miesiąc zaliczki jest zamknięty)"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-recognise-deferred-tax",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Różnica przejściowa staje się obiektem deferred_tax: składnik aktywów wart w bilansie więcej niż podatkowo albo składnik pasywów wart mniej to dodatnia różnica i rezerwa; odwrotnie — ujemna różnica i aktywa; kwota to różnica razy stawka, zaokrąglona do grosza",
+      "spec": {
+        "match": {
+          "event_type": "deferred_tax.recognised",
+          "where": [
+            {
+              "formula": "=$.carrying_value <> $.tax_value and $.rate > 0"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "deferred_tax",
+            "fields": {
+              "title": "=$.title",
+              "item": "=$.item",
+              "side": "=$.side",
+              "carrying_value": "=$.carrying_value",
+              "tax_value": "=$.tax_value",
+              "difference": "=abs($.carrying_value - $.tax_value)",
+              "kind": "=if(($.side = \"asset\" and $.carrying_value > $.tax_value) or ($.side = \"liability\" and $.carrying_value < $.tax_value), \"liability\", \"asset\")",
+              "rate": "=$.rate",
+              "amount": "=round(abs($.carrying_value - $.tax_value) * $.rate / 100, 2, half_up)",
+              "date": "=$.date",
+              "status": "open",
+              "book": "pl-stat"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 37 ust. 1: „W związku z przejściowymi różnicami między wykazywaną w księgach rachunkowych wartością aktywów i pasywów a ich wartością podatkową oraz stratą podatkową możliwą do odliczenia w przyszłości, jednostka tworzy rezerwę i ustala aktywa z tytułu odroczonego podatku dochodowego, którego jest podatnikiem”",
+          "ustawa o rachunkowości art. 37 ust. 4: „Aktywa z tytułu odroczonego podatku dochodowego ustala się w wysokości kwoty przewidzianej w przyszłości do odliczenia od podatku dochodowego, w związku z ujemnymi różnicami przejściowymi, które spowodują w przyszłości zmniejszenie podstawy obliczenia podatku dochodowego oraz straty podatkowej możliwej do odliczenia, ustalonej przy uwzględnieniu zasady ostrożności”",
+          "ustawa o rachunkowości art. 37 ust. 5: „Rezerwę z tytułu odroczonego podatku dochodowego tworzy się w wysokości kwoty podatku dochodowego, wymagającej w przyszłości zapłaty, w związku z występowaniem dodatnich różnic przejściowych, to jest różnic, które spowodują zwiększenie podstawy obliczenia podatku dochodowego w przyszłości” (pytanie I-22 egzaminu 2025: linia produkcyjna o wartości bilansowej wyższej niż podatkowa — rezerwa)",
+          "ustawa o rachunkowości art. 37 ust. 6: „Wysokość rezerwy i aktywów z tytułu odroczonego podatku dochodowego ustala się przy uwzględnieniu stawek podatku dochodowego obowiązujących w roku powstania obowiązku podatkowego”",
+          "ustawa o rachunkowości art. 37 ust. 10: „Jednostka mikro i jednostka mała mogą odstąpić od ustalania aktywów i rezerw z tytułu odroczonego podatku dochodowego” — drzwi są wyborem, nie obowiązkiem",
+          "KSR 2 „Podatek dochodowy” pkt 2.18: „Dodatnie różnice przejściowe powstają, gdy wartość bilansowa składnika aktywów jest wyższa niż jego wartość podatkowa albo wartość bilansowa składnika zobowiązań jest niższa niż jego wartość podatkowa. […] Ujemne różnice przejściowe powstają, gdy wartość bilansowa składnika aktywów jest niższa niż jego wartość podatkowa albo wartość bilansowa składnika zobowiązań jest wyższa niż jego wartość podatkowa”"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-deferred-tax-liability",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Rezerwa z tytułu odroczonego podatku księguje się na dzień bilansowy: Wn 870 Podatek dochodowy / Ma 835 Rezerwa z tytułu odroczonego podatku dochodowego",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "deferred_tax"
+            },
+            {
+              "path": "$.state.kind",
+              "op": "eq",
+              "value": "liability"
+            },
+            {
+              "formula": "=$.state.amount > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.date",
+            "lines": [
+              {
+                "account": "870",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "835",
+                "credit": "=$.state.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 37 ust. 5: „Rezerwę z tytułu odroczonego podatku dochodowego tworzy się w wysokości kwoty podatku dochodowego, wymagającej w przyszłości zapłaty, w związku z występowaniem dodatnich różnic przejściowych, to jest różnic, które spowodują zwiększenie podstawy obliczenia podatku dochodowego w przyszłości” (pytanie I-22 egzaminu 2025: linia produkcyjna o wartości bilansowej wyższej niż podatkowa — rezerwa)",
+          "ustawa o rachunkowości art. 37 ust. 8: podatek dochodowy wpływający na wynik finansowy obejmuje część bieżącą i część odroczoną; „część odroczona stanowi różnicę pomiędzy stanem rezerw i aktywów z tytułu podatku odroczonego na koniec i początek okresu sprawozdawczego”",
+          "wzorcowy plan kont: 650 Aktywa z tytułu odroczonego podatku dochodowego, 835 Rezerwa z tytułu odroczonego podatku dochodowego, 870 Podatek dochodowy"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-deferred-tax-asset",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Aktywa z tytułu odroczonego podatku księgują się na dzień bilansowy: Wn 650 Aktywa z tytułu odroczonego podatku dochodowego / Ma 870 Podatek dochodowy",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "deferred_tax"
+            },
+            {
+              "path": "$.state.kind",
+              "op": "eq",
+              "value": "asset"
+            },
+            {
+              "formula": "=$.state.amount > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.date",
+            "lines": [
+              {
+                "account": "650",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "870",
+                "credit": "=$.state.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 37 ust. 4: „Aktywa z tytułu odroczonego podatku dochodowego ustala się w wysokości kwoty przewidzianej w przyszłości do odliczenia od podatku dochodowego, w związku z ujemnymi różnicami przejściowymi, które spowodują w przyszłości zmniejszenie podstawy obliczenia podatku dochodowego oraz straty podatkowej możliwej do odliczenia, ustalonej przy uwzględnieniu zasady ostrożności”",
+          "ustawa o rachunkowości art. 37 ust. 8: podatek dochodowy wpływający na wynik finansowy obejmuje część bieżącą i część odroczoną; „część odroczona stanowi różnicę pomiędzy stanem rezerw i aktywów z tytułu podatku odroczonego na koniec i początek okresu sprawozdawczego”",
+          "wzorcowy plan kont: 650 Aktywa z tytułu odroczonego podatku dochodowego, 835 Rezerwa z tytułu odroczonego podatku dochodowego, 870 Podatek dochodowy"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-reverse-deferred-tax",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Odwrócona różnica przejściowa przechodzi w stan reversed z dniem odwrócenia",
+      "spec": {
+        "match": {
+          "event_type": "deferred_tax.reversed",
+          "where": []
+        },
+        "effect": {
+          "amend": {
+            "type": "deferred_tax",
+            "target": "=$.deferred_tax",
+            "set": {
+              "status": "reversed",
+              "reversed_on": "=$.date"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 37 ust. 8: podatek dochodowy wpływający na wynik finansowy obejmuje część bieżącą i część odroczoną; „część odroczona stanowi różnicę pomiędzy stanem rezerw i aktywów z tytułu podatku odroczonego na koniec i początek okresu sprawozdawczego”"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-deferred-tax-liability-reversal",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Odwrócenie rezerwy z tytułu odroczonego podatku: Wn 835 / Ma 870, w kwocie rezerwy",
+      "spec": {
+        "match": {
+          "event_type": "deferred_tax.reversed",
+          "where": [
+            {
+              "formula": "=$.deferred_tax.kind = \"liability\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.date",
+            "lines": [
+              {
+                "account": "835",
+                "debit": "=$.deferred_tax.amount"
+              },
+              {
+                "account": "870",
+                "credit": "=$.deferred_tax.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 37 ust. 8: podatek dochodowy wpływający na wynik finansowy obejmuje część bieżącą i część odroczoną; „część odroczona stanowi różnicę pomiędzy stanem rezerw i aktywów z tytułu podatku odroczonego na koniec i początek okresu sprawozdawczego”",
+          "wzorcowy plan kont: 650 Aktywa z tytułu odroczonego podatku dochodowego, 835 Rezerwa z tytułu odroczonego podatku dochodowego, 870 Podatek dochodowy"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-deferred-tax-asset-reversal",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Odwrócenie aktywów z tytułu odroczonego podatku: Wn 870 / Ma 650, w kwocie aktywów",
+      "spec": {
+        "match": {
+          "event_type": "deferred_tax.reversed",
+          "where": [
+            {
+              "formula": "=$.deferred_tax.kind = \"asset\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.date",
+            "lines": [
+              {
+                "account": "870",
+                "debit": "=$.deferred_tax.amount"
+              },
+              {
+                "account": "650",
+                "credit": "=$.deferred_tax.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 37 ust. 8: podatek dochodowy wpływający na wynik finansowy obejmuje część bieżącą i część odroczoną; „część odroczona stanowi różnicę pomiędzy stanem rezerw i aktywów z tytułu podatku odroczonego na koniec i początek okresu sprawozdawczego”",
+          "wzorcowy plan kont: 650 Aktywa z tytułu odroczonego podatku dochodowego, 835 Rezerwa z tytułu odroczonego podatku dochodowego, 870 Podatek dochodowy"
+        ]
+      }
+    }
+  ]
+}

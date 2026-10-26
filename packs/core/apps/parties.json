@@ -1,0 +1,151 @@
+{
+  "app": "parties",
+  "version": 1,
+  "title": "Companies",
+  "layer": "core",
+  "data": [
+    {
+      "name": "company",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "name",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "kind",
+          "type": "enum",
+          "values": [
+            "customer",
+            "supplier",
+            "self"
+          ],
+          "required": true
+        },
+        {
+          "name": "vat_id",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "country",
+          "type": "string",
+          "required": false
+        }
+      ]
+    },
+    {
+      "name": "contractor",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "name",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "nip",
+          "type": "string"
+        },
+        {
+          "name": "regon",
+          "type": "string"
+        },
+        {
+          "name": "address",
+          "type": "string"
+        },
+        {
+          "name": "country",
+          "type": "string"
+        },
+        {
+          "name": "payment_term_days",
+          "type": "int"
+        },
+        {
+          "name": "cash_method",
+          "type": "enum",
+          "values": [
+            "yes",
+            "no"
+          ]
+        },
+        {
+          "name": "very_important",
+          "type": "enum",
+          "values": [
+            "yes",
+            "no"
+          ]
+        }
+      ]
+    }
+  ],
+  "tabs": [
+    {
+      "view_id": "company-list",
+      "version": 1,
+      "notion": "list",
+      "title": "Companies",
+      "domain": "finance",
+      "function": "master data",
+      "spec": {
+        "object_type": "company",
+        "columns": [
+          {
+            "field": "name",
+            "label": "Name"
+          },
+          {
+            "field": "kind",
+            "label": "Kind"
+          },
+          {
+            "field": "country",
+            "label": "Country"
+          }
+        ]
+      }
+    }
+  ],
+  "record": {
+    "of": "company",
+    "tabs": [
+      {
+        "view_id": "company-detail",
+        "version": 1,
+        "notion": "detail",
+        "title": "Company",
+        "domain": "finance",
+        "function": "master data",
+        "spec": {
+          "object_type": "company",
+          "sections": [
+            {
+              "title": "Company",
+              "fields": [
+                "name",
+                "kind"
+              ]
+            },
+            {
+              "title": "Registration",
+              "fields": [
+                "vat_id",
+                "country"
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
