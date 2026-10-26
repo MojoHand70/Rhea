@@ -106,4 +106,44 @@ func TestThePolandPackArrangesItsApps(t *testing.T) {
 	if len(wrong) > 0 {
 		t.Fatalf("the arrangement: %s", strings.Join(wrong, "; "))
 	}
+
+	// and the words name, in Polish, what those Apps keep and do: every kind
+	// (what it is and its shape), field, value and door — a Polish company's
+	// screens and forms never show the kernel's names (2026-10-27)
+	var unnamed []string
+	for _, id := range order {
+		a := apps[id]
+		for _, k := range a.Data {
+			tw, ok := w.Types[k]
+			if !ok || tw.Kind == "" || tw.Shape == "" {
+				unnamed = append(unnamed, "kind "+k)
+			}
+		}
+		for _, d := range a.Actions {
+			if w.Doors[d] == "" {
+				unnamed = append(unnamed, "door "+d)
+			}
+		}
+	}
+	for _, p := range []string{"core/core.json", "common/people.json", "common/periods.json", "common/documents.json", "pl/pack.json", "pl/warehouse.json"} {
+		m, _, err := pack.ReadFile(filepath.Join("..", "..", "packs", p))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, ty := range m.ObjectTypes {
+			for _, f := range ty.Fields {
+				if w.Fields[ty.Name+"."+f.Name] == "" && w.Fields[f.Name] == "" {
+					unnamed = append(unnamed, "field "+ty.Name+"."+f.Name)
+				}
+				for _, v := range f.Values {
+					if w.Values[ty.Name+"."+f.Name][v] == "" && w.Values[f.Name][v] == "" {
+						unnamed = append(unnamed, "value "+ty.Name+"."+f.Name+"="+v)
+					}
+				}
+			}
+		}
+	}
+	if len(unnamed) > 0 {
+		t.Fatalf("the Poland pack's words leave unnamed: %s", strings.Join(unnamed, ", "))
+	}
 }

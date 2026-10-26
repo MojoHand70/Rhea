@@ -1,12 +1,17 @@
 {
   "pack": "core",
-  "version": 4,
+  "version": 5,
   "kind": "core",
   "install": "installation",
   "description": "Core: what Rhea is with nothing installed — the ledger's vocabulary (company, account, posting, the period's lock, exchange rates), the invoice's common shape and its tax rate, contractors, Rachunki i karty's bank accounts, bank lines and settlements, and tasks. Market-neutral; the kernel carries it in its binary and rhea init drafts what a database lacks.",
   "stage": "initial",
   "disclaimer": "This pack was prepared by artificial intelligence (AI). It is an initial version: its definitions may contain errors and will change as accountants, tax advisers and auditors review them.",
   "history": [
+    {
+      "versions": "5",
+      "date": "2026-10-27",
+      "changes": "Clients and suppliers as roles of one firm (KK, option A): the client and supplier records, each pointing at the firm and holding its own terms. A firm's first sales invoice makes it a client, its first purchase invoice a supplier, each from the invoice's date; the terms are set through set_client_terms (payment terms, discount, credit limit, price list, account manager) and set_supplier_terms (payment terms, whether its invoices need approval). The lists Clients and Suppliers."
+    },
     {
       "versions": "4",
       "date": "2026-10-26",
@@ -52,6 +57,8 @@
     "tasks",
     "packs",
     "my-company",
-    "settings"
+    "settings",
+    "clients",
+    "suppliers"
   ]
 }

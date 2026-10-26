@@ -1,0 +1,169 @@
+{
+  "app": "suppliers",
+  "version": 1,
+  "title": "Suppliers",
+  "layer": "core",
+  "data": [
+    {
+      "name": "supplier",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "company",
+      "fields": [
+        {
+          "name": "company",
+          "type": "ref<company>",
+          "required": true
+        },
+        {
+          "name": "since",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "payment_term_days",
+          "type": "int",
+          "required": false
+        },
+        {
+          "name": "needs_approval",
+          "type": "enum",
+          "required": false,
+          "values": [
+            "yes",
+            "no"
+          ]
+        }
+      ],
+      "amendable": [
+        "payment_term_days",
+        "needs_approval"
+      ]
+    }
+  ],
+  "uses": [
+    "company",
+    "purchase_invoice"
+  ],
+  "tabs": [
+    {
+      "view_id": "supplier-list",
+      "version": 1,
+      "notion": "list",
+      "title": "Suppliers",
+      "domain": "finance",
+      "function": "master data",
+      "spec": {
+        "object_type": "supplier",
+        "columns": [
+          {
+            "field": "company"
+          },
+          {
+            "field": "since"
+          },
+          {
+            "field": "payment_term_days"
+          },
+          {
+            "field": "needs_approval"
+          }
+        ]
+      }
+    }
+  ],
+  "actions": [
+    {
+      "name": "set_supplier_terms",
+      "domain": "finance",
+      "description": "Set how we deal with a supplier: the payment terms in days and whether its invoices need approval; what is left out stays as it was",
+      "spec": {
+        "inputs": [
+          {
+            "name": "supplier",
+            "type": "ref<supplier>",
+            "required": true
+          },
+          {
+            "name": "payment_term_days",
+            "type": "int"
+          },
+          {
+            "name": "needs_approval",
+            "type": "enum",
+            "values": [
+              "yes",
+              "no"
+            ]
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "supplier.terms.set",
+        "who": [
+          "human"
+        ]
+      }
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "core-supplier-from-purchase-invoice",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "A firm's first purchase invoice makes it our supplier, from the invoice's date; its later invoices leave the supplier as it is",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "purchase_invoice"
+            },
+            {
+              "path": "$.state.supplier",
+              "op": "exists"
+            },
+            {
+              "formula": "=count(s in objects(supplier, company, $.state.supplier)) = 0"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "supplier",
+            "fields": {
+              "company": "=$.state.supplier",
+              "since": "=$.state.invoice_date"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "core-set-supplier-terms",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "A supplier's terms, as set: payment terms and whether its invoices need approval; what the setting leaves out stays as it was",
+      "spec": {
+        "match": {
+          "event_type": "supplier.terms.set"
+        },
+        "effect": {
+          "amend": {
+            "type": "supplier",
+            "target": "=$.supplier",
+            "set": {
+              "payment_term_days": "=$.payment_term_days",
+              "needs_approval": "=$.needs_approval"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

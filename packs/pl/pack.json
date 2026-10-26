@@ -1,12 +1,17 @@
 {
   "pack": "pl",
-  "version": 47,
+  "version": 48,
   "kind": "market",
   "market": "PL",
   "install": "installation",
   "stage": "initial",
   "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
   "history": [
+    {
+      "versions": "48",
+      "date": "2026-10-27",
+      "changes": "Klienci pod Sprzedażą i Dostawcy pod Kosztami (KK, wariant A): rekord klienta i rekord dostawcy, każdy wskazuje jedną firmę i ma własne warunki — firma staje się klientem przy pierwszej fakturze sprzedaży, dostawcą przy pierwszej fakturze zakupu. Słownik nazywa ich pola, warunki i czynności (Warunki klienta, Warunki dostawcy) po polsku; nazywa też zainstalowane pakiety i dokumenty PZ, które dotąd pokazywały nazwy jądra. Lista wszystkich firm jest w Księgowości i podatkach, w Słownikach i parametrach."
+    },
     {
       "versions": "47",
       "date": "2026-10-26",

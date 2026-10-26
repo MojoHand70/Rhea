@@ -1,0 +1,203 @@
+{
+  "app": "clients",
+  "version": 1,
+  "title": "Clients",
+  "layer": "core",
+  "data": [
+    {
+      "name": "client",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "company",
+      "fields": [
+        {
+          "name": "company",
+          "type": "ref<company>",
+          "required": true
+        },
+        {
+          "name": "since",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "payment_term_days",
+          "type": "int",
+          "required": false
+        },
+        {
+          "name": "discount_percent",
+          "type": "decimal",
+          "required": false
+        },
+        {
+          "name": "credit_limit",
+          "type": "money",
+          "required": false
+        },
+        {
+          "name": "price_list",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "account_manager",
+          "type": "ref<person>",
+          "required": false
+        }
+      ],
+      "amendable": [
+        "payment_term_days",
+        "discount_percent",
+        "credit_limit",
+        "price_list",
+        "account_manager"
+      ]
+    }
+  ],
+  "uses": [
+    "company",
+    "sales_invoice"
+  ],
+  "tabs": [
+    {
+      "view_id": "client-list",
+      "version": 1,
+      "notion": "list",
+      "title": "Clients",
+      "domain": "finance",
+      "function": "master data",
+      "spec": {
+        "object_type": "client",
+        "columns": [
+          {
+            "field": "company"
+          },
+          {
+            "field": "since"
+          },
+          {
+            "field": "payment_term_days"
+          },
+          {
+            "field": "discount_percent"
+          },
+          {
+            "field": "credit_limit"
+          },
+          {
+            "field": "price_list"
+          },
+          {
+            "field": "account_manager"
+          }
+        ]
+      }
+    }
+  ],
+  "actions": [
+    {
+      "name": "set_client_terms",
+      "domain": "finance",
+      "description": "Set what a client is offered: its payment terms in days, discount, credit limit, price list and the person who looks after it; what is left out stays as it was",
+      "spec": {
+        "inputs": [
+          {
+            "name": "client",
+            "type": "ref<client>",
+            "required": true
+          },
+          {
+            "name": "payment_term_days",
+            "type": "int"
+          },
+          {
+            "name": "discount_percent",
+            "type": "decimal"
+          },
+          {
+            "name": "credit_limit",
+            "type": "money"
+          },
+          {
+            "name": "price_list",
+            "type": "string"
+          },
+          {
+            "name": "account_manager",
+            "type": "ref<person>"
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "client.terms.set",
+        "who": [
+          "human"
+        ]
+      }
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "core-client-from-sales-invoice",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "A firm's first sales invoice makes it our client, from the invoice's date; its later invoices leave the client as it is",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "sales_invoice"
+            },
+            {
+              "path": "$.state.buyer",
+              "op": "exists"
+            },
+            {
+              "formula": "=count(c in objects(client, company, $.state.buyer)) = 0"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "client",
+            "fields": {
+              "company": "=$.state.buyer",
+              "since": "=$.state.issue_date"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "core-set-client-terms",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "A client's terms, as set: payment terms, discount, credit limit, price list, the person who looks after it; what the setting leaves out stays as it was",
+      "spec": {
+        "match": {
+          "event_type": "client.terms.set"
+        },
+        "effect": {
+          "amend": {
+            "type": "client",
+            "target": "=$.client",
+            "set": {
+              "payment_term_days": "=$.payment_term_days",
+              "discount_percent": "=$.discount_percent",
+              "credit_limit": "=$.credit_limit",
+              "price_list": "=$.price_list",
+              "account_manager": "=$.account_manager"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

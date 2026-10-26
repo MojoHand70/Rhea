@@ -6,7 +6,7 @@
   "tabs": [
     {
       "view_id": "slownik",
-      "version": 19,
+      "version": 20,
       "notion": "words",
       "title": "Słownik",
       "domain": "finance",
@@ -335,6 +335,36 @@
           "year_close_clearing": {
             "label": "Zamknięcie roku – konto rozliczeniowe",
             "plural": "Zamknięcie roku – konta rozliczeniowe",
+            "shape": "card",
+            "kind": "entry"
+          },
+          "client": {
+            "label": "Klient",
+            "plural": "Klienci",
+            "shape": "card",
+            "kind": "master"
+          },
+          "supplier": {
+            "label": "Dostawca",
+            "plural": "Dostawcy",
+            "shape": "card",
+            "kind": "master"
+          },
+          "installed_pack": {
+            "label": "Zainstalowany pakiet",
+            "plural": "Zainstalowane pakiety",
+            "shape": "card",
+            "kind": "master"
+          },
+          "pz": {
+            "label": "Przyjęcie zewnętrzne (PZ)",
+            "plural": "Przyjęcia zewnętrzne (PZ)",
+            "shape": "paper",
+            "kind": "document"
+          },
+          "pz_line": {
+            "label": "Pozycja PZ",
+            "plural": "Pozycje PZ",
             "shape": "card",
             "kind": "entry"
           }
@@ -671,7 +701,25 @@
           "year_close_clearing.account": "Konto",
           "year_close_clearing.code": "Nr konta",
           "year_close_clearing.year_end": "Dzień bilansowy",
-          "year_close_clearing.amount": "Saldo (Wn minus Ma)"
+          "year_close_clearing.amount": "Saldo (Wn minus Ma)",
+          "client.company": "Firma",
+          "client.since": "Klient od",
+          "discount_percent": "Rabat (%)",
+          "credit_limit": "Limit kredytowy",
+          "price_list": "Cennik",
+          "account_manager": "Opiekun klienta",
+          "client": "Klient",
+          "supplier.company": "Firma",
+          "supplier.since": "Dostawca od",
+          "needs_approval": "Faktury do akceptacji",
+          "installed_pack.pack": "Pakiet",
+          "installed_pack.from": "Od",
+          "installed_pack.to": "Do",
+          "installed_by": "Kto zainstalował",
+          "switched_off_by": "Kto wyłączył",
+          "pz.supplier_document": "Dokument dostawcy",
+          "pz.location": "Magazyn",
+          "pz_line.document": "Dokument PZ"
         },
         "values": {
           "account.type": {
@@ -993,6 +1041,14 @@
           "development_costs.status": {
             "active": "aktywne",
             "written_off": "odpisane"
+          },
+          "needs_approval": {
+            "yes": "tak",
+            "no": "nie"
+          },
+          "installed_pack.status": {
+            "installed": "zainstalowany",
+            "switched_off": "wyłączony"
           }
         },
         "events": {
@@ -1071,7 +1127,9 @@
           "policy.changed": "Zmiana zasad rachunkowości",
           "development_costs.capitalised": "Aktywowanie prac rozwojowych",
           "development_costs.amortised": "Odpis prac rozwojowych",
-          "company.entered": "Firma wpisana do kartoteki"
+          "company.entered": "Firma wpisana do kartoteki",
+          "client.terms.set": "Ustalono warunki klienta",
+          "supplier.terms.set": "Ustalono warunki dostawcy"
         },
         "doors": {
           "appoint_deputy": "wyznaczenie zastępcy",
@@ -1142,7 +1200,11 @@
           "adjust_for_policy_change": "zmiana zasad rachunkowości",
           "capitalise_development_costs": "aktywowanie prac rozwojowych",
           "amortise_development_costs": "odpis prac rozwojowych",
-          "enter_company": "wpisanie firmy"
+          "enter_company": "wpisanie firmy",
+          "set_client_terms": "Warunki klienta",
+          "set_supplier_terms": "Warunki dostawcy",
+          "install_pack": "Zainstaluj pakiet",
+          "switch_off_pack": "Wyłącz pakiet"
         },
         "account_groups": {
           "0": "Aktywa trwałe",
@@ -1188,7 +1250,9 @@
           "desk:settings": "Wygląd i biurko",
           "desk:access": "Kto ma dostęp",
           "desk:invites": "Zaproszenia",
-          "desk:packs": "Pakiety"
+          "desk:packs": "Pakiety",
+          "client-list": "Klienci",
+          "supplier-list": "Dostawcy"
         },
         "apps": {
           "invoices": "Faktury",
@@ -1200,7 +1264,9 @@
           "packs": "Pakiety",
           "today": "Dziś",
           "my-company": "Firma",
-          "settings": "Wygląd i biurko"
+          "settings": "Wygląd i biurko",
+          "clients": "Klienci",
+          "suppliers": "Dostawcy"
         },
         "activities": [
           {
@@ -1267,7 +1333,7 @@
                 "title": "Klienci",
                 "items": [
                   {
-                    "app": "parties"
+                    "app": "clients"
                   }
                 ]
               }
@@ -1294,7 +1360,7 @@
                 "title": "Dostawcy",
                 "items": [
                   {
-                    "app": "parties"
+                    "app": "suppliers"
                   }
                 ]
               }
@@ -1426,6 +1492,10 @@
                 "id": "parameters",
                 "title": "Słowniki i parametry",
                 "items": [
+                  {
+                    "app": "parties",
+                    "title": "Wszystkie firmy"
+                  },
                   {
                     "app": "vat-rates"
                   },
