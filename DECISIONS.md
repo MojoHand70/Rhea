@@ -5340,3 +5340,48 @@ it showed and the table in front again; a tab closed since is passed over, never
 start of the trail back stays on the desk, never leaving it for the sign-in page. (rheaface 227f7e4.)
 The keys are Alt [ and Alt ], Alt ← → staying the previous and next tab; offered Alt ← for back as
 browsers have it, KK: *"we can stay with these keyboard shortcuts"*.
+
+## 2026-10-26 — The Activity Bar arranged as accountants work (KK)
+
+KK, on the left side of the desk: *"it is messy and gives user a feeling of lack of order. We mix
+things, things do not follow any priorities"*; functions under a section should be indented so they
+"follow" it. The names: the column of icons is the **Activity Bar**, the panel it opens the **Nav
+Bar**. KK proposed the activities (Sprzedaż, Koszty, Banki, Księgowość i podatki, Środki trwałe,
+Kartoteki; firms and users under Ustawienia; "Szukaj funkcji" across every activity); Claude proposed
+the arrangement in detail and four questions. KK's answers:
+
+1. **"Przepływ" is not Polish here** (*"The only thing that comes to my mind are 'Przepływy pieniężne'
+   = CashFlow"*): the board of where each sales invoice stands is **Status faktur**. "Obieg" stays for
+   what Polish firms mean by it, the approval of purchase invoices (step 3); "przepływy pieniężne" for
+   the cash flow statement.
+2. **The rule of 2026-10-22 gives way** — every activity's Nav Bar in the same three folders by kind
+   (Dokumenty i zapisy, Raporty, Kartoteki), alphabetical within each: the Nav Bar follows the
+   pack's own order, what an accountant reaches for first at the top. **Kartoteki is no activity**:
+   the chart of accounts, journal types, parameters and limits go to Księgowość i podatki.
+3. **Kadry i płace is an activity of its own**, there once its first App is.
+4. **The order of work**: first the Activity Bar and the Nav Bar rearranged over what exists (step 5
+   of the Apps); then the new Apps one at a time — Klienci and Dostawcy first, then Karty płatnicze,
+   Bramki płatnicze, Pracownicy with the payroll list, the statutory reports.
+
+On the same exchange KK set what the new Apps are: **clients apart from suppliers** — *"physically we
+can keep 1 table of Kontrahenci, but I would like to see our Clients separate from our Suppliers ...
+they might have different properties in the future, like trade conditions, account manager, price
+list ... the Kontrahenci only is very 'old school' ... We want Rhea to understand business in a
+natural way"*: one firm (its identity, from GUS and the VAT list), the roles of client and supplier
+each a record of its own with its own data, the role learnt from what happens (a firm's first sales
+invoice makes it a client); **cards apart from bank accounts** (*"Karty app will not work the same as
+normal bank account"*); **payment gateways** under Banki (FUNCTIONS 90); **employees** (FUNCTIONS 89,
+119); the statutory reports *"whatever is required"* (FUNCTIONS 62, 120, 121).
+
+*Claude, the spec silent:*
+- **The arrangement is the market pack's words**, beside its titles: the activities in order (title,
+  icon from the face's set, the letter after Alt Q), each with its sections in order, each section
+  its items — an App, an App on one of its tabs, or the list of one kind of record. A later pack's
+  words add to an activity of the same id. The face draws whatever arrangement it is given and knows
+  no market's; with none it files the screens as before. Why: where things sit is how a market's
+  people work, as their words are.
+- **A function is never hidden**: an App the arrangement places nowhere goes to the one section marked
+  for the rest. An item whose App the company does not have is not drawn (nothing to open).
+- **A section of one item is drawn as the item**, with no folder of its own.
+- **Ustawienia is an activity like the others**, at the bar's far end, with its own Nav Bar.
+- **Szukaj funkcji searches every activity**, the one in front first, each hit under its activity.
