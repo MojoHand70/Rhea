@@ -38,3 +38,26 @@ func TestWordsSayWhatAThingIs(t *testing.T) {
 		t.Fatal("an empty title is refused")
 	}
 }
+
+// TestWordsNameAnApp: a market's words give, in its language, the title of an
+// App another pack brought in another (2026-10-26) — the core's Journal is
+// Dziennik where the Poland pack is — as they give a view's; a later pack's
+// words name it over an earlier's, and an empty title is refused.
+func TestWordsNameAnApp(t *testing.T) {
+	var w WordsSpec
+	if err := json.Unmarshal([]byte(`{"lang": "pl", "apps": {"journal": "Dziennik", "trial-balance": "Zestawienie obrotów i sald"}}`), &w); err != nil {
+		t.Fatal(err)
+	}
+	if err := w.Check(); err != nil || w.Apps["journal"] != "Dziennik" {
+		t.Fatalf("an App named: %+v %v", w.Apps, err)
+	}
+	base := WordsSpec{Lang: "en", Apps: map[string]string{"journal": "Journal", "packs": "Packs"}}
+	base.Merge(w)
+	if base.Apps["journal"] != "Dziennik" || base.Apps["packs"] != "Packs" || base.Apps["trial-balance"] != "Zestawienie obrotów i sald" {
+		t.Fatalf("the later pack names it over the earlier: %+v", base.Apps)
+	}
+	w.Apps["packs"] = " "
+	if err := w.Check(); err == nil || !strings.Contains(err.Error(), "packs") {
+		t.Fatalf("an empty title is refused: %v", err)
+	}
+}

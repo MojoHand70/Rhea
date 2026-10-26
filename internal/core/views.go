@@ -147,6 +147,10 @@ type WordsSpec struct {
 	// in another (2026-10-22): a face shows the market's word, never the
 	// base pack's English.
 	Views map[string]string `json:"views,omitempty"`
+	// Apps gives, in this language, the title of an App another pack
+	// brought in another (2026-10-26): the core's Journal is Dziennik where
+	// the Poland pack is.
+	Apps map[string]string `json:"apps,omitempty"`
 	// Notes say how this market's books are read — what a payment to social
 	// security is, which amount is in the home currency, which month an
 	// invoice counts in (2026-10-18): market knowledge for whoever reads the
@@ -181,6 +185,7 @@ func (w *WordsSpec) Merge(o WordsSpec) {
 	over(&w.Doors, o.Doors)
 	over(&w.AccountGroups, o.AccountGroups)
 	over(&w.Views, o.Views)
+	over(&w.Apps, o.Apps)
 	for f, vals := range o.Values {
 		if w.Values == nil {
 			w.Values = map[string]map[string]string{}
@@ -232,7 +237,7 @@ func (w WordsSpec) Check() error {
 			return fmt.Errorf("words: type %s is of kind %q, not one of %v", t, tw.Kind, Kinds)
 		}
 	}
-	for _, m := range []map[string]string{w.Fields, w.Events, w.Doors, w.AccountGroups, w.Views} {
+	for _, m := range []map[string]string{w.Fields, w.Events, w.Doors, w.AccountGroups, w.Views, w.Apps} {
 		for k, v := range m {
 			if strings.TrimSpace(v) == "" {
 				return fmt.Errorf("words: %s has an empty label", k)
