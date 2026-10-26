@@ -898,6 +898,13 @@ func (x *Executor) amendOne(ctx context.Context, r core.Rule, objType core.Objec
 		}
 		val, c, err := tp.Evaluate(payload, fd, env)
 		if err != nil {
+			// What a setting leaves out stays as it was (2026-10-27): an
+			// optional field copied from an input the fact does not carry is
+			// left out of the amendment, as a new object leaves it unset. A
+			// computation over an absent input still fails.
+			if !fd.Required && tp.CarriesID() && errors.Is(err, core.ErrMissing) {
+				continue
+			}
 			return nil, fmt.Errorf("rule %s v%d set %q: %w", r.ID, r.Version, name, err)
 		}
 		if err := vouchRef(fd, tp, val, get); err != nil {

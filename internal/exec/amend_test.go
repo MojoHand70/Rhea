@@ -312,3 +312,55 @@ func TestAmendmentSimulates(t *testing.T) {
 		t.Fatal("simulation wrote an amendment")
 	}
 }
+
+// TestAmendmentLeavesOutWhatTheSettingLeavesOut (KK 2026-10-27, a client's
+// terms set a few at a time): an amendment that copies an optional field
+// from an input the fact does not carry leaves that field as it was — as a
+// new object leaves it unset — instead of failing the fact. A computation
+// over an absent input still fails, and so does a target the fact lacks.
+func TestAmendmentLeavesOutWhatTheSettingLeavesOut(t *testing.T) {
+	ctx := context.Background()
+	x := &exec.Executor{Store: storetest.New(t)}
+	seedLifecycleWorld(t, x)
+	activateRule(t, x, "note-case", 300, core.RuleSpec{
+		Match: core.Match{EventType: "case.noted"},
+		Effect: core.Effect{Amend: &core.AmendTemplate{Type: "case", Target: "=ref(case, subject_id, $.complaint)",
+			Set: map[string]string{"resolution": "=$.resolution"}}},
+	})
+	submitRaw(t, x, "c-1", "complaint.registered", "2026-10-05", `{"customer":"ACME Sp. z o.o.","registered_on":"2026-10-05"}`)
+	if n, errs := x.ProcessPending(ctx); n != 1 || len(errs) != 0 {
+		t.Fatalf("booked %d, errs %v", n, errs)
+	}
+	complaints, _ := x.Store.ObjectsByType(ctx, "complaint")
+	c := complaints[0].ID
+	submitRaw(t, x, "n-1", "case.noted", "2026-10-06", fmt.Sprintf(`{"complaint":"%s","resolution":"called back"}`, c))
+	submitRaw(t, x, "n-2", "case.noted", "2026-10-07", fmt.Sprintf(`{"complaint":"%s"}`, c))
+	if n, errs := x.ProcessPending(ctx); n != 2 || len(errs) != 0 {
+		t.Fatalf("a note without a resolution is booked, not refused: booked %d, errs %v", n, errs)
+	}
+	cases, _ := x.Store.ObjectsByType(ctx, "case")
+	if cases[0].State["resolution"] != "called back" {
+		t.Fatalf("the note that left the resolution out left it as it was: %+v", cases[0].State)
+	}
+	before, _ := x.Store.AllObjects(ctx)
+	if _, err := x.Replay(ctx); err != nil {
+		t.Fatal(err)
+	}
+	after, _ := x.Store.AllObjects(ctx)
+	bj, _ := json.Marshal(before)
+	aj, _ := json.Marshal(after)
+	if string(bj) != string(aj) {
+		t.Fatalf("replay diverged:\n%s\n%s", bj, aj)
+	}
+
+	// a computation over the absent input still fails: nothing stands in for it
+	activateRule(t, x, "shout-case", 400, core.RuleSpec{
+		Match: core.Match{EventType: "case.shouted"},
+		Effect: core.Effect{Amend: &core.AmendTemplate{Type: "case", Target: "=ref(case, subject_id, $.complaint)",
+			Set: map[string]string{"resolution": "=coalesce($.resolution, $.loud)"}}},
+	})
+	submitRaw(t, x, "s-1", "case.shouted", "2026-10-08", fmt.Sprintf(`{"complaint":"%s"}`, c))
+	if n, errs := x.ProcessPending(ctx); n != 0 || len(errs) == 0 {
+		t.Fatalf("a computation over absent inputs is refused: booked %d, errs %v", n, errs)
+	}
+}
