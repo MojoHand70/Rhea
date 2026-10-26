@@ -64,6 +64,10 @@ func (o Offer) runningAt(p string) bool { return o.running[p] }
 // View says whether a screen is offered.
 func (o Offer) View(id string) bool { return o.all || o.h.allows(core.KindViewDef, id, o.seenAt) }
 
+// App says whether an App is offered: the company has an install of a pack
+// holding it, as for a screen.
+func (o Offer) App(id string) bool { return o.all || o.h.allows(core.KindApp, id, o.seenAt) }
+
 // Type says whether a type is offered.
 func (o Offer) Type(name string) bool {
 	return o.all || o.h.allows(core.KindObjectType, name, o.seenAt)

@@ -134,6 +134,7 @@ func TestEveryReadIsTheCompanysOwn(t *testing.T) {
 	}
 	steps := []step{
 		{"GET /api/nav", "GET", "/api/nav", nil},
+		{"GET /api/apps", "GET", "/api/apps", nil},
 		{"GET /api/worklist", "GET", "/api/worklist", nil},
 		{"GET /api/types", "GET", "/api/types", nil},
 		{"GET /api/explain", "GET", "/api/explain?object=" + note, nil},

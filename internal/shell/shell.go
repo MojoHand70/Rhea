@@ -236,6 +236,7 @@ func hardened(next http.Handler) http.Handler {
 func (s *Server) mux() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/nav", s.handleNav)
+	mux.HandleFunc("GET /api/apps", s.handleApps)
 	mux.HandleFunc("GET /api/views/{id}", s.handleView)
 	mux.HandleFunc("GET /api/worklist", s.handleWorklist)
 	mux.HandleFunc("GET /api/types", s.handleTypes)

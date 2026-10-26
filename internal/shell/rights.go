@@ -199,16 +199,24 @@ func (s *Server) may(ctx context.Context, p *rights.Principal, kind, name, domai
 // allowView gates a view: by its own name, or — for a view that shows one
 // type's objects — by the type.
 func (s *Server) allowView(w http.ResponseWriter, r *http.Request, vd *core.ViewDef) bool {
-	p := rights.PrincipalOf(r.Context())
-	if p == nil || s.may(r.Context(), p, "view", vd.ID, vd.Domain) {
+	if s.mayView(r.Context(), vd) {
+		return true
+	}
+	return s.allow(w, r, "view", vd.ID, vd.Domain)
+}
+
+// mayView answers allowView's question without answering the request.
+func (s *Server) mayView(ctx context.Context, vd *core.ViewDef) bool {
+	p := rights.PrincipalOf(ctx)
+	if p == nil || s.may(ctx, p, "view", vd.ID, vd.Domain) {
 		return true
 	}
 	if typ := viewType(vd); typ != "" {
-		if t, err := s.Store.GetObjectType(r.Context(), typ); err == nil && s.may(r.Context(), p, "type", typ, t.Domain) {
+		if t, err := s.Store.GetObjectType(ctx, typ); err == nil && s.may(ctx, p, "type", typ, t.Domain) {
 			return true
 		}
 	}
-	return s.allow(w, r, "view", vd.ID, vd.Domain)
+	return false
 }
 
 // viewType is the object type a list, detail or statement view shows.
