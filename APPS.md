@@ -160,7 +160,7 @@ close names the core's month lock, the Poland pack's Plan kont, Kontrahenci, Fak
 VAT and Waluty name the core's screens and kinds. The channels' packs — KSeF in, MT940, NBP, the PDF
 reader — have doors and no tabs and stay as they are until step 5 makes them connectors.
 
-**Core** — `packs/core/core.json` v3, 13 Apps.
+**Core** — `packs/core/core.json` v4, 16 Apps.
 
 | App | title | v | layer | tabs | record | keeps | uses | doors | rules |
 |---|---|---|---|---|---|---|---|---|---|
@@ -177,6 +177,9 @@ reader — have doors and no tabs and stay as they are until step 5 makes them c
 | `bank-accounts` | Bank accounts and cards | 1 | core | — | — | bank_account, bank_operation, settlement, matching_difference | — | — | — |
 | `tasks` | Tasks | 1 | platform | do-zrobienia | — | task, task_schedule | — | — | — |
 | `packs` | Packs | 1 | platform | *desk: packs* | — | installed_pack | — | install_pack, switch_off_pack | 2 |
+| `today` | Today | 1 | platform | *desk: today* | — | — | — | — | — |
+| `my-company` | My company | 1 | platform | *desk: company* | — | — | company | — | — |
+| `settings` | Desk and look | 1 | platform | *desk: settings* | — | — | — | — | — |
 
 **Ludzie** — `packs/common/people.json` v4, 1 App.
 
@@ -196,17 +199,17 @@ reader — have doors and no tabs and stay as they are until step 5 makes them c
 |---|---|---|---|---|---|---|---|---|---|
 | `documents` | Documents | 1 | platform | issued-documents | — | received_document, issued_document | — | — | 3 |
 
-**Poland** — `packs/pl/pack.json` v46, 24 Apps.
+**Poland** — `packs/pl/pack.json` v47, 24 Apps.
 
 | App | title | v | layer | tabs | record | keeps | uses | doors | rules |
 |---|---|---|---|---|---|---|---|---|---|
 | `chart-of-accounts` | Plan kont | 2 | core | account-list *(named)* | account: account-detail *(named)*, *desk: ledger-sheet* | account | — | set_tax_treatment | 2 |
 | `vat-rates` | Stawki VAT | 2 | law | vat-rate-list | — | — | vat_rate | — | 1 |
 | `fx-rates` | Waluty | 2 | law | fx-rates *(named)*, wycena-bilansowa-walut | — | fx_revaluation | fx_rate, posting | revalue_fx_balances | 5 |
-| `parties` | Kontrahenci i moja firma | 2 | law | company-list *(named)* | company: company-detail *(named)*, *desk: company-page* | company, contractor | — | identify_company, declare_company_form, declare_company_accounts, enter_company | 8 |
-| `sales-invoices` | Faktury sprzedaży | 2 | law | sales-invoice-list, *desk: flow*, naleznosci-do-pilnowania, ksef-submissions | sales_invoice: *desk: document-sheet*, sales-invoice-detail | sales_invoice, ksef_submission, recurring_invoice_template | posting, task | ksef | 12 |
+| `parties` | Kontrahenci | 3 | law | company-list *(named)* | company: company-detail *(named)*, *desk: company-page* | company, contractor | — | identify_company, declare_company_form, declare_company_accounts, enter_company | 8 |
+| `sales-invoices` | Faktury sprzedaży | 3 | law | sales-invoice-list, *desk: flow* (Status faktur), naleznosci-do-pilnowania, ksef-submissions | sales_invoice: *desk: document-sheet*, sales-invoice-detail | sales_invoice, ksef_submission, recurring_invoice_template | posting, task | ksef | 12 |
 | `purchase-invoices` | Faktury zakupu | 2 | law | purchase-invoice-list *(named)* | purchase_invoice: *desk: document-sheet* | purchase_invoice | posting, company | set_cost_account | 6 |
-| `bank-accounts` | Rachunki i karty | 2 | law | wplaty-do-rozliczenia, wyplaty-do-rozliczenia | bank_operation: *desk: document-sheet* | bank_account, bank_operation, settlement, matching_difference | posting, sales_invoice, purchase_invoice | classify_bank_operation | 19 |
+| `bank-accounts` | Rachunki bankowe | 3 | law | pozycje-wyciagow, rachunki-bankowe, wplaty-do-rozliczenia, wyplaty-do-rozliczenia | bank_operation: *desk: document-sheet* | bank_account, bank_operation, settlement, matching_difference | posting, sales_invoice, purchase_invoice | classify_bank_operation | 19 |
 | `vat` | VAT | 1 | law | rozliczenie-vat, rejestr-vat-sprzedazy, rejestr-vat-zakupu | vat_settlement: deklaracja-vat | vat_settlement | — | — | 1 |
 | `cit` | CIT | 1 | law | zaliczki-cit, podatek-odroczony | cit_advance: zaliczka-cit | cit_limit, cit_status, cit_advance, deferred_tax | posting | declare_cit_status, recompute_cit_advance, recognise_deferred_tax, reverse_deferred_tax | 12 |
 | `tax-declarations` | Deklaracje podatkowe | 1 | law | — | — | tax_declaration | — | — | — |
@@ -258,8 +261,11 @@ the face's check and the live walk guard what the person sees.
    cost account: the Apps' detail views and actions, step 2.
 4. **The result and receivables sheets** — statement views in the Poland pack, step 2.
 5. **The company page** — the company App's view over its documents, step 2.
-6. **The search box** — each App says what of it is searchable, step 1.
-7. **The starter questions and the stand-in domain words** — the pack's words, step 1.
+6. **The search box** — the functions it finds are the Nav Bar's, under their activity and section (rheaface
+   eb418a8); which records it finds and how one reads in a line (an invoice's number, firm and gross) wait for
+   step 2, with what a record shows.
+7. **The starter questions and the stand-in domain words** — the pack's words: the questions are (Rhea be714d9, pack
+   v47; rheaface d4c36a0); the domain words stand in only where a pack arranges nothing.
 
 ## Order within step 1
 
@@ -284,9 +290,17 @@ the face's check and the live walk guard what the person sees.
    own with its tabs, one level; a tab pulled out into a desk tab of its own; a desk saved before
    still opens, a view's id leading to its App; an App's page of what it consists of — the
    designer page's first, read-only form. Gallery first, then the face's check and the live walk.
-5. **The platform's Apps** — Dziś, Ludzie, Dokumenty, Dlaczego, Rozmowa, Szukaj, Ustawienia — as
-   definitions in the core, their tabs the desk's own; what is searchable and the starter words
-   move to the packs (items 6–7 above).
+5. **The platform's Apps and the Activity Bar** — *done 2026-10-26* (Rhea 830dfc3, be714d9, 2905c02, dcecca3;
+   rheaface 9fe3ba8, eb5d18e, ac7da6f, d4c36a0, 466163e, 5b5b3aa, 89b0e7d, eb418a8). KK took the occasion to rearrange
+   the Activity Bar as accountants work (DECISIONS 2026-10-26): a market's words arrange its Apps — the activities in
+   order, each Nav Bar's sections and items in order; the Poland pack v47 gives Dziś, Sprzedaż, Koszty, Banki,
+   Księgowość i podatki, Środki trwałe and Ustawienia at the far end. Dziś, Firma (the company's own page) and Wygląd
+   i biurko are the core's Apps (core v4); Ludzie and Dokumenty were Apps already, now under Ustawienia and Księgi.
+   Rozmowa, the search box and Dlaczego stay the desk's frame — a pane, a box, an answer on a record — not tabs a
+   person opens. The questions to start with are the pack's words. Szukaj funkcji searches every activity; the
+   search box finds the Nav Bar's functions. Left, with the reason: which records the search box finds (step 2, with
+   what a record shows); the queue and matching screens (Do zrobienia, Należności do pilnowania, the bank's pairing)
+   are not drawn by the desk yet and their items wait, shown meanwhile as Dziś's cards.
 
 **Before the split, for KK.** "Core, market packs and business packs" (DIRECTION) splits the Poland
 pack into Podstawa, Pełna księgowość and Środki trwałe — Polska, then adds KPiR and ryczałt.

@@ -5385,3 +5385,11 @@ normal bank account"*); **payment gateways** under Banki (FUNCTIONS 90); **emplo
 - **A section of one item is drawn as the item**, with no folder of its own.
 - **Ustawienia is an activity like the others**, at the bar's far end, with its own Nav Bar.
 - **Szukaj funkcji searches every activity**, the one in front first, each hit under its activity.
+- **Assessed and left, with the reason** (2026-10-26, step 5): *which records the search box finds* — an
+  invoice by its number, firm and gross, a bank line by its payer and signed amount — is still chosen in the
+  face; it is a record's one-line form, which belongs with what a record shows (step 2), so it moves there
+  rather than becoming a part of the App format that step 2 would reshape. *The queue and matching screens*
+  (Do zrobienia, Należności do pilnowania, the bank's Wpłaty and Wypłaty do rozliczenia) are not drawn by the
+  desk; their Nav Bar items are left out until it draws those notions, and Dziś shows their work as cards
+  meanwhile. Rachunki bankowe got two plain lists (its statement lines, its accounts) so Banki opens on
+  something. Neither touches isolation or concurrency.

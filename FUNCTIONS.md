@@ -198,22 +198,22 @@ The link → a key enrolled, the person in the company with the role the invitat
 - [ ] the link enrols a key once and lands on the desk
 - [ ] the link works seven days and only once
 
-**3. Invite a person** — a company's owner · Ludzie → „Zaproś osobę”
+**3. Invite a person** — a company's owner · Ustawienia → Użytkownicy → „Zaproś osobę”
 Name, e-mail, role → a link to send; the person holds the role from today. *Now: works.*
 - [ ] the link is shown to copy
 - [ ] the person appears in „Kto ma dostęp” before they first come in
 
-**4. Withdraw an invitation** — the owner · Ludzie → Zaproszenia → „Unieważnij”
+**4. Withdraw an invitation** — the owner · Ustawienia → Użytkownicy → Zaproszenia → „Unieważnij”
 An unused link → the link opens nothing, the person's access ends. *Now: works.*
 - [ ] the link no longer opens
 - [ ] the person is gone from „Kto ma dostęp”
 
-**5. See who has access and who may do what** — the owner · Ludzie → „Kto ma dostęp”, „Kto co może”
+**5. See who has access and who may do what** — the owner · Ustawienia → Użytkownicy → „Kto ma dostęp”, „Kto co może”
 → every person, their role, where it comes from (membership, the office, a substitution), from when; every right by person. *Now: works.*
 - [ ] each row opens the grant it rests on
 - [ ] a person without the right to see this is told so
 
-**6. End a person's access** — the owner · Ludzie → „Zakończ”
+**6. End a person's access** — the owner · Ustawienia → Użytkownicy → „Zakończ”
 → the membership ends yesterday; from now the person sees nothing. *Now: works.*
 - [ ] the person is off the list
 - [ ] nobody can end their own access
@@ -345,10 +345,21 @@ The company's KSeF token or certificate → Rhea sends and fetches invoices for 
 - [ ] connected, Rhea says so and from when
 - [ ] a company's connection is never another company's
 
-**21. Chart of accounts** — the accountant · Księgi → Plan kont
+**21. Chart of accounts** — the accountant · Księgowość i podatki → Księgi → Plan kont
 See the chart; add an account; set an account's tax treatment. *Now: partly — seeing works; adding is not on the desk; the chart is still loaded as rows every company sees (to change: each company's own).*
 - [ ] the chart is the company's own
 - [ ] a new account can be added and is booked to
+
+**123. Clients and suppliers** — the accountant or the owner · Sprzedaż → Klienci, Koszty → Dostawcy · *Now: not
+yet (one list of Kontrahenci).*
+One firm — its identity, from GUS and the VAT list: NIP, name, address, VAT status, bank accounts — and its
+roles, each a record of its own with its own data: a client (payment terms, price list, discount, credit
+limit, account manager) and a supplier (payment terms, the default cost account, whether its invoices need
+approval). A firm's first sales invoice makes it a client, its first purchase invoice a supplier; a
+prospective client can be added by hand. (KK, 2026-10-26: *"the Kontrahenci only is very 'old school' ... We
+want Rhea to understand business in a natural way."*)
+- [ ] a firm that both buys and sells is one firm, a client and a supplier, its page showing both sides
+- [ ] a client's payment terms set the due date of its next sales invoice
 
 ## D. Documents coming in
 
@@ -442,6 +453,15 @@ A line nobody explains → its kind (a fee, a tax, the owner's), booked. *Now: w
 **29. Pair a payment with an invoice by hand** — the accountant · not yet on the desk
 Line, invoice(s) → settled; a difference booked. *Now: kernel only.*
 - [ ] the invoice shows as paid
+
+**122. Payment cards** — the accountant · Banki → Karty płatnicze · *Now: not yet.*
+A credit or charge card → its payments through the month, the card's statement, one repayment from the bank
+account; each payment paired with its invoice or receipt — often a foreign one, with the VAT on imported
+services; the card's debt on an account of its own until it is repaid. A debit card needs nothing of its own:
+its payments are the bank's lines. (KK, 2026-10-26: *"Karty app will not work the same as normal bank
+account."*)
+- [ ] a month's card payments add up to the statement, and the repayment clears it
+- [ ] a service from abroad paid by card is booked with the VAT on imported services
 
 **87. A receipt or a paper invoice from the phone** — anyone in the company · the phone's camera, mail
 A photo or a scan → seller, date, lines and rates read; a receipt up to 450 zł with the buyer's NIP
@@ -685,11 +705,11 @@ Date, description, lines Wn / Ma → a balanced entry, booked. *Now: not yet.*
 - [ ] an unbalanced PK is refused
 - [ ] a PK into a closed month is refused
 
-**36. The journal and an entry's origin** — the accountant · Księgi → Dziennik; any entry → „Dlaczego”
+**36. The journal and an entry's origin** — the accountant · Księgowość i podatki → Księgi → Dziennik; any entry → „Dlaczego”
 → every entry; for each, the fact and the rule it came from. *Now: works.*
 - [ ] every entry opens its document and its rule
 
-**37. Trial balance** — the accountant · Księgi → Zestawienie obrotów i sald
+**37. Trial balance** — the accountant · Księgowość i podatki → Księgi → Zestawienie obrotów i sald
 → every account's turnover and balance for a period. *Now: works.*
 - [ ] debits equal credits
 
@@ -712,7 +732,7 @@ Accept (OT), depreciation each month, dispose (LT). *Now: on the desk through it
 
 ## G. KPiR and ryczałt (sole traders)
 
-**42. The KPiR book** — Rhea · Księgi → KPiR
+**42. The KPiR book** — Rhea · Księgowość i podatki → Księgi → KPiR
 Sales and cost invoices, bank lines where they count → entries in the book's columns. *Now: not yet.*
 - [ ] each invoice lands in its column
 - [ ] the month's totals match the invoices
@@ -729,7 +749,7 @@ Date, document, column, amount → the entry. *Now: not yet.*
 Date, the stock's value → it counts in the year's income. *Now: not yet.*
 - [ ] the year's income takes it
 
-**46. The ryczałt record** — Rhea · Księgi → Ewidencja przychodów
+**46. The ryczałt record** — Rhea · Księgowość i podatki → Księgi → Ewidencja przychodów
 Sales → revenue by rate. *Now: not yet.*
 - [ ] each sale lands under its rate
 
@@ -743,7 +763,7 @@ The owner's basis → what to pay, when. *Now: not yet.*
 
 ## H. VAT and JPK
 
-**49. VAT registers** — the accountant · Księgi → rejestr VAT sprzedaży, zakupu
+**49. VAT registers** — the accountant · Księgowość i podatki → Podatki → VAT: rejestr VAT sprzedaży, zakupu
 → every invoice of the month with its VAT. *Now: works.*
 - [ ] a month's totals match the invoices
 
@@ -809,7 +829,7 @@ statements are not drawn).*
 **63. Distribute the result** — the owners · the search box, or the record's sheet · *Now: on the desk through its generic form (M2) — not yet tried with this action.*
 - [ ] the distribution is booked as decided
 
-**120. The JPK_KR_PD file** — the accountant · Księgi → JPK, once a year
+**120. The JPK_KR_PD file** — the accountant · Księgowość i podatki → Księgi → JPK, once a year
 The year's books → JPK_KR_PD, every account carrying its tags from the chart (one of the Ministry's
 244 statement tags, a tax tag where the account serves the tax), the book-to-tax bridge, and
 JPK_ST_KR with the fixed assets' tax and book values side by side; due by the end of the seventh
@@ -951,7 +971,7 @@ accounts and lists in Rhea. *Now: not yet.*
 question. *Now: not yet.*
 - [ ] nothing is exported to an account the client's chart does not have
 
-**106. Export the month to the program** — the accountant · Księgi → „Eksport do programu”
+**106. Export the month to the program** — the accountant · Księgowość i podatki → Księgi → „Eksport do programu”
 A period → the file the program imports (Optima: into its VAT registers through the JPK file first);
 the batch kept as a fact. *Now: not yet (the JPK_V7M writer exists, kernel only).*
 - [ ] the same month exported twice adds nothing
@@ -978,7 +998,7 @@ against the program's closing ones. *Now: not yet.*
 
 ## Q. Rhea's API (API.md)
 
-**110. A key for a program** — the owner or the office · Ludzie → „Programy”
+**110. A key for a program** — the owner or the office · Ustawienia → Użytkownicy → „Programy”
 A name, a role, the companies, from when → a key shown once; withdrawn, it opens nothing. *Now: not
 yet.*
 - [ ] a key of company A reads nothing of B
