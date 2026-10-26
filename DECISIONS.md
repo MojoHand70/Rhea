@@ -5323,3 +5323,10 @@ limit is something I would like to suggest."*
 - Every pack written as Apps moves one version (core 3, Ludzie 4, Okresy 3, Dokumenty 5, Poland
   45, warehouse 2, Germany 4); on a server that has the earlier versions, the new ones draft only
   the Apps, and the house approves each.
+
+## 2026-10-26 — An empty list stays in sight, with a sign that it is empty (KK)
+
+Asked whether an App whose lists have no rows yet should stay out of the drawer, as an empty list
+did — a new company would not see Faktury sprzedaży until its first invoice — KK: *"no, if list is
+empty, we need no data glyph, we should not hide functions"*. So the desk offers every list and every
+App whatever it holds, and an empty one carries a sign that it is empty, never hidden.
