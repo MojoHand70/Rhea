@@ -1,7 +1,7 @@
 {
   "app": "bank-accounts",
-  "version": 2,
-  "title": "Rachunki i karty",
+  "version": 3,
+  "title": "Rachunki bankowe",
   "layer": "law",
   "data": [
     {
@@ -227,6 +227,76 @@
     "purchase_invoice"
   ],
   "tabs": [
+    {
+      "view_id": "pozycje-wyciagow",
+      "version": 1,
+      "notion": "list",
+      "title": "Pozycje wyciągów",
+      "domain": "finance",
+      "function": "rozrachunki",
+      "spec": {
+        "object_type": "bank_operation",
+        "columns": [
+          {
+            "field": "date",
+            "label": "Data"
+          },
+          {
+            "field": "counterparty",
+            "label": "Kontrahent"
+          },
+          {
+            "field": "title",
+            "label": "Tytuł"
+          },
+          {
+            "field": "direction",
+            "label": "Strona"
+          },
+          {
+            "field": "amount",
+            "label": "Kwota"
+          },
+          {
+            "field": "currency",
+            "label": "Waluta"
+          },
+          {
+            "field": "settlement_status",
+            "label": "Rozliczenie"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "rachunki-bankowe",
+      "version": 1,
+      "notion": "list",
+      "title": "Rachunki bankowe",
+      "domain": "finance",
+      "function": "rozrachunki",
+      "spec": {
+        "object_type": "bank_account",
+        "columns": [
+          {
+            "field": "name",
+            "label": "Nazwa"
+          },
+          {
+            "field": "bank",
+            "label": "Bank"
+          },
+          {
+            "field": "number",
+            "label": "Numer rachunku"
+          },
+          {
+            "field": "currency",
+            "label": "Waluta"
+          }
+        ]
+      }
+    },
     {
       "view_id": "wplaty-do-rozliczenia",
       "version": 1,

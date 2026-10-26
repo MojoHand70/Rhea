@@ -1,12 +1,17 @@
 {
   "pack": "pl",
-  "version": 46,
+  "version": 47,
   "kind": "market",
   "market": "PL",
   "install": "installation",
   "stage": "initial",
   "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
   "history": [
+    {
+      "versions": "47",
+      "date": "2026-10-26",
+      "changes": "Pasek aktywności ułożony tak, jak pracuje księgowa (KK): Dziś, Sprzedaż, Koszty, Banki, Księgowość i podatki, Środki trwałe, a na końcu Ustawienia; w każdej aktywności sekcje w kolejności pracy, nie alfabetycznie. Tablica faktur sprzedaży nazywa się Status faktur. Kontrahenci bez „moja firma” (własna firma jest w Ustawieniach jako Firma), Ludzie jako Użytkownicy, Rachunki i karty jako Rachunki bankowe — z listą pozycji wyciągów i listą rachunków. Słownik niesie też pytania na początek, które pokazuje panel Rhei."
+    },
     {
       "versions": "46",
       "date": "2026-10-26",

@@ -239,7 +239,7 @@ type NavActivity struct {
 }
 
 // NavSection is one section of an activity's Nav Bar; one with no title
-// holds items above the titled ones. Rest marks the one section, of the
+// puts its items in the Nav Bar itself, where it stands. Rest marks the one section, of the
 // whole arrangement, that takes the Apps no activity places — a pack's
 // these words do not know yet: a function is never hidden (KK 2026-10-26).
 type NavSection struct {

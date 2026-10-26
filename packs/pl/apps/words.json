@@ -6,7 +6,7 @@
   "tabs": [
     {
       "view_id": "slownik",
-      "version": 18,
+      "version": 19,
       "notion": "words",
       "title": "Słownik",
       "domain": "finance",
@@ -1182,16 +1182,397 @@
           "group-trial-balance": "Zestawienie obrotów i sald grupy (EUR)",
           "invoice-by-customer": "Sprzedaż według nabywców",
           "intercompany-positions": "Rozrachunki wewnątrz grupy",
-          "who-can-do-what": "Kto co może"
+          "who-can-do-what": "Kto co może",
+          "desk:today": "Dziś",
+          "desk:company": "Firma",
+          "desk:settings": "Wygląd i biurko",
+          "desk:access": "Kto ma dostęp",
+          "desk:invites": "Zaproszenia",
+          "desk:packs": "Pakiety"
         },
         "apps": {
           "invoices": "Faktury",
           "journal": "Dziennik",
           "trial-balance": "Zestawienie obrotów i sald",
           "period-close": "Zamknięcie miesiąca",
-          "people": "Ludzie",
+          "people": "Użytkownicy",
           "documents": "Dokumenty",
-          "packs": "Pakiety"
+          "packs": "Pakiety",
+          "today": "Dziś",
+          "my-company": "Firma",
+          "settings": "Wygląd i biurko"
+        },
+        "activities": [
+          {
+            "id": "today",
+            "title": "Dziś",
+            "icon": "today",
+            "key": "D",
+            "sections": [
+              {
+                "items": [
+                  {
+                    "app": "today"
+                  },
+                  {
+                    "app": "tasks"
+                  },
+                  {
+                    "app": "tax-calendar"
+                  },
+                  {
+                    "app": "morning"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "sales",
+            "title": "Sprzedaż",
+            "icon": "sales",
+            "key": "S",
+            "sections": [
+              {
+                "items": [
+                  {
+                    "app": "sales-invoices"
+                  },
+                  {
+                    "app": "sales-invoices",
+                    "tab": "desk:flow"
+                  },
+                  {
+                    "app": "sales-invoices",
+                    "tab": "ksef-submissions"
+                  }
+                ]
+              },
+              {
+                "id": "receivables",
+                "title": "Należności",
+                "items": [
+                  {
+                    "app": "sales-invoices",
+                    "tab": "naleznosci-do-pilnowania"
+                  },
+                  {
+                    "app": "reports",
+                    "tab": "naleznosci-wiek"
+                  }
+                ]
+              },
+              {
+                "id": "customers",
+                "title": "Klienci",
+                "items": [
+                  {
+                    "app": "parties"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "costs",
+            "title": "Koszty",
+            "icon": "costs",
+            "key": "O",
+            "sections": [
+              {
+                "items": [
+                  {
+                    "app": "purchase-invoices"
+                  },
+                  {
+                    "app": "goods-receipts"
+                  }
+                ]
+              },
+              {
+                "id": "suppliers",
+                "title": "Dostawcy",
+                "items": [
+                  {
+                    "app": "parties"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "bank",
+            "title": "Banki",
+            "icon": "bank",
+            "key": "B",
+            "sections": [
+              {
+                "items": [
+                  {
+                    "app": "bank-accounts",
+                    "tab": "pozycje-wyciagow"
+                  },
+                  {
+                    "app": "bank-accounts",
+                    "tab": "wplaty-do-rozliczenia"
+                  },
+                  {
+                    "app": "bank-accounts",
+                    "tab": "wyplaty-do-rozliczenia"
+                  },
+                  {
+                    "app": "bank-accounts",
+                    "tab": "rachunki-bankowe"
+                  },
+                  {
+                    "app": "loans"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "books",
+            "title": "Księgowość i podatki",
+            "icon": "books",
+            "key": "K",
+            "sections": [
+              {
+                "id": "books",
+                "title": "Księgi",
+                "items": [
+                  {
+                    "app": "journal"
+                  },
+                  {
+                    "app": "trial-balance"
+                  },
+                  {
+                    "app": "chart-of-accounts"
+                  },
+                  {
+                    "app": "documents",
+                    "title": "Archiwum dokumentów"
+                  }
+                ]
+              },
+              {
+                "id": "taxes",
+                "title": "Podatki",
+                "items": [
+                  {
+                    "app": "vat"
+                  },
+                  {
+                    "app": "cit"
+                  },
+                  {
+                    "app": "tax-declarations"
+                  },
+                  {
+                    "app": "tax-calendar"
+                  }
+                ]
+              },
+              {
+                "id": "periodic",
+                "title": "Operacje okresowe",
+                "items": [
+                  {
+                    "app": "prepaid-costs"
+                  },
+                  {
+                    "app": "provisions"
+                  },
+                  {
+                    "app": "fx-rates",
+                    "tab": "wycena-bilansowa-walut"
+                  },
+                  {
+                    "app": "stocktake"
+                  }
+                ]
+              },
+              {
+                "id": "close",
+                "title": "Zamknięcie",
+                "items": [
+                  {
+                    "app": "period-close"
+                  },
+                  {
+                    "app": "year-close"
+                  },
+                  {
+                    "app": "equity"
+                  }
+                ]
+              },
+              {
+                "id": "statements",
+                "title": "Sprawozdania",
+                "items": [
+                  {
+                    "app": "reports",
+                    "tab": "wynik"
+                  },
+                  {
+                    "app": "reports",
+                    "tab": "wynik-miesiace"
+                  }
+                ]
+              },
+              {
+                "id": "parameters",
+                "title": "Słowniki i parametry",
+                "items": [
+                  {
+                    "app": "vat-rates"
+                  },
+                  {
+                    "app": "fx-rates",
+                    "tab": "fx-rates"
+                  },
+                  {
+                    "kind": "cit_limit"
+                  }
+                ]
+              },
+              {
+                "id": "rest",
+                "title": "Pozostałe",
+                "items": [
+                  {
+                    "app": "invoices"
+                  }
+                ],
+                "rest": true
+              }
+            ]
+          },
+          {
+            "id": "assets",
+            "title": "Środki trwałe",
+            "icon": "assets",
+            "key": "T",
+            "sections": [
+              {
+                "items": [
+                  {
+                    "app": "fixed-assets"
+                  },
+                  {
+                    "app": "development-costs"
+                  },
+                  {
+                    "app": "vehicles"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "settings",
+            "title": "Ustawienia",
+            "icon": "settings",
+            "key": "U",
+            "end": true,
+            "sections": [
+              {
+                "items": [
+                  {
+                    "app": "my-company"
+                  }
+                ]
+              },
+              {
+                "id": "users",
+                "title": "Użytkownicy",
+                "items": [
+                  {
+                    "app": "people",
+                    "tab": "desk:access"
+                  },
+                  {
+                    "app": "people",
+                    "tab": "who-can-do-what"
+                  },
+                  {
+                    "app": "people",
+                    "tab": "desk:invites"
+                  },
+                  {
+                    "kind": "person"
+                  },
+                  {
+                    "kind": "role"
+                  },
+                  {
+                    "kind": "group"
+                  },
+                  {
+                    "kind": "substitution"
+                  },
+                  {
+                    "kind": "membership"
+                  },
+                  {
+                    "kind": "mandate"
+                  }
+                ]
+              },
+              {
+                "items": [
+                  {
+                    "app": "packs"
+                  },
+                  {
+                    "app": "words"
+                  },
+                  {
+                    "app": "settings"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "asks": {
+          "today": [
+            "Co dziś czeka na moją decyzję?",
+            "Ile mam na rachunku?",
+            "Jaki mam wynik od stycznia?",
+            "Które faktury są nieopłacone?",
+            "Ile VAT za ostatni miesiąc?",
+            "Zakupy powyżej 900 zł",
+            "Pokazuj najpierw numer dokumentu, nie kontrahenta"
+          ],
+          "list:sales_invoice": [
+            "Które faktury są po terminie?",
+            "Kto zalega najdłużej?"
+          ],
+          "flow:sales_invoice": [
+            "Które faktury czekają na zapłatę?"
+          ],
+          "list:purchase_invoice": [
+            "Które zakupy czekają na zapłatę?"
+          ],
+          "list:bank_operation": [
+            "Które wpłaty nie są rozliczone?"
+          ],
+          "list:company": [
+            "Kto zalega najdłużej?",
+            "Kto jest największym klientem w tym roku?"
+          ],
+          "company": [
+            "Ile jest nam winna ta firma?"
+          ],
+          "receivables": [
+            "Kto zalega najdłużej?"
+          ],
+          "result": [
+            "Jaki mam wynik od stycznia?"
+          ]
         }
       }
     }

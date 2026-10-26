@@ -1,6 +1,6 @@
 {
   "app": "sales-invoices",
-  "version": 2,
+  "version": 3,
   "title": "Faktury sprzedaży",
   "layer": "law",
   "data": [
@@ -296,7 +296,7 @@
     },
     {
       "desk": "flow",
-      "title": "Przepływ"
+      "title": "Status faktur"
     },
     {
       "view_id": "naleznosci-do-pilnowania",

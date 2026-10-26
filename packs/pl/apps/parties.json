@@ -1,7 +1,7 @@
 {
   "app": "parties",
-  "version": 2,
-  "title": "Kontrahenci i moja firma",
+  "version": 3,
+  "title": "Kontrahenci",
   "layer": "law",
   "data": [
     {
