@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"slices"
 	"sort"
 	"strings"
@@ -214,11 +215,14 @@ type Shape struct {
 var structural = map[string]bool{"$.object_type": true, "$.market": true, "$.currency": true}
 
 // ShapeOf anonymizes a rule. Kept: the matched event, structural condition
-// values, the effect with its templates, literals (enum values, account
-// codes, book names — the market's shared vocabulary). Dropped: id,
-// description, priority, dates, and every other condition value. Stripping
-// instance literals well is ultimately an AI task (DIRECTION); this is the
-// deterministic first cut, guarded by the floor.
+// values, the effect's structure — its types, fields, paths and operators —
+// and the chart's words (a posting's account, book and currency). Dropped:
+// id, description, priority, dates, every other condition value, and every
+// value a rule writes: text and long numbers inside a formula, a field's
+// plain value. Only general rules are published (Publish), and no company's
+// values leave with them (KK, 2026-10-27: "No particular company data in
+// it!"); the shape once kept a NIP in a formula and a tenant's name and
+// street as a field's value (review 2026-10-27).
 func ShapeOf(spec core.RuleSpec) (Shape, error) {
 	anon := spec
 	anon.Match.Where = nil
@@ -226,7 +230,22 @@ func ShapeOf(spec core.RuleSpec) (Shape, error) {
 		if !structural[c.Path] {
 			c.Value = "?"
 		}
+		c.Formula = blankFormula(c.Formula)
 		anon.Match.Where = append(anon.Match.Where, c)
+	}
+	anon.Effect.Object.Each = blankFormula(spec.Effect.Object.Each)
+	anon.Effect.Object.Fields = blankFields(spec.Effect.Object.Fields)
+	if a := spec.Effect.Amend; a != nil {
+		anon.Effect.Amend = &core.AmendTemplate{Type: a.Type, Each: blankFormula(a.Each), Target: blankFormula(a.Target), Set: blankFields(a.Set)}
+	}
+	if p := spec.Effect.Postings; p != nil {
+		cp := *p
+		cp.Currency = blankFormula(p.Currency)
+		cp.Lines = nil
+		for _, l := range p.Lines {
+			cp.Lines = append(cp.Lines, core.PostingLine{Account: blankFormula(l.Account), Debit: blankValue(l.Debit), Credit: blankValue(l.Credit)})
+		}
+		anon.Effect.Postings = &cp
 	}
 	sort.Slice(anon.Match.Where, func(i, j int) bool { return anon.Match.Where[i].Path < anon.Match.Where[j].Path })
 	b, err := json.Marshal(anon) // map keys marshal sorted: the encoding is canonical
@@ -234,6 +253,45 @@ func ShapeOf(spec core.RuleSpec) (Shape, error) {
 		return Shape{}, err
 	}
 	return Shape{Key: KeyOf(spec), Fingerprint: fingerprint(b), Spec: anon}, nil
+}
+
+// quoted and longNumber are the values a formula writes: text in quotes,
+// and numbers of six digits or more — a NIP, an account number, an amount
+// someone typed. A rate, a day count, a legal threshold under a hundred
+// thousand stay: they are the law's, and the shape's sense.
+var (
+	quoted     = regexp.MustCompile(`"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'`)
+	longNumber = regexp.MustCompile(`\b\d{6,}(?:\.\d+)?\b`)
+)
+
+// blankFormula blanks the values inside a formula; a plain word (a type, an
+// account, a currency code — the template's vocabulary) is kept.
+func blankFormula(t string) string {
+	if !strings.HasPrefix(t, "=") {
+		return t
+	}
+	return longNumber.ReplaceAllString(quoted.ReplaceAllString(t, `"?"`), "?")
+}
+
+// blankValue blanks a value a rule writes: a formula's values, or the whole
+// of a plain one.
+func blankValue(t string) string {
+	if t == "" || strings.HasPrefix(t, "=") {
+		return blankFormula(t)
+	}
+	return "?"
+}
+
+// blankFields blanks the values of a field map, keeping its field names.
+func blankFields(fields map[string]string) map[string]string {
+	if fields == nil {
+		return nil
+	}
+	out := make(map[string]string, len(fields))
+	for k, v := range fields {
+		out[k] = blankValue(v)
+	}
+	return out
 }
 
 // KeyOf names the question a rule answers: the event it explains (a cascade
@@ -261,11 +319,15 @@ func KeyOf(spec core.RuleSpec) string {
 }
 
 // Publish records an installation's current knowledge: the shapes of its
-// active rules. Business data never leaves; only explanations do.
+// active general rules — Rhea's own, never a company's (KK, 2026-10-27).
+// Business data never leaves; only explanations do.
 func (n *Network) Publish(ctx context.Context, installation string, rules []core.Rule) (int, error) {
 	seen := map[string]bool{}
 	var shapes []Shape
 	for _, r := range rules {
+		if r.Company != "" {
+			continue // a company's own reading is its business, not the law's
+		}
 		sh, err := ShapeOf(r.Spec)
 		if err != nil {
 			return 0, err
