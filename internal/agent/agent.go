@@ -363,7 +363,9 @@ settling two invoices with two grosz written off reads, for example:
                           "open_after": {"money": 0}, "currency": "PLN", "reference": "FV/2"}]},
    "differences": [{"kind": "tolerance", "measure": "money", "side": "invoice", "amount": 2,
                     "direction": "short", "currency": "PLN", "account": "755"}]}
-Money amounts in it are minor units. It changes nothing by itself: ordinary rules in the
+Money amounts in it are minor units: copy them as they are ("=$.line.allocated.money"); a
+computation over them is refused — make an object of them first and compute from its typed
+state in a cascade. It changes nothing by itself: ordinary rules in the
 SAME answer explain it, matching "objects.matched" with
 "where": [{"path": "$.matching", "op": "eq", "value": "incoming-payments"}] -
   the open amounts move by an amendment over the items:

@@ -763,7 +763,7 @@ func TestMatchingThreeWay(t *testing.T) {
 		{Name: "price_variance", Version: 1, Domain: "purchasing", Fields: []core.FieldDef{
 			{Name: "order_line", Type: "ref<po_line>", Required: true},
 			{Name: "per_unit", Type: "money", Required: true},
-			{Name: "amount", Type: "money", Required: true},
+			{Name: "qty", Type: "int", Required: true},
 			{Name: "direction", Type: "enum", Required: true, Values: []string{"short", "over"}},
 			{Name: "date", Type: "date", Required: true}}},
 	} {
@@ -845,13 +845,13 @@ func TestMatchingThreeWay(t *testing.T) {
 	activate("record-variance", 40, core.RuleSpec{Match: core.Match{EventType: core.EventObjectsMatched, Where: []core.Condition{
 		{Path: "$.matching", Op: "eq", Value: "three-way"}, {Path: "$.differences[0]", Op: "exists"}}},
 		Effect: core.Effect{Object: core.ObjectTemplate{Type: "price_variance", Each: "=$.differences[*]", Fields: map[string]string{
-			"order_line": "=$.line.item", "per_unit": "=$.line.amount",
-			"amount":    "=round($.line.amount * $.doc.sides.invoice[0].allocated.qty / 100, 2, half_up)",
+			"order_line": "=$.line.item", "per_unit": "=$.line.amount", "qty": "=$.doc.sides.invoice[0].allocated.qty",
 			"direction": "=$.line.direction", "date": "=$.root.date"}}}})
-	// The supplier invoiced above the order's price: Wn 341 / Ma 300.
+	// The supplier invoiced above the order's price: Wn 341 / Ma 300, the
+	// variance's per-unit amount times its quantity, read typed from its state.
 	activate("post-variance", 50, core.RuleSpec{Match: cascade("price_variance"),
 		Effect: core.Effect{Postings: &core.PostingsTemplate{Currency: "PLN", Lines: []core.PostingLine{
-			{Account: "341", Debit: "=$.state.amount"}, {Account: "300", Credit: "=$.state.amount"}}}}})
+			{Account: "341", Debit: "=$.state.per_unit * $.state.qty"}, {Account: "300", Credit: "=$.state.per_unit * $.state.qty"}}}}})
 
 	submit("w", "item.created", "2026-09-01", `{"sku":"W"}`)
 	submit("v", "item.created", "2026-09-01", `{"sku":"V"}`)
@@ -888,7 +888,7 @@ func TestMatchingThreeWay(t *testing.T) {
 		t.Fatalf("one three-way match per invoice line: %d", len(matches))
 	}
 	variances, _ := x.Store.ObjectsByType(ctx, "price_variance")
-	if len(variances) != 1 || variances[0].State["per_unit"].(float64) != 20 || variances[0].State["amount"].(float64) != 2000 || variances[0].State["direction"] != "over" {
+	if len(variances) != 1 || variances[0].State["per_unit"].(float64) != 20 || variances[0].State["qty"].(float64) != 100 || variances[0].State["direction"] != "over" {
 		t.Fatalf("W invoiced 0.20 above the order on 100 units: %v", variances)
 	}
 	postings, _ := x.Store.ObjectsByType(ctx, "posting")

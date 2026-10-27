@@ -523,3 +523,39 @@ func TestTypedReadNeverFallsBackToRaw(t *testing.T) {
 		t.Fatalf("an unreadable type read raw: %v", err)
 	}
 }
+
+// A computation over a bare number in a derived fact is refused in money
+// (review 2026-10-27, high: the hundredfold slip). A derived payload's bare
+// number is minor units when copied — =$.amount over {"amount": 1234} is
+// 12.34 — but abs, a minus, a product or a sum over it read major units and
+// stored 1234.00: a match's allocation or difference turned a hundred times
+// larger the moment a rule computed with it. Now a value computed from a bare
+// number has no unit and a money field refuses it; a bare number a formula
+// only picks (coalesce, if, min, max) is read as the copy it is. A raw
+// fact's bare numbers are counts, as before.
+func TestABareNumberKeepsItsUnitThroughAFormula(t *testing.T) {
+	derived := decode(t, `{"amount": 1234, "items": [{"amount": 1000}, {"amount": 234}]}`)
+	eval := func(tmpl string, env *Env) (any, error) {
+		t.Helper()
+		tm, err := ParseTemplate(tmpl)
+		if err != nil {
+			t.Fatal(err)
+		}
+		v, _, err := tm.Evaluate(derived, FieldDef{Name: "f", Type: "money"}, env)
+		return v, err
+	}
+	for _, f := range []string{"=$.amount", "=coalesce($.amount, 0)", "=if(true, $.amount, 0)", "=max($.amount, 0)"} {
+		if v, err := eval(f, &Env{}); err != nil || v != int64(1234) {
+			t.Fatalf("%s over a derived fact: %v, %v (want 12.34)", f, v, err)
+		}
+	}
+	for _, f := range []string{"=abs($.amount)", "=-$.amount", "=$.amount * 1", "=$.amount + 0", "=round($.amount, 2, half_up)", "=sum(i in $.items : i.amount)"} {
+		if v, err := eval(f, &Env{}); err == nil {
+			t.Fatalf("%s over a derived fact stored %v", f, v)
+		}
+	}
+	// a raw fact's bare number is a count: a computation with it still runs
+	if v, err := eval("=$.amount * 1.50", &Env{Raw: true}); err != nil || v != int64(185100) {
+		t.Fatalf("a count times a price in a raw fact: %v, %v", v, err)
+	}
+}

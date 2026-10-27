@@ -35,6 +35,21 @@ type Value struct {
 	// money field it is minor units in a derived payload and refused in a
 	// raw one (Env.Raw), where money crosses as text (invariant 6).
 	untyped bool
+	// unitless marks a number computed from an untyped one — a sum, a
+	// product, an abs, a minus over it: its unit is the payload's, which
+	// says none, so a money field of a derived fact refuses it (toField).
+	unitless bool
+}
+
+// noUnit reports whether any of the values is an untyped number or was
+// computed from one.
+func noUnit(vs ...Value) bool {
+	for _, v := range vs {
+		if v.untyped || v.unitless {
+			return true
+		}
+	}
+	return false
 }
 
 // Env is what a formula may reach beyond its payload: lookups and state
@@ -170,7 +185,7 @@ func (m *vm) exec(p *program) (Value, error) {
 			if err != nil {
 				return Value{}, err
 			}
-			m.push(Value{Kind: k, Num: new(big.Rat).Neg(r)})
+			m.push(Value{Kind: k, Num: new(big.Rat).Neg(r), unitless: noUnit(v)})
 		case opNot:
 			v := m.pop()
 			if v.Kind != KBool {
@@ -854,7 +869,19 @@ func binop(op string, a, b Value) (Value, error) {
 	if err := bounded(r); err != nil {
 		return Value{}, err
 	}
-	return Value{Kind: k, Num: r}, nil
+	// A bare number times an amount, or an amount divided by one, is a count
+	// of it — ten pieces at 12.50 — and the amount's unit stands.
+	unitless := noUnit(a, b)
+	if unitless && (op == "*" && (amount(a) || amount(b)) || op == "/" && amount(a)) {
+		unitless = false
+	}
+	return Value{Kind: k, Num: r, unitless: unitless}, nil
+}
+
+// amount reports whether a value carries money's unit: typed money, or an
+// amount written as text, as money crosses the boundary.
+func amount(v Value) bool {
+	return !noUnit(v) && (v.Kind == KMoney || v.Kind == KString)
 }
 
 func looksDate(v Value) bool {
@@ -1013,7 +1040,7 @@ func call(name string, args []Value) (Value, error) {
 		if k == KInt {
 			k = KDecimal
 		}
-		return Value{Kind: k, Num: roundRat(r, int(places), args[2].Str)}, nil
+		return Value{Kind: k, Num: roundRat(r, int(places), args[2].Str), unitless: noUnit(args[0])}, nil
 	case "coalesce":
 		if args[0].Kind == KNull {
 			return args[1], nil
@@ -1024,7 +1051,7 @@ func call(name string, args []Value) (Value, error) {
 		if err != nil {
 			return Value{}, err
 		}
-		return Value{Kind: k, Num: new(big.Rat).Abs(r)}, nil
+		return Value{Kind: k, Num: new(big.Rat).Abs(r), unitless: noUnit(args[0])}, nil
 	case "min", "max":
 		less, err := compare("<", args[0], args[1])
 		if err != nil {
@@ -1111,7 +1138,7 @@ func (it *iterator) accumulate(v Value) error {
 			return err
 		}
 		if !it.has {
-			it.acc = Value{Kind: k, Num: new(big.Rat).Set(r)}
+			it.acc = Value{Kind: k, Num: new(big.Rat).Set(r), unitless: it.kind == "sum" && noUnit(v)}
 			it.has = true
 			return nil
 		}
@@ -1119,7 +1146,7 @@ func (it *iterator) accumulate(v Value) error {
 		if err != nil {
 			return err
 		}
-		it.acc = Value{Kind: kind, Num: new(big.Rat).Add(it.acc.Num, r)}
+		it.acc = Value{Kind: kind, Num: new(big.Rat).Add(it.acc.Num, r), unitless: it.acc.unitless || it.kind == "sum" && noUnit(v)}
 		if err := bounded(it.acc.Num); err != nil {
 			return err
 		}
@@ -1218,13 +1245,22 @@ func toField(v Value, fd FieldDef, copy, raw bool) (any, error) {
 		if v.Kind == KNull {
 			return nil, fmt.Errorf("%s is missing", orDefault(v.Origin, "the value"))
 		}
-		if copy && v.Kind == KInt && v.untyped {
+		// A bare number a formula only picks — coalesce, if, min, max — is
+		// the copy it is; one computed from a bare number has no unit, and a
+		// derived fact's money refuses it: read as major units, an
+		// allocation of 12.34 came out of abs() as 1234.00 (review
+		// 2026-10-27, the hundredfold slip). A raw fact's bare numbers are
+		// counts, and a computation with them stands as it did.
+		if v.unitless && !raw {
+			return nil, fmt.Errorf("%s is computed from a bare number, which has no unit here (a derived fact's bare amounts are minor units) — copy the amount as it is, or compute from a typed amount", orDefault(v.Origin, "the value"))
+		}
+		if v.Kind == KInt && v.untyped {
 			if raw {
 				return nil, fmt.Errorf("%s is a bare number with no unit — money crosses the boundary as text with two places (\"123.45\")", orDefault(v.Origin, "the value"))
 			}
 			return v.Num.Num().Int64(), nil // minor units, the derived-payload form
 		}
-		if copy && v.Kind == KString && v.untyped && raw {
+		if v.Kind == KString && v.untyped && raw {
 			return nil, fmt.Errorf("%s is a bare number — money crosses the boundary as text with two places (\"123.45\")", orDefault(v.Origin, "the value"))
 		}
 		if copy && v.Kind == KString {
