@@ -1071,6 +1071,8 @@ func call(name string, args []Value) (Value, error) {
 			return args[0], nil
 		}
 		return args[1], nil
+	case "is_iban":
+		return Value{Kind: KBool, Bool: CheckIBAN(args[0].Str) == nil}, nil
 	case "end_of_month":
 		d, err := toDate(args[0])
 		if err != nil {

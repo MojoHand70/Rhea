@@ -61,3 +61,13 @@ func TestATypeDeclaresItsMovesWhole(t *testing.T) {
 		}
 	}
 }
+
+// A rule asks whether a value is an IBAN before it makes one of it.
+func TestAFormulaAsksWhetherAnIBANIs(t *testing.T) {
+	for in, want := range map[string]string{"PL61109010140000071219812874": "yes", "61109010140000071219812874": "no", "PL61109010140000071219812875": "no"} {
+		v, _ := evalFormula(t, `=if(is_iban($.account), "yes", "no")`, `{"account": "`+in+`"}`, "string", nil)
+		if v != want {
+			t.Errorf("is_iban(%s) = %v, want %v", in, v, want)
+		}
+	}
+}

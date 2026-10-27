@@ -38,6 +38,8 @@ import (
 // Functions: round(x, places, method) with method ∈ half_up half_even down up;
 // if(c, a, b); coalesce(a, b) — a, unless it is missing, then b; abs(x);
 // min(a, b); max(a, b); end_of_month(d); start_of_year(d); add_months(d, n);
+// is_iban(x) — whether text is an IBAN as kept (no spaces, capitals), its
+// country's length and check digits holding (ISO 13616);
 // months_between(a, b) — whole months from a's month to b's (Jan to Mar is 2);
 // month(d) — the period a date falls in, "YYYY-MM", the key periods share;
 // balance(book, code, from, to) — the debits less the credits of the account
@@ -945,6 +947,18 @@ func (e *checkEnv) checkCall(n *node, rounded bool) (ty, error) {
 			return anyT, fmt.Errorf("at %d: %w", n.pos, err)
 		}
 		return join(a, b), nil
+	case "is_iban":
+		if err := argc(1); err != nil {
+			return anyT, err
+		}
+		x, err := e.check(n.args[0], rounded)
+		if err != nil {
+			return anyT, err
+		}
+		if x.kind != KString && x.kind != KAny {
+			return anyT, fmt.Errorf("at %d: is_iban wants text, got %s", n.pos, x.kind)
+		}
+		return ty{kind: KBool}, nil
 	case "end_of_month":
 		if err := argc(1); err != nil {
 			return anyT, err
