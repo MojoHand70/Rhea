@@ -5586,7 +5586,12 @@ The design is DIRECTION "Tasks, groups and the phone".
   Designer, Tenant Owner, Office Manager, Company Manager, User, Guest, and Rhea Support for Rhea's own
   staff ("Not a group"). A group has no role. Of today's roles, owner becomes Company Manager, support
   Rhea Support; chief accountant, accountant and reader become groups.
-- **A system group, All users**, for giving an App to everyone (KK); Rhea keeps its members.
+- **A system group, All users**, for giving an App to everyone (KK); Rhea keeps its members: the
+  company's own people, never a Guest, never another company's — an office's people reach a client
+  through the office's groups (Claude's proposal, KK confirmed).
+- **A new company's Company Manager is in each group it starts with** (Chief Accountant, Accountant,
+  Reader) until handing it over, so a sole trader does everything on day one (Claude's proposal, KK
+  confirmed).
 - **A User in no group sees Dziś and their own tasks only** (KK, agreeing).
 - **The tenant is the contract with Rhea**, holding an office with its clients or companies directly;
   the Tenant Owner sees no company's books by that role alone (KK, agreeing).

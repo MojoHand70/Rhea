@@ -4501,12 +4501,13 @@ then ask who to add to this Group."
   as a company membership does, so the books answer who could approve on a given day; an App does
   not go into production with a step whose group is empty.
 - A system group *All users* (KK: "if by chance you need to add all users to an app"), whose
-  members Rhea keeps and nobody adds by hand. Proposed (Claude): a company's own people, never a
-  Guest, never another company's; an office's people reach a client through the office's groups.
+  members Rhea keeps and nobody adds by hand: a company's own people, never a Guest, never another
+  company's; an office's people reach a client through the office's groups (Claude's proposal, KK
+  confirmed).
 - A User in no group sees Dziś and their own tasks, nothing else (KK, agreeing).
 - The groups a company starts with — Chief Accountant (Główny księgowy), Accountant (Księgowość),
-  Reader (Podgląd) — hold what today's roles of those names hold; proposed (Claude): its Company
-  Manager in each until handed over, so a sole trader does everything on day one.
+  Reader (Podgląd) — hold what today's roles of those names hold, with its Company Manager in each
+  until handed over, so a sole trader does everything on day one (Claude's proposal, KK confirmed).
 
 **Zadania.** KK: "the 'Dziś' activity needs a new function: Worklist or we can call it 'Zadania' or
 'Todos', which would be the list of tasks a user has to do. A normal table but with a) inline
