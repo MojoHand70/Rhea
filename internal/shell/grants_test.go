@@ -19,6 +19,7 @@ import (
 	"rhea/internal/core"
 	"rhea/internal/exec"
 	"rhea/internal/pack"
+	"rhea/internal/rights"
 	"rhea/internal/shell"
 	"rhea/internal/store"
 	"rhea/internal/store/storetest"
@@ -554,6 +555,39 @@ func TestTheOpenDoorIsNoSideDoor(t *testing.T) {
 	}
 	if code, out := submit("kk", "membership.granted", map[string]any{"person": kk, "company": a, "role": "reader", "from": w.today, "granted_by": "kk"}); code != 200 {
 		t.Fatalf("the owner's grant through the open door: %d %v", code, out)
+	}
+}
+
+// A fact let through the open door is the fact its own door would write
+// (review 2026-10-27, critical 1): the check asked the substitution's door,
+// which names the company acted for where none is given and signs who
+// granted it, then threw its answer away and kept the payload as sent.
+// Mallory, the owner of a company of her own, appointed herself KK's deputy
+// with no company — every company, by the rule's reading — signed as KK,
+// and read KK's company's books.
+func TestTheOpenDoorWritesWhatItsDoorWould(t *testing.T) {
+	w := newGrantsWorld(t)
+	a, m := "PL5250001111", "PL5260001246"
+	kk := w.person("Krzysztof Kowal", "kk", a, "owner")
+	mallory := w.person("Mallory Obca", "mallory", m, "owner")
+
+	code, out := w.door("mallory", m, "submit_event", map[string]any{"event_type": "substitution.appointed", "occurred_at": w.today,
+		"payload": map[string]any{"person": kk, "deputy": mallory, "from": w.today, "to": w.dayFrom(30), "granted_by": "kk"}})
+	if code == 200 {
+		subs, err := w.s.ObjectsByType(w.ctx, "substitution")
+		if err != nil || len(subs) != 1 {
+			t.Fatalf("the substitution: %+v %v", subs, err)
+		}
+		if got := subs[0].State; got["company"] != m || got["granted_by"] != "mallory" {
+			t.Fatalf("the open door wrote what the door would not: %v", got)
+		}
+	}
+	p, err := rights.Resolve(w.ctx, w.s, "mallory", w.today)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := p.Companies(); len(got) != 1 || got[0] != m {
+		t.Fatalf("mallory reaches %v (submit: %d %v)", got, code, out)
 	}
 }
 

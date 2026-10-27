@@ -276,7 +276,7 @@ func (x *Executor) TriggerActivity(ctx context.Context, name string, inputs map[
 		return Triggered{}, fmt.Errorf("activity %s: %w", name, err)
 	}
 	if p := rights.PrincipalOf(ctx); p != nil && act.Spec.Passthrough() {
-		if err := x.mayEmit(ctx, *p, act.Name, built); err != nil {
+		if built, err = x.mayEmit(ctx, *p, act.Name, built); err != nil {
 			return Triggered{}, err
 		}
 	}
@@ -376,11 +376,17 @@ func (x *Executor) TriggerActivity(ctx context.Context, name string, inputs map[
 // namespaces and nothing else, so an accountant, whose door:* reaches it and
 // never the people doors, submitted membership.granted and owned another
 // company's books, and moved the clock every company reads (review
-// 2026-10-21, C1). A fact nothing declares still comes in.
-func (x *Executor) mayEmit(ctx context.Context, p rights.Principal, door string, built core.BuiltEvent) error {
+// 2026-10-21, C1). A fact nothing declares still comes in. A door's own fact
+// let through is the one that door would write from the inputs it signed:
+// the check once threw its answer away and kept the payload as sent, so a
+// substitution naming no company — every company — and signed as the person
+// substituted came in, and its deputy read that person's books everywhere
+// (review 2026-10-27, critical 1). A channel's fact keeps its payload; its
+// door's inputs are a file, not the fact.
+func (x *Executor) mayEmit(ctx context.Context, p rights.Principal, door string, built core.BuiltEvent) (core.BuiltEvent, error) {
 	acts, err := x.Store.ActiveActivities(ctx)
 	if err != nil {
-		return err
+		return built, err
 	}
 	var inputs map[string]any
 	_ = json.Unmarshal(built.Payload, &inputs)
@@ -390,24 +396,37 @@ func (x *Executor) mayEmit(ctx context.Context, p rights.Principal, door string,
 			continue
 		}
 		owners = append(owners, a.Name)
-		_, err := rights.Authorize(ctx, x.Store, p, a, inputs, store.CompanyOf(ctx), x.today())
+		signed, err := rights.Authorize(ctx, x.Store, p, a, inputs, store.CompanyOf(ctx), x.today())
 		var refused *rights.ErrRefused
 		switch {
 		case err == nil:
-			return nil
+			if built.Type != a.Spec.Emits {
+				return built, nil
+			}
+			for _, f := range a.Spec.Inputs {
+				if f.Name == "occurred_at" {
+					signed["occurred_at"] = built.OccurredAt
+				}
+			}
+			own, err := a.BuildEvent(signed, built.OccurredAt)
+			if err != nil {
+				return built, fmt.Errorf("%s comes through %s: %w", built.Type, a.Name, err)
+			}
+			built.Payload, built.Refs = own.Payload, append(built.Refs, own.Refs...)
+			return built, nil
 		case !errors.As(err, &refused):
-			return err
+			return built, err
 		}
 	}
 	if len(owners) == 0 {
-		return nil
+		return built, nil
 	}
 	refused := &rights.ErrRefused{Person: p.Handle, Door: door, Company: store.CompanyOf(ctx),
 		Reason: fmt.Sprintf("%s comes through %s, which no role of yours opens", built.Type, strings.Join(owners, ", "))}
 	if err := x.RecordRefusal(ctx, refused); err != nil {
-		return err
+		return built, err
 	}
-	return refused
+	return built, refused
 }
 
 // RecordRefusal appends the refusal as a fact under the company it was
