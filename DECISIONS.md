@@ -5552,3 +5552,19 @@ waiting for a rule (queries/pending.sql), about four times per invoice.
   into an empty database, and a server left running while its database is replaced underneath it must be
   restarted, or it would remember facts of the old log. The worklist
   screen and the look-back's dry run still read the whole log; the look-back's portions are next.
+
+## 2026-10-27 — Negative amounts: the person's way of writing them; red storno is the company's policy (KK)
+
+- **How a negative is written is each person's choice, in Wygląd** (KK: "accountants like negative in
+  parentheses, some prefer minus sign"): −1 234,56 or (1 234,56), and red on or off as a choice of its own.
+  A person's, not the office's: it is how they read, not what the books say. The minus until they choose:
+  JPK and the Polish forms write it so; parentheses are the habit of English-language and IFRS statements.
+  Screens only — a file for a program (JPK, KSeF, a copied row, the Excel export) keeps the minus. Built in
+  the face, rheaface 0106e55.
+- **Red storno is the company's accounting policy, set in the onboarding interview** (KK, answering the
+  question posed the same day). It is a way of booking a correction, not a way of showing one: on the same
+  side with a minus, so the turnover reads as if the mistake had never happened, where black storno (the
+  opposite side) leaves the mistake in the turnover — and the turnover is what the statutory trial balance
+  and JPK_KR report. Both are lawful (UoR art. 25 ust. 1 pkt 2). Not built: the kernel refuses a negative
+  amount on a posting line (internal/exec/postings.go), so every reversal today is black (packs/pl/REVIEW.md
+  FB-17 names the gap).
