@@ -5596,3 +5596,47 @@ The design is DIRECTION "Tasks, groups and the phone".
 - **The tenant is the contract with Rhea**, holding an office with its clients or companies directly;
   the Tenant Owner sees no company's books by that role alone (KK, agreeing).
 - **Statement lines from a bank account not yet approved wait**, one approval releasing them all (KK, a).
+
+## 2026-10-27 — The independent review of 2026-10-27: what is fixed, what waits (Claude, the spec silent)
+
+A read-only review of the whole tree at 7c5921a (claude.ai/artifact/VfD4TKAEjFHbynGDgX7zvm: 3
+critical, 16 high, the rest medium and low) found three ways a person let into one company became
+a member of another, and the edges where a wrong amount, a lost bank line or a double booking got
+in. Fixed one finding, one test, one commit each, every one with the whole suite green:
+
+- **The three criticals.** A door's own fact let through the open door is the fact that door would
+  write from the inputs it signed (01f64c4); a grant counts only when Rhea's own rule wrote it in
+  the company it grants into (a3e38a5 — before deploying, white01's grants are checked with the
+  query in the commit); a company's own new door acts in the company alone, any other door in a
+  company's bundle is staff's — KK's rule of 2026-10-22 otherwise stands (032df7b).
+- **Isolation and claims.** Acting for a company, a read by id is that company's or the
+  installation's (5d7e7df); the host speaks only for a company the books hold (cd33644); a company
+  whose books hold a fact is claimed — the kernel's own records and the clock's days claim nothing
+  (77b6887).
+- **Amounts.** A computation over a bare number in a derived fact is refused in money; a count
+  times an amount keeps the amount's unit (c3a8ad3). Chosen over reading a match's amounts typed by
+  its kinds, which would have turned a hand-made ÷ 100 silently a hundred times too small; one test
+  made up for the slip that way and was changed, as its commit says. A number longer than any value
+  holds is refused at its text (a6b0fac).
+- **Intake.** A bank line is keyed by its statement's opening day, the older keys still known
+  (2b5d016); a purchase invoice is read only when the company bought it — KSeF (366e297) and PDF (f2b81ac);
+  KSeF sends only as the invoice's seller (d0a4397; each company's own KSeF identity is still the
+  2026-10-21 review's F3).
+- **Operations.** A backup holding the largest file restores (eda8a89); a chain is refused at its
+  first consequence past the size cap (44e63df).
+
+Waits, for KK (asked as business questions, not decided here):
+- *A company's words seen by every company* (invariant 9; revisit by 2026-11-03): a kept answer's
+  title and query, a new type's name, a new view's title. Recommended: views — kept answers first —
+  become a company's own, as rules did; types and doors with the Apps' install per company.
+- *What leaves the installation for the network* (the review's high; the 2026-10-21 review's B6):
+  company rules and the literals in formulas are published, and every installation shares one
+  login. Recommended: only Rhea's rules, without literals; a login per installation.
+- *A KSeF duplicate after a lost answer* (440): booked today as a rejection, never resent.
+  Recommended: fetch the original by its number and compare the content — the same invoice is an
+  acceptance with that number, another is a problem for a person.
+
+Next without a decision, each touching the face too: the machine routes ask the face's key (the
+clock's and the morning's timers on white01 send it); a person's door names its act (the face's
+own calls send a key) before the kernel refuses a fact with neither a key nor an identity; the Go
+toolchain to 1.26.10 and x/text (19 reachable vulnerabilities). Then the review's mediums and lows.
