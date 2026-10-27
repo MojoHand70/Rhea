@@ -57,6 +57,9 @@ var objectRootsSQL string
 //go:embed queries/object_sources.sql
 var objectSourcesSQL string
 
+//go:embed queries/dedup_known.sql
+var dedupKnownSQL string
+
 type Store struct {
 	Pool *pgxpool.Pool
 }
@@ -158,6 +161,9 @@ var ErrDuplicate = errors.New("event already in the log (dedup key)")
 // does nothing on a known dedup key and reports ErrDuplicate instead of
 // aborting the enclosing transaction — the batch path.
 func appendEvent(ctx context.Context, q Querier, ev core.Event, skipDuplicate bool) (int64, error) {
+	if len(ev.Files) > 0 {
+		return 0, fmt.Errorf("%s carries files: an event's files are kept by AppendEvents, which keeps them first", ev.Type)
+	}
 	// The object.* namespace is the kernel's own: a raw event spelled like a
 	// derived one could trigger cascade rules — or claim an amendment — for
 	// a fact that never happened.
@@ -220,22 +226,15 @@ func appendEvent(ctx context.Context, q Querier, ev core.Event, skipDuplicate bo
 	if skipDuplicate {
 		sql += ` ON CONFLICT (COALESCE(company, ''), dedup_key) WHERE dedup_key IS NOT NULL DO NOTHING`
 	}
-	// The partition key: a raw fact's own, else the company the call acts
-	// for; a derived event always keeps its chain's (the root's), never the
-	// caller's — a request scoped to one company booking installation master
-	// data stamped the explanation with that company, and replay diverged.
-	company := ev.Company
-	if company == "" && ev.Kind == core.KindRaw {
-		company = CompanyOf(ctx)
-		if set, scoped := ScopeOf(ctx); company == "" && scoped && len(set) > 0 {
-			return 0, fmt.Errorf("a scope of several companies acts for none — name the company the fact belongs to")
-		}
+	company, err := factCompany(ctx, ev)
+	if err != nil {
+		return 0, err
 	}
 	var companyKey *string
 	if company != "" {
 		companyKey = &company
 	}
-	err := q.QueryRow(ctx, sql+` RETURNING event_id`,
+	err = q.QueryRow(ctx, sql+` RETURNING event_id`,
 		ev.Kind, ev.Type, ev.OccurredAt, ev.Payload, ev.CauseEventID, ruleID, ruleVersion, dedup, actor, actName, actVersion, companyKey,
 	).Scan(&id)
 	if skipDuplicate && errors.Is(err, pgx.ErrNoRows) {
@@ -280,6 +279,17 @@ func (s *Store) AppendEvents(ctx context.Context, evs []core.Event) (appended, d
 	}
 	defer tx.Rollback(ctx)
 	for _, ev := range evs {
+		if len(ev.Files) > 0 {
+			kept, err := keepFiles(ctx, tx, ev)
+			if err != nil {
+				return 0, 0, err
+			}
+			if !kept {
+				duplicates++
+				continue
+			}
+			ev.Files = nil
+		}
 		switch _, err := appendEvent(ctx, tx, ev, true); {
 		case err == nil:
 			appended++
@@ -293,6 +303,48 @@ func (s *Store) AppendEvents(ctx context.Context, evs []core.Event) (appended, d
 		return 0, 0, err
 	}
 	return appended, duplicates, nil
+}
+
+// factCompany is the partition key a fact is appended under: a raw fact's
+// own, else the company the call acts for; a derived event always keeps its
+// chain's (the root's), never the caller's — a request scoped to one company
+// booking installation master data stamped the explanation with that
+// company, and replay diverged.
+func factCompany(ctx context.Context, ev core.Event) (string, error) {
+	company := ev.Company
+	if company == "" && ev.Kind == core.KindRaw {
+		company = CompanyOf(ctx)
+		if set, scoped := ScopeOf(ctx); company == "" && scoped && len(set) > 0 {
+			return "", fmt.Errorf("a scope of several companies acts for none — name the company the fact belongs to")
+		}
+	}
+	return company, nil
+}
+
+// keepFiles keeps the files a channel's fact carries, in the fact's company,
+// before the fact: the file is the fact, so the file comes first. A fact the
+// log already has by its dedup key keeps nothing (kept=false) — a package
+// sealed again after a crash is not the one the log names.
+func keepFiles(ctx context.Context, q Querier, ev core.Event) (kept bool, err error) {
+	company, err := factCompany(ctx, ev)
+	if err != nil {
+		return false, err
+	}
+	if ev.DedupKey != "" {
+		var known bool
+		if err := q.QueryRow(ctx, dedupKnownSQL, company, ev.DedupKey).Scan(&known); err != nil {
+			return false, err
+		}
+		if known {
+			return false, nil
+		}
+	}
+	for _, f := range ev.Files {
+		if _, err := putBlob(ctx, q, company, f.Hash, f.MediaType, f.Bytes); err != nil {
+			return false, err
+		}
+	}
+	return true, nil
 }
 
 // fileHashes collects the hashes a document.received payload names: every
@@ -332,6 +384,11 @@ type Blob struct {
 // whoever computed it. The file is the company's that received it, seen
 // only where that company is (invariant 9).
 func PutBlob(ctx context.Context, q Querier, hash, mediaType string, data []byte) (stored bool, err error) {
+	return putBlob(ctx, q, CompanyOf(ctx), hash, mediaType, data)
+}
+
+// putBlob keeps a file for the company named, "" for the installation.
+func putBlob(ctx context.Context, q Querier, owner, hash, mediaType string, data []byte) (stored bool, err error) {
 	if want := core.HashBytes(data); hash != want {
 		return false, fmt.Errorf("blob %s: the bytes hash to %s", hash, want)
 	}
@@ -339,8 +396,8 @@ func PutBlob(ctx context.Context, q Querier, hash, mediaType string, data []byte
 		mediaType = "application/octet-stream"
 	}
 	var company *string
-	if c := CompanyOf(ctx); c != "" {
-		company = &c
+	if owner != "" {
+		company = &owner
 	}
 	tag, err := q.Exec(ctx, `
 		INSERT INTO blob (hash, media_type, size, bytes, company) VALUES ($1, $2, $3, $4, $5)

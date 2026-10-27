@@ -310,6 +310,13 @@ func runScoped(ctx context.Context, s *store.Store, x *exec.Executor, a Adapter)
 			}
 			events[i].Payload = stamped
 		}
+		if len(events[i].Files) > 0 {
+			named, err := withFiles(events[i].Payload, events[i].Files)
+			if err != nil {
+				return res, fmt.Errorf("channel %s v%d: %s event: %w — nothing of this pass is appended", ch.Name, ch.Version, events[i].Type, err)
+			}
+			events[i].Payload = named
+		}
 	}
 	res.Events = events
 	if res.Submitted, res.Duplicates, err = s.AppendEvents(ctx, events); err != nil {
@@ -319,6 +326,35 @@ func runScoped(ctx context.Context, s *store.Store, x *exec.Executor, a Adapter)
 		res.Booked, res.Errors = x.ProcessPending(ctx)
 	}
 	return res, nil
+}
+
+// withFiles names a fact's files in its payload as a door names its file —
+// {<input>: {hash, name, media_type, size}} — the hash computed here, never
+// taken from the adapter; the store keeps the bytes before the fact. A file
+// with no input or no name, one whose input the payload already holds, or
+// one past the store's cap refuses the pass.
+func withFiles(payload json.RawMessage, files []core.FileInput) (json.RawMessage, error) {
+	var m map[string]any
+	if err := json.Unmarshal(payload, &m); err != nil {
+		return nil, err
+	}
+	for i := range files {
+		f := &files[i]
+		switch _, taken := m[f.Input]; {
+		case f.Input == "" || f.Name == "":
+			return nil, fmt.Errorf("a file needs its input and its name (%q, %q)", f.Input, f.Name)
+		case taken:
+			return nil, fmt.Errorf("file %s: the payload already holds %q", f.Name, f.Input)
+		case len(f.Bytes) > core.MaxFileBytes:
+			return nil, fmt.Errorf("file %s is %d bytes; the store keeps a file of at most %d MiB", f.Name, len(f.Bytes), core.MaxFileBytes>>20)
+		}
+		if f.MediaType == "" {
+			f.MediaType = "application/octet-stream"
+		}
+		f.Hash = core.HashBytes(f.Bytes)
+		m[f.Input] = map[string]any{"hash": f.Hash, "name": f.Name, "media_type": f.MediaType, "size": len(f.Bytes)}
+	}
+	return json.Marshal(m)
 }
 
 // withMarket stamps the channel's market into a payload that names none:

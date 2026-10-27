@@ -42,6 +42,12 @@ type Event struct {
 	// by nothing yet. Empty on history from before the key, and on facts
 	// appended without a scope.
 	Company string `json:"company,omitempty"`
+	// Files are bytes a channel hands back with its fact — a package it
+	// sealed, a receipt the outside world answered with. The adapter runner
+	// names each in the payload by its input, as a door names its file, and
+	// the store keeps them under their hash in the fact's company before the
+	// fact, in its transaction. Never part of the event itself.
+	Files []FileInput `json:"-"`
 }
 
 const (

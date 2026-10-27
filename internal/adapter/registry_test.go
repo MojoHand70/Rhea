@@ -1,12 +1,15 @@
 package adapter
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 
 	"rhea/internal/core"
 	"rhea/internal/exec"
+	"rhea/internal/store"
 	"rhea/internal/store/storetest"
 )
 
@@ -195,5 +198,84 @@ func TestPassAppendsInOneTransaction(t *testing.T) {
 	res, err := Run(ctx, s, x, probe{[]core.Event{good}})
 	if err != nil || res.Submitted != 1 {
 		t.Fatalf("run = %+v, %v", res, err)
+	}
+}
+
+// An adapter hands back files with its events — a package it sealed, a
+// receipt the outside world answered with — and the runner keeps them as a
+// door keeps a file: under their hash, in the event's company only, before
+// the event that names them and in its transaction, the payload naming each
+// by its input. A retried event (its dedup key in the log) keeps no file of
+// its own; a file larger than the store takes refuses the pass whole.
+func TestPassKeepsItsFiles(t *testing.T) {
+	Register(Implemented{Name: "probe", CodeVersion: 2, Format: "test fixture"})
+	ctx := context.Background()
+	const alfa, beta = "PL5250001111", "PL5260001246"
+	s := storetest.New(t)
+	x := &exec.Executor{Store: s}
+	if _, err := s.InsertActivityVersion(ctx, probeChannel(core.StatusActive, 2)); err != nil {
+		t.Fatal(err)
+	}
+	asAlfa := store.WithCompany(ctx, alfa)
+	data := []byte("a package the adapter sealed")
+	ev := core.Event{Type: "probe.seen", OccurredAt: "2026-10-27", Payload: []byte(`{"n":1}`), DedupKey: "probe/files/1",
+		Files: []core.FileInput{{Input: "package", Name: "jpk.zip.aes", MediaType: "application/octet-stream", Bytes: data}}}
+	res, err := Run(asAlfa, s, x, probe{[]core.Event{ev}})
+	if err != nil || res.Submitted != 1 {
+		t.Fatalf("run = %+v, %v", res, err)
+	}
+	hash := core.HashBytes(data)
+	logged, err := s.EventsOfTypes(asAlfa, []string{"probe.seen"})
+	if err != nil || len(logged) != 1 {
+		t.Fatalf("the log holds %d probe events: %v", len(logged), err)
+	}
+	var p struct {
+		N       int
+		Package struct {
+			Hash, Name string
+			MediaType  string `json:"media_type"`
+			Size       int
+		}
+	}
+	if err := json.Unmarshal(logged[0].Payload, &p); err != nil {
+		t.Fatal(err)
+	}
+	if p.N != 1 || p.Package.Hash != hash || p.Package.Name != "jpk.zip.aes" || p.Package.MediaType != "application/octet-stream" || p.Package.Size != len(data) {
+		t.Errorf("the logged payload %s does not name the file as a door would", logged[0].Payload)
+	}
+	if b, err := s.GetBlob(asAlfa, hash); err != nil || !bytes.Equal(b.Bytes, data) {
+		t.Errorf("the file is not kept in its company: %v", err)
+	}
+	if _, err := s.GetBlob(store.WithCompany(ctx, beta), hash); err == nil {
+		t.Error("another company sees the file")
+	}
+
+	// A pass run again after a crash seals again: same key, other bytes. The
+	// log has the first; the second package is no one's and is not kept.
+	resealed := []byte("the same package sealed again with another key")
+	again := ev
+	again.Files = []core.FileInput{{Input: "package", Name: "jpk.zip.aes", MediaType: "application/octet-stream", Bytes: resealed}}
+	res, err = Run(asAlfa, s, x, probe{[]core.Event{again}})
+	if err != nil || res.Duplicates != 1 || res.Submitted != 0 {
+		t.Fatalf("the retry = %+v, %v", res, err)
+	}
+	if _, err := s.GetBlob(asAlfa, core.HashBytes(resealed)); err == nil {
+		t.Error("a retried event kept a file the log never names")
+	}
+
+	big := core.Event{Type: "probe.seen", OccurredAt: "2026-10-27", Payload: []byte(`{"n":2}`), DedupKey: "probe/files/2",
+		Files: []core.FileInput{{Input: "package", Name: "big.zip.aes", Bytes: make([]byte, core.MaxFileBytes+1)}}}
+	small := core.Event{Type: "probe.seen", OccurredAt: "2026-10-27", Payload: []byte(`{"n":3}`), DedupKey: "probe/files/3"}
+	if _, err := Run(asAlfa, s, x, probe{[]core.Event{small, big}}); err == nil || !strings.Contains(err.Error(), "MiB") {
+		t.Fatalf("a file past the store's cap: %v", err)
+	}
+	if logged, _ := s.EventsOfTypes(asAlfa, []string{"probe.seen"}); len(logged) != 1 {
+		t.Errorf("a refused pass appended %d events beside it", len(logged)-1)
+	}
+	for _, bad := range []core.FileInput{{Name: "no-input"}, {Input: "n", Name: "collides with the payload's own n"}, {Input: "nameless"}} {
+		ev := core.Event{Type: "probe.seen", OccurredAt: "2026-10-27", Payload: []byte(`{"n":4}`), DedupKey: "probe/files/4", Files: []core.FileInput{bad}}
+		if _, err := Run(asAlfa, s, x, probe{[]core.Event{ev}}); err == nil {
+			t.Errorf("a file %+v was taken", bad)
+		}
 	}
 }
