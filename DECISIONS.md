@@ -5571,7 +5571,7 @@ waiting for a rule (queries/pending.sql), about four times per invoice.
 
 ## 2026-10-27 — Approvals reach people: groups, Zadania, the phone (KK, answering the questions posed the same day)
 
-The design is DIRECTION "Tasks, groups and the phone"; its open points wait for KK.
+The design is DIRECTION "Tasks, groups and the phone".
 
 - **A table is defined by one App and read and written by every App** (KK, correcting Claude's
   reading of APPS.md's one owner: "we NEVER designed apps like that"). An approval that must hold for
@@ -5581,3 +5581,13 @@ The design is DIRECTION "Tasks, groups and the phone"; its open points wait for 
 - **Who adds a person to a group that approves:** the Rhea Designer, the Tenant Owner, the Office
   Manager, the Company Manager (KK).
 - **A client's approval step may name a group of its accounting office, under the mandate** (KK: yes).
+- **Roles are the system's seven; the business is groups** (KK: "We mostly should use groups. Roles
+  are more suitable for commercial ownerships of contracts and technical parameters setup"): Rhea
+  Designer, Tenant Owner, Office Manager, Company Manager, User, Guest, and Rhea Support for Rhea's own
+  staff ("Not a group"). A group has no role. Of today's roles, owner becomes Company Manager, support
+  Rhea Support; chief accountant, accountant and reader become groups.
+- **A system group, All users**, for giving an App to everyone (KK); Rhea keeps its members.
+- **A User in no group sees Dziś and their own tasks only** (KK, agreeing).
+- **The tenant is the contract with Rhea**, holding an office with its clients or companies directly;
+  the Tenant Owner sees no company's books by that role alone (KK, agreeing).
+- **Statement lines from a bank account not yet approved wait**, one approval releasing them all (KK, a).

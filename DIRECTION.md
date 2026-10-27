@@ -4476,11 +4476,17 @@ Groups."
 - *Company Manager* — owns a company, which may be an accounting office's client.
 - *User*.
 - *Guest*.
+- *Rhea Support* — Rhea's own staff, who approve Rhea's shared rules ("That's the Rhea Support
+  Role. Not a group." KK, answering open point 2); in a company's books only by that company's
+  timed grant, as decided 2026-10-21.
 
-"A group has no role assigned" (KK). A group holds people and other groups; an App's steps, and who
-may use it, name groups. This replaces the role of 2026-10-19 ("People and rights" above: a named
-set of rights, data in a pack, a company able to declare its own); where the people pack's five
-roles of today go is open below.
+"A group has no role assigned" (KK). "We mostly should use groups. Roles are more suitable for
+commercial ownerships of contracts and technical parameters setup" (KK). A group holds people and
+other groups; an App's steps, and who may use it, name groups. This replaces the role of 2026-10-19
+("People and rights" above: a named set of rights, data in a pack, a company able to declare its
+own): of the people pack's five roles, owner becomes Company Manager, support becomes Rhea Support,
+and chief accountant, accountant and reader become groups (KK: "Chief Accountant, Accountant -
+should be groups").
 
 **Groups.** KK: "If Rhea, while designing an app hears 'This should be approved by someone
 responsible for Banks', she could or even should create a dedicated User Group for that purpose and
@@ -4494,6 +4500,13 @@ then ask who to add to this Group."
 - Proposed (Claude): members are people or groups, and a circle is refused; membership has dates,
   as a company membership does, so the books answer who could approve on a given day; an App does
   not go into production with a step whose group is empty.
+- A system group *All users* (KK: "if by chance you need to add all users to an app"), whose
+  members Rhea keeps and nobody adds by hand. Proposed (Claude): a company's own people, never a
+  Guest, never another company's; an office's people reach a client through the office's groups.
+- A User in no group sees Dziś and their own tasks, nothing else (KK, agreeing).
+- The groups a company starts with — Chief Accountant (Główny księgowy), Accountant (Księgowość),
+  Reader (Podgląd) — hold what today's roles of those names hold; proposed (Claude): its Company
+  Manager in each until handed over, so a sole trader does everything on day one.
 
 **Zadania.** KK: "the 'Dziś' activity needs a new function: Worklist or we can call it 'Zadania' or
 'Todos', which would be the list of tasks a user has to do. A normal table but with a) inline
@@ -4527,19 +4540,12 @@ on mobiles … we should even require that."
 **Order** (proposed): groups → a workflow step naming who may move it (step 3) → Zadania → the
 phone. The bank account App proves all four; the supplier's account follows.
 
-**Open, for KK.**
-1. *Today's five roles* (owner, chief accountant, accountant, reader, support). Proposed: owner →
-   Company Manager; chief accountant, accountant and reader → User, in groups the pack makes in
-   every company (Księgowość, Podgląd…), a new company's Company Manager in each until handed
-   over; support → the house's timed access, as decided 2026-10-21.
-2. *Rhea's own staff*, who approve Rhea's shared rules (the house today). Proposed: a group in
-   Rhea's own company, not a seventh role.
-3. *The tenant* — a level the kernel does not have. Proposed: a tenant holds an accounting office
-   with its clients, or companies directly; the Tenant Owner manages the contract and, by that role
-   alone, sees no company's books.
-4. *A User in no group.* Proposed: Dziś and their own tasks, nothing else.
-5. *A statement from an account not yet approved.* Its lines wait, one approval releasing them all
-   (proposed), or they book to 130 and move after.
+**The tenant** (KK agreed the proposal): a level the kernel does not have yet — the contract with
+Rhea. A tenant holds an accounting office with its clients, or companies directly; the Tenant Owner
+manages the contract and, by that role alone, sees no company's books.
+
+**A statement from an account not yet approved** (KK agreed the proposal): its lines wait, and one
+approval releases them all; nothing books to an account nobody has checked.
 
 ## Language decisions with a recorded destination
 
