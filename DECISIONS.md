@@ -5669,3 +5669,22 @@ toolchain to 1.26.10 and x/text (19 reachable vulnerabilities). Then the review'
 - **Assessed and left: one part.** A file over 60 MB zipped goes to the gateway in parts; Rhea
   refuses it with that reason. A JPK_V7M that large is millions of records, far beyond the offices
   and companies Rhea serves now; the blob store caps a door's file at 32 MiB anyway.
+## 2026-10-27 — Saved reports are the company's; the network carries general rules only; a KSeF duplicate is compared (KK, answering the review's three questions)
+
+- **A saved report is the company's own** (KK: "Absolutely, saved reports are company own"): a kept
+  answer — its title, its query, the question it came from — is seen and approved only where the
+  company is, as the company's rules are.
+- **Saved reports have their selection written into them** (KK, observed): a report kept from "sales
+  to Jan Kowalski" is always Kowalski's — no filter, no choice on the toolbar. A report's selection
+  should be a parameter, as its period is (2026-10-27, the trial balance). Not decided how: a
+  proposal goes to KK.
+- **The network carries general rules only** (KK: "Shared knowledge are general rules that relate
+  to general law or accepted practice. No particular company data in it!"): Rhea's own rules, never a
+  company's; no value written in a rule — a name, a NIP, an amount — leaves with it; and each
+  installation reaches the network under a login of its own (the recommendation KK accepted).
+- **A KSeF duplicate (440) is compared, not believed** (KK: "Yes, we need to compare content"). KSeF
+  decides a duplicate by the seller's NIP, the invoice's number and its type, ten years back — not by
+  the file. Each file has a SHA-256 fingerprint (sent with the invoice, in the UPO, in the QR code),
+  but Rhea's file of one invoice differs by its day of writing (the creation time), so the content is
+  compared with that time set aside: the same invoice is accepted under the original KSeF number,
+  another is a problem for a person.
