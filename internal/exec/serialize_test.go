@@ -2,7 +2,9 @@ package exec_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"runtime"
 	"strings"
 	"sync"
@@ -193,5 +195,49 @@ func TestAWaitForTheExecutorEnds(t *testing.T) {
 	free()
 	if err := <-first; err != nil {
 		t.Fatalf("the first caller: %v", err)
+	}
+}
+
+// The size cap holds inside a generation (review 2026-10-27): the cap was
+// checked between generations only, so one generation of a cascade fanning
+// out per line was built whole before the chain was refused — a 1200-line
+// document's second generation was 1.44 million consequences, fourteen
+// seconds and 2.7 GB under the executor's lock. Now the chain is refused at
+// the first consequence past the cap, wherever in a generation it falls.
+func TestTheSizeCapHoldsInsideAGeneration(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	x := &exec.Executor{Store: s}
+	if err := s.InsertObjectType(ctx, core.ObjectType{Name: "thing", Version: 1, Domain: "work", LabelField: "name",
+		Fields: []core.FieldDef{{Name: "name", Type: "string", Required: true}}}); err != nil {
+		t.Fatal(err)
+	}
+	for id, spec := range map[string]core.RuleSpec{
+		"first-thing": {Match: core.Match{EventType: "thing.named"},
+			Effect: core.Effect{Object: core.ObjectTemplate{Type: "thing", Fields: map[string]string{"name": "=$.name"}}}},
+		"fan-out": {Match: core.Match{EventType: core.EventObjectMaterialized,
+			Where: []core.Condition{{Path: "$.object_type", Op: "eq", Value: "thing"}}},
+			Effect: core.Effect{Object: core.ObjectTemplate{Type: "thing", Each: "=$.root.items[*]",
+				Fields: map[string]string{"name": "=$.line.name"}}}},
+	} {
+		if _, err := s.InsertRuleVersion(ctx, core.Rule{ID: id, Status: core.StatusActive, Priority: 100,
+			EffectiveFrom: "2026-01-01", CreatedBy: "test", Description: id, Spec: spec}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// 150 lines: the second generation is 150 × 150 = 22,500 things
+	items := make([]map[string]string, 150)
+	for i := range items {
+		items[i] = map[string]string{"name": fmt.Sprintf("p%d", i)}
+	}
+	payload, _ := json.Marshal(map[string]any{"name": "a", "items": items})
+	if _, err := s.AppendEvent(ctx, core.Event{Kind: core.KindRaw, Type: "thing.named", OccurredAt: "2026-09-01",
+		Payload: payload, DedupKey: "t-150"}); err != nil {
+		t.Fatal(err)
+	}
+	_, errs := x.ProcessPending(ctx)
+	var big *exec.ErrChainTooLarge
+	if len(errs) != 1 || !errors.As(errs[0], &big) || big.Consequences != 10_001 || big.Rule != "fan-out" {
+		t.Fatalf("refused at %+v: %v", big, errs)
 	}
 }

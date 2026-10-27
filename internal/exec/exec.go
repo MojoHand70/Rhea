@@ -368,6 +368,17 @@ func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []cor
 		}
 		return state, true, nil
 	}
+	// The size cap holds at every consequence, not between generations: one
+	// generation of a cascade fanning out per line was built whole first —
+	// a 1200-line document's second, 1.44 million consequences, fourteen
+	// seconds and 2.7 GB under the lock — before the chain was refused
+	// (review 2026-10-27).
+	grown := func(rule, typ string) error {
+		if len(nodes) > maxChainNodes {
+			return &ErrChainTooLarge{Consequences: len(nodes), Rule: rule, Type: typ}
+		}
+		return nil
+	}
 	fire := func(ev core.Event, evPayload any, cause int) error {
 		// A fact that came through a door has the door's shape: its ref
 		// inputs, vouched by the door, read as links. A raw fact's money is
@@ -416,6 +427,9 @@ func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []cor
 					return fmt.Errorf("rule %s v%d: %w", r.ID, r.Version, err)
 				}
 				nodes = append(nodes, chainNode{matched: m, unmatched: u, rule: r, cause: cause})
+				if err := grown(r.ID, "match"); err != nil {
+					return err
+				}
 				continue
 			}
 			if r.Spec.Effect.Amend != nil {
@@ -429,6 +443,9 @@ func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []cor
 					}
 					owner[am.ObjectID], born[am.ObjectID] = r.ID, false
 					nodes = append(nodes, chainNode{amend: am, rule: r, cause: cause})
+					if err := grown(r.ID, am.ObjectType); err != nil {
+						return err
+					}
 				}
 				continue
 			}
@@ -442,6 +459,9 @@ func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []cor
 				}
 				owner[m.ObjectID], born[m.ObjectID] = r.ID, true
 				nodes = append(nodes, chainNode{mat: m, rule: r, cause: cause})
+				if err := grown(r.ID, m.ObjectType); err != nil {
+					return err
+				}
 			}
 		}
 		return nil
@@ -459,12 +479,8 @@ func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []cor
 		// Depth alone does not bound a chain: a rule on its own type with
 		// an each over a few items multiplies every generation, and one
 		// event would hold the executor's lock for minutes on the way to
-		// the depth cap, or exhaust memory before it. Size is capped too.
-		if len(nodes) > maxChainNodes {
-			last := nodes[len(nodes)-1]
-			return nil, fmt.Errorf("cascade grew past %d consequences of one event — rule %s keeps materializing %s objects; the event waits for a person",
-				maxChainNodes, last.rule.ID, last.mat.ObjectType)
-		}
+		// the depth cap, or exhaust memory before it. Size is capped too,
+		// at every consequence (grown).
 		visible = hi
 		for i := lo; i < hi; i++ {
 			n := nodes[i]
@@ -514,6 +530,19 @@ func scopeFor(ctx context.Context, company string) context.Context {
 // maxChainNodes bounds the consequences of one event: a chain larger than
 // this is refused into the worklist, naming the rule.
 const maxChainNodes = 10_000
+
+// ErrChainTooLarge is a chain refused for its size, at the first consequence
+// past maxChainNodes: how many there were then, the rule that made the last
+// and what it made.
+type ErrChainTooLarge struct {
+	Consequences int
+	Rule, Type   string
+}
+
+func (e *ErrChainTooLarge) Error() string {
+	return fmt.Sprintf("cascade grew past %d consequences of one event — rule %s keeps materializing %s objects; the event waits for a person",
+		maxChainNodes, e.Rule, e.Type)
+}
 
 // forCompany is the rule set that may fire in a chain of the company's fact
 // dated date: Rhea's rules, which book for every company, and the company's
