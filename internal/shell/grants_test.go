@@ -773,3 +773,33 @@ func TestTheHostSpeaksForNoCompanyTheBooksDoNotHold(t *testing.T) {
 		}
 	}
 }
+
+// A company whose books hold facts is someone's, before anyone is let in
+// (review 2026-10-27, high): the operator, or a channel, booked a company's
+// documents before granting anyone a role there, and the first signed-in
+// person to name it claimed it as its owner — and read its books. Now a
+// company is claimed by its first grant or by the first fact in its books;
+// its first owner is then the operator's to grant. A refusal recorded under
+// a key, or a day the clock opened, claims nothing.
+func TestACompanyWithBooksIsNobodysToClaim(t *testing.T) {
+	w := newGrantsWorld(t)
+	booked, fresh := "PL7010001234", "PL1234563218"
+	w.person("Mallory Obca", "mallory", "", "owner")
+	mallory := w.personID("mallory")
+	w.mustDoor("", booked, "take_note", map[string]any{"text": "the first note", "amount": "10.00"})
+	claim := func(company string) (int, map[string]any) {
+		return w.door("mallory", company, "grant_membership", map[string]any{"person": mallory, "company": company,
+			"role": "owner", "from": w.today, "granted_by": "mallory"})
+	}
+	if code, out := claim(booked); code != 403 {
+		t.Fatalf("mallory claiming a company with books: %d %v", code, out)
+	}
+	// a key nobody has booked under is still open to its first claim, a
+	// refusal recorded under it notwithstanding
+	if code, _ := w.door("mallory", fresh, "take_note", map[string]any{"text": "x", "amount": "1.00"}); code != 403 {
+		t.Fatalf("a note in an unclaimed company: %d", code)
+	}
+	if code, out := claim(fresh); code != 200 {
+		t.Fatalf("the first claim of a fresh company: %d %v", code, out)
+	}
+}

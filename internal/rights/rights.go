@@ -385,10 +385,17 @@ func Resolve(ctx context.Context, s *store.Store, handle, today string) (Princip
 // Claimed reports whether anyone was ever let into the company: a
 // membership or mandate names it, whatever its dates. A company whose
 // grants have lapsed, or not yet begun, is still someone's — counting only
-// today's grants made it anyone's to claim (review 2026-10-21, A4). An
-// unclaimed company is open to its first owner or office, and only to
-// that: the claim is the first grant written into it.
+// today's grants made it anyone's to claim (review 2026-10-21, A4). So is a
+// company whose books hold a fact: the operator or a channel booked a
+// company's documents before anyone was granted a role there, and the first
+// signed-in person to name it became its owner and read them (review
+// 2026-10-27); its first owner is the operator's to grant. An unclaimed
+// company is open to its first owner or office, and only to that: the
+// claim is the first grant written into it.
 func Claimed(ctx context.Context, s *store.Store, company, today string) (bool, error) {
+	if held, err := s.HoldsBooks(store.WithOwner(ctx), company); err != nil || held {
+		return held, err
+	}
 	w, err := load(ctx, s, today)
 	if err != nil {
 		return false, err

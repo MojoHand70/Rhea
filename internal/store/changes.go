@@ -42,3 +42,15 @@ func (s *Store) RheasRules(ctx context.Context) (map[string]bool, error) {
 	}
 	return out, rows.Err()
 }
+
+//go:embed queries/holds_books.sql
+var holdsBooksSQL string
+
+// HoldsBooks reports whether a company's books hold a fact someone put there
+// — a document, a door's fact — as against the kernel's own records under
+// its key.
+func (s *Store) HoldsBooks(ctx context.Context, company string) (bool, error) {
+	var held bool
+	err := s.Pool.QueryRow(ctx, holdsBooksSQL, company).Scan(&held)
+	return held, err
+}
