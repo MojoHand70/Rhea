@@ -30,8 +30,8 @@ func TestEveryReadIsTheCompanysOwn(t *testing.T) {
 	w := newGrantsWorld(t)
 	a, b := "PL5250001111", "PL5260001246"
 	const mark = "betasecret"
-	w.person("Krzysztof Kowal", "kk", a, "owner")
-	w.person("Olga Nowa", "olga", b, "owner")
+	w.person("Krzysztof Kowal", "kk", a, "company_manager")
+	w.person("Olga Nowa", "olga", b, "company_manager")
 	// the author answers every question with the company's notes
 	w.reply = func(system, user string) string {
 		if strings.Contains(system, "reporting author") {
@@ -157,6 +157,8 @@ func TestEveryReadIsTheCompanysOwn(t *testing.T) {
 		{"GET /api/channels", "GET", "/api/channels", nil},
 		{"GET /api/rights", "GET", "/api/rights", nil},
 		{"GET /api/rights", "GET", "/api/rights?company=" + b, nil},
+		{"GET /api/groups", "GET", "/api/groups", nil},
+		{"GET /api/groups", "GET", "/api/groups?company=" + b, nil},
 		{"GET /api/whoami", "GET", "/api/whoami", nil},
 		{"GET /api/registers", "GET", "/api/registers", nil},
 		{"GET /api/registers/{name}", "GET", "/api/registers/no-such?id=5260250995", nil}, // public records, and no register reached from a test

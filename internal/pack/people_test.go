@@ -27,24 +27,44 @@ func TestPeoplePack(t *testing.T) {
 		t.Fatal(err)
 	}
 	// v3 (DIRECTION 2026-10-19, "People and rights"): the person and the
-	// five notions of who may do what, the pack's roles as master data; v4
-	// writes them as one App (2026-10-26).
-	if sum.Types != 6 || sum.Rules != 15 || sum.Activities != 13 || sum.Views != 1 || sum.Events != 5 || sum.Apps != 1 || sum.Bundle != "pack-common-people-v4" {
+	// five notions of who may do what; v4 writes them as one App
+	// (2026-10-26); v5 (KK, 2026-10-27): the system's seven roles and four
+	// groups every company has, as master data, and a place in a group —
+	// changed counts because the pack changed.
+	if sum.Types != 7 || sum.Rules != 17 || sum.Activities != 15 || sum.Views != 1 || sum.Events != 11 || sum.Apps != 1 || sum.Bundle != "pack-common-people-v5" {
 		t.Fatalf("load: %+v", sum)
 	}
-	if _, booked, errs, err := x.ApproveBundle(ctx, sum.Bundle, "krzysztof", "2026-09-01"); err != nil || len(errs) != 0 || booked != 5 {
-		t.Fatalf("approve: %v %v, booked %d roles", err, errs, booked)
+	if _, booked, errs, err := x.ApproveBundle(ctx, sum.Bundle, "krzysztof", "2026-09-01"); err != nil || len(errs) != 0 || booked != 11 {
+		t.Fatalf("approve: %v %v, booked %d roles and groups", err, errs, booked)
 	}
 	roles, err := s.ObjectsByType(ctx, "role")
-	if err != nil || len(roles) != 5 {
+	if err != nil || len(roles) != len(core.Roles) {
 		t.Fatalf("the pack's roles: %d %v", len(roles), err)
 	}
+	// The roles' rights are the kernel's (core.RoleRights): what the pack
+	// tells a person a role gives is what it gives.
 	for _, r := range roles {
+		name, _ := r.State["name"].(string)
 		if r.Company != "" {
-			t.Fatalf("the pack's role %v is the installation's, not %q's", r.State["name"], r.Company)
+			t.Fatalf("the pack's role %v is the installation's, not %q's", name, r.Company)
+		}
+		if want, ok := core.RoleRights[name]; !ok || r.State["rights"] != want {
+			t.Fatalf("role %s: the pack says %q, the kernel gives %q (%v)", name, r.State["rights"], want, ok)
 		}
 		if _, err := core.ParseRights(r.State["rights"].(string)); err != nil {
-			t.Fatalf("role %v: %v", r.State["name"], err)
+			t.Fatalf("role %v: %v", name, err)
+		}
+	}
+	groups, err := s.ObjectsByType(ctx, "group")
+	if err != nil || len(groups) != 4 {
+		t.Fatalf("the pack's groups: %d %v", len(groups), err)
+	}
+	for _, g := range groups {
+		if g.Company != "" || g.State["company"] != "" {
+			t.Fatalf("the pack's group %v is every company's: %q", g.State["name"], g.Company)
+		}
+		if _, err := core.ParseRights(g.State["rights"].(string)); err != nil {
+			t.Fatalf("group %v: %v", g.State["name"], err)
 		}
 	}
 

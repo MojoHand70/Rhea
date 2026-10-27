@@ -276,6 +276,7 @@ func (s *Server) mux() http.Handler {
 	mux.HandleFunc("POST /api/activities/{name}/approve", s.handleApproveActivity)
 	mux.HandleFunc("GET /api/channels", s.handleChannels)
 	mux.HandleFunc("GET /api/rights", s.handleRights)
+	mux.HandleFunc("GET /api/groups", s.handleGroups)
 	mux.HandleFunc("GET /api/whoami", s.handleWhoAmI)
 	mux.HandleFunc("GET /api/registers", s.handleRegisters)
 	mux.HandleFunc("GET /api/registers/{name}", s.handleRegister)

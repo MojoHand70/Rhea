@@ -33,8 +33,8 @@ func TestWhoAmINamesTheCompanies(t *testing.T) {
 	w.mustDoor("", alfa, "register_company", map[string]any{"name": "Alfa sp. z o.o.", "kind": "self"})
 	w.mustDoor("", alfa, "register_company", map[string]any{"name": "Klient Alfy S.A.", "kind": "customer"})
 	w.mustDoor("", beta, "register_company", map[string]any{"name": "Beta S.A.", "kind": "self"})
-	w.person("Krzysztof Kowal", "kk", alfa, "owner")
-	w.mustDoor("", beta, "grant_membership", map[string]any{"person": w.personID("kk"), "company": beta, "role": "owner", "from": "2026-01-01", "granted_by": "operator"})
+	w.person("Krzysztof Kowal", "kk", alfa, "company_manager")
+	w.mustDoor("", beta, "grant_membership", map[string]any{"person": w.personID("kk"), "company": beta, "role": "company_manager", "from": "2026-01-01", "granted_by": "operator"})
 	w.person("Anna Nowak", "anna", alfa, "accountant")
 
 	var who struct {

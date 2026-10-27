@@ -18,8 +18,8 @@ import (
 func TestAFileIsTheCompanysThatReceivedIt(t *testing.T) {
 	w := newGrantsWorld(t)
 	a, b := "PL5250001111", "PL5260001246"
-	w.person("Krzysztof Kowal", "kk", a, "owner")
-	w.person("Olga Nowa", "olga", b, "owner")
+	w.person("Krzysztof Kowal", "kk", a, "company_manager")
+	w.person("Olga Nowa", "olga", b, "company_manager")
 	receive := func(person, company string, data []byte) string {
 		t.Helper()
 		if code, out := w.door(person, company, "receive_document", map[string]any{

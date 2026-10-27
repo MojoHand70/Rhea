@@ -383,6 +383,43 @@ func (s *Server) handleRights(w http.ResponseWriter, r *http.Request) {
 	s.serveRights(r.Context(), w, nil, r.URL.Query().Get("company"))
 }
 
+// handleGroups is a company's groups, what each gives and who is in it
+// today, and the system's roles beside them: GET /api/groups?company=<key>
+// — the People App's Groups tab (KK, 2026-10-27). Seen by whoever sees who
+// can do what there.
+func (s *Server) handleGroups(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	company := r.URL.Query().Get("company")
+	if company == "" {
+		company = store.CompanyOf(ctx)
+	}
+	if company == "" {
+		writeErr(w, 400, fmt.Errorf("groups: name the company (?company=)"))
+		return
+	}
+	if p := rights.PrincipalOf(ctx); p != nil {
+		if _, ok := p.May(company, "view", "who-can-do-what", core.PeopleDomain); !ok {
+			writeErr(w, 403, fmt.Errorf("refused: no role of %s sees who can do what in %s", p.Handle, company))
+			return
+		}
+	}
+	today := s.Clock.Today()
+	groups, err := rights.Groups(ctx, s.Store, company, today)
+	if err != nil {
+		writeErr(w, 500, err)
+		return
+	}
+	type role struct {
+		Name   string `json:"name"`
+		Rights string `json:"rights"`
+	}
+	roles := make([]role, 0, len(core.Roles))
+	for _, name := range core.Roles {
+		roles = append(roles, role{Name: name, Rights: core.RoleRights[name]})
+	}
+	writeJSON(w, 200, map[string]any{"company": company, "today": today, "roles": roles, "groups": groups})
+}
+
 // handleWhoAmI tells a face who the kernel takes the request for: the
 // person, their companies and the one they act for — the desk's header.
 func (s *Server) handleWhoAmI(w http.ResponseWriter, r *http.Request) {

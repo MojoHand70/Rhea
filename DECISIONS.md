@@ -5710,3 +5710,39 @@ toolchain to 1.26.10 and x/text (19 reachable vulnerabilities). Then the review'
 - **Assessed and left:** the face's three touches (download the file to sign, upload the signed
   one, see the status and the UPO) are the face's, built apart; the kernel serves the files
   (/api/blobs) and the door. Authorisation data waits on KK (above).
+
+## 2026-10-27 — Roles and groups built (step 1 of "Tasks, groups and the phone"; KK: "Yes, let's start step 1")
+
+Built in the kernel and the people pack v5 (Poland pack v53 names it in Polish). Claude's choices
+where the design was silent, each with its reason:
+
+- **The roles' rights are the kernel's** (core.RoleRights), not a record's: a rule of a company's own
+  can amend a record, and a role every company shares must not be one company's to widen. The pack
+  still declares the seven, so a person can read them; a test holds the pack's words to the kernel's.
+  What each gives: Company Manager and Office Manager everything; Tenant Owner who is in (the people
+  doors) and no books, as KK said; Rhea Designer sees the company, releases its Apps and keeps its
+  groups, books nothing; Rhea Support the books, never who may do what (the support role of
+  2026-10-21); User and Guest nothing of their own — their groups give it.
+- **The grants already in the log read as what they became**: owner as Company Manager, support as Rhea
+  Support, chief accountant, accountant and reader as a User in the group of that name. Nothing on
+  white01 is rewritten and nobody loses a right; a door takes the seven alone from now on.
+- **The groups every company has hold what the roles of those names held**: Chief Accountant the books
+  and the people doors of v3 except the group doors (who is in which group is the four roles' — KK's
+  answer of the same day), Accountant the books, Reader everything to read; All users nothing until an
+  App or a group names it.
+- **Nobody raises their own rights by their own hand**: a role given to oneself, or a group one is put
+  into — oneself, or a group one is in — must give nothing the person does not already hold in the
+  company. Without it a Tenant Owner, who sees no books, would put herself in Accountant. Others she may
+  put anywhere (KK's answer). The first claim of a company stays the claimant's own grant.
+- **A group gives its rights only to a person let into its company**, and a place in a group belongs to
+  the stay it was given in: let in again after leaving, a person starts with no groups — or someone
+  taken back as a guest would be an accountant again by a place nobody remembered.
+- **A company's own group never stands in for one every company has**: the name is refused at the door
+  and ignored if written another way. A company's own role (declare_role) is read by nothing any more.
+  *Assessed and left* (2026-10-27): declare_role and change_role stay as doors, inert, until the people
+  pack's next version can retire a door; a pack has no way to retire one today.
+- **The Polish names are drafts** for KK to rename: Projektant Rhei, Właściciel umowy, Kierownik biura,
+  Kierownik firmy, Użytkownik, Gość, Wsparcie Rhei; Główny księgowy, Księgowość, Podgląd, Wszyscy
+  użytkownicy.
+- *Owed with step 2* (approval steps inside an App): KK's answer that nobody is put into a group that
+  approves before one of their devices receives notifications — no group approves anything yet.

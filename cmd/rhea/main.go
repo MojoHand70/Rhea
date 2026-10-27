@@ -467,7 +467,7 @@ func main() {
 		name := fs.String("name", "", "the person's name")
 		handle := fs.String("handle", "", "the handle their acts are signed with")
 		person := fs.String("person", "", "the person's handle")
-		role := fs.String("role", "owner", "the role")
+		role := fs.String("role", core.RoleCompanyManager, "one of the system's roles: "+strings.Join(core.Roles, ", "))
 		company := fs.String("company", "", "the company key")
 		from := fs.String("from", "", "the first day (default: the books' day)")
 		fs.Parse(os.Args[3:])

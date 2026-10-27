@@ -1,11 +1,16 @@
 {
   "pack": "common-people",
-  "version": 4,
+  "version": 5,
   "kind": "core",
   "install": "installation",
   "stage": "initial",
   "disclaimer": "This pack was prepared by artificial intelligence (AI). It is an initial version: its rules may contain errors and will change as accountants, tax advisers and auditors review them.",
   "history": [
+    {
+      "versions": "5",
+      "date": "2026-10-27",
+      "changes": "The roles are the system's seven — Rhea Designer, Tenant Owner, Office Manager, Company Manager, User, Guest, Rhea Support — for the contract with Rhea and the technical setup; what a person does in the books is their groups'. A group says what its members may do; a person or another group joins it between two dates. Every company has four groups from the start: Chief Accountant, Accountant, Reader, and All users, which Rhea keeps. Grants already made under the roles of v3 read as what they became: owner as Company Manager, support as Rhea Support, chief accountant, accountant and reader as a User in the group of that name."
+    },
     {
       "versions": "4",
       "date": "2026-10-26",
@@ -27,7 +32,7 @@
       "changes": "The person as master data: who acts, who is assigned work, who stands in when they are away."
     }
   ],
-  "description": "People: the person as master data — who acts, who is assigned, who stands in — and who may do what: roles, memberships, mandates, substitutions, groups. Market-neutral; every pack that assigns work builds on it. v3: rights as data (DIRECTION 2026-10-19, People and rights).",
+  "description": "People: the person as master data — who acts, who is assigned, who stands in — and who may do what: the system's roles, groups, memberships, mandates, substitutions. Market-neutral; every pack that assigns work builds on it. v5: the roles are the system's, the business is groups (KK, 2026-10-27).",
   "warrant": {
     "basis": "practice",
     "citations": [
@@ -45,51 +50,115 @@
     {
       "event_type": "role.declared",
       "occurred_at": "2026-01-01",
-      "dedup_key": "people/role/owner",
+      "dedup_key": "people/role/rhea_designer",
       "payload": {
-        "name": "owner",
-        "rights": "*",
-        "description": "The entity's owner: everything, including who may do what"
+        "name": "rhea_designer",
+        "rights": "view:* type:* door:approve_bundle door:reject_bundle door:declare_group door:join_group door:leave_group",
+        "description": "Designs Apps and runs the interviews: sees the company, releases its Apps, keeps its groups; books nothing"
       }
     },
     {
       "event_type": "role.declared",
       "occurred_at": "2026-01-01",
-      "dedup_key": "people/role/chief_accountant",
+      "dedup_key": "people/role/tenant_owner",
+      "payload": {
+        "name": "tenant_owner",
+        "rights": "domain:people",
+        "description": "Owns the tenant's contract with Rhea: says who is in; sees no books by this role alone"
+      }
+    },
+    {
+      "event_type": "role.declared",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "people/role/office_manager",
+      "payload": {
+        "name": "office_manager",
+        "rights": "*",
+        "description": "Runs an accounting office: its parameters, master data and people"
+      }
+    },
+    {
+      "event_type": "role.declared",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "people/role/company_manager",
+      "payload": {
+        "name": "company_manager",
+        "rights": "*",
+        "description": "Owns a company, an accounting office's client or not: everything, including who may do what"
+      }
+    },
+    {
+      "event_type": "role.declared",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "people/role/user",
+      "payload": {
+        "name": "user",
+        "rights": "",
+        "description": "Works in Rhea: what they do is their groups'"
+      }
+    },
+    {
+      "event_type": "role.declared",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "people/role/guest",
+      "payload": {
+        "name": "guest",
+        "rights": "",
+        "description": "From outside the company: what they do is their groups'"
+      }
+    },
+    {
+      "event_type": "role.declared",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "people/role/rhea_support",
+      "payload": {
+        "name": "rhea_support",
+        "rights": "door:* view:* type:*",
+        "description": "Rhea's own staff: approve Rhea's shared rules; in a company's books by its timed grant alone, never who may do what"
+      }
+    },
+    {
+      "event_type": "group.declared",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "people/group/chief_accountant",
       "payload": {
         "name": "chief_accountant",
-        "rights": "door:* view:* type:* domain:people",
-        "description": "Keeps the books whole and says who may do what in them"
+        "company": "",
+        "description": "Keeps the books whole and says who is in the company — the chief accountant's role of v3",
+        "rights": "door:* view:* type:* door:register_person door:appoint_deputy door:set_person_status door:identify_person door:grant_membership door:end_membership door:grant_mandate door:end_mandate door:appoint_substitute door:end_substitution"
       }
     },
     {
-      "event_type": "role.declared",
+      "event_type": "group.declared",
       "occurred_at": "2026-01-01",
-      "dedup_key": "people/role/accountant",
+      "dedup_key": "people/group/accountant",
       "payload": {
         "name": "accountant",
-        "rights": "door:* view:* type:*",
-        "description": "Keeps the books: every door, view and type; never who may do what"
+        "company": "",
+        "description": "Keeps the books: every door, view and type; never who may do what",
+        "rights": "door:* view:* type:*"
       }
     },
     {
-      "event_type": "role.declared",
+      "event_type": "group.declared",
       "occurred_at": "2026-01-01",
-      "dedup_key": "people/role/reader",
+      "dedup_key": "people/group/reader",
       "payload": {
         "name": "reader",
-        "rights": "view:* type:*",
-        "description": "Sees everything, changes nothing"
+        "company": "",
+        "description": "Sees everything, changes nothing",
+        "rights": "view:* type:*"
       }
     },
     {
-      "event_type": "role.declared",
+      "event_type": "group.declared",
       "occurred_at": "2026-01-01",
-      "dedup_key": "people/role/support",
+      "dedup_key": "people/group/all_users",
       "payload": {
-        "name": "support",
-        "rights": "door:* view:* type:*",
-        "description": "The house's person on an owner's timed grant: the books, never who may do what"
+        "name": "all_users",
+        "company": "",
+        "description": "Everyone let into the company, a guest apart — Rhea keeps it; nobody is put into it",
+        "rights": ""
       }
     }
   ]

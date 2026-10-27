@@ -60,8 +60,8 @@ func TestAPackNotInstalledIsNotServed(t *testing.T) {
 		t.Fatalf("approve: %v %v", err, errs)
 	}
 	a, b2 := "PL5250001111", "PL5260001246"
-	w.person("Krzysztof Kowal", "kk", a, "owner")
-	w.person("Olga Nowa", "olga", b2, "owner")
+	w.person("Krzysztof Kowal", "kk", a, "company_manager")
+	w.person("Olga Nowa", "olga", b2, "company_manager")
 	day, _ := time.Parse("2006-01-02", w.today)
 	yesterday := day.AddDate(0, 0, -1).Format("2006-01-02")
 	if code, out := w.door("kk", a, "install_pack", map[string]any{"pack": "tally-test", "from": day.AddDate(0, 0, -7).Format("2006-01-02")}); code != 200 {

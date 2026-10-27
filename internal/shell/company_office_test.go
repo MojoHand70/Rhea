@@ -20,7 +20,7 @@ func newOfficeScene(t *testing.T) *officeScene {
 	w := newGrantsWorld(t)
 	o := &officeScene{w: w, office: "PL7010001234", a: alfaKey, b: betaKey, c: "PL8010004321"}
 	w.person("Anna Nowak", "anna", o.office, "accountant")
-	w.person("Beta Owner", "beta", o.b, "owner")
+	w.person("Beta Owner", "beta", o.b, "company_manager")
 	for client, scope := range map[string]string{o.a: "door:* view:* type:*", o.b: "door:* view:* type:*", o.c: "view:* type:*"} {
 		w.mustDoor("", client, "grant_mandate", map[string]any{"office": o.office, "client": client, "scope": scope, "from": "2026-01-01", "granted_by": "operator"})
 	}
@@ -156,7 +156,7 @@ func TestAClientSwitchesALessonOff(t *testing.T) {
 func TestAMandateIsNotPassedOn(t *testing.T) {
 	o := newOfficeScene(t)
 	w, d, z := o.w, "PL8020005678", "PL8030009012"
-	w.person("Olek Owner", "olek", o.office, "owner")
+	w.person("Olek Owner", "olek", o.office, "company_manager")
 	w.mustDoor("", d, "grant_mandate", map[string]any{"office": o.office, "client": d, "scope": "*", "from": "2026-01-01", "granted_by": "operator"})
 	mandate := func(office string) (int, map[string]any) {
 		t.Helper()
@@ -171,7 +171,7 @@ func TestAMandateIsNotPassedOn(t *testing.T) {
 	}
 	// Under the full mandate he still manages d's people.
 	w.mustDoor("", "", "register_person", map[string]any{"name": "Dorota Pracownik", "handle": "dorota", "role": "reader"})
-	if code, out := w.door("olek", d, "grant_membership", map[string]any{"person": w.personID("dorota"), "company": d, "role": "reader",
+	if code, out := w.door("olek", d, "grant_membership", map[string]any{"person": w.personID("dorota"), "company": d, "role": "user",
 		"from": w.today, "granted_by": "olek"}); code != 200 {
 		t.Fatalf("olek onboarding d's employee under the mandate: %d %v", code, out)
 	}

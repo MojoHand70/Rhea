@@ -18,8 +18,8 @@ import (
 func TestCompanyRulesAreTheCompanysAndRheasAreStaffs(t *testing.T) {
 	w := newGrantsWorld(t)
 	a, b := alfaKey, betaKey
-	kk := w.person("Krzysztof Kowal", "kk", a, "owner")
-	w.person("Olga Nowa", "olga", b, "owner")
+	kk := w.person("Krzysztof Kowal", "kk", a, "company_manager")
+	w.person("Olga Nowa", "olga", b, "company_manager")
 	w.person("Ewa Reader", "ewa", a, "reader")
 	draft := func(id, company string) {
 		t.Helper()
@@ -58,17 +58,17 @@ func TestCompanyRulesAreTheCompanysAndRheasAreStaffs(t *testing.T) {
 	if code := approve("kk", a, "memo"); code != 403 {
 		t.Fatalf("a's owner approving Rhea's rule: %d", code)
 	}
-	w.mustDoor("olga", b, "grant_membership", map[string]any{"person": kk, "company": b, "role": "owner", "from": "2026-01-01", "granted_by": "olga"})
+	w.mustDoor("olga", b, "grant_membership", map[string]any{"person": kk, "company": b, "role": "company_manager", "from": "2026-01-01", "granted_by": "olga"})
 	if code := approve("kk", a, "memo"); code != 403 {
 		t.Fatalf("an owner of both companies approving Rhea's rule: %d", code)
 	}
 	// No signed-in person claims the house, even while nobody holds it.
 	if code, out := w.door("olga", core.House, "grant_membership", map[string]any{"person": w.personID("olga"), "company": core.House,
-		"role": "owner", "from": "2026-01-01", "granted_by": "olga"}); code != 403 {
+		"role": "company_manager", "from": "2026-01-01", "granted_by": "olga"}); code != 403 {
 		t.Fatalf("olga claiming the house: %d %v", code, out)
 	}
 	// The installation's owner makes kk staff; kk approves Rhea's rule acting for the house.
-	w.mustDoor("", core.House, "grant_membership", map[string]any{"person": kk, "company": core.House, "role": "owner", "from": "2026-01-01", "granted_by": "operator"})
+	w.mustDoor("", core.House, "grant_membership", map[string]any{"person": kk, "company": core.House, "role": "company_manager", "from": "2026-01-01", "granted_by": "operator"})
 	if code := approve("kk", core.House, "memo"); code != 200 {
 		t.Fatalf("staff approving Rhea's rule: %d", code)
 	}
@@ -79,7 +79,7 @@ func TestCompanyRulesAreTheCompanysAndRheasAreStaffs(t *testing.T) {
 	// A bundle drafted for a that changes a type every company books is
 	// staff's, drafted for a or not; one of a's rules and a word of a's own
 	// (a type nobody had) is a's. Adam owns a and is not staff.
-	w.person("Adam Nowak", "adam", a, "owner")
+	w.person("Adam Nowak", "adam", a, "company_manager")
 	spec := core.RuleSpec{Match: core.Match{EventType: "fuel.bought"},
 		Effect: core.Effect{Object: core.ObjectTemplate{Type: "note", Fields: map[string]string{"text": "=$.text", "amount": "=$.amount"}}}}
 	warrant := &core.Warrant{Basis: "client", Citations: []string{"the owner said so"}}
@@ -119,8 +119,8 @@ func TestCompanyRulesAreTheCompanysAndRheasAreStaffs(t *testing.T) {
 func TestACompanysNewDoorActsInTheCompanyAlone(t *testing.T) {
 	w := newGrantsWorld(t)
 	a, b := alfaKey, betaKey
-	w.person("Krzysztof Kowal", "kk", a, "owner")
-	w.person("Olga Nowa", "olga", b, "owner")
+	w.person("Krzysztof Kowal", "kk", a, "company_manager")
+	w.person("Olga Nowa", "olga", b, "company_manager")
 	w.person("Anna Nowak", "anna", a, "accountant")
 	warrant := &core.Warrant{Basis: "client", Citations: []string{"the accountant said so"}}
 	inputs := []core.FieldDef{{Name: "person", Type: "ref<person>", Required: true}, {Name: "company", Type: "string", Required: true},

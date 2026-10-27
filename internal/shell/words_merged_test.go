@@ -58,8 +58,8 @@ func TestWordsAreMergedFromEveryPackTheCompanyHas(t *testing.T) {
 		}
 	}
 	a, b := "PL5250001111", "PL5260001246"
-	w.person("Krzysztof Kowal", "kk", a, "owner")
-	w.person("Olga Nowa", "olga", b, "owner")
+	w.person("Krzysztof Kowal", "kk", a, "company_manager")
+	w.person("Olga Nowa", "olga", b, "company_manager")
 	if code, out := w.door("kk", a, "install_pack", map[string]any{"pack": "regime-test", "from": w.today}); code != 200 {
 		t.Fatalf("install: %d %v", code, out)
 	}

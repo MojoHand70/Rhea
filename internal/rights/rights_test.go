@@ -16,11 +16,14 @@ import (
 )
 
 // Who may do what is computed from the log alone (DIRECTION 2026-10-19,
-// "People and rights"): memberships give roles, roles give rights, an
-// office reaches a client through a mandate within the client's scope, a
+// "People and rights"; 2026-10-27, "Tasks, groups and the phone"):
+// memberships give the system's roles, groups give what a business decides,
+// an office reaches a client through a mandate within the client's scope, a
 // deputy holds the substituted person's grants between two dates, and an
 // ended grant gives nothing after its last day. Every grant names the
-// object and the person that gave it.
+// object and the person that gave it. (Rewritten 2026-10-27, the law
+// changed: the roles are the system's seven, and an accountant is a user in
+// the group Accountant.)
 func TestGrantsFromTheLog(t *testing.T) {
 	ctx := context.Background()
 	s := storetest.New(t)
@@ -43,7 +46,7 @@ func TestGrantsFromTheLog(t *testing.T) {
 		if tr.Booked != 1 || len(tr.Errors) != 0 {
 			t.Fatalf("%s: booked %d, errors %v", name, tr.Booked, tr.Errors)
 		}
-		typ := map[string]string{"grant_membership": "membership", "grant_mandate": "mandate", "appoint_substitute": "substitution", "declare_role": "role"}[name]
+		typ := map[string]string{"grant_membership": "membership", "grant_mandate": "mandate", "appoint_substitute": "substitution", "declare_role": "role", "join_group": "group_member"}[name]
 		return fmt.Sprintf("%s-%d", typ, tr.EventID)
 	}
 	office, client, other := "PL5250001111", "PL5260001246", "PL7010001234"
@@ -64,8 +67,9 @@ func TestGrantsFromTheLog(t *testing.T) {
 
 	// kk owns the office; anna keeps its books; the grant is the office's fact.
 	at := func(company string) context.Context { return store.WithCompany(ctx, company) }
-	door(at(office), "grant_membership", map[string]any{"person": id("kk"), "company": office, "role": "owner", "from": "2026-01-01", "granted_by": "kk"})
-	annaMembership := door(at(office), "grant_membership", map[string]any{"person": id("anna"), "company": office, "role": "accountant", "from": "2026-10-01", "granted_by": "kk"})
+	door(at(office), "grant_membership", map[string]any{"person": id("kk"), "company": office, "role": "company_manager", "from": "2026-01-01", "granted_by": "kk"})
+	annaMembership := door(at(office), "grant_membership", map[string]any{"person": id("anna"), "company": office, "role": "user", "from": "2026-10-01", "granted_by": "kk"})
+	annaAccountant := door(at(office), "join_group", map[string]any{"group": "accountant", "person": id("anna"), "company": office, "from": "2026-10-01", "granted_by": "kk"})
 
 	anna, err := rights.Resolve(ctx, s, "anna", "2026-10-20")
 	if err != nil {
@@ -74,8 +78,8 @@ func TestGrantsFromTheLog(t *testing.T) {
 	if got := anna.Companies(); len(got) != 1 || got[0] != office {
 		t.Fatalf("anna's companies: %v", got)
 	}
-	if g, ok := anna.May(office, "door", "close_period", "periods"); !ok || g.Via != "membership" || g.Object != annaMembership || g.GrantedBy != "kk" || g.Role != "accountant" {
-		t.Fatalf("anna closes periods at the office by kk's grant: %+v %v", g, ok)
+	if g, ok := anna.May(office, "door", "close_period", "periods"); !ok || g.Via != "group" || g.Object != annaAccountant || g.GrantedBy != "kk" || g.Group != "accountant" {
+		t.Fatalf("anna closes periods at the office as an accountant, by kk's grant: %+v %v", g, ok)
 	}
 	if _, ok := anna.May(office, "door", "grant_membership", "people"); ok {
 		t.Fatal("an accountant never says who may do what")
@@ -97,7 +101,7 @@ func TestGrantsFromTheLog(t *testing.T) {
 	if got := anna.Companies(); len(got) != 2 || got[1] != client {
 		t.Fatalf("anna's companies with the mandate: %v", got)
 	}
-	if g, ok := anna.May(client, "door", "book_invoice", "finance"); !ok || g.Via != "mandate" || g.Object != mandate || g.Through != annaMembership {
+	if g, ok := anna.May(client, "door", "book_invoice", "finance"); !ok || g.Via != "mandate" || g.Object != mandate || g.Through != annaAccountant {
 		t.Fatalf("anna books the client's invoices through the mandate: %+v %v", g, ok)
 	}
 	if _, ok := anna.May(client, "door", "close_period", "periods"); ok {
@@ -116,7 +120,7 @@ func TestGrantsFromTheLog(t *testing.T) {
 	// A deputy holds anna's grants between two dates, in one company only.
 	door(at(office), "appoint_substitute", map[string]any{"person": id("anna"), "deputy": id("piotr"), "company": office, "from": "2026-10-19", "to": "2026-10-21", "granted_by": "kk"})
 	piotr, _ := rights.Resolve(ctx, s, "piotr", "2026-10-20")
-	if g, ok := piotr.May(office, "door", "close_period", "periods"); !ok || g.Via != "substitution" || g.Through != annaMembership {
+	if g, ok := piotr.May(office, "door", "close_period", "periods"); !ok || g.Via != "substitution" || g.Through != annaAccountant {
 		t.Fatalf("piotr stands in for anna at the office: %+v %v", g, ok)
 	}
 	if _, ok := piotr.May(client, "door", "book_invoice", "finance"); ok {
@@ -126,13 +130,17 @@ func TestGrantsFromTheLog(t *testing.T) {
 		t.Fatalf("nothing after the substitution's last day: %+v", after.Grants)
 	}
 
-	// A membership granted until a day expires by itself after it.
-	door(at(client), "grant_membership", map[string]any{"person": id("piotr"), "company": client, "role": "reader", "from": "2026-10-01", "to": "2026-10-19", "reason": "the audit", "granted_by": "kk"})
-	if p, _ := rights.Resolve(ctx, s, "piotr", "2026-10-19"); len(p.Grants) != 2 || p.Grants[0].Reason != "the audit" {
+	// A membership granted until a day expires by itself after it, and the
+	// groups it let him into with it.
+	door(at(client), "grant_membership", map[string]any{"person": id("piotr"), "company": client, "role": "guest", "from": "2026-10-01", "to": "2026-10-19", "reason": "the audit", "granted_by": "kk"})
+	door(at(client), "join_group", map[string]any{"group": "reader", "person": id("piotr"), "company": client, "from": "2026-10-01", "granted_by": "kk"})
+	if p, _ := rights.Resolve(ctx, s, "piotr", "2026-10-19"); p.Grants[0].Reason != "the audit" || p.Grants[0].Role != "guest" {
 		t.Fatalf("piotr on the audit's last day: %+v", p.Grants)
+	} else if _, ok := p.May(client, "view", "balance", "finance"); !ok {
+		t.Fatalf("piotr reads the client's books in the group Reader: %+v", p.Grants)
 	}
-	if p, _ := rights.Resolve(ctx, s, "piotr", "2026-10-20"); len(p.Grants) != 1 {
-		t.Fatalf("piotr after the audit: %+v", p.Grants)
+	if p, _ := rights.Resolve(ctx, s, "piotr", "2026-10-20"); len(p.Companies()) != 1 || p.Companies()[0] != office {
+		t.Fatalf("piotr after the audit — a group is no way in: %+v", p.Grants)
 	}
 
 	// Ending anna's membership ends everything that rested on it after its
@@ -168,15 +176,17 @@ func TestGrantsFromTheLog(t *testing.T) {
 		t.Fatal("a stranger is no principal")
 	}
 
-	// A company's own role wins over the pack's of the same name.
-	door(at(office), "declare_role", map[string]any{"name": "accountant", "rights": "view:*", "description": "here an accountant only reads"})
-	door(at(office), "grant_membership", map[string]any{"person": id("anna"), "company": office, "role": "accountant", "from": "2026-10-21", "granted_by": "kk"})
+	// The roles are the system's: a role a company declares, of a role's
+	// name or another, changes nothing (until 2026-10-27 the company's own
+	// role won over the pack's of the same name).
+	door(at(office), "declare_role", map[string]any{"name": "user", "rights": "*", "description": "here every user is the owner"})
+	door(at(office), "grant_membership", map[string]any{"person": id("anna"), "company": office, "role": "user", "from": "2026-10-21", "granted_by": "kk"})
 	anna, _ = rights.Resolve(ctx, s, "anna", "2026-10-21")
 	if _, ok := anna.May(office, "door", "close_period", "periods"); ok {
-		t.Fatal("the office's own accountant role only reads")
+		t.Fatalf("a user holds nothing of her own — her groups do: %+v", anna.Grants)
 	}
-	if _, ok := anna.May(office, "view", "balance", "finance"); !ok {
-		t.Fatal("…but reads")
+	if _, ok := anna.May(office, "view", "balance", "finance"); ok {
+		t.Fatalf("…nor reads: %+v", anna.Grants)
 	}
 	_ = core.ActorHuman
 }
@@ -224,8 +234,8 @@ func TestAGrantIsThePeoplePacksInItsOwnCompany(t *testing.T) {
 		return ids[0]
 	}
 	kk, anna := id("kk"), id("anna")
-	trigger(at(office), "grant_membership", map[string]any{"person": anna, "company": office, "role": "accountant", "from": "2026-01-01", "granted_by": "kk"})
-	trigger(at(other), "grant_membership", map[string]any{"person": kk, "company": other, "role": "owner", "from": "2026-01-01", "granted_by": "kk"})
+	trigger(at(office), "grant_membership", map[string]any{"person": anna, "company": office, "role": "user", "from": "2026-01-01", "granted_by": "kk"})
+	trigger(at(other), "grant_membership", map[string]any{"person": kk, "company": other, "role": "company_manager", "from": "2026-01-01", "granted_by": "kk"})
 
 	// the office's own rule, booking a membership wherever its fact says
 	claim := core.Rule{ID: "claim@" + office, Company: office, Status: core.StatusActive, Priority: 100, EffectiveFrom: "2026-01-01",
@@ -256,7 +266,7 @@ func TestAGrantIsThePeoplePacksInItsOwnCompany(t *testing.T) {
 		t.Fatalf("anna made herself the office's owner: %+v", p.Grants)
 	}
 	// the grants given at their own company's door still hold
-	if k, _ := rights.Resolve(ctx, s, "kk", "2026-10-20"); len(k.Grants) != 1 || k.Grants[0].Company != other {
+	if k, _ := rights.Resolve(ctx, s, "kk", "2026-10-20"); len(k.Companies()) != 1 || k.Grants[0].Company != other || k.Grants[0].Role != "company_manager" {
 		t.Fatalf("kk's own grant: %+v", k.Grants)
 	}
 }

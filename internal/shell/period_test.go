@@ -118,8 +118,8 @@ func newBooksWorld(t *testing.T) (w *grantsWorld, alfa, beta string) {
 		t.Fatal(err)
 	}
 	alfa, beta = "PL5250001111", "PL5260001246"
-	w.person("Krzysztof Kowal", "kk", alfa, "owner")
-	w.person("Olga Nowa", "olga", beta, "owner")
+	w.person("Krzysztof Kowal", "kk", alfa, "company_manager")
+	w.person("Olga Nowa", "olga", beta, "company_manager")
 	for _, c := range [][3]string{{"kk", alfa, "Alfa"}, {"olga", beta, "Beta"}} {
 		if code := w.call(c[0], c[1], "POST", "/api/events", map[string]any{"event_type": "test.company.entered", "occurred_at": "2026-01-01",
 			"dedup_key": "own-" + c[1], "payload": map[string]any{"name": c[2]}}, nil); code != 200 {

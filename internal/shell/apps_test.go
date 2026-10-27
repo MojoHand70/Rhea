@@ -93,15 +93,15 @@ func TestAppsAreTheCompanysAndThePersons(t *testing.T) {
 	}
 
 	a, b := "PL5250001111", "PL5260001246"
-	w.person("Krzysztof Kowal", "kk", a, "owner")
-	w.person("Olga Nowa", "olga", b, "owner")
+	w.person("Krzysztof Kowal", "kk", a, "company_manager")
+	w.person("Olga Nowa", "olga", b, "company_manager")
 	day, _ := time.Parse("2006-01-02", w.today)
 	if code, out := w.door("kk", a, "install_pack", map[string]any{"pack": "tally-apps", "from": day.AddDate(0, 0, -7).Format("2006-01-02")}); code != 200 {
 		t.Fatalf("kk installs the pack in alfa: %d %v", code, out)
 	}
-	w.mustDoor("kk", a, "declare_role", map[string]any{"name": "tally_clerk", "rights": "view:tally-list"})
-	clerk := w.person("Celina Clerk", "celina", "", "tally_clerk")
-	w.mustDoor("kk", a, "grant_membership", map[string]any{"person": clerk, "company": a, "role": "tally_clerk", "from": "2026-01-01", "granted_by": "kk"})
+	w.mustDoor("kk", a, "declare_group", map[string]any{"name": "tally_clerk", "company": a, "rights": "view:tally-list"})
+	clerk := w.person("Celina Clerk", "celina", "", "user")
+	w.grant("kk", clerk, a, "tally_clerk", "2026-01-01", "")
 
 	type tab struct {
 		View  string `json:"view"`

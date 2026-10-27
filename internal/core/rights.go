@@ -114,6 +114,33 @@ func CoveredBy(rights []Right, kind, name, domain string) bool {
 	return false
 }
 
+// Implies reports whether the rights already give everything one right
+// gives: "*" only by "*", a domain by the same domain, a wildcard by the same
+// wildcard, a named thing by whatever covers it in its domain. A right is
+// never held by a narrower one: door:* is not held by domain:finance.
+func Implies(have []Right, r Right, domain string) bool {
+	for _, h := range have {
+		switch {
+		case h.Kind == "*":
+			return true
+		case r.Kind == "*":
+		case r.Kind == "domain":
+			if h.Kind == "domain" && h.Name == r.Name {
+				return true
+			}
+		case r.Name == "*":
+			if h.Kind == r.Kind && h.Name == "*" {
+				return true
+			}
+		default:
+			if h.Covers(r.Kind, r.Name, domain) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // Actor kinds: the vocabulary Activity.Who is written in. A person signs
 // with a bare handle (the face) or "shell:<user>" / "cli:<user>"; the kernel
 // and its adapters and the model have their own prefixes.

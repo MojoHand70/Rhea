@@ -6,7 +6,7 @@
   "tabs": [
     {
       "view_id": "slownik",
-      "version": 23,
+      "version": 24,
       "notion": "words",
       "title": "Słownik",
       "domain": "finance",
@@ -281,6 +281,12 @@
           "group": {
             "label": "Grupa",
             "plural": "Grupy",
+            "shape": "card",
+            "kind": "master"
+          },
+          "group_member": {
+            "label": "Miejsce w grupie",
+            "plural": "Miejsca w grupach",
             "shape": "card",
             "kind": "master"
           },
@@ -650,6 +656,16 @@
           "group.name": "Nazwa grupy",
           "group.company": "Firma",
           "group.description": "Opis grupy",
+          "group.rights": "Co daje grupa",
+          "group_member.group": "Grupa",
+          "group_member.person": "Osoba",
+          "group_member.member_group": "Grupa w grupie",
+          "group_member.company": "Firma",
+          "group_member.from": "Od dnia",
+          "group_member.to": "Do dnia",
+          "group_member.reason": "Powód",
+          "group_member.status": "Status",
+          "group_member.granted_by": "Dodał(a)",
           "sales_invoice.kind": "Co sprzedano",
           "inventory_write_down.title": "Tytuł",
           "inventory_write_down.stock_account": "Konto zapasów",
@@ -1026,6 +1042,25 @@
             "active": "aktywne",
             "ended": "zakończone"
           },
+          "membership.role": {
+            "rhea_designer": "Projektant Rhei",
+            "tenant_owner": "Właściciel umowy",
+            "office_manager": "Kierownik biura",
+            "company_manager": "Kierownik firmy",
+            "user": "Użytkownik",
+            "guest": "Gość",
+            "rhea_support": "Wsparcie Rhei"
+          },
+          "group.name": {
+            "chief_accountant": "Główny księgowy",
+            "accountant": "Księgowość",
+            "reader": "Podgląd",
+            "all_users": "Wszyscy użytkownicy"
+          },
+          "group_member.status": {
+            "active": "aktywne",
+            "ended": "zakończone"
+          },
           "mandate.status": {
             "active": "aktywne",
             "ended": "zakończone"
@@ -1170,6 +1205,8 @@
           "substitution.appointed": "Wyznaczono zastępstwo",
           "substitution.ended": "Zastępstwo zakończone",
           "group.declared": "Grupa określona",
+          "group.joined": "Dodano do grupy",
+          "group.left": "Usunięto z grupy",
           "access.refused": "Odmowa dostępu",
           "access.recorded": "Logowanie odnotowane",
           "inventory.written_down": "Odpis aktualizujący zapasy",
@@ -1250,6 +1287,8 @@
           "appoint_substitute": "wyznaczenie zastępstwa",
           "end_substitution": "zakończenie zastępstwa",
           "declare_group": "określenie grupy",
+          "join_group": "dodanie do grupy",
+          "leave_group": "usunięcie z grupy",
           "record_access": "odnotowanie logowania",
           "write_down_inventory": "odpis aktualizujący zapasy",
           "reverse_inventory_write_down": "cofnięcie odpisu zapasów",

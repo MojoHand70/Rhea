@@ -176,7 +176,7 @@ func TestTheGroupTrialBalanceIsForAPeriodToo(t *testing.T) {
 	line("olga", b, "ODD/9", "2026-09-25", "130", "debit", "10.00", "EUR")
 
 	// read by one who sees the group: kk let into Beta as well, acting for neither
-	w.mustDoor("", b, "grant_membership", map[string]any{"person": w.personID("kk"), "company": b, "role": "owner", "from": "2026-01-01", "granted_by": "operator"})
+	w.mustDoor("", b, "grant_membership", map[string]any{"person": w.personID("kk"), "company": b, "role": "company_manager", "from": "2026-01-01", "granted_by": "operator"})
 	var gtb struct {
 		Columns []struct {
 			Field string `json:"field"`

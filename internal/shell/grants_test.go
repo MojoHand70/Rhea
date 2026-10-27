@@ -146,15 +146,45 @@ func (w *grantsWorld) personID(handle string) string {
 }
 
 // person registers someone through the operator's tools and, when a
-// company is named, grants them a role there from the first of the year.
-func (w *grantsWorld) person(name, handle, company, role string) string {
+// company is named, lets them in there from the first of the year as what
+// "as" names: one of the system's roles, or a group every company has — a
+// user in it (KK, 2026-10-27: an accountant is a user in the group
+// Accountant).
+func (w *grantsWorld) person(name, handle, company, as string) string {
 	w.t.Helper()
-	w.mustDoor("", "", "register_person", map[string]any{"name": name, "handle": handle, "role": role})
+	w.mustDoor("", "", "register_person", map[string]any{"name": name, "handle": handle, "role": as})
 	id := w.personID(handle)
 	if company != "" {
-		w.mustDoor("", company, "grant_membership", map[string]any{"person": id, "company": company, "role": role, "from": "2026-01-01", "granted_by": "operator"})
+		w.grant("", id, company, as, "2026-01-01", "")
 	}
 	return id
+}
+
+// grant lets a person into a company, signed by who (the operator when
+// empty), from a day and until one if named, as one of the system's roles
+// or as a user in a group every company has.
+func (w *grantsWorld) grant(who, person, company, as, from, to string) {
+	w.t.Helper()
+	role, group := as, ""
+	if !core.IsRole(as) {
+		role, group = core.RoleUser, as
+	}
+	by := who
+	if by == "" {
+		by = "operator"
+	}
+	in := map[string]any{"person": person, "company": company, "role": role, "from": from, "granted_by": by}
+	if to != "" {
+		in["to"] = to
+	}
+	w.mustDoor(who, company, "grant_membership", in)
+	if group != "" {
+		in := map[string]any{"group": group, "person": person, "company": company, "from": from, "granted_by": by}
+		if to != "" {
+			in["to"] = to
+		}
+		w.mustDoor(who, company, "join_group", in)
+	}
 }
 
 // dayFrom is the books' day moved by n days.
@@ -176,13 +206,13 @@ func (w *grantsWorld) dayFrom(n int) string {
 func TestAPersonOfNoCompanyHearsNothing(t *testing.T) {
 	w := newGrantsWorld(t)
 	a, b := "PL5250001111", "PL5260001246"
-	w.person("Krzysztof Kowal", "kk", a, "owner")
-	w.person("Olga Nowa", "olga", b, "owner")
+	w.person("Krzysztof Kowal", "kk", a, "company_manager")
+	w.person("Olga Nowa", "olga", b, "company_manager")
 	w.mustDoor("kk", a, "take_note", map[string]any{"text": "a's note", "amount": "12.50"})
 	w.mustDoor("olga", b, "take_note", map[string]any{"text": "b's note", "amount": "12.50"})
 	// anna kept a's books until yesterday
 	anna := w.person("Anna Nowak", "anna", "", "accountant")
-	w.mustDoor("kk", a, "grant_membership", map[string]any{"person": anna, "company": a, "role": "accountant", "from": "2026-01-01", "to": w.dayFrom(-1), "granted_by": "kk"})
+	w.grant("kk", anna, a, "accountant", "2026-01-01", w.dayFrom(-1))
 
 	if code := w.call("anna", "", "POST", "/api/speak", nil, nil); code != 403 {
 		t.Fatalf("anna asking the host to speak: %d", code)
@@ -224,17 +254,17 @@ func TestAPersonOfNoCompanyHearsNothing(t *testing.T) {
 func TestALapsedCompanyIsNoOnesToClaim(t *testing.T) {
 	w := newGrantsWorld(t)
 	office, lapsed, later, held, fresh, own := "PL5250001111", "PL5260001246", "PL7010001234", "PL8130000001", "PL9990000009", "PL1110000001"
-	w.person("Krzysztof Kowal", "kk", office, "owner")
+	w.person("Krzysztof Kowal", "kk", office, "company_manager")
 	w.mustDoor("", lapsed, "grant_mandate", map[string]any{"office": office, "client": lapsed, "scope": "type:* view:*", "from": "2026-01-01", "to": w.dayFrom(-1), "granted_by": "operator"})
 	w.mustDoor("", lapsed, "take_note", map[string]any{"text": "the client's note", "amount": "12.50"})
-	olga := w.person("Olga Nowa", "olga", "", "owner")
-	w.mustDoor("", later, "grant_membership", map[string]any{"person": olga, "company": later, "role": "owner", "from": w.dayFrom(30), "granted_by": "operator"})
-	w.person("Ewa Owner", "ewa", held, "owner")
-	mallory := w.person("Mallory Mal", "mallory", own, "owner")
+	olga := w.person("Olga Nowa", "olga", "", "company_manager")
+	w.mustDoor("", later, "grant_membership", map[string]any{"person": olga, "company": later, "role": "company_manager", "from": w.dayFrom(30), "granted_by": "operator"})
+	w.person("Ewa Owner", "ewa", held, "company_manager")
+	mallory := w.person("Mallory Mal", "mallory", own, "company_manager")
 
 	claim := func(company string) int {
 		t.Helper()
-		code, _ := w.door("mallory", company, "grant_membership", map[string]any{"person": mallory, "company": company, "role": "owner", "from": w.today, "granted_by": "mallory"})
+		code, _ := w.door("mallory", company, "grant_membership", map[string]any{"person": mallory, "company": company, "role": "company_manager", "from": w.today, "granted_by": "mallory"})
 		return code
 	}
 	if code := claim(lapsed); code != 403 {
@@ -269,8 +299,8 @@ func TestALapsedCompanyIsNoOnesToClaim(t *testing.T) {
 func TestAGrantReachesOnlyItsCompany(t *testing.T) {
 	w := newGrantsWorld(t)
 	held, own := "PL5250001111", "PL1110000001"
-	kk := w.person("Krzysztof Kowal", "kk", held, "owner")
-	mallory := w.person("Mallory Mal", "mallory", own, "owner")
+	kk := w.person("Krzysztof Kowal", "kk", held, "company_manager")
+	mallory := w.person("Mallory Mal", "mallory", own, "company_manager")
 	companies := func(handle string) []string {
 		t.Helper()
 		var who struct {
@@ -311,8 +341,8 @@ func TestAGrantReachesOnlyItsCompany(t *testing.T) {
 func TestAPersonIsChangedOnlyWhereTheyAreLetIn(t *testing.T) {
 	w := newGrantsWorld(t)
 	held, own := "PL5250001111", "PL1110000001"
-	kk := w.person("Krzysztof Kowal", "kk", held, "owner")
-	mallory := w.person("Mallory Mal", "mallory", own, "owner")
+	kk := w.person("Krzysztof Kowal", "kk", held, "company_manager")
+	mallory := w.person("Mallory Mal", "mallory", own, "company_manager")
 	whoami := func(handle string) (int, string) {
 		t.Helper()
 		var who struct {
@@ -347,7 +377,7 @@ func TestAPersonIsChangedOnlyWhereTheyAreLetIn(t *testing.T) {
 	// let in elsewhere as well.
 	anna := w.person("Anna Nowak", "anna", held, "accountant")
 	w.mustDoor("kk", "", "identify_person", map[string]any{"person": anna, "given_name": "Anna", "family_name": "Nowak", "birth_date": "1990-05-04"})
-	w.mustDoor("", own, "grant_membership", map[string]any{"person": anna, "company": own, "role": "accountant", "from": "2026-01-01", "granted_by": "operator"})
+	w.grant("", anna, own, "accountant", "2026-01-01", "")
 	if code, out := w.door("kk", "", "set_person_status", map[string]any{"person": anna, "status": "left"}); code != 403 {
 		t.Fatalf("kk marking anna, let in at mallory's too, as left: %d %v", code, out)
 	}
@@ -365,8 +395,8 @@ func TestAPersonIsChangedOnlyWhereTheyAreLetIn(t *testing.T) {
 func TestWhatRunsEverywhereIsApprovedEverywhere(t *testing.T) {
 	w := newGrantsWorld(t)
 	a, b := "PL5250001111", "PL5260001246"
-	kk := w.person("Krzysztof Kowal", "kk", a, "owner")
-	w.person("Olga Nowa", "olga", b, "owner")
+	kk := w.person("Krzysztof Kowal", "kk", a, "company_manager")
+	w.person("Olga Nowa", "olga", b, "company_manager")
 	w.person("Ewa Reader", "ewa", a, "reader")
 	if _, err := w.s.InsertRuleVersion(w.ctx, core.Rule{ID: "memo", Status: core.StatusDraft, Priority: 100, EffectiveFrom: "2026-01-01",
 		CreatedBy: "agent:test", Description: "memos as notes", Spec: core.RuleSpec{Match: core.Match{EventType: "memo.taken"},
@@ -383,11 +413,11 @@ func TestWhatRunsEverywhereIsApprovedEverywhere(t *testing.T) {
 	if r, err := w.s.GetRule(w.ctx, "memo"); err != nil || r.Status != core.StatusDraft {
 		t.Fatalf("the draft stays a draft: %v %v", err, r.Status)
 	}
-	w.mustDoor("olga", b, "grant_membership", map[string]any{"person": kk, "company": b, "role": "owner", "from": "2026-01-01", "granted_by": "olga"})
+	w.mustDoor("olga", b, "grant_membership", map[string]any{"person": kk, "company": b, "role": "company_manager", "from": "2026-01-01", "granted_by": "olga"})
 	if code := w.call("kk", a, "POST", "/api/rules/memo/approve", map[string]any{}, nil); code != 403 {
 		t.Fatalf("kk, let in at both but no staff, approving Rhea's rule: %d", code)
 	}
-	w.mustDoor("", core.House, "grant_membership", map[string]any{"person": kk, "company": core.House, "role": "owner", "from": "2026-01-01", "granted_by": "operator"})
+	w.mustDoor("", core.House, "grant_membership", map[string]any{"person": kk, "company": core.House, "role": "company_manager", "from": "2026-01-01", "granted_by": "operator"})
 	if code := w.call("kk", core.House, "POST", "/api/rules/memo/approve", map[string]any{}, nil); code != 200 {
 		t.Fatalf("kk, staff, approving: %d", code)
 	}
@@ -420,9 +450,9 @@ func TestWhatRunsEverywhereIsApprovedEverywhere(t *testing.T) {
 func TestActingForAClientReachesThatClientAlone(t *testing.T) {
 	w := newGrantsWorld(t)
 	office, a, b := "PL5250001111", "PL5260001246", "PL7010001234"
-	w.person("Krzysztof Kowal", "kk", office, "owner")
-	w.person("Alfa Owner", "alfa", a, "owner")
-	w.person("Beta Owner", "beta", b, "owner")
+	w.person("Krzysztof Kowal", "kk", office, "company_manager")
+	w.person("Alfa Owner", "alfa", a, "company_manager")
+	w.person("Beta Owner", "beta", b, "company_manager")
 	w.person("Anna Nowak", "anna", office, "accountant")
 	w.mustDoor("", a, "grant_mandate", map[string]any{"office": office, "client": a, "scope": "door:* view:* type:*", "from": "2026-01-01", "granted_by": "operator"})
 	w.mustDoor("", b, "grant_mandate", map[string]any{"office": office, "client": b, "scope": "view:* type:*", "from": "2026-01-01", "granted_by": "operator"})
@@ -522,15 +552,15 @@ func TestTheCopyIsTheCompanyActedFor(t *testing.T) {
 func TestTheOpenDoorIsNoSideDoor(t *testing.T) {
 	w := newGrantsWorld(t)
 	a, b := "PL5250001111", "PL5260001246"
-	kk := w.person("Krzysztof Kowal", "kk", a, "owner")
-	w.person("Olga Nowa", "olga", b, "owner")
+	kk := w.person("Krzysztof Kowal", "kk", a, "company_manager")
+	w.person("Olga Nowa", "olga", b, "company_manager")
 	anna := w.person("Anna Nowak", "anna", a, "accountant")
 	submit := func(person, typ string, payload map[string]any) (int, map[string]any) {
 		t.Helper()
 		return w.door(person, a, "submit_event", map[string]any{"event_type": typ, "occurred_at": w.today, "payload": payload})
 	}
 
-	if code, out := submit("anna", "membership.granted", map[string]any{"person": anna, "company": b, "role": "owner", "from": w.today, "granted_by": "anna"}); code != 403 {
+	if code, out := submit("anna", "membership.granted", map[string]any{"person": anna, "company": b, "role": "company_manager", "from": w.today, "granted_by": "anna"}); code != 403 {
 		t.Fatalf("anna granting herself beta through the open door: %d %v", code, out)
 	}
 	if code, out := submit("anna", "time.day_opened", map[string]any{"date": "2099-12-31"}); code != 403 {
@@ -553,7 +583,7 @@ func TestTheOpenDoorIsNoSideDoor(t *testing.T) {
 	if code, out := submit("anna", "visit.logged", map[string]any{"who": "a supplier"}); code != 200 {
 		t.Fatalf("a new fact through the open door: %d %v", code, out)
 	}
-	if code, out := submit("kk", "membership.granted", map[string]any{"person": kk, "company": a, "role": "reader", "from": w.today, "granted_by": "kk"}); code != 200 {
+	if code, out := submit("kk", "membership.granted", map[string]any{"person": kk, "company": a, "role": "user", "from": w.today, "granted_by": "kk"}); code != 200 {
 		t.Fatalf("the owner's grant through the open door: %d %v", code, out)
 	}
 }
@@ -568,8 +598,8 @@ func TestTheOpenDoorIsNoSideDoor(t *testing.T) {
 func TestTheOpenDoorWritesWhatItsDoorWould(t *testing.T) {
 	w := newGrantsWorld(t)
 	a, m := "PL5250001111", "PL5260001246"
-	kk := w.person("Krzysztof Kowal", "kk", a, "owner")
-	mallory := w.person("Mallory Obca", "mallory", m, "owner")
+	kk := w.person("Krzysztof Kowal", "kk", a, "company_manager")
+	mallory := w.person("Mallory Obca", "mallory", m, "company_manager")
 
 	code, out := w.door("mallory", m, "submit_event", map[string]any{"event_type": "substitution.appointed", "occurred_at": w.today,
 		"payload": map[string]any{"person": kk, "deputy": mallory, "from": w.today, "to": w.dayFrom(30), "granted_by": "kk"}})
@@ -627,12 +657,12 @@ func TestACallersKeyClaimsNoChannelsFact(t *testing.T) {
 func TestTheDryRunsAskWhatTheGateAsks(t *testing.T) {
 	w := newGrantsWorld(t)
 	a, b := "PL5250001111", "PL5260001246"
-	w.person("Krzysztof Kowal", "kk", a, "owner")
-	w.person("Olga Nowa", "olga", b, "owner")
+	w.person("Krzysztof Kowal", "kk", a, "company_manager")
+	w.person("Olga Nowa", "olga", b, "company_manager")
 	w.person("Anna Nowak", "anna", a, "accountant")
-	w.mustDoor("kk", a, "declare_role", map[string]any{"name": "clerk", "rights": "door:take_note type:note"})
-	clerk := w.person("Celina Clerk", "celina", "", "clerk")
-	w.mustDoor("kk", a, "grant_membership", map[string]any{"person": clerk, "company": a, "role": "clerk", "from": "2026-01-01", "granted_by": "kk"})
+	w.mustDoor("kk", a, "declare_group", map[string]any{"name": "clerk", "company": a, "rights": "door:take_note type:note"})
+	clerk := w.person("Celina Clerk", "celina", "", "user")
+	w.grant("kk", clerk, a, "clerk", "2026-01-01", "")
 	if _, err := w.s.InsertRuleVersion(w.ctx, core.Rule{ID: "memo", Status: core.StatusDraft, Priority: 100, EffectiveFrom: "2026-01-01",
 		CreatedBy: "agent:test", Description: "memos as notes", Spec: core.RuleSpec{Match: core.Match{EventType: "memo.taken"},
 			Effect: core.Effect{Object: core.ObjectTemplate{Type: "note", Fields: map[string]string{"text": "=$.text", "amount": "=$.amount"}}}}}); err != nil {
@@ -716,8 +746,8 @@ func TestAnAmendmentsMoneyIsMoneyInWhy(t *testing.T) {
 func TestTheLiveStreamIsTheListenersOwn(t *testing.T) {
 	w := newGrantsWorld(t)
 	a, b := "PL5250001111", "PL5260001246"
-	w.person("Krzysztof Kowal", "kk", a, "owner")
-	olga := w.person("Olga Nowa", "olga", b, "owner")
+	w.person("Krzysztof Kowal", "kk", a, "company_manager")
+	olga := w.person("Olga Nowa", "olga", b, "company_manager")
 	ctx, cancel := context.WithTimeout(w.ctx, 10*time.Second)
 	defer cancel()
 	req, _ := http.NewRequestWithContext(ctx, "GET", w.ts.URL+"/api/live", nil)
@@ -737,7 +767,7 @@ func TestTheLiveStreamIsTheListenersOwn(t *testing.T) {
 		}
 	}()
 	w.mustDoor("kk", a, "take_note", map[string]any{"text": "alfa's note", "amount": "1.00"})
-	w.mustDoor("olga", b, "grant_membership", map[string]any{"person": olga, "company": b, "role": "reader", "from": w.today, "granted_by": "olga"})
+	w.mustDoor("olga", b, "grant_membership", map[string]any{"person": olga, "company": b, "role": "user", "from": w.today, "granted_by": "olga"})
 	select {
 	case got := <-heard:
 		if got != "membership" {
@@ -756,7 +786,7 @@ func TestTheLiveStreamIsTheListenersOwn(t *testing.T) {
 // model is not asked.
 func TestTheHostSpeaksForNoCompanyTheBooksDoNotHold(t *testing.T) {
 	w := newGrantsWorld(t)
-	w.person("Krzysztof Kowal", "kk", "PL5250001111", "owner")
+	w.person("Krzysztof Kowal", "kk", "PL5250001111", "company_manager")
 	if code := w.call("", "JUNK0", "POST", "/api/speak", nil, nil); code != 404 {
 		t.Fatalf("speaking for JUNK0: %d", code)
 	}
@@ -784,12 +814,12 @@ func TestTheHostSpeaksForNoCompanyTheBooksDoNotHold(t *testing.T) {
 func TestACompanyWithBooksIsNobodysToClaim(t *testing.T) {
 	w := newGrantsWorld(t)
 	booked, fresh := "PL7010001234", "PL1234563218"
-	w.person("Mallory Obca", "mallory", "", "owner")
+	w.person("Mallory Obca", "mallory", "", "company_manager")
 	mallory := w.personID("mallory")
 	w.mustDoor("", booked, "take_note", map[string]any{"text": "the first note", "amount": "10.00"})
 	claim := func(company string) (int, map[string]any) {
 		return w.door("mallory", company, "grant_membership", map[string]any{"person": mallory, "company": company,
-			"role": "owner", "from": w.today, "granted_by": "mallory"})
+			"role": "company_manager", "from": w.today, "granted_by": "mallory"})
 	}
 	if code, out := claim(booked); code != 403 {
 		t.Fatalf("mallory claiming a company with books: %d %v", code, out)
@@ -813,8 +843,8 @@ func TestACompanyWithBooksIsNobodysToClaim(t *testing.T) {
 func TestASavedReportIsTheCompanysOwn(t *testing.T) {
 	w := newGrantsWorld(t)
 	a, b := "PL5250001111", "PL5260001246"
-	w.person("Krzysztof Kowal", "kk", a, "owner")
-	w.person("Olga Nowa", "olga", b, "owner")
+	w.person("Krzysztof Kowal", "kk", a, "company_manager")
+	w.person("Olga Nowa", "olga", b, "company_manager")
 	answered, err := w.x.TriggerActivity(store.WithCompany(w.ctx, a), "host_answered", map[string]any{"question": "Notes for Jan Kowalski?",
 		"sql": "SELECT COUNT(*) AS notes FROM objects WHERE object_type = 'note'", "reading": "One note.",
 		"visual": `{"kind":"table","title":"Notes for Jan Kowalski"}`, "result": `{"columns":["notes"],"rows":[[1]]}`, "rows": 1, "asked_by": "kk", "occurred_at": w.today},

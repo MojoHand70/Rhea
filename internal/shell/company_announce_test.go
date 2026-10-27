@@ -15,10 +15,10 @@ import (
 func TestRheasChangesAreAnnouncedToEveryCompany(t *testing.T) {
 	w := newGrantsWorld(t)
 	a, b := alfaKey, betaKey
-	kk := w.person("Krzysztof Kowal", "kk", "", "owner")
-	w.mustDoor("", core.House, "grant_membership", map[string]any{"person": kk, "company": core.House, "role": "owner", "from": "2026-01-01", "granted_by": "operator"})
-	w.person("Alfa Owner", "alfa", a, "owner")
-	w.person("Beta Owner", "beta", b, "owner")
+	kk := w.person("Krzysztof Kowal", "kk", "", "company_manager")
+	w.mustDoor("", core.House, "grant_membership", map[string]any{"person": kk, "company": core.House, "role": "company_manager", "from": "2026-01-01", "granted_by": "operator"})
+	w.person("Alfa Owner", "alfa", a, "company_manager")
+	w.person("Beta Owner", "beta", b, "company_manager")
 	draft := func(id, company string) {
 		t.Helper()
 		if _, err := w.s.InsertRuleVersion(w.ctx, core.Rule{ID: id, Company: company, Status: core.StatusDraft, Priority: 100,

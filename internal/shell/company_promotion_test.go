@@ -44,8 +44,8 @@ func TestARuleManyCompaniesHoldBecomesRheasByStaff(t *testing.T) {
 		w.mustDoor("", company(i), "grant_mandate", map[string]any{"office": office, "client": company(i), "scope": "door:* view:* type:*", "from": "2026-01-01", "granted_by": "operator"})
 	}
 	w.person("Anna Nowak", "anna", o1, "accountant")
-	kk := w.person("Krzysztof Kowal", "kk", "", "owner")
-	w.mustDoor("", core.House, "grant_membership", map[string]any{"person": kk, "company": core.House, "role": "owner", "from": "2026-01-01", "granted_by": "operator"})
+	kk := w.person("Krzysztof Kowal", "kk", "", "company_manager")
+	w.mustDoor("", core.House, "grant_membership", map[string]any{"person": kk, "company": core.House, "role": "company_manager", "from": "2026-01-01", "granted_by": "operator"})
 	for i := 1; i <= 9; i++ {
 		own(i, byVendor)
 	}

@@ -105,7 +105,7 @@ func TestPersonsAtTheDoors(t *testing.T) {
 		}
 		return ids[0]
 	}
-	mustDoor("", office, "grant_membership", map[string]any{"person": personID("kk"), "company": office, "role": "owner", "from": "2026-01-01", "granted_by": "operator"})
+	mustDoor("", office, "grant_membership", map[string]any{"person": personID("kk"), "company": office, "role": "company_manager", "from": "2026-01-01", "granted_by": "operator"})
 
 	// A stranger is no principal; a person's scope is their grants.
 	if code := call("nobody", "", "GET", "/api/whoami", nil, nil); code != 403 {
@@ -123,7 +123,8 @@ func TestPersonsAtTheDoors(t *testing.T) {
 	// The owner invites an accountant: the kernel signs the grant with the
 	// owner, whatever the page sent; the accountant's seat is visible at once.
 	mustDoor("kk", "", "register_person", map[string]any{"name": "Anna Nowak", "handle": "anna", "role": "accountant"})
-	grant := mustDoor("kk", office, "grant_membership", map[string]any{"person": personID("anna"), "company": office, "role": "accountant", "from": today, "granted_by": "mallory"})
+	grant := mustDoor("kk", office, "grant_membership", map[string]any{"person": personID("anna"), "company": office, "role": "user", "from": today, "granted_by": "mallory"})
+	place := mustDoor("kk", office, "join_group", map[string]any{"group": "accountant", "person": personID("anna"), "company": office, "from": today, "granted_by": "mallory"})
 	ev, err := s.GetEvent(ctx, int64(grant["event_id"].(float64)))
 	var signed struct {
 		GrantedBy string `json:"granted_by"`
@@ -139,7 +140,7 @@ func TestPersonsAtTheDoors(t *testing.T) {
 	// The accountant keeps the books and is refused at the people doors;
 	// the refusal is a fact under the office, signed by her.
 	mustDoor("anna", "", "take_note", map[string]any{"text": "the office's note"})
-	code, out := door("anna", "", "grant_membership", map[string]any{"person": personID("kk"), "company": office, "role": "reader", "from": today, "granted_by": "anna"})
+	code, out := door("anna", "", "grant_membership", map[string]any{"person": personID("kk"), "company": office, "role": "user", "from": today, "granted_by": "anna"})
 	if code != 403 || !strings.Contains(fmt.Sprint(out["error"]), "no role of yours opens this door") {
 		t.Fatalf("anna granting: %d %v", code, out)
 	}
@@ -176,7 +177,7 @@ func TestPersonsAtTheDoors(t *testing.T) {
 	if code := call("anna", "", "GET", "/api/objects?type=note", nil, &objs); code != 200 || len(objs.Objects) != 1 {
 		t.Fatalf("anna's notes: %d %+v", code, objs)
 	}
-	mustDoor("", client, "grant_membership", map[string]any{"person": personID("kk"), "company": client, "role": "owner", "from": "2026-01-01", "granted_by": "operator"})
+	mustDoor("", client, "grant_membership", map[string]any{"person": personID("kk"), "company": client, "role": "company_manager", "from": "2026-01-01", "granted_by": "operator"})
 	if code := call("anna", client, "GET", "/api/objects?type=note", nil, nil); code != 403 {
 		t.Fatalf("anna at the client: %d", code)
 	}
@@ -187,7 +188,8 @@ func TestPersonsAtTheDoors(t *testing.T) {
 	}
 	// A reader sees and does nothing.
 	mustDoor("", "", "register_person", map[string]any{"name": "Ewa Reader", "handle": "ewa", "role": "reader"})
-	mustDoor("kk", office, "grant_membership", map[string]any{"person": personID("ewa"), "company": office, "role": "reader", "from": today, "granted_by": "kk"})
+	mustDoor("kk", office, "grant_membership", map[string]any{"person": personID("ewa"), "company": office, "role": "user", "from": today, "granted_by": "kk"})
+	mustDoor("kk", office, "join_group", map[string]any{"group": "reader", "person": personID("ewa"), "company": office, "from": today, "granted_by": "kk"})
 	if code := call("ewa", "", "GET", "/api/objects?type=note", nil, &objs); code != 200 || len(objs.Objects) != 1 {
 		t.Fatalf("ewa reads: %d", code)
 	}
@@ -225,12 +227,12 @@ func TestPersonsAtTheDoors(t *testing.T) {
 	// A company nobody holds is claimed by its first grant: a new owner
 	// grants herself; the second claimant is refused.
 	mustDoor("", "", "register_person", map[string]any{"name": "Olga Nowa", "handle": "olga", "role": "owner"})
-	mustDoor("olga", stranger, "grant_membership", map[string]any{"person": personID("olga"), "company": stranger, "role": "owner", "from": today, "granted_by": "olga"})
-	if code, _ := door("anna", stranger, "grant_membership", map[string]any{"person": personID("anna"), "company": stranger, "role": "owner", "from": today, "granted_by": "anna"}); code != 403 {
+	mustDoor("olga", stranger, "grant_membership", map[string]any{"person": personID("olga"), "company": stranger, "role": "company_manager", "from": today, "granted_by": "olga"})
+	if code, _ := door("anna", stranger, "grant_membership", map[string]any{"person": personID("anna"), "company": stranger, "role": "company_manager", "from": today, "granted_by": "anna"}); code != 403 {
 		t.Fatalf("a claimed company is not claimed twice: %d", code)
 	}
 	// A grant naming one company while acting for another is refused.
-	if code, out := door("kk", office, "grant_membership", map[string]any{"person": personID("ewa"), "company": client, "role": "reader", "from": today, "granted_by": "kk"}); code != 403 || !strings.Contains(fmt.Sprint(out["error"]), "act for") {
+	if code, out := door("kk", office, "grant_membership", map[string]any{"person": personID("ewa"), "company": client, "role": "user", "from": today, "granted_by": "kk"}); code != 403 || !strings.Contains(fmt.Sprint(out["error"]), "act for") {
 		t.Fatalf("naming another company: %d %v", code, out)
 	}
 
@@ -249,8 +251,11 @@ func TestPersonsAtTheDoors(t *testing.T) {
 		t.Fatalf("rows: %+v", table.Rows)
 	}
 	cell := table.Rows[0].Cells["door:take_note"]
-	if cell["via"] != "membership" || cell["granted_by"] != "kk" || cell["role"] != "accountant" || cell["object"] != "membership-"+fmt.Sprint(int64(grant["event_id"].(float64))) {
-		t.Fatalf("anna's right to take_note opens to kk's grant: %v", cell)
+	if cell["via"] != "group" || cell["granted_by"] != "kk" || cell["group"] != "accountant" || cell["object"] != "group_member-"+fmt.Sprint(int64(place["event_id"].(float64))) {
+		t.Fatalf("anna's right to take_note opens to kk's putting her in Accountant: %v", cell)
+	}
+	if grant["event_id"] == nil {
+		t.Fatal("anna's membership was granted")
 	}
 	if _, ok := table.Rows[0].Cells["door:grant_membership"]; ok {
 		t.Fatal("anna has no cell at the people doors")
@@ -386,9 +391,10 @@ func TestAPersonIsAlwaysChecked(t *testing.T) {
 
 	office := "PL5250001111"
 	mustDoor("", "", "register_person", map[string]any{"name": "Krzysztof Kowal", "handle": "kk", "role": "owner"})
-	mustDoor("", office, "grant_membership", map[string]any{"person": personID("kk"), "company": office, "role": "owner", "from": "2026-01-01", "granted_by": "operator"})
+	mustDoor("", office, "grant_membership", map[string]any{"person": personID("kk"), "company": office, "role": "company_manager", "from": "2026-01-01", "granted_by": "operator"})
 	mustDoor("", "", "register_person", map[string]any{"name": "Ewa Reader", "handle": "ewa", "role": "reader"})
-	mustDoor("kk", office, "grant_membership", map[string]any{"person": personID("ewa"), "company": office, "role": "reader", "from": today, "granted_by": "kk"})
+	mustDoor("kk", office, "grant_membership", map[string]any{"person": personID("ewa"), "company": office, "role": "user", "from": today, "granted_by": "kk"})
+	mustDoor("kk", office, "join_group", map[string]any{"group": "reader", "person": personID("ewa"), "company": office, "from": today, "granted_by": "kk"})
 	mustDoor("kk", office, "take_note", map[string]any{"text": "the office's note", "amount": "12.50"})
 
 	// A reader cannot approve by naming the machine, or the agent, as the
@@ -410,7 +416,7 @@ func TestAPersonIsAlwaysChecked(t *testing.T) {
 	// Staff may approve Rhea's rule (KK, 2026-10-22: the house's people), and
 	// the approval is theirs whatever the body named: the approver is the
 	// person signed in.
-	mustDoor("", core.House, "grant_membership", map[string]any{"person": personID("kk"), "company": core.House, "role": "owner", "from": "2026-01-01", "granted_by": "operator"})
+	mustDoor("", core.House, "grant_membership", map[string]any{"person": personID("kk"), "company": core.House, "role": "company_manager", "from": "2026-01-01", "granted_by": "operator"})
 	if code := call("kk", core.House, "POST", "/api/rules/memo/approve", map[string]any{"approved_by": "kernel"}, nil); code != 200 {
 		t.Fatalf("kk approving: %d", code)
 	}

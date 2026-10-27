@@ -3,7 +3,8 @@
 // "People and rights"). The face says who; the kernel says whether.
 //
 // Everything it reads is data a pack declared and people granted through
-// doors — persons, roles, memberships, mandates, substitutions — so replay
+// doors — persons, memberships, groups, mandates, substitutions — and the
+// system's roles, which are the kernel's (core.RoleRights), so replay
 // rebuilds who-may-do-what identically and every right opens to the grant
 // that gives it. The kernel itself computes with its own eyes (unscoped):
 // a person's grants decide their scope, so they cannot be read under it.
@@ -20,22 +21,23 @@ import (
 )
 
 // A Grant is one reason a person holds rights in a company: a membership
-// with a role, an office membership reaching a client through a mandate, or
-// a substitution for someone who holds either.
+// with one of the system's roles, a group the person is in there, an office
+// grant reaching a client through a mandate, or a substitution for someone
+// who holds any of these.
 type Grant struct {
 	Company string       `json:"company"` // where the rights hold
 	Rights  []core.Right `json:"rights"`  // the role's rights
 	// Scope narrows a mandate's reach: the rights the client granted the
 	// office. Nil for a membership — the role's rights whole.
 	Scope  []core.Right `json:"scope,omitempty"`
-	Via    string       `json:"via"`    // "membership" | "mandate" | "substitution"
-	Object string       `json:"object"` // the membership, mandate or substitution object
+	Via    string       `json:"via"`    // "membership" | "group" | "mandate" | "substitution"
+	Object string       `json:"object"` // the membership, place in a group, mandate or substitution object
 	// Through is the grant a mandate or a substitution carries: the office
 	// membership behind a mandate, the substituted person's grant behind a
 	// substitution.
 	Through   string `json:"through,omitempty"`
-	Role      string `json:"role"`
-	Group     string `json:"group,omitempty"`
+	Role      string `json:"role,omitempty"`  // a membership's role, as it reads today
+	Group     string `json:"group,omitempty"` // a group's name
 	GrantedBy string `json:"granted_by"`
 	From      string `json:"from"`
 	To        string `json:"to,omitempty"`
@@ -173,8 +175,9 @@ const NoCompany = "-"
 type world struct {
 	persons       map[string]core.Object // by object id
 	byHandle      map[string]string      // handle → object id
-	roles         map[string][]core.Object
+	groups        map[string]core.Object // "<company>|<name>": the pack's under "", a company's own under its key
 	memberships   []core.Object
+	members       []core.Object // group_member: a person or a group in a group
 	mandates      []core.Object
 	substitutions []core.Object
 	today         string
@@ -182,7 +185,7 @@ type world struct {
 
 func load(ctx context.Context, s *store.Store, today string) (*world, error) {
 	ctx = store.WithOwner(ctx) // the kernel's own eyes
-	w := &world{persons: map[string]core.Object{}, byHandle: map[string]string{}, roles: map[string][]core.Object{}, today: today}
+	w := &world{persons: map[string]core.Object{}, byHandle: map[string]string{}, groups: map[string]core.Object{}, today: today}
 	persons, err := s.ObjectsByType(ctx, "person")
 	if err != nil {
 		return nil, err
@@ -197,14 +200,6 @@ func load(ctx context.Context, s *store.Store, today string) (*world, error) {
 				w.byHandle[h] = p.ID
 			}
 		}
-	}
-	roles, err := s.ObjectsByType(ctx, "role")
-	if err != nil {
-		return nil, err
-	}
-	for _, r := range roles {
-		name, _ := r.State["name"].(string)
-		w.roles[name] = append(w.roles[name], r)
 	}
 	// A grant is one Rhea's own rule wrote, in the company it grants into —
 	// the company that gave it, at its own door. The company each grant
@@ -239,7 +234,51 @@ func load(ctx context.Context, s *store.Store, today string) (*world, error) {
 	if w.substitutions, err = grants("substitution", "company"); err != nil {
 		return nil, err
 	}
+	if w.members, err = grants("group_member", "company"); err != nil {
+		return nil, err
+	}
+	// A group says what its members may do, so it is read as a grant is:
+	// Rhea's own rule wrote it, the pack's for every company (no company) or
+	// a company's own in that company. The first of a name stands — the
+	// pack's before any company's, a company's earliest before a later one
+	// of the same name (objects come in log order).
+	all, err := s.ObjectsByType(ctx, "group")
+	if err != nil {
+		return nil, err
+	}
+	for _, g := range all {
+		if !rheas[g.RuleID] || g.Company != str(g, "company") {
+			continue
+		}
+		if _, taken := w.groups["|"+str(g, "name")]; taken {
+			continue
+		}
+		if key := g.Company + "|" + str(g, "name"); w.groups[key].ID == "" {
+			w.groups[key] = g
+		}
+	}
 	return w, nil
+}
+
+// group finds a group by name for a company: the pack's, every company's,
+// first; then the company's own.
+func (w *world) group(company, name string) (core.Object, bool) {
+	if g, ok := w.groups["|"+name]; ok {
+		return g, true
+	}
+	g, ok := w.groups[company+"|"+name]
+	return g, ok && company != ""
+}
+
+// groupRights is what a group gives; ok is false for a group nobody
+// declared, or one whose rights do not read.
+func (w *world) groupRights(company, name string) ([]core.Right, bool) {
+	g, ok := w.group(company, name)
+	if !ok {
+		return nil, false
+	}
+	rights, err := core.ParseRights(str(g, "rights"))
+	return rights, err == nil
 }
 
 func str(o core.Object, f string) string { v, _ := o.State[f].(string); return v }
@@ -276,43 +315,108 @@ func (w *world) current(o core.Object) bool {
 	return true
 }
 
-// roleRights finds a role by name for a company: the company's own role of
-// that name first, then the installation's (the pack's).
-func (w *world) roleRights(company, name string) ([]core.Right, bool) {
-	var installation *core.Object
-	for i := range w.roles[name] {
-		r := &w.roles[name][i]
-		if r.Company == company && company != "" {
-			rights, err := core.ParseRights(str(*r, "rights"))
-			return rights, err == nil
-		}
-		if r.Company == "" {
-			installation = r
-		}
+// roleRights is what a role gives — the kernel's, never a record's.
+func roleRights(role string) []core.Right {
+	rights, err := core.ParseRights(core.RoleRights[role])
+	if err != nil {
+		panic(fmt.Sprintf("role %s: %v", role, err)) // the kernel's own table; a test reads every role
 	}
-	if installation == nil {
-		return nil, false
-	}
-	rights, err := core.ParseRights(str(*installation, "rights"))
-	return rights, err == nil
+	return rights
 }
 
-// direct is a person's grants from memberships and, through them, mandates
-// — without substitutions, so a substitution never chains.
+// A place is how a person is in a group of a company: the group, the record
+// that put them (or the group through which they are in it) there, and the
+// dates it holds.
+type place struct {
+	group, object, through, grantedBy, from, to string
+}
+
+// groupsOf is every group a person is in, in a company, today: the groups a
+// record names them in, the group a former role names, All users when a
+// membership lets them in as anything but a guest — and every group one of
+// those is in, and so on up, each group once (a circle ends where it began).
+// A place is the stay's it was given in: one dated before the person's
+// current stay began — they left, and were let in again — gives nothing, or
+// a person taken back as a guest would be an accountant again by a place
+// nobody remembered.
+func (w *world) groupsOf(personID, company, stay string, former []place, allUsers *place) []place {
+	seen := map[string]bool{}
+	var out []place
+	add := func(p place) {
+		if !seen[p.group] {
+			seen[p.group] = true
+			out = append(out, p)
+		}
+	}
+	for _, m := range w.members {
+		if str(m, "company") == company && str(m, "person") == personID && str(m, "person") != "" && w.current(m) && str(m, "from") >= stay {
+			add(place{group: str(m, "group"), object: m.ID, grantedBy: str(m, "granted_by"), from: str(m, "from"), to: str(m, "to")})
+		}
+	}
+	for _, p := range former {
+		add(p)
+	}
+	if allUsers != nil {
+		add(*allUsers)
+	}
+	for i := 0; i < len(out); i++ {
+		for _, m := range w.members {
+			if str(m, "company") == company && str(m, "member_group") == out[i].group && str(m, "person") == "" && w.current(m) {
+				add(place{group: str(m, "group"), object: m.ID, through: out[i].object, grantedBy: str(m, "granted_by"), from: str(m, "from"), to: str(m, "to")})
+			}
+		}
+	}
+	return out
+}
+
+// direct is a person's grants from memberships, the groups they are in and,
+// through both, mandates — without substitutions, so a substitution never
+// chains.
 func (w *world) direct(personID string) []Grant {
 	var grants []Grant
+	former := map[string][]place{}
+	allUsers := map[string]*place{}
+	stay := map[string]string{} // the day the person's current stay in a company began
+	var companies []string
 	for _, m := range w.memberships {
 		if str(m, "person") != personID || !w.current(m) {
 			continue
 		}
 		company := str(m, "company")
-		rights, ok := w.roleRights(company, str(m, "role"))
+		role, group, ok := core.RoleOf(str(m, "role"))
 		if !ok {
-			continue // a role nobody declared grants nothing
+			continue // a role the system does not have grants nothing
 		}
-		grants = append(grants, Grant{Company: company, Rights: rights, Via: "membership", Object: m.ID,
-			Role: str(m, "role"), Group: str(m, "group"), GrantedBy: str(m, "granted_by"),
-			From: str(m, "from"), To: str(m, "to"), Reason: str(m, "reason")})
+		grants = append(grants, Grant{Company: company, Rights: roleRights(role), Via: "membership", Object: m.ID,
+			Role: role, GrantedBy: str(m, "granted_by"), From: str(m, "from"), To: str(m, "to"), Reason: str(m, "reason")})
+		if _, seen := allUsers[company]; !seen {
+			companies = append(companies, company)
+			allUsers[company] = nil
+		}
+		if from := str(m, "from"); stay[company] == "" || from < stay[company] {
+			stay[company] = from
+		}
+		at := place{object: m.ID, grantedBy: str(m, "granted_by"), from: str(m, "from"), to: str(m, "to")}
+		if group != "" {
+			at.group = group
+			former[company] = append(former[company], at)
+		}
+		if role != core.RoleGuest && allUsers[company] == nil {
+			at.group = core.GroupAllUsers
+			allUsers[company] = &at
+		}
+	}
+	// A group gives its rights only to a person let into its company: a
+	// place in a group is no way in.
+	for _, company := range companies {
+		for _, p := range w.groupsOf(personID, company, stay[company], former[company], allUsers[company]) {
+			rights, ok := w.groupRights(company, p.group)
+			if !ok {
+				continue // a group nobody declared gives nothing
+			}
+			grants = append(grants, Grant{Company: company, Rights: rights, Via: "group", Object: p.object, Through: p.through,
+				Group: p.group, GrantedBy: p.grantedBy, From: p.from, To: p.to})
+		}
 	}
 	// An office's person reaches a client through the mandate: the office
 	// role's rights, narrowed to what the client granted.
@@ -549,6 +653,10 @@ func Authorize(ctx context.Context, s *store.Store, p Principal, act core.Activi
 			if !claims(act) {
 				return nil, refuse("nobody holds this company yet — the first grant into it is its claim")
 			}
+		} else if reason, err := checkPeople(ctx, s, p, act, inputs, acting, today); err != nil {
+			return nil, err
+		} else if reason != "" {
+			return nil, refuse(reason)
 		}
 		if office, ok := inputs["office"].(string); ok && office != "" && office != acting {
 			// Making a company someone's office is that office's own act: a
