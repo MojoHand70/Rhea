@@ -11,6 +11,7 @@ import (
 	"rhea/internal/core"
 	"rhea/internal/exec"
 	"rhea/internal/pack"
+	"rhea/internal/store"
 	"rhea/internal/store/storetest"
 	"rhea/markets/pl"
 )
@@ -25,6 +26,7 @@ import (
 // sent to KSeF count the VAT in złoty.
 func TestAnInvoiceInEuro(t *testing.T) {
 	ctx := context.Background()
+	at := store.WithCompany(ctx, selfCo) // the books are a company's: its account approved by its manager
 	s := storetest.New(t)
 	x := &exec.Executor{Store: s}
 	installPoland(t, s, x)
@@ -35,8 +37,9 @@ func TestAnInvoiceInEuro(t *testing.T) {
 	if _, _, errs, err := x.ApproveBundle(ctx, sum.Bundle, "krzysztof", "2026-09-01"); err != nil || len(errs) != 0 {
 		t.Fatalf("approve: %v %v", err, errs)
 	}
-	selfID := registerParties(t, s, x)
-	if tr, err := x.TriggerActivity(ctx, "identify_company", map[string]any{"company": selfID, "email": "biuro@rhea-test.pl", "tax_office": "1471", "legal_form": "legal_entity", "occurred_at": "2026-09-01"}, "krzysztof", ""); err != nil || tr.Booked != 1 {
+	selfID := registerPartiesAt(t, s, x, selfCo)
+	ownAccount(t, s, x, selfCo, "PL83101010230000261395100000", "EUR") // its statement lines wait for nothing (Poland pack v54)
+	if tr, err := x.TriggerActivity(at, "identify_company", map[string]any{"company": selfID, "email": "biuro@rhea-test.pl", "tax_office": "1471", "legal_form": "legal_entity", "occurred_at": "2026-09-01"}, "krzysztof", ""); err != nil || tr.Booked != 1 {
 		t.Fatalf("identify_company: %+v %v", tr, err)
 	}
 	eur := func(no, date, mid string) pl.NBPTable {
@@ -51,11 +54,11 @@ func TestAnInvoiceInEuro(t *testing.T) {
 	}
 
 	// A sale on the 29th converts at Monday's average, 4.2650.
-	append1(t, s, x, "sales.invoice.issued", "2026-09-29", "fv-e1", map[string]any{
+	appendAt(t, s, x, selfCo, "sales.invoice.issued", "2026-09-29", "fv-e1", map[string]any{
 		"number": "FV/E1/2026", "issue_date": "2026-09-29", "seller_nip": "PL8058083055", "buyer_nip": "PL5265877635",
 		"net": "1000.00", "vat": "230.00", "gross": "1230.00", "vat_rate": "23", "currency": "EUR", "intragroup": "no", "market": "pl"})
 	// A purchase of the same day, from the same party.
-	append1(t, s, x, "purchase.invoice.received", "2026-09-29", "fz-e1", map[string]any{
+	appendAt(t, s, x, selfCo, "purchase.invoice.received", "2026-09-29", "fz-e1", map[string]any{
 		"number": "Z/E1/2026", "invoice_date": "2026-09-29", "supplier_nip": "PL5265877635", "buyer_nip": "PL8058083055",
 		"net": "100.00", "vat": "23.00", "gross": "123.00", "vat_rate": "23", "currency": "EUR", "market": "pl"})
 	sales, _ := s.ObjectsByType(ctx, "sales_invoice")
@@ -71,7 +74,7 @@ func TestAnInvoiceInEuro(t *testing.T) {
 	// owed. We pay the supplier on 1 October (4.2800): a loss of 1.84 zł.
 	pay := func(dedup, date, direction, amount, title string) {
 		t.Helper()
-		append1(t, s, x, "bank.statement.line", date, dedup, map[string]any{
+		appendAt(t, s, x, selfCo, "bank.statement.line", date, dedup, map[string]any{
 			"date": date, "amount": amount, "currency": "EUR", "direction": direction, "reference": title,
 			"counterparty": "Nabywca S.A.", "counterparty_account": "PL60102010260000042270201111",
 			"account": "PL83101010230000261395100000", "code": "NTRF", "market": "pl"})
@@ -87,7 +90,7 @@ func TestAnInvoiceInEuro(t *testing.T) {
 	}
 
 	// September in złoty: the settlement, the records, the declaration.
-	if tr, err := x.TriggerActivity(ctx, "close_period", map[string]any{"period": "2026-09-30", "book": "pl-stat", "occurred_at": "2026-10-05"}, "krzysztof", ""); err != nil || tr.Booked != 1 {
+	if tr, err := x.TriggerActivity(at, "close_period", map[string]any{"period": "2026-09-30", "book": "pl-stat", "occurred_at": "2026-10-05"}, "krzysztof", ""); err != nil || tr.Booked != 1 {
 		t.Fatalf("close: %+v %v", tr, err)
 	}
 	st, _ := s.ObjectsByType(ctx, "vat_settlement")
@@ -133,7 +136,7 @@ func TestAnInvoiceInEuro(t *testing.T) {
 			incoming = ev.ID
 		}
 	}
-	if _, err := x.TriggerActivity(ctx, "unpair_items", map[string]any{"match_event": incoming, "reason": "wrong invoice"}, "shell:krzysztof", ""); err != nil {
+	if _, err := x.TriggerActivity(at, "unpair_items", map[string]any{"match_event": incoming, "reason": "wrong invoice"}, "shell:krzysztof", ""); err != nil {
 		t.Fatal(err)
 	}
 	if d, c := debits(t, s), credits(t, s); c["750"] != 615 || d["750"] != 615 || d["751"] != 184 {

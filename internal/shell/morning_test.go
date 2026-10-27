@@ -121,6 +121,12 @@ func TestTheMorningByRole(t *testing.T) {
 		"supplier_nip": "5260001246", "buyer_nip": "5250001111", "supplier": "Nabywca S.A.",
 		"net": "400.00", "vat": "92.00", "gross": "492.00", "vat_rate": "23", "currency": "PLN"})
 	submit("sales.invoice.issued", "2026-10-08", "fv-3", inv("FV 1/10/2026", "2026-10-08", "200.00", "46.00", "246.00"))
+	// the company's own account, proposed and approved by its operator — the
+	// story keeps no company (Poland pack v54: a line of an account not
+	// approved waits)
+	door("propose_bank_account", map[string]any{"name": "Rachunek bieżący", "number": "PL83101010230000261395100000", "currency": "PLN", "proposed_by": "krzysztof"})
+	accts, _ := s.ObjectsByType(ctx, "bank_account")
+	door("approve_bank_account", map[string]any{"bank_account": accts[0].ID, "approved_by": "krzysztof"})
 	submit("bank.statement.line", "2026-10-10", "wb-1", map[string]any{"date": "2026-10-10", "amount": "100.00", "currency": "PLN", "direction": "credit",
 		"market": "pl", "reference": "przelew", "counterparty": "Ktoś Nieznany", "counterparty_account": "PL27114020040000300201355387",
 		"account": "PL83101010230000261395100000"})

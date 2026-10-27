@@ -769,7 +769,7 @@
       "rule_id": "pl-bank-operation",
       "priority": 100,
       "effective_from": "2026-01-01",
-      "description": "Pozycja wyciągu bankowego staje się operacją bankową i najpierw mówi, czym jest: opłata (NCHG, NCOM) i odsetki (NINT) po kodzie banku; przelew między własnymi rachunkami, wpłata na mikrorachunek podatkowy, na rachunek składkowy ZUS, pieniądze właściciela — po rachunku drugiej strony, jak go podała firma; reszta to zapłata kontrahenta (transfer), otwarta na swoją kwotę do rozliczenia z fakturami (rynek pl: kanał bankowy pakietu stempluje go)",
+      "description": "Pozycja wyciągu bankowego staje się operacją bankową i najpierw mówi, czym jest: opłata (NCHG, NCOM) i odsetki (NINT) po kodzie banku; przelew między własnymi rachunkami, wpłata na mikrorachunek podatkowy, na rachunek składkowy ZUS, pieniądze właściciela — po rachunku drugiej strony, jak go podała firma; reszta to zapłata kontrahenta (transfer), otwarta na swoją kwotę do rozliczenia z fakturami (rynek pl: kanał bankowy pakietu stempluje go); pozycja rachunku, którego Bankowość jeszcze nie zatwierdziła, czeka — zatwierdzenie zwalnia wszystkie naraz",
       "spec": {
         "match": {
           "event_type": "bank.statement.line",
@@ -778,6 +778,9 @@
               "path": "$.market",
               "op": "eq",
               "value": "pl"
+            },
+            {
+              "formula": "=any(a in objects(bank_account, number, $.account) : a.status = \"active\")"
             }
           ]
         },

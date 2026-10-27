@@ -306,6 +306,20 @@ func TestM3PolandPack(t *testing.T) {
 	// becomes a bank operation, posts Wn 130 / Ma 201, and is matched by
 	// reference — the invoice paid, the operation settled, a settlement
 	// recorded. The same party, paid as a supplier, settles the purchase.
+	// The company's own account comes first (Poland pack v54): a statement
+	// line of an account Bankowość has not approved waits. The story keeps
+	// no company, so its operator proposes the account and approves it.
+	post("/api/activities/propose_bank_account/trigger", map[string]any{"actor": "krzysztof", "inputs": map[string]any{
+		"name": "Rachunek bieżący", "number": "PL83101010230000261395100000", "currency": "PLN", "proposed_by": "krzysztof"}}, nil)
+	var accounts struct {
+		Objects []core.Object `json:"objects"`
+	}
+	get("/api/objects?type=bank_account", &accounts)
+	if len(accounts.Objects) != 1 || accounts.Objects[0].State["status"] != "proposed" {
+		t.Fatalf("the account proposed: %+v", accounts.Objects)
+	}
+	post("/api/activities/approve_bank_account/trigger", map[string]any{"actor": "krzysztof", "inputs": map[string]any{
+		"bank_account": accounts.Objects[0].ID, "approved_by": "krzysztof"}}, nil)
 	post("/api/events", map[string]any{
 		"event_type": "bank.statement.line", "occurred_at": "2026-09-25", "dedup_key": "wb-1",
 		"payload": map[string]any{"date": "2026-09-25", "amount": "1230.00", "currency": "PLN", "direction": "credit", "market": "pl",

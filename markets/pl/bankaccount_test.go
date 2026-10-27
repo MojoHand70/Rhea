@@ -160,3 +160,41 @@ func TestABankAccountIsApprovedByBankowosc(t *testing.T) {
 		t.Fatalf("replay: %d → %d objects", len(before), len(after))
 	}
 }
+
+// A statement line of an account Bankowość has not approved waits, and the
+// approval releases every line that waited (KK, 2026-10-27, answer a:
+// "nothing gets booked to an account nobody has checked, and the wait is
+// one approval").
+func TestStatementLinesWaitForTheirAccount(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	x := &exec.Executor{Store: s, Today: func() string { return "2026-10-27" }}
+	installPoland(t, s, x)
+	registerPartiesAt(t, s, x, selfCo)
+	at := store.WithCompany(ctx, selfCo)
+	const own = "PL83101010230000261395100000"
+	said, _ := json.Marshal(map[string]any{"account": own, "currency": "PLN", "date": "2026-09-01", "statement": "1/2026", "document": "sha256:x", "market": "pl"})
+	if _, err := s.AppendEvent(at, core.Event{Kind: core.KindRaw, Type: "bank.account.seen", OccurredAt: "2026-09-01", Payload: said, DedupKey: "bank_mt940/account/" + own, Company: selfCo}); err != nil {
+		t.Fatal(err)
+	}
+	for i, amount := range []string{"100.00", "250.00"} {
+		appendAt(t, s, x, selfCo, "bank.statement.line", "2026-09-20", fmt.Sprintf("line-%d", i), map[string]any{
+			"date": "2026-09-20", "amount": amount, "currency": "PLN", "direction": "credit", "reference": fmt.Sprintf("pozycja %d", i),
+			"counterparty": "Ktoś", "counterparty_account": "PL27114020040000300201355387", "account": own, "code": "NTRF", "market": "pl"})
+	}
+	ops := func() int {
+		o, _ := s.ObjectsByType(at, "bank_operation")
+		return len(o)
+	}
+	waiting, _ := s.UnmatchedRawEvents(at)
+	if ops() != 0 || len(waiting) != 2 {
+		t.Fatalf("before the approval: %d operations, %d facts waiting", ops(), len(waiting))
+	}
+	ownAccount(t, s, x, selfCo, own, "PLN") // the statement proposed it; its manager approves it
+	if ops() != 2 {
+		t.Fatalf("the approval released %d of the 2 lines", ops())
+	}
+	if d := debits(t, s); d["130"] != 35000 {
+		t.Fatalf("booked to the bank: %v", d)
+	}
+}

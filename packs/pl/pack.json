@@ -10,7 +10,7 @@
     {
       "versions": "54",
       "date": "2026-10-27",
-      "changes": "Rachunek bankowy firmy jest zatwierdzany (KK, 2026-10-27: „takie dane jak rachunki bankowe powinna zatwierdzić osoba odpowiedzialna za rachunki”): zgłasza go osoba (numer IBAN sprawdzany: kraj, długość, cyfry kontrolne) albo pierwszy wyciąg z niego; zatwierdza osoba z grupy Bankowość — nigdy ta, która go zgłosiła, chyba że jest w Bankowości sama; dopóki nikogo do Bankowości nie dodano, zatwierdza kierownik firmy; jeden rachunek na numer w firmie; zamknięcie z dniem (rachunki bankowe v4, rachunek bankowy v2, słownik v25)."
+      "changes": "Rachunek bankowy firmy jest zatwierdzany (KK, 2026-10-27: „takie dane jak rachunki bankowe powinna zatwierdzić osoba odpowiedzialna za rachunki”): zgłasza go osoba (numer IBAN sprawdzany: kraj, długość, cyfry kontrolne) albo pierwszy wyciąg z niego; zatwierdza osoba z grupy Bankowość — nigdy ta, która go zgłosiła, chyba że jest w Bankowości sama; dopóki nikogo do Bankowości nie dodano, zatwierdza kierownik firmy; pozycja wyciągu z rachunku, którego Bankowość jeszcze nie zatwierdziła, czeka — zatwierdzenie zwalnia wszystkie naraz; jeden rachunek na numer w firmie; zamknięcie z dniem (rachunki bankowe v4, rachunek bankowy v2, słownik v25)."
     },
     {
       "versions": "53",

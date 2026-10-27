@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"rhea/internal/exec"
+	"rhea/internal/store"
 	"rhea/internal/store/storetest"
 )
 
@@ -20,10 +21,12 @@ import (
 // legal form.
 func TestABankLineSaysWhatItIs(t *testing.T) {
 	ctx := context.Background()
+	at := store.WithCompany(ctx, selfCo) // the books are a company's: its account approved by its manager
 	s := storetest.New(t)
 	x := &exec.Executor{Store: s}
 	installPoland(t, s, x)
-	selfID := registerParties(t, s, x)
+	selfID := registerPartiesAt(t, s, x, selfCo)
+	ownAccount(t, s, x, selfCo, "PL83101010230000261395100000", "PLN") // its statement lines wait for nothing (Poland pack v54)
 	const (
 		self   = "PL83101010230000261395100000"
 		tax    = "PL12101010100000000000000001"
@@ -33,11 +36,11 @@ func TestABankLineSaysWhatItIs(t *testing.T) {
 		credit = "credit"
 		debit  = "debit"
 	)
-	if tr, err := x.TriggerActivity(ctx, "declare_company_accounts", map[string]any{"company": selfID, "tax_account": tax, "zus_account": zus, "owner_account": owner, "occurred_at": "2026-09-01"}, "krzysztof", ""); err != nil || tr.Booked != 1 {
+	if tr, err := x.TriggerActivity(at, "declare_company_accounts", map[string]any{"company": selfID, "tax_account": tax, "zus_account": zus, "owner_account": owner, "occurred_at": "2026-09-01"}, "krzysztof", ""); err != nil || tr.Booked != 1 {
 		t.Fatalf("declare_company_accounts: %+v %v", tr, err)
 	}
 	// A later declaration that names only one account keeps the others.
-	if tr, err := x.TriggerActivity(ctx, "declare_company_accounts", map[string]any{"company": selfID, "zus_account": zus, "occurred_at": "2026-09-02"}, "krzysztof", ""); err != nil || tr.Booked != 1 {
+	if tr, err := x.TriggerActivity(at, "declare_company_accounts", map[string]any{"company": selfID, "zus_account": zus, "occurred_at": "2026-09-02"}, "krzysztof", ""); err != nil || tr.Booked != 1 {
 		t.Fatalf("the second declaration: %+v %v", tr, err)
 	}
 	if c, _ := s.GetObject(ctx, selfID); c.State["tax_account"] != tax || c.State["owner_account"] != owner {
@@ -46,7 +49,7 @@ func TestABankLineSaysWhatItIs(t *testing.T) {
 
 	line := func(n int, code, direction, amount, party string) {
 		t.Helper()
-		append1(t, s, x, "bank.statement.line", "2026-09-20", fmt.Sprintf("line-%d", n), map[string]any{
+		appendAt(t, s, x, selfCo, "bank.statement.line", "2026-09-20", fmt.Sprintf("line-%d", n), map[string]any{
 			"date": "2026-09-20", "amount": amount, "currency": "PLN", "direction": direction, "reference": fmt.Sprintf("pozycja %d", n),
 			"counterparty": "", "counterparty_account": party, "account": self, "code": code, "market": "pl"})
 	}
@@ -83,7 +86,7 @@ func TestABankLineSaysWhatItIs(t *testing.T) {
 			unknown = o.ID
 		}
 	}
-	if tr, err := x.TriggerActivity(ctx, "classify_bank_operation", map[string]any{"operation": unknown, "kind": "owner", "occurred_at": "2026-09-21"}, "krzysztof", ""); err != nil || tr.Booked != 1 {
+	if tr, err := x.TriggerActivity(at, "classify_bank_operation", map[string]any{"operation": unknown, "kind": "owner", "occurred_at": "2026-09-21"}, "krzysztof", ""); err != nil || tr.Booked != 1 {
 		t.Fatalf("classify: %+v %v", tr, err)
 	}
 	if o, _ := s.GetObject(ctx, unknown); o.State["kind"] != "owner" || o.State["settlement_status"] != "settled" || o.State["open"] != float64(0) {
@@ -93,19 +96,19 @@ func TestABankLineSaysWhatItIs(t *testing.T) {
 		t.Fatalf("after the classification: debits %v, credits %v", d, c)
 	}
 	// Said twice, it is already explained: nothing matches.
-	if tr, err := x.TriggerActivity(ctx, "classify_bank_operation", map[string]any{"operation": unknown, "kind": "fee", "occurred_at": "2026-09-22"}, "krzysztof", ""); err != nil || tr.Booked != 0 {
+	if tr, err := x.TriggerActivity(at, "classify_bank_operation", map[string]any{"operation": unknown, "kind": "fee", "occurred_at": "2026-09-22"}, "krzysztof", ""); err != nil || tr.Booked != 0 {
 		t.Fatalf("a second word on an explained line: %+v %v", tr, err)
 	}
 
 	// A legal person pays CIT on full books: the scale and a KPiR are not its
 	// to declare, so that declaration waits.
-	if tr, err := x.TriggerActivity(ctx, "identify_company", map[string]any{"company": selfID, "email": "biuro@rhea-test.pl", "tax_office": "1471", "legal_form": "legal_entity", "occurred_at": "2026-09-01"}, "krzysztof", ""); err != nil || tr.Booked != 1 {
+	if tr, err := x.TriggerActivity(at, "identify_company", map[string]any{"company": selfID, "email": "biuro@rhea-test.pl", "tax_office": "1471", "legal_form": "legal_entity", "occurred_at": "2026-09-01"}, "krzysztof", ""); err != nil || tr.Booked != 1 {
 		t.Fatalf("identify_company: %+v %v", tr, err)
 	}
-	if tr, err := x.TriggerActivity(ctx, "declare_company_form", map[string]any{"company": selfID, "vat_status": "active", "books": "kpir", "income_tax": "skala", "from": "2026-01-01", "occurred_at": "2026-09-01"}, "krzysztof", ""); err != nil || tr.Booked != 0 {
+	if tr, err := x.TriggerActivity(at, "declare_company_form", map[string]any{"company": selfID, "vat_status": "active", "books": "kpir", "income_tax": "skala", "from": "2026-01-01", "occurred_at": "2026-09-01"}, "krzysztof", ""); err != nil || tr.Booked != 0 {
 		t.Fatalf("a company on the scale: %+v %v", tr, err)
 	}
-	if tr, err := x.TriggerActivity(ctx, "declare_company_form", map[string]any{"company": selfID, "vat_status": "active", "books": "full", "income_tax": "cit", "from": "2026-01-01", "occurred_at": "2026-09-01"}, "krzysztof", ""); err != nil || tr.Booked != 1 {
+	if tr, err := x.TriggerActivity(at, "declare_company_form", map[string]any{"company": selfID, "vat_status": "active", "books": "full", "income_tax": "cit", "from": "2026-01-01", "occurred_at": "2026-09-01"}, "krzysztof", ""); err != nil || tr.Booked != 1 {
 		t.Fatalf("a company on CIT: %+v %v", tr, err)
 	}
 }
