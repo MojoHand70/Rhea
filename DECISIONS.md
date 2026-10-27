@@ -5519,3 +5519,24 @@ acted for, and a company's own record has another id. The Polish column names ar
 *Assessed and left:* a change of financial year (a transitional year) and a first year joined to the next
 (art. 3 ust. 1 pkt 9) — the month set applies to every period, past ones too, until a company needs a
 transition. The group trial balance (EUR) takes no period yet.
+
+## 2026-10-27 — One invoice no longer rereads the whole log (Claude, the spec silent; KK: "If we can fix it, let's try")
+
+Measuring the look-back at 100,000 invoices (KK) found the booking itself slowing as the books grew: 46
+invoices a second at 2,000, 10 at 39,000 when KK stopped the run. One query was 92% of an invoice's time
+in the database: after every fact the executor read the whole log — every company's — for the facts still
+waiting for a rule (queries/pending.sql), about four times per invoice.
+
+- **Every fact rules act on is recorded under the kernel's lock** (c6d83f6). The lock moves from the
+  executor into the store, where every writer passes; the clock's days, a pack's master data and a
+  reader's batch, which wrote beside a running chain, now wait for it as a door does.
+- **The executor remembers which facts still wait**, per scope (the companies seen and the one acted for),
+  and reads only what the log gained since it last read; of the facts it remembers it asks only whether a
+  rule has acted on them since. Correct because, under the lock, nothing rules act on is half-written: an
+  explained fact stays explained and a later fact has a later id — another process records and books under
+  the same lock. Without the lock held (the look-back's dry run), the whole log as before. At 39,000
+  invoices: 94 ms an invoice before, 25 ms after (22 ms at 2,000).
+- *Assessed and left* (2026-10-27, invariant 10): the memory lives in the running process — a restore goes
+  into an empty database, and a server left running while its database is replaced underneath it must be
+  restarted, or it would remember facts of the old log. The worklist
+  screen and the look-back's dry run still read the whole log; the look-back's portions are next.
