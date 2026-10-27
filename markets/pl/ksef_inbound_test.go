@@ -397,3 +397,69 @@ func TestFAAmountsAsTheSchemaWritesThem(t *testing.T) {
 		t.Fatalf("read %+v, want %+v", got, want)
 	}
 }
+
+// A purchase invoice is one the company bought (review 2026-10-27, high):
+// the reader never asked whose invoice it read, so an office uploading a
+// client's whole KSeF export — the client's own sales invoices in it — made
+// each a purchase.invoice.received, and the pack deducted its VAT as input
+// tax: the return was wrong. Now, where the company's own record says its
+// NIP, an invoice the company sold, or one bought by someone else, is
+// reported unreadable for a person, with the reason, and books nothing.
+func TestTheReaderBooksOnlyWhatTheCompanyBought(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	x := &exec.Executor{Store: s}
+	installIntake(t, s, x)
+	if err := s.InsertObjectType(ctx, core.ObjectType{Name: "company", Version: 1, Domain: "parties", LabelField: "name",
+		Fields: []core.FieldDef{{Name: "name", Type: "string", Required: true}, {Name: "kind", Type: "string"}, {Name: "vat_id", Type: "string"}}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.InsertRuleVersion(ctx, core.Rule{ID: "register-company", Status: core.StatusActive, Priority: 100,
+		EffectiveFrom: "2026-01-01", CreatedBy: "test", Description: "companies", Spec: core.RuleSpec{
+			Match: core.Match{EventType: "company.registered"},
+			Effect: core.Effect{Object: core.ObjectTemplate{Type: "company", Fields: map[string]string{
+				"name": "=$.name", "kind": "=$.kind", "vat_id": "=$.vat_id"}}}}}); err != nil {
+		t.Fatal(err)
+	}
+	self, _ := json.Marshal(map[string]any{"name": "Helios sp. z o.o.", "kind": "self", "vat_id": "PL8058083055"})
+	if _, err := s.AppendEvent(ctx, core.Event{Kind: core.KindRaw, Type: "company.registered", OccurredAt: "2026-09-01", Payload: self, DedupKey: "self"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, errs := x.ProcessPending(ctx); len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	invoice := func(number, seller, buyer string) []byte {
+		body, err := pl.WriteFA3(pl.FA3Invoice{
+			Seller:   pl.FA3Party{NIP: seller, Name: "Sprzedawca " + seller, Address: "ul. Testowa 1, 00-001 Warszawa"},
+			Buyer:    pl.FA3Party{NIP: buyer, Name: "Nabywca " + buyer},
+			Currency: "PLN", IssueDate: "2026-09-21", Number: number, RateCode: "23",
+			Net: 100000, VAT: 23000, Gross: 123000, Created: "2026-09-21T08:00:00Z", SystemInfo: "test",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return body
+	}
+	receive(t, x, "ours.xml", "application/xml", "ksef", "2026-09-21", invoice("FS/1/2026", "8058083055", "5265877635"))
+	receive(t, x, "theirs.xml", "application/xml", "ksef", "2026-09-21", invoice("FZ/9/2026", "5265877635", "7010001234"))
+	receive(t, x, "bought.xml", "application/xml", "ksef", "2026-09-21", invoice("FZ/1/2026", "5265877635", "8058083055"))
+	if res, err := adapter.Run(ctx, s, x, pl.KSeFInbound{}); err != nil || res.PassErr != nil {
+		t.Fatalf("pass: %+v %v", res, err)
+	}
+	raws, _ := s.EventsByKind(ctx, core.KindRaw)
+	var bought []string
+	unreadable := 0
+	for _, ev := range raws {
+		var m map[string]any
+		_ = json.Unmarshal(ev.Payload, &m)
+		switch ev.Type {
+		case "purchase.invoice.received":
+			bought = append(bought, m["number"].(string))
+		case adapter.EventDocumentUnreadable:
+			unreadable++
+		}
+	}
+	if len(bought) != 1 || bought[0] != "FZ/1/2026" || unreadable != 2 {
+		t.Fatalf("bought %v, unreadable %d", bought, unreadable)
+	}
+}

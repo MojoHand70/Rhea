@@ -50,6 +50,10 @@ func (k KSeFInbound) Pass(ctx context.Context, reads adapter.Reads) ([]core.Even
 	if err != nil {
 		return nil, err
 	}
+	own, err := ownNIP(ctx, reads)
+	if err != nil {
+		return nil, err
+	}
 	var out []core.Event
 	for _, d := range docs {
 		status, _ := d.State["status"].(string)
@@ -74,6 +78,19 @@ func (k KSeFInbound) Pass(ctx context.Context, reads adapter.Reads) ([]core.Even
 		if err != nil {
 			payload, _ := json.Marshal(map[string]any{
 				"document": hash, "name": name, "channel": k.Name(), "reason": err.Error(),
+			})
+			out = append(out, core.Event{Type: adapter.EventDocumentUnreadable, OccurredAt: k.today(),
+				Payload: payload, DedupKey: "ksef_inbound/unreadable/" + hash})
+			continue
+		}
+		// A purchase invoice is one the company bought: an office uploading
+		// a client's whole KSeF export — its own sales in it — made each a
+		// purchase whose VAT the pack deducted (review 2026-10-27). Where the
+		// company's own record says its NIP, a sale of its own or another's
+		// purchase is reported for a person and books nothing.
+		if why := notBought(inv, own); why != "" {
+			payload, _ := json.Marshal(map[string]any{
+				"document": hash, "name": name, "channel": k.Name(), "reason": why,
 			})
 			out = append(out, core.Event{Type: adapter.EventDocumentUnreadable, OccurredAt: k.today(),
 				Payload: payload, DedupKey: "ksef_inbound/unreadable/" + hash})
@@ -149,6 +166,42 @@ func (k KSeFInbound) Pass(ctx context.Context, reads adapter.Reads) ([]core.Even
 				Payload: read, DedupKey: "ksef_inbound/read/" + hash})
 	}
 	return out, nil
+}
+
+// ownNIP is the NIP of the company the pass reads for — its one company
+// record of kind self — or "" when it has none, or more than one.
+func ownNIP(ctx context.Context, reads adapter.Reads) (string, error) {
+	companies, err := byID(ctx, reads, "company")
+	if err != nil {
+		return "", err
+	}
+	own, selves := "", 0
+	for _, c := range companies {
+		if c["kind"] == "self" {
+			vatID, _ := c["vat_id"].(string)
+			own, selves = NIPDigits(vatID), selves+1
+		}
+	}
+	if selves != 1 {
+		return "", nil
+	}
+	return own, nil
+}
+
+// notBought says why an invoice is no purchase of the company whose NIP is
+// own: its own sale, or a sale to someone else. Nothing when own is unknown.
+func notBought(inv Invoice, own string) string {
+	switch {
+	case own == "":
+		return ""
+	case inv.SellerNIP == own:
+		return fmt.Sprintf("invoice %s was issued by this company (NIP %s) — a sale of its own, not a purchase", inv.Number, own)
+	case inv.BuyerNIP == "":
+		return fmt.Sprintf("invoice %s names no buyer's NIP — not a purchase of this company (NIP %s)", inv.Number, own)
+	case inv.BuyerNIP != own || inv.BuyerCountry != "" && inv.BuyerCountry != "PL":
+		return fmt.Sprintf("invoice %s was bought by %s%s, not by this company (NIP %s)", inv.Number, inv.BuyerCountry, inv.BuyerNIP, own)
+	}
+	return ""
 }
 
 func (k KSeFInbound) today() string {
