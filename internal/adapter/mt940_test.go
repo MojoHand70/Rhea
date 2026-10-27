@@ -58,10 +58,27 @@ func TestMT940ReadsTheStore(t *testing.T) {
 	if err != nil || res.PassErr != nil {
 		t.Fatalf("pass: %v %v", err, res.PassErr)
 	}
-	if res.Channel != "bank_mt940" || res.Submitted != lines+len(statements) || res.Booked != len(statements) {
+	// every line, a read a file, and the company's one account said once
+	// across both months' statements (code version 2: the pack proposes
+	// the account from it; the count changed with the reader)
+	if res.Channel != "bank_mt940" || res.Submitted != lines+len(statements)+1 || res.Booked != len(statements) {
 		t.Fatalf("pass = %+v (lines %d, statements %d)", res, lines, len(statements))
 	}
 	raws, _ := s.EventsByKind(ctx, core.KindRaw)
+	var said []map[string]any
+	for _, ev := range raws {
+		if ev.Type == adapter.EventBankAccountSeen {
+			var m map[string]any
+			jsonUnmarshal(ev.Payload, &m)
+			said = append(said, m)
+			if ev.DedupKey != "bank_mt940/account/"+m["account"].(string) || ev.OccurredAt != m["date"] {
+				t.Fatalf("the account said: %+v", ev)
+			}
+		}
+	}
+	if len(said) != 1 || said[0]["account"] != f.Events[statements[0].Events[0]].Payload["account"] || said[0]["currency"] != "PLN" {
+		t.Fatalf("the account, said once: %v", said)
+	}
 	byKey := map[string]map[string]any{}
 	for _, ev := range raws {
 		if ev.Type != "bank.statement.line" {
@@ -101,8 +118,8 @@ func TestMT940ReadsTheStore(t *testing.T) {
 	if debits == 0 {
 		t.Fatal("no purchase payment in two months — the generator pays nobody")
 	}
-	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != lines {
-		t.Fatalf("worklist = %d, want the %d lines", len(wl), lines)
+	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != lines+1 {
+		t.Fatalf("worklist = %d, want the %d lines and the account said, no pack here to read them", len(wl), lines)
 	}
 	if res, err := adapter.Run(ctx, s, x, adapter.MT940{}); err != nil || res.Submitted != 0 {
 		t.Fatalf("second pass = %+v, %v", res, err)

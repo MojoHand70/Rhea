@@ -1,12 +1,17 @@
 {
   "pack": "pl-bank-mt940",
-  "version": 1,
+  "version": 2,
   "kind": "market",
   "market": "PL",
   "install": "installation",
   "stage": "initial",
   "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
   "history": [
+    {
+      "versions": "2",
+      "date": "2026-10-27",
+      "changes": "Każdy rachunek, z którego przyszedł wyciąg, kanał zgłasza raz: bank.account.seen — pakiet proponuje z niego rachunek bankowy firmy do zatwierdzenia (wersja czytnika 2)."
+    },
     {
       "versions": "1",
       "date": "2026-10-11",
@@ -38,7 +43,7 @@
         ],
         "channel": {
           "adapter": "bank_mt940",
-          "code_version": 1,
+          "code_version": 2,
           "format": "MT940 z magazynu dokumentów; dialekt :86: sim-bank (rodzaj|tytuł|kontrahent|rachunek), oryginał zachowany",
           "identity": "skrót pliku i numer pozycji na wyciągu",
           "confidence": {
@@ -46,6 +51,7 @@
           },
           "events": [
             "bank.statement.line",
+            "bank.account.seen",
             "document.read",
             "document.unreadable"
           ],

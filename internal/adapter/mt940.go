@@ -22,6 +22,11 @@ import (
 // closing balance) is reported as document.unreadable for a person, and so
 // is a file that came through the bank door but is not a statement.
 //
+// Every account a statement is of is said once, the first time a statement
+// of it is read: bank.account.seen, keyed by the account (code version 2,
+// KK 2026-10-27: Rachunki bankowe stayed empty while statements were in the
+// books) — a pack proposes the account from it, for a person to approve.
+//
 // A file may carry several statements (one per :20:), each over one or more
 // balance pages (:60F:/:62F:, :60M:/:62M: at the page breaks); every page
 // is checked on its own and the line numbers run through the file. A
@@ -36,13 +41,16 @@ type MT940 struct {
 	Today func() string
 }
 
-const mt940CodeVersion = 1
+const mt940CodeVersion = 2
 
 func init() {
 	Register(Implemented{Name: "bank_mt940", CodeVersion: mt940CodeVersion,
 		Format: "MT940 statements from the document store; :86: kept raw, the sim-bank dialect read"})
 	readers["bank_mt940"] = func() Adapter { return MT940{} }
 }
+
+// EventBankAccountSeen: an account a statement is of, said once.
+const EventBankAccountSeen = "bank.account.seen"
 
 func (MT940) Name() string     { return "bank_mt940" }
 func (MT940) CodeVersion() int { return mt940CodeVersion }
@@ -70,6 +78,7 @@ func (m MT940) Pass(ctx context.Context, reads Reads) ([]core.Event, error) {
 		}
 	}
 	var out []core.Event
+	seen := map[string]bool{} // the accounts this pass has said
 	for _, d := range docs {
 		status, _ := d.State["status"].(string)
 		source, _ := d.State["source"].(string)
@@ -93,6 +102,13 @@ func (m MT940) Pass(ctx context.Context, reads Reads) ([]core.Event, error) {
 		}
 		lines := 0
 		for _, st := range statements {
+			if !seen[st.Account] {
+				seen[st.Account] = true
+				said, _ := json.Marshal(map[string]any{"account": st.Account, "currency": st.Currency, "date": st.From,
+					"statement": st.Number, "document": hash})
+				out = append(out, core.Event{Type: EventBankAccountSeen, OccurredAt: st.From, Payload: said,
+					DedupKey: "bank_mt940/account/" + st.Account})
+			}
 			for _, l := range st.Lines {
 				lines++
 				fact := map[string]any{
