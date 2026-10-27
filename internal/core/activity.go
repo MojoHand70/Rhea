@@ -848,11 +848,12 @@ func BuiltinActivities() []Activity {
 		},
 		{
 			Name: "host_said", Domain: "system",
-			Description: "What the host said: the words it phrased for a narrative view, logged as a fact so it never repeats itself and so what was said can be read back. The agent speaks through this door; the words it says never carry a number the facts did not, and never pass over a fact that has an amount in it.",
+			Description: "What the host said: the words it phrased for a narrative view, logged as a fact so it never repeats itself and so what was said can be read back. The agent speaks through this door; the words it says never carry a number the facts did not, and never pass over a fact that has an amount in it. Every amount it said is one of the facts' cells, with its sign; figures names them in order, as JSON — what each amount was written as, the view, the row and the column it came from, and the value it held.",
 			Spec: ActivitySpec{
 				Inputs: []FieldDef{
 					{Name: "view", Type: "string", Required: true},
 					{Name: "text", Type: "string", Required: true},
+					{Name: "figures", Type: "string"},
 					{Name: "occurred_at", Type: "date"},
 				},
 				Emits: EventHostSaid,

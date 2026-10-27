@@ -51,7 +51,7 @@ func newGrantsWorld(t *testing.T) *grantsWorld {
 			if w.reply != nil {
 				return w.reply(system, user), nil
 			}
-			return "One note was taken, worth 12.50 PLN.", nil
+			return "One note was taken, worth " + figure(user, "12.50") + " PLN.", nil
 		}}}
 	w.x.Today = srv.Clock.Today
 	w.today = srv.Clock.Today()

@@ -299,7 +299,7 @@ func TestAPersonIsAlwaysChecked(t *testing.T) {
 	x := &exec.Executor{Store: s}
 	srv := &shell.Server{Store: s, Exec: x, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb"),
 		Agent: &agent.Agent{Complete: func(ctx context.Context, system, user string) (string, error) {
-			return "One note was taken, worth 12.50 PLN.", nil
+			return "One note was taken, worth " + figure(user, "12.50") + " PLN.", nil
 		}}}
 	x.Today = srv.Clock.Today
 	ts := serve(t, srv.Handler())

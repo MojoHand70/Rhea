@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -29,7 +30,7 @@ func TestBriefing(t *testing.T) {
 	s := storetest.New(t)
 	x := &exec.Executor{Store: s}
 	var heard string
-	words := "Two notes were taken today, worth 1234.56 PLN together."
+	words := "Two notes were taken today, worth [F1: 1234.56] PLN together."
 	var answers []string // when set, the host's next answers in turn
 	srv := &shell.Server{Store: s, Exec: x, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb"),
 		Agent: &agent.Agent{Complete: func(ctx context.Context, system, user string) (string, error) {
@@ -137,10 +138,10 @@ func TestBriefing(t *testing.T) {
 		d.Facts = read.Facts
 	}
 	brief()
-	if d.Said != words || d.SaidEvent == 0 || d.Silent != "" {
+	if d.Said != unbracket(words) || d.SaidEvent == 0 || d.Silent != "" {
 		t.Fatalf("the briefing: %+v", d)
 	}
-	if read.Said != words {
+	if read.Said != unbracket(words) {
 		t.Fatalf("a read shows the last words: %q", read.Said)
 	}
 	if before, _ := srvSaid(ctx, s); before != 1 {
@@ -163,9 +164,9 @@ func TestBriefing(t *testing.T) {
 	}
 
 	// 2. The next time, the host is told what it said, so it does not repeat itself.
-	words = "Nothing new: the 2 notes still stand at 1234.56 PLN."
+	words = "Nothing new: the 2 notes still stand at [F1: 1234.56] PLN."
 	brief()
-	if !strings.Contains(heard, "What you said before") || !strings.Contains(heard, "worth 1234.56 PLN together") || d.Said != words {
+	if !strings.Contains(heard, "What you said before") || !strings.Contains(heard, "worth 1234.56 PLN together") || d.Said != unbracket(words) {
 		t.Fatalf("the host does not know what it said: %s", heard)
 	}
 
@@ -223,6 +224,23 @@ func TestBriefing(t *testing.T) {
 	if d.Said != "" || !strings.Contains(d.Silent, "no host") || len(d.Facts) != 1 {
 		t.Fatalf("silent: %+v", d)
 	}
+}
+
+// unbracket is the host's words as the kernel keeps them: each amount as she
+// wrote it, without its reference.
+func unbracket(words string) string {
+	return regexp.MustCompile(`\[F\d+:\s*([^\]]*?)\s*\]`).ReplaceAllString(words, "$1")
+}
+
+// figure writes an amount the way the host is told to: with the reference
+// the facts she was handed give it (an unknown one when they give none, so
+// the words are refused and the test says so).
+func figure(facts, value string) string {
+	m := regexp.MustCompile(`"v":"` + regexp.QuoteMeta(value) + `","ref":"(F\d+)"`).FindStringSubmatch(facts)
+	if m == nil {
+		return "[F0: " + value + "]"
+	}
+	return "[" + m[1] + ": " + value + "]"
 }
 
 func srvSaid(ctx context.Context, s interface {
@@ -406,5 +424,114 @@ func TestCrossSiteWritesAreRefused(t *testing.T) {
 	}
 	if code := post(nil); code == 403 {
 		t.Fatal("a write from no browser was refused")
+	}
+}
+
+// TestHerFiguresAreTheBooks (KK's screenshot, 2026-10-27): Helios's October
+// to date was revenue 0.00, costs −665.83 (an RMK spread of a September
+// invoice, September closed), result +665.83. She said "koszty 665,83" —
+// and on 19 October "wynik −665,83" — and both passed: her laws read a
+// number without its sign and found 665.83 somewhere in the facts. A face
+// then linked the figure by its value, to an RMK schedule's remainder that
+// happened to be 665.83. Now every amount the facts carry has a reference;
+// she writes each amount with its reference, [F2: −665,83]; the kernel
+// checks it against that cell, sign and digits, keeps her words without the
+// brackets, and records which cell each figure came from. An amount written
+// without its reference is refused, so a dropped sign cannot pass by
+// matching another cell.
+func TestHerFiguresAreTheBooks(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	x := &exec.Executor{Store: s}
+	var answers []string
+	var heard string
+	srv := &shell.Server{Store: s, Exec: x, DuckPath: filepath.Join(t.TempDir(), "rhea.duckdb"),
+		Agent: &agent.Agent{Complete: func(ctx context.Context, system, user string) (string, error) {
+			heard = user
+			if len(answers) == 0 {
+				return "", fmt.Errorf("asked once more than the test answers")
+			}
+			a := answers[0]
+			answers = answers[1:]
+			return a, nil
+		}}}
+	ts := serve(t, srv.Handler())
+	month, _ := json.Marshal(core.AnalysisSpec{
+		SQL: `SELECT '2026-10 do dziś' AS period, CAST(0 AS BIGINT) AS revenue, CAST(-66583 AS BIGINT) AS costs, CAST(66583 AS BIGINT) AS result`,
+		Columns: []core.ColumnSpec{{Field: "period", Label: "Okres", Type: "string"}, {Field: "revenue", Label: "Przychody", Type: "money"},
+			{Field: "costs", Label: "Koszty", Type: "money"}, {Field: "result", Label: "Wynik", Type: "money"}}})
+	if err := s.InsertViewDef(ctx, core.ViewDef{ID: "wynik-test", Version: 1, Notion: "analysis", Title: "Wynik",
+		Domain: "finance", Function: "briefing", Spec: month}); err != nil {
+		t.Fatal(err)
+	}
+	narrative, _ := json.Marshal(core.NarrativeSpec{Facts: []core.NarrativeFact{{View: "wynik-test", As: "wynik"}}, Voice: "po polsku"})
+	if err := s.InsertViewDef(ctx, core.ViewDef{ID: "poranek-test", Version: 1, Notion: "narrative", Title: "Poranek",
+		Domain: "finance", Function: "briefing", Spec: narrative}); err != nil {
+		t.Fatal(err)
+	}
+	speak := func(words ...string) (said, silent string) {
+		t.Helper()
+		answers = words
+		res, err := ts.Client().Post(ts.URL+"/api/speak?view=poranek-test", "application/json", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+		var out []struct{ Said, Silent string }
+		if res.StatusCode != 200 || json.NewDecoder(res.Body).Decode(&out) != nil || len(out) != 1 {
+			t.Fatalf("speak: %d %+v", res.StatusCode, out)
+		}
+		return out[0].Said, out[0].Silent
+	}
+
+	// She is handed each amount with its reference.
+	if said, _ := speak("Październik: przychody [F1: 0,00] zł, koszty [F2: −665,83] zł, wynik [F3: 665,83] zł."); said == "" ||
+		!strings.Contains(heard, `"v":"-665.83","ref":"F2"`) {
+		t.Fatalf("the facts carry no references: %s", heard)
+	}
+	// The sign dropped, twice: refused, naming the figure and its sign.
+	if said, silent := speak("Październik: przychody [F1: 0,00] zł, koszty [F2: 665,83] zł, wynik [F3: 665,83] zł.",
+		"Październik: przychody [F1: 0,00] zł, koszty [F2: 665,83] zł."); said != "" || !strings.Contains(silent, "F2") || !strings.Contains(silent, "-665.83") {
+		t.Fatalf("a figure without its sign passed: %q / %q", said, silent)
+	}
+	// The result's sign turned, as on 19 October: refused.
+	if said, silent := speak("Wynik [F3: −665,83] zł przy kosztach [F2: −665,83] zł i przychodach [F1: 0,00] zł.", "Wynik [F3: −665,83] zł."); said != "" || !strings.Contains(silent, "F3") {
+		t.Fatalf("a result with the wrong sign passed: %q / %q", said, silent)
+	}
+	// An amount written without its reference: refused, though the facts carry its value.
+	if said, silent := speak("Październik: przychody 0,00 zł, koszty 665,83 zł, wynik 665,83 zł.", "Koszty 665,83 zł."); said != "" || !strings.Contains(silent, "665,83") {
+		t.Fatalf("an amount without its reference passed: %q / %q", said, silent)
+	}
+	// A reference the facts do not carry: refused.
+	if said, silent := speak("Koszty [F9: −665,83] zł.", "Koszty [F9: −665,83] zł."); said != "" || !strings.Contains(silent, "F9") {
+		t.Fatalf("an unknown reference passed: %q / %q", said, silent)
+	}
+
+	// Her words as written, the brackets gone, and which cell each figure is.
+	words := "Październik do dziś: przychody [F1: 0,00] zł, koszty [F2: −665,83] zł — korekta, nie zarobek — więc wynik [F3: 665,83] zł."
+	said, silent := speak(words)
+	if want := "Październik do dziś: przychody 0,00 zł, koszty −665,83 zł — korekta, nie zarobek — więc wynik 665,83 zł."; said != want || silent != "" {
+		t.Fatalf("her words: %q (%s), want %q", said, silent, want)
+	}
+	res, err := ts.Client().Get(ts.URL + "/api/said?view=poranek-test&n=1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	var out []struct {
+		Text    string `json:"text"`
+		Figures []struct {
+			Written string `json:"written"`
+			View    string `json:"view"`
+			Row     int    `json:"row"`
+			Col     string `json:"col"`
+			Value   string `json:"value"`
+		} `json:"figures"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&out); err != nil || len(out) != 1 || out[0].Text != said {
+		t.Fatalf("said: %+v %v", out, err)
+	}
+	if got := fmt.Sprint(out[0].Figures); got != "[{0,00 wynik-test 0 revenue 0.00} {−665,83 wynik-test 0 costs -665.83} {665,83 wynik-test 0 result 665.83}]" {
+		t.Fatalf("the figures: %s", got)
 	}
 }

@@ -5454,3 +5454,30 @@ and, on the shape that followed, *"That's the way how I would do it."*
   saying "Uzupełnij i zaksięguj" when it books. *Assessed and left until the scale step* (dated 2026-10-27,
   invariant 10): Dziś reads the dry run each time the books are loaded, and the dry run reads the company's
   whole past — nothing at white01's size, measured with the 100,000 invoices before the first large client.
+
+## 2026-10-27 — Her figures are the books': every amount she says names its cell, sign and all (KK)
+
+KK's screenshots of Helios's morning: "Październik do dziś: przychody 0,00 zł, koszty 665,83 zł, wynik
+przed opodatkowaniem 665,83 zł" — the books say costs **−665,83** (the RMK spread of September's
+BIU/17/2026, entered after September closed) and a result of +665,83. On 19 October she had said the
+opposite, "wynik −665,83". Both passed her laws, because her numbers were read without their sign
+(2026-10-15, "A sign is not read") and matched by value against every number in the facts, where both
++665,83 and −665,83 stood. The face then linked "koszty 665,83" by its value too, to an RMK schedule's
+remainder that happened to be 665,83. Claude proposed the figures as references to the books' cells,
+the kernel checking each with its sign; KK, asked whether it may replace the 2026-10-15 line: *"Yes,
+please, let's try to fix this?"*.
+
+- **Every amount in her facts has a reference** (F1, F2, … on the cell, money only), and she writes
+  each amount she says with it: `[F2: −665,83]`, written the owner's way. The kernel checks that the
+  reference exists and that her figure has the cell's digits and sign; it keeps her words without the
+  brackets and records, in order, which view, row and column each figure came from (`host_said`'s
+  `figures`, served with her words at `/api/said`). A face opens that cell, never a value search.
+- **An amount written without its reference is refused** — a number the facts carry only as an amount.
+  Counts, days and dates she still writes plainly, checked by value as before.
+- **2026-10-15's "A sign is not read" stays for prose in general** (`core.WrittenNumbers`, the mail
+  and chat reader of tomorrow); her amounts are no longer read by it alone.
+
+*Claude, the spec silent:* the figures travel as a string input holding their JSON, because a door's
+`json` input is its whole payload; words spoken before this have no figures, and the face links them as
+it did. Measured on the live model (claude-sonnet-4-6): the recorded Poland morning 3 of 3 accepted, 8
+figures each; Helios's October 3 of 3, "koszty −665,83" with its sign.

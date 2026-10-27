@@ -198,10 +198,11 @@ func TestTheMorningByRole(t *testing.T) {
 	// none of their own; the accountant's names hers. Each speaks from the
 	// figures above, and the host's laws hold on both.
 	srv.Agent = &agent.Agent{Complete: func(ctx context.Context, system, user string) (string, error) {
+		f := func(v string) string { return figure(user, v) }
 		if strings.Contains(user, "biura rachunkowego") {
-			return "Jedna wpłata, 100.00 zł, czeka na wyjaśnienie. VAT za wrzesień 346.00 zł do 26 października; zaliczki na CIT księgi jeszcze nie liczą. Wynik od stycznia 1300.00 zł.", nil
+			return "Jedna wpłata, " + f("100.00") + " zł, czeka na wyjaśnienie. VAT za wrzesień " + f("346.00") + " zł do 26 października; zaliczki na CIT księgi jeszcze nie liczą. Wynik od stycznia " + f("1300.00") + " zł.", nil
 		}
-		return "Październik do dziś na minusie, wrzesień dał 1500.00 zł, od stycznia 1300.00 zł przed opodatkowaniem. Klienci są winni 2091.50 zł. VAT 346.00 zł do 26 października. Wpłata 100.00 zł czeka na Twoje słowo.", nil
+		return "Październik do dziś na minusie, wrzesień dał " + f("1500.00") + " zł, od stycznia " + f("1300.00") + " zł przed opodatkowaniem. Klienci są winni " + f("2091.50") + " zł. VAT " + f("346.00") + " zł do 26 października. Wpłata " + f("100.00") + " zł czeka na Twoje słowo.", nil
 	}}
 	var spoken struct {
 		Silent string `json:"silent"`

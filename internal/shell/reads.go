@@ -130,18 +130,26 @@ func (s *Server) handleSaid(w http.ResponseWriter, r *http.Request) {
 		OccurredAt string `json:"occurred_at"`
 		RecordedAt string `json:"recorded_at"`
 		Actor      string `json:"actor"`
+		// Figures are the cells her amounts came from, in the order she said
+		// them; words spoken before she wrote amounts by reference have none.
+		Figures json.RawMessage `json:"figures,omitempty"`
 	}
 	out := []said{}
 	for i := len(evs) - 1; i >= 0 && len(out) < n; i-- {
 		var p struct {
-			View string `json:"view"`
-			Text string `json:"text"`
+			View    string `json:"view"`
+			Text    string `json:"text"`
+			Figures string `json:"figures"`
 		}
 		if json.Unmarshal(evs[i].Payload, &p) != nil || (view != "" && p.View != view) {
 			continue
 		}
+		var figs json.RawMessage
+		if json.Valid([]byte(p.Figures)) {
+			figs = json.RawMessage(p.Figures)
+		}
 		out = append(out, said{EventID: evs[i].ID, View: p.View, Text: p.Text, OccurredAt: evs[i].OccurredAt,
-			RecordedAt: evs[i].RecordedAt.Format("2006-01-02T15:04:05Z07:00"), Actor: evs[i].Actor})
+			RecordedAt: evs[i].RecordedAt.Format("2006-01-02T15:04:05Z07:00"), Actor: evs[i].Actor, Figures: figs})
 	}
 	writeJSON(w, 200, out)
 }

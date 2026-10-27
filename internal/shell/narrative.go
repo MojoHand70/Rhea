@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"regexp"
 	"strings"
 	"unicode"
 
@@ -27,6 +28,15 @@ import (
 // amount in it must be spoken — one of its amounts, exactly — or the words
 // are refused the same way. Without an agent the host is silent and the
 // facts speak for themselves.
+//
+// Her figures are the books' (KK 2026-10-27): every amount the facts carry
+// has a reference, and she writes each amount she says with it — [F2:
+// −665,83]. The kernel checks the figure against that cell, its digits and
+// its sign, keeps her words without the brackets, and records which cell
+// each figure came from, so a face opens that cell and nothing else. An
+// amount written without its reference is refused: matched by its value
+// alone, "koszty 665,83" found the result's +665,83 and passed with the
+// costs' minus dropped.
 
 type narrativeFact struct {
 	As    string      `json:"as"`
@@ -59,13 +69,21 @@ func (s *Server) serveNarrative(ctx context.Context, w http.ResponseWriter, vd *
 // and today, with the facts as JSON for the host to read. A failure carries
 // the HTTP status it answers with.
 func (s *Server) narrativeFacts(ctx context.Context, vd *core.ViewDef) (map[string]any, []byte, int, error) {
+	out, plain, _, status, err := s.narrativeFigures(ctx, vd)
+	return out, plain, status, err
+}
+
+// narrativeFigures is narrativeFacts with every amount given its reference:
+// the facts as JSON before the references (what her laws read), and the
+// references with the cells they name; out carries the facts with them.
+func (s *Server) narrativeFigures(ctx context.Context, vd *core.ViewDef) (map[string]any, []byte, factRefs, int, error) {
 	var spec core.NarrativeSpec
 	if err := json.Unmarshal(vd.Spec, &spec); err != nil {
-		return nil, nil, 500, err
+		return nil, nil, factRefs{}, 500, err
 	}
 	vds, err := s.effectiveViewDefs(ctx)
 	if err != nil {
-		return nil, nil, 500, err
+		return nil, nil, factRefs{}, 500, err
 	}
 	byID := map[string]core.ViewDef{}
 	for _, v := range vds {
@@ -75,7 +93,7 @@ func (s *Server) narrativeFacts(ctx context.Context, vd *core.ViewDef) (map[stri
 	for _, f := range spec.Facts {
 		fv, ok := byID[f.View]
 		if !ok {
-			return nil, nil, 400, fmt.Errorf("narrative %s: no view %q to draw on", vd.ID, f.View)
+			return nil, nil, factRefs{}, 400, fmt.Errorf("narrative %s: no view %q to draw on", vd.ID, f.View)
 		}
 		as := f.As
 		if as == "" {
@@ -86,27 +104,28 @@ func (s *Server) narrativeFacts(ctx context.Context, vd *core.ViewDef) (map[stri
 		case "analysis":
 			as, err := s.analysisSpec(ctx, fv.Spec)
 			if err != nil {
-				return nil, nil, 500, err
+				return nil, nil, factRefs{}, 500, err
 			}
 			cols, rows, _, err := s.analysisData(ctx, as)
 			if err != nil {
-				return nil, nil, 500, err
+				return nil, nil, factRefs{}, 500, err
 			}
 			fact.Data = map[string]any{"columns": cols, "rows": rows}
 		case "matching":
 			data, err := s.matchingData(ctx, &fv)
 			if err != nil {
-				return nil, nil, 500, err
+				return nil, nil, factRefs{}, 500, err
 			}
 			fact.Data = data
 		default:
-			return nil, nil, 400, fmt.Errorf("narrative %s: a host speaks from analysis views and matching grids, not a %s", vd.ID, fv.Notion)
+			return nil, nil, factRefs{}, 400, fmt.Errorf("narrative %s: a host speaks from analysis views and matching grids, not a %s", vd.ID, fv.Notion)
 		}
 		facts = append(facts, fact)
 	}
-	out := map[string]any{"view": vd, "facts": facts, "today": s.Clock.Today()}
 	factsJSON, _ := json.Marshal(facts)
-	return out, factsJSON, 200, nil
+	refs := referFigures(facts)
+	out := map[string]any{"view": vd, "facts": facts, "today": s.Clock.Today()}
+	return out, factsJSON, refs, 200, nil
 }
 
 // narrate computes a narrative's facts and asks the host to speak them,
@@ -117,10 +136,11 @@ func (s *Server) narrate(ctx context.Context, vd *core.ViewDef) (map[string]any,
 	if err := json.Unmarshal(vd.Spec, &spec); err != nil {
 		return nil, 500, err
 	}
-	out, factsJSON, status, err := s.narrativeFacts(ctx, vd)
+	out, factsJSON, refs, status, err := s.narrativeFigures(ctx, vd)
 	if err != nil {
 		return nil, status, err
 	}
+	withRefs, _ := json.Marshal(out["facts"])
 	before, err := s.saidBefore(ctx, vd.ID, 3)
 	if err != nil {
 		return nil, 500, err
@@ -135,14 +155,19 @@ func (s *Server) narrate(ctx context.Context, vd *core.ViewDef) (map[string]any,
 	// One correction: words refused by her laws are asked for again, with
 	// the reason; a second refusal stands, and the facts speak alone.
 	refused, words := "", ""
+	var figures []saidFigure
 	for try := 0; try < 2; try++ {
-		words, err = s.Agent.Narrate(ctx, s.Clock.Today(), spec.Voice, factsJSON, before, refused)
+		words, err = s.Agent.Narrate(ctx, s.Clock.Today(), spec.Voice, withRefs, before, refused)
 		if err != nil {
 			out["silent"] = "the host could not speak: " + err.Error()
 			return out, 200, nil
 		}
-		words = strings.TrimSpace(words)
-		if refused = hostLaws(words, factsJSON); refused == "" {
+		clean, figs, why := herFigures(strings.TrimSpace(words), refs)
+		if why == "" {
+			why = hostLaws(clean, factsJSON)
+		}
+		if refused = why; refused == "" {
+			words, figures = clean, figs
 			break
 		}
 	}
@@ -153,7 +178,12 @@ func (s *Server) narrate(ctx context.Context, vd *core.ViewDef) (map[string]any,
 	// The words are a fact: logged through the door, by the agent — the
 	// kernel speaking, not the person who asked, who is set aside for this
 	// one door and otherwise always signs.
-	t, err := s.Exec.TriggerActivity(rights.WithoutPrincipal(ctx), "host_said", map[string]any{"view": vd.ID, "text": words}, "agent:"+s.model(), "")
+	in := map[string]any{"view": vd.ID, "text": words}
+	if len(figures) > 0 {
+		b, _ := json.Marshal(figures)
+		in["figures"] = string(b)
+	}
+	t, err := s.Exec.TriggerActivity(rights.WithoutPrincipal(ctx), "host_said", in, "agent:"+s.model(), "")
 	if err != nil {
 		return nil, 500, err
 	}
@@ -342,6 +372,140 @@ func (s *Server) lastSaid(ctx context.Context, viewID string, n int) ([]hostWord
 		}
 	}
 	return out, nil
+}
+
+// figureCell is the cell an amount of the facts sits in: an analysis view's
+// row and column, or a matching grid's side, item and column.
+type figureCell struct {
+	View   string `json:"view"`
+	Row    int    `json:"row"`
+	Side   string `json:"side,omitempty"`
+	Object string `json:"object,omitempty"`
+	Col    string `json:"col"`
+	Value  string `json:"value"`
+}
+
+// saidFigure is one amount the host said: as she wrote it, and its cell.
+type saidFigure struct {
+	Written string `json:"written"`
+	figureCell
+}
+
+// factRefs are the facts' amounts by reference, and the values the facts
+// carry outside their amounts (counts, days, dates), which she may write
+// plainly.
+type factRefs struct {
+	cells  map[string]figureCell
+	others map[string]bool
+}
+
+// referFigures gives every amount of the facts its reference, F1, F2, … in
+// the order the facts carry them, writing it on the cell.
+func referFigures(facts []narrativeFact) factRefs {
+	r := factRefs{cells: map[string]figureCell{}, others: map[string]bool{}}
+	refer := func(c figureCell) string {
+		k := fmt.Sprintf("F%d", len(r.cells)+1)
+		r.cells[k] = c
+		return k
+	}
+	other := func(v string) {
+		for _, n := range core.WrittenNumbers(v) {
+			r.others[n.Value] = true
+		}
+	}
+	for _, f := range facts {
+		d, _ := f.Data.(map[string]any)
+		if cols, ok := d["columns"].([]columnOut); ok {
+			rows, _ := d["rows"].([][]cellOut)
+			for i, row := range rows {
+				for j := range row {
+					if j < len(cols) && cols[j].Type == "money" && row[j].V != "" {
+						row[j].Ref = refer(figureCell{View: f.View, Row: i, Col: cols[j].Field, Value: row[j].V})
+					} else {
+						other(row[j].V)
+					}
+				}
+			}
+		}
+		if sides, ok := d["sides"].([]matchingSide); ok {
+			for _, side := range sides {
+				for i, item := range side.Items {
+					for _, col := range side.Columns {
+						c, ok := item.Cells[col.Field]
+						if !ok {
+							continue
+						}
+						if col.Type == "money" && c.V != "" {
+							c.Ref = refer(figureCell{View: f.View, Side: side.Name, Row: i, Object: item.ObjectID, Col: col.Field, Value: c.V})
+							item.Cells[col.Field] = c
+						} else {
+							other(c.V)
+						}
+					}
+				}
+			}
+		}
+	}
+	return r
+}
+
+// figureRe is an amount written with its reference: [F2: −665,83].
+var figureRe = regexp.MustCompile(`\[(F\d+):\s*([^\]]*?)\s*\]`)
+
+// herFigures reads the amounts she wrote with their references. Each names
+// a cell the facts carry and writes its value — the same digits, the same
+// sign — or the words are refused; so is an amount the facts carry only as
+// an amount, written without its reference. The words come back without
+// the brackets, with the figures in the order she said them.
+func herFigures(words string, refs factRefs) (string, []saidFigure, string) {
+	var figs []saidFigure
+	var unlike []string
+	clean := figureRe.ReplaceAllStringFunc(words, func(m string) string {
+		sm := figureRe.FindStringSubmatch(m)
+		ref, written := sm[1], sm[2]
+		cell, ok := refs.cells[ref]
+		if !ok {
+			unlike = append(unlike, fmt.Sprintf("[%s] is no amount of the facts", ref))
+			return written
+		}
+		nums := core.WrittenNumbers(written)
+		neg := strings.HasPrefix(cell.Value, "-")
+		if len(nums) != 1 || writtenNegative(written) != neg || nums[0].Value != core.ReadWrittenNumber(strings.TrimPrefix(cell.Value, "-")) {
+			unlike = append(unlike, fmt.Sprintf("[%s] is %s, written %q", ref, cell.Value, written))
+			return written
+		}
+		figs = append(figs, saidFigure{Written: written, figureCell: cell})
+		return written
+	})
+	if len(unlike) > 0 {
+		return "", nil, fmt.Sprintf("they write amounts unlike the facts (%s): an amount keeps its digits and its sign", strings.Join(unlike, "; "))
+	}
+	amounts := map[string]bool{}
+	for _, c := range refs.cells {
+		amounts[core.ReadWrittenNumber(strings.TrimPrefix(c.Value, "-"))] = true
+	}
+	var bare []string
+	for _, n := range core.WrittenNumbers(figureRe.ReplaceAllString(words, " ")) {
+		if amounts[n.Value] && !refs.others[n.Value] {
+			bare = append(bare, n.Text)
+		}
+	}
+	if len(bare) > 0 {
+		return "", nil, fmt.Sprintf("they write amounts without their reference (%s): every amount is written with it, [F1: amount]", strings.Join(bare, ", "))
+	}
+	return clean, figs, ""
+}
+
+// writtenNegative: a written amount opens with a minus — the hyphen, the
+// minus sign, the dash a typesetter uses for one, or the word.
+func writtenNegative(written string) bool {
+	w := strings.TrimSpace(written)
+	for _, m := range []string{"-", "−", "–", "minus "} {
+		if strings.HasPrefix(w, m) {
+			return true
+		}
+	}
+	return false
 }
 
 // foreignNumbers lists the numbers in the words that the facts do not

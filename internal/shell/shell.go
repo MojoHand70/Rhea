@@ -535,6 +535,9 @@ type columnOut struct {
 type cellOut struct {
 	V  string `json:"v"`            // canonical value, never locale-formatted
 	ID string `json:"id,omitempty"` // refs only: the referenced object id
+	// Ref is a narrative's facts only: the reference the host writes this
+	// amount by, [F2: −665,83], so the kernel checks it against this cell.
+	Ref string `json:"ref,omitempty"`
 	// Detail is the view that opens the referenced object — with derived
 	// defaults, every type has one, so every ref is a door.
 	Detail string `json:"detail,omitempty"`
