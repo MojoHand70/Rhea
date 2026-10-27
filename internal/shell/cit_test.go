@@ -28,6 +28,7 @@ type citWorld struct {
 	srv    *shell.Server
 	day    *string
 	get    func(path string, out any)
+	post   func(path string, body, out any)
 	door   func(name string, in map[string]any)
 	submit func(typ, date, key string, payload map[string]any)
 	id     map[string]string
@@ -66,6 +67,23 @@ func newCITWorld(t *testing.T) *citWorld {
 		}
 		if err := json.Unmarshal(b.Bytes(), out); err != nil {
 			t.Fatalf("GET %s: %v", path, err)
+		}
+	}
+	post := func(path string, body, out any) {
+		t.Helper()
+		in, _ := json.Marshal(body)
+		res, err := ts.Client().Post(ts.URL+path, "application/json", bytes.NewReader(in))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+		var b bytes.Buffer
+		b.ReadFrom(res.Body)
+		if res.StatusCode != 200 {
+			t.Fatalf("POST %s: %d %s", path, res.StatusCode, b.String())
+		}
+		if err := json.Unmarshal(b.Bytes(), out); err != nil {
+			t.Fatalf("POST %s: %v", path, err)
 		}
 	}
 	for _, p := range []string{"common/people.json", "common/periods.json", "common/documents.json", "pl/pack.json"} {
@@ -161,7 +179,7 @@ func newCITWorld(t *testing.T) *citWorld {
 		}
 	}
 
-	return &citWorld{ctx: ctx, s: s, x: x, srv: srv, day: &day, get: get, door: door, submit: submit, id: id, self: self,
+	return &citWorld{ctx: ctx, s: s, x: x, srv: srv, day: &day, get: get, post: post, door: door, submit: submit, id: id, self: self,
 		sale: sale, buy: buy, closeMonth: closeMonth, advance: advance, want: want}
 }
 

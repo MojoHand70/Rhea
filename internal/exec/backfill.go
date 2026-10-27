@@ -1,13 +1,17 @@
 package exec
 
 import (
+	"cmp"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
+	"slices"
 	"strconv"
+	"strings"
 
 	"rhea/internal/core"
 	"rhea/internal/store"
@@ -45,6 +49,8 @@ type BackfillPlan struct {
 	Chains []BackfillChain `json:"chains"`
 	Diff   SimDiff         `json:"diff"`
 	Errors []string        `json:"errors"`
+	// Summary is what the plan would do, said the way a person decides it.
+	Summary BackfillSummary `json:"summary"`
 	// Fingerprint names this plan — the events and the rules of every
 	// chain — so an approval can say which dry run it read, and a plan
 	// that moved since (another tab approved a rule) is refused.
@@ -185,9 +191,108 @@ func (x *Executor) PlanBackfill(ctx context.Context, date string) (BackfillPlan,
 		c.nodes = nodes // booking needs the replayed nodes too, as causes
 		plan.Chains = append(plan.Chains, c)
 	}
-	plan.Diff, err = x.backfillDiff(ctx, plan.Chains)
+	if plan.Diff, err = x.backfillDiff(ctx, plan.Chains); err != nil {
+		return plan, err
+	}
 	plan.Fingerprint = plan.fingerprint()
+	plan.Summary, err = summarize(plan)
 	return plan, err
+}
+
+// BackfillSummary says what a look-back would do the way a person decides it
+// (KK 2026-10-27): the records of each kind it adds or changes, and the
+// entries it books — none, or by month, book and currency with how much. A
+// look-back that only adds records is the person's to approve in one step;
+// one that books entries into past months shows them before anyone does.
+type BackfillSummary struct {
+	Records []RecordCount  `json:"records"`
+	Entries []MonthEntries `json:"entries"`
+	// Forwarded counts the chains bound for a closed period, booked on the
+	// look-back's own day instead.
+	Forwarded int `json:"forwarded,omitempty"`
+}
+
+// RecordCount is one kind of record a look-back adds or changes.
+type RecordCount struct {
+	Type    string `json:"type"`
+	Added   int    `json:"added,omitempty"`
+	Changed int    `json:"changed,omitempty"`
+}
+
+// MonthEntries is the entries a look-back books into one month of one book:
+// how many, and their debits summed (money, as text).
+type MonthEntries struct {
+	Month    string `json:"month"`
+	Book     string `json:"book"`
+	Currency string `json:"currency"`
+	Entries  int    `json:"entries"`
+	Debit    string `json:"debit"`
+}
+
+func summarize(plan BackfillPlan) (BackfillSummary, error) {
+	sum := BackfillSummary{Records: []RecordCount{}, Entries: []MonthEntries{}}
+	records := map[string]*RecordCount{}
+	record := func(typ string) *RecordCount {
+		if records[typ] == nil {
+			records[typ] = &RecordCount{Type: typ}
+		}
+		return records[typ]
+	}
+	type key struct{ month, book, currency string }
+	entries := map[key]map[string]bool{}
+	debits := map[key]int64{}
+	for _, o := range plan.Diff.Added {
+		if o.Type != PostingObjectType {
+			record(o.Type).Added++
+			continue
+		}
+		book := core.Text(o.State["book"])
+		if book == "" {
+			book = DefaultBook
+		}
+		date := core.Text(o.State["date"])
+		if len(date) < 7 {
+			return sum, fmt.Errorf("look-back: posting %s has no date", o.ID)
+		}
+		k := key{date[:7], book, core.Text(o.State["currency"])}
+		if entries[k] == nil {
+			entries[k] = map[string]bool{}
+		}
+		entries[k][core.Text(o.State["entry"])] = true
+		if o.State["side"] != "debit" {
+			continue
+		}
+		amt, err := strconv.ParseInt(core.Text(o.State["amount"]), 10, 64)
+		if err != nil {
+			return sum, fmt.Errorf("look-back: posting %s amount %v: %w", o.ID, o.State["amount"], err)
+		}
+		if amt > 0 && debits[k] > math.MaxInt64-amt || amt < 0 && debits[k] < math.MinInt64-amt {
+			return sum, fmt.Errorf("look-back: the debits of %s in %s overflow money", k.book, k.month)
+		}
+		debits[k] += amt
+	}
+	for _, c := range plan.Diff.Changed {
+		if c.After.Type != PostingObjectType {
+			record(c.After.Type).Changed++
+		}
+	}
+	for _, r := range records {
+		sum.Records = append(sum.Records, *r)
+	}
+	slices.SortFunc(sum.Records, func(a, b RecordCount) int { return strings.Compare(a.Type, b.Type) })
+	for k, ids := range entries {
+		sum.Entries = append(sum.Entries, MonthEntries{Month: k.month, Book: k.book, Currency: k.currency,
+			Entries: len(ids), Debit: core.FormatMoney(debits[k])})
+	}
+	slices.SortFunc(sum.Entries, func(a, b MonthEntries) int {
+		return cmp.Or(strings.Compare(a.Month, b.Month), strings.Compare(a.Book, b.Book), strings.Compare(a.Currency, b.Currency))
+	})
+	for _, c := range plan.Chains {
+		if c.Forwarded != "" {
+			sum.Forwarded++
+		}
+	}
+	return sum, nil
 }
 
 // priorOf indexes a root's existing derivations by the chain point they fired

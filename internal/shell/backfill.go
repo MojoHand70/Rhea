@@ -9,7 +9,9 @@ import (
 
 // handleSimulateBackfill is the dry run of ruled backfill: which past events
 // the active rules would explain further, offered forward where a period is
-// closed, rendered as the same field-level diff every approval reads.
+// closed, rendered as the same field-level diff every approval reads, and
+// summed the way a person decides it — the records of each kind it adds, the
+// entries it books by month (KK 2026-10-27).
 func (s *Server) handleSimulateBackfill(w http.ResponseWriter, r *http.Request) {
 	if !s.allowSystem(w, r, ViewGate) { // the gate's dry run asks what the gate asks (A9)
 		return
@@ -32,7 +34,8 @@ func (s *Server) handleSimulateBackfill(w http.ResponseWriter, r *http.Request) 
 	if errs == nil {
 		errs = []string{}
 	}
-	writeJSON(w, 200, map[string]any{"date": plan.Date, "chains": chains, "errors": errs, "diff": diff, "plan": plan.Fingerprint})
+	writeJSON(w, 200, map[string]any{"date": plan.Date, "chains": chains, "errors": errs, "diff": diff, "plan": plan.Fingerprint,
+		"summary": plan.Summary})
 }
 
 // handleApproveBackfill is the deliberate act: approve_backfill, then the

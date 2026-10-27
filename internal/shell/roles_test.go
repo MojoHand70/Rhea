@@ -94,3 +94,76 @@ func TestClientsAndSuppliersAreRolesOfOneFirm(t *testing.T) {
 		t.Fatal("replay does not reproduce the clients and suppliers")
 	}
 }
+
+// TestTheLookBackFindsClientsAndSuppliersInPastInvoices (KK 2026-10-27): a
+// company already has its invoices when Klienci and Dostawcy arrive; asked to
+// look back, Rhea says what she would add — one client, two suppliers, no
+// entries in the books — and once a person approves exactly that, the roles
+// are there, dated by each firm's first invoice. Looking back again finds
+// nothing; replay reproduces it.
+func TestTheLookBackFindsClientsAndSuppliersInPastInvoices(t *testing.T) {
+	w := newCITWorld(t)
+	ctx, s, x := w.ctx, w.s, w.x
+	w.sale("fv-1", "FV 1/09/2026", "2026-09-21", "1000.00", "230.00", "1230.00")
+	w.sale("fv-2", "FV 2/09/2026", "2026-09-24", "500.00", "115.00", "615.00")
+	w.buy("fz-1", "FZ 7/09/2026", "2026-09-25", "5260001246", "200.00", "46.00", "246.00")
+	w.buy("fz-2", "R 12/2026", "2026-09-26", "5270003330", "100.00", "8.00", "108.00")
+
+	// Klienci and Dostawcy arrive with the core's version: nothing yet.
+	sums, err := pack.LoadCore(ctx, s, "init")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, sum := range sums {
+		if sum.Bundle == "" {
+			continue
+		}
+		if _, _, errs, err := x.ApproveBundle(ctx, sum.Bundle, "krzysztof", "2026-10-17"); err != nil || len(errs) != 0 {
+			t.Fatalf("approve %s: %v %v", sum.Bundle, err, errs)
+		}
+	}
+	if clients, _ := s.ObjectsByType(ctx, "client"); len(clients) != 0 {
+		t.Fatalf("clients before anyone looked back: %d", len(clients))
+	}
+
+	var plan struct {
+		Plan    string `json:"plan"`
+		Summary struct {
+			Records []map[string]any `json:"records"`
+			Entries []map[string]any `json:"entries"`
+		} `json:"summary"`
+	}
+	w.post("/api/backfill/simulate", nil, &plan)
+	if got := fmt.Sprint(plan.Summary.Records); got != "[map[added:1 type:client] map[added:2 type:supplier]]" || len(plan.Summary.Entries) != 0 {
+		t.Fatalf("what the look-back would do: %s, entries %v", got, plan.Summary.Entries)
+	}
+	tr, err := x.TriggerActivity(ctx, "approve_backfill", map[string]any{"plan": plan.Plan, "approved_by": "krzysztof", "occurred_at": "2026-10-17"}, "krzysztof", "")
+	if err != nil || tr.Backfilled != 3 {
+		t.Fatalf("approve the look-back: %+v %v", tr, err)
+	}
+	buyer, restaurant := w.id["Nabywca S.A."], w.id["Restauracja Pod Lipą"]
+	since := func(typ string) map[string]string {
+		objs, _ := s.ObjectsByType(ctx, typ)
+		out := map[string]string{}
+		for _, o := range objs {
+			out[fmt.Sprint(o.State["company"])] = fmt.Sprint(o.State["since"])
+		}
+		return out
+	}
+	if c, sp := since("client"), since("supplier"); len(c) != 1 || c[buyer] != "2026-09-21" || len(sp) != 2 || sp[buyer] != "2026-09-25" || sp[restaurant] != "2026-09-26" {
+		t.Fatalf("the roles, dated by each firm's first invoice: clients %v, suppliers %v", c, sp)
+	}
+
+	w.post("/api/backfill/simulate", nil, &plan)
+	if len(plan.Summary.Records) != 0 || len(plan.Summary.Entries) != 0 {
+		t.Fatalf("looked back twice: %+v", plan.Summary)
+	}
+	before, _ := s.AllObjects(ctx)
+	if _, err := x.Replay(ctx); err != nil {
+		t.Fatal(err)
+	}
+	after, _ := s.AllObjects(ctx)
+	if !reflect.DeepEqual(before, after) {
+		t.Fatal("replay does not reproduce what the look-back filled")
+	}
+}
