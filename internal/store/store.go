@@ -526,10 +526,14 @@ func (s *Store) ChainOf(ctx context.Context, rootID int64) ([]core.Event, error)
 	return scanEvents(rows)
 }
 
-// GetEvent returns one event by id.
+// GetEvent reads one fact by its id: of the company acted for, or the
+// installation's, when a company is acted for — as every other read is. A
+// scope over several companies acting for one once read another's fact by
+// its id, and a door undid that company's match under the company acted for
+// (review 2026-10-27).
 func (s *Store) GetEvent(ctx context.Context, id int64) (core.Event, error) {
 	rows, err := s.Pool.Query(ctx,
-		`SELECT `+eventCols+` FROM event WHERE event_id = $1`, id)
+		`SELECT `+eventCols+` FROM event WHERE event_id = $1 AND ($2 = '' OR company = $2 OR COALESCE(company, '') = '')`, id, CompanyOf(ctx))
 	if err != nil {
 		return core.Event{}, err
 	}
@@ -1249,9 +1253,11 @@ func (s *Store) AccountBalance(ctx context.Context, book, account, from, to stri
 	return minor, err
 }
 
+// GetObject reads one object by its id, the company acted for's or the
+// installation's alone when a company is acted for (GetEvent).
 func (s *Store) GetObject(ctx context.Context, id string) (core.Object, error) {
 	rows, err := s.Pool.Query(ctx,
-		`SELECT `+objectCols+` FROM object WHERE object_id = $1`, id)
+		`SELECT `+objectCols+` FROM object WHERE object_id = $1 AND ($2 = '' OR company = $2 OR COALESCE(company, '') = '')`, id, CompanyOf(ctx))
 	if err != nil {
 		return core.Object{}, err
 	}

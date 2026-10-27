@@ -21,6 +21,7 @@ import (
 
 	"rhea/internal/core"
 	"rhea/internal/exec"
+	"rhea/internal/store"
 	"rhea/internal/store/storetest"
 )
 
@@ -1088,31 +1089,18 @@ func TestMatchingIntercompany(t *testing.T) {
 	}
 }
 
-// Unpairing (DIRECTION, the brief's invariant 5: "a wrong match is undone
-// by a correcting event that restores the open amounts, never by
-// deletion"). The unpairing verb seeds a reversal of the match — the
-// allocations negated, the open amounts as they are now before and
-// restored after, every difference flipped — into the chain under the
-// match's own rule, and the same rules explain it: the invoice and the
-// line open again (by the transition their types declare), a settlement
-// for the negative amount, the flipped difference posting the opposite
-// entry. Undone twice is refused; replay reproduces it.
-func TestMatchingUnpairing(t *testing.T) {
+// unpairingRules are the rules the unpairing stories stand on: the bank
+// world's incoming payments matched to sales invoices, settled, recorded
+// and their differences posted, with types that consent to reopening.
+func unpairingRules(t *testing.T, x *exec.Executor) {
+	t.Helper()
 	ctx := context.Background()
-	x, _ := bankWorld(t)
 	// The types consent to reopening.
 	for name, done := range map[string]string{"sales_invoice": "paid", "bank_line": "settled"} {
 		ot, _ := x.Store.GetObjectType(ctx, name)
 		ot.Version++
 		ot.Lifecycle.Transitions[done] = []string{"open"}
 		if err := x.Store.InsertObjectType(ctx, ot); err != nil {
-			t.Fatal(err)
-		}
-	}
-	submit := func(dedup, evType, date, payload string) {
-		t.Helper()
-		if _, err := x.Store.AppendEvent(ctx, core.Event{Kind: core.KindRaw, Type: evType, OccurredAt: date,
-			Payload: []byte(payload), DedupKey: dedup}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -1161,6 +1149,28 @@ func TestMatchingUnpairing(t *testing.T) {
 			{Path: "$.object_type", Op: "eq", Value: "matching_difference"}, {Path: "$.state.direction", Op: "eq", Value: dir.name}}},
 			Effect: core.Effect{Postings: &core.PostingsTemplate{Currency: "=$.state.currency", Lines: []core.PostingLine{
 				{Account: dir.debit, Debit: "=$.state.amount"}, {Account: dir.credit, Credit: "=$.state.amount"}}}}})
+	}
+}
+
+// Unpairing (DIRECTION, the brief's invariant 5: "a wrong match is undone
+// by a correcting event that restores the open amounts, never by
+// deletion"). The unpairing verb seeds a reversal of the match — the
+// allocations negated, the open amounts as they are now before and
+// restored after, every difference flipped — into the chain under the
+// match's own rule, and the same rules explain it: the invoice and the
+// line open again (by the transition their types declare), a settlement
+// for the negative amount, the flipped difference posting the opposite
+// entry. Undone twice is refused; replay reproduces it.
+func TestMatchingUnpairing(t *testing.T) {
+	ctx := context.Background()
+	x, _ := bankWorld(t)
+	unpairingRules(t, x)
+	submit := func(dedup, evType, date, payload string) {
+		t.Helper()
+		if _, err := x.Store.AppendEvent(ctx, core.Event{Kind: core.KindRaw, Type: evType, OccurredAt: date,
+			Payload: []byte(payload), DedupKey: dedup}); err != nil {
+			t.Fatal(err)
+		}
 	}
 	submit("nova", "company.registered", "2026-09-01", `{"name":"Nova","iban":"PL60"}`)
 	for _, a := range [][2]string{{"201", "Należności"}, {"755", "Koszty finansowe"}} {
@@ -1262,5 +1272,63 @@ func TestMatchingUnpairing(t *testing.T) {
 	after, _ := x.Store.AllObjects(ctx)
 	if !reflect.DeepEqual(before, after) {
 		t.Fatal("replay does not reproduce the reversal")
+	}
+}
+
+// Undoing a match acts in the match's own company (review 2026-10-27,
+// high): acting for one company with another in view — an office's desk,
+// the bench's scope header — unpair_items named the other company's match
+// and undid it. Its invoice opened again, and the reversal, the settlement
+// and the difference postings were written under the company acted for,
+// where the match's own company could not see them and could undo it a
+// second time. A door acting for a company reads that company's facts and
+// objects, and the installation's, alone.
+func TestUnpairingReachesTheCompanyActedFor(t *testing.T) {
+	ctx := context.Background()
+	x, _ := bankWorld(t)
+	unpairingRules(t, x)
+	a, b := "PL5250001111", "PL5260001246"
+	inB := store.WithCompany(ctx, b)
+	submit := func(company, dedup, evType, date, payload string) {
+		t.Helper()
+		if _, err := x.Store.AppendEvent(ctx, core.Event{Kind: core.KindRaw, Type: evType, OccurredAt: date,
+			Payload: []byte(payload), DedupKey: dedup, Company: company}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// the customer and the chart are the installation's, every company's
+	submit("", "nova", "company.registered", "2026-09-01", `{"name":"Nova","iban":"PL60"}`)
+	for _, acc := range [][2]string{{"201", "Należności"}, {"755", "Koszty finansowe"}} {
+		submit("", "acc-"+acc[0], "account.created", "2026-09-01", `{"code":"`+acc[0]+`","name":"`+acc[1]+`"}`)
+	}
+	if _, errs := x.ProcessPending(store.WithInstallation(ctx)); len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	submit(b, "fv8", "sales.invoice.issued", "2026-09-09", `{"number":"FV/8","issue_date":"2026-09-09","buyer_iban":"PL60","gross":"99.99","currency":"PLN"}`)
+	submit(b, "l5", "bank.statement.line", "2026-09-16", `{"date":"2026-09-16","amount":"99.97","currency":"PLN","reference":"przelew","counterparty_account":"PL60"}`)
+	if _, errs := x.ProcessPending(inB); len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	var matchID int64
+	derived, _ := x.Store.EventsByKind(inB, core.KindDerived)
+	for _, ev := range derived {
+		if ev.Type == core.EventObjectsMatched {
+			matchID = ev.ID
+		}
+	}
+	if matchID == 0 {
+		t.Fatal("b's payment was not matched")
+	}
+
+	forA := store.ActFor(store.WithScope(ctx, []string{a, b}), a)
+	if _, err := x.TriggerActivity(forA, "unpair_items", map[string]any{"match_event": matchID, "reason": "not ours"}, "shell:test", ""); err == nil {
+		t.Fatal("acting for a, b's match was undone")
+	}
+	invoices, _ := x.Store.ObjectsByType(inB, "sales_invoice")
+	if len(invoices) != 1 || invoices[0].State["status"] != "paid" {
+		t.Fatalf("b's invoice after a's attempt: %+v", invoices)
+	}
+	if n, _ := x.Store.EventsOfTypes(store.WithCompany(ctx, a), []string{core.EventObjectsMatched}); len(n) != 0 {
+		t.Fatalf("a reversal written under a: %+v", n)
 	}
 }
