@@ -1,25 +1,27 @@
 {
   "app": "bank-accounts",
-  "version": 3,
+  "version": 4,
   "title": "Rachunki bankowe",
   "layer": "law",
   "data": [
     {
       "name": "bank_account",
-      "version": 1,
+      "version": 2,
       "domain": "finance",
       "is_document": false,
       "label_field": "name",
+      "key": "number",
       "fields": [
         {
           "name": "name",
           "type": "string",
-          "required": true
+          "required": false
         },
         {
           "name": "number",
           "type": "string",
-          "required": true
+          "required": true,
+          "format": "iban"
         },
         {
           "name": "currency",
@@ -28,8 +30,93 @@
         },
         {
           "name": "bank",
-          "type": "string"
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "proposed",
+            "active",
+            "rejected",
+            "closed"
+          ]
+        },
+        {
+          "name": "source",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "person",
+            "statement"
+          ]
+        },
+        {
+          "name": "proposed_by",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "approved_by",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "seen_on",
+          "type": "date",
+          "required": false
+        },
+        {
+          "name": "closed_on",
+          "type": "date",
+          "required": false
+        },
+        {
+          "name": "reason",
+          "type": "string",
+          "required": false
         }
+      ],
+      "lifecycle": {
+        "field": "status",
+        "initial": "proposed",
+        "transitions": {
+          "proposed": [
+            "active",
+            "rejected"
+          ],
+          "active": [
+            "closed"
+          ]
+        },
+        "moves": {
+          "proposed>active": {
+            "group": "banking",
+            "not_by": "proposed_by",
+            "door": "approve_bank_account",
+            "label": "Zatwierdź"
+          },
+          "proposed>rejected": {
+            "group": "banking",
+            "door": "reject_bank_account",
+            "label": "Odrzuć"
+          },
+          "active>closed": {
+            "group": "banking",
+            "door": "close_bank_account",
+            "label": "Zamknij"
+          }
+        }
+      },
+      "amendable": [
+        "name",
+        "bank",
+        "approved_by",
+        "seen_on",
+        "closed_on",
+        "reason"
       ]
     },
     {
@@ -270,7 +357,7 @@
     },
     {
       "view_id": "rachunki-bankowe",
-      "version": 1,
+      "version": 2,
       "notion": "list",
       "title": "Rachunki bankowe",
       "domain": "finance",
@@ -283,16 +370,28 @@
             "label": "Nazwa"
           },
           {
-            "field": "bank",
-            "label": "Bank"
-          },
-          {
             "field": "number",
             "label": "Numer rachunku"
           },
           {
             "field": "currency",
             "label": "Waluta"
+          },
+          {
+            "field": "bank",
+            "label": "Bank"
+          },
+          {
+            "field": "status",
+            "label": "Status"
+          },
+          {
+            "field": "source",
+            "label": "Skąd"
+          },
+          {
+            "field": "seen_on",
+            "label": "Na wyciągu od"
           }
         ]
       }
@@ -331,6 +430,143 @@
   },
   "actions": [
     {
+      "name": "propose_bank_account",
+      "domain": "finance",
+      "description": "Osoba zgłasza rachunek bankowy firmy: nazwa, numer IBAN (sprawdzany: kraj, długość, cyfry kontrolne), waluta, bank — rachunek czeka na zatwierdzenie przez Bankowość, a wyciągi z niego czekają na ten rachunek",
+      "spec": {
+        "inputs": [
+          {
+            "name": "name",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "number",
+            "type": "string",
+            "required": true,
+            "format": "iban"
+          },
+          {
+            "name": "currency",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "bank",
+            "type": "string"
+          },
+          {
+            "name": "proposed_by",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "bank_account.proposed",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "approve_bank_account",
+      "domain": "finance",
+      "description": "Osoba z Bankowości zatwierdza zgłoszony rachunek — nigdy ta, która go zgłosiła, chyba że jest w Bankowości sama; od teraz wyciągi z niego trafiają do ksiąg, także te, które czekały",
+      "spec": {
+        "inputs": [
+          {
+            "name": "bank_account",
+            "type": "ref<bank_account>",
+            "required": true
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "approved_by",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "bank_account.approved",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "reject_bank_account",
+      "domain": "finance",
+      "description": "Osoba z Bankowości odrzuca zgłoszony rachunek, z powodem — wyciągi z niego dalej czekają",
+      "spec": {
+        "inputs": [
+          {
+            "name": "bank_account",
+            "type": "ref<bank_account>",
+            "required": true
+          },
+          {
+            "name": "reason",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "rejected_by",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "bank_account.rejected",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "close_bank_account",
+      "domain": "finance",
+      "description": "Osoba z Bankowości zamyka rachunek z dniem zamknięcia",
+      "spec": {
+        "inputs": [
+          {
+            "name": "bank_account",
+            "type": "ref<bank_account>",
+            "required": true
+          },
+          {
+            "name": "closed_on",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "closed_by",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "bank_account.closed",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
       "name": "classify_bank_operation",
       "domain": "finance",
       "description": "Osoba mówi, czym jest pozycja wyciągu, której nic nie rozliczyło: pieniądze właściciela, podatek, ZUS, przelew własny, opłata albo odsetki — pozycja przechodzi z rozrachunków z kontrahentami na swoje konto i przestaje czekać",
@@ -367,6 +603,168 @@
     }
   ],
   "rules": [
+    {
+      "rule_id": "pl-propose-bank-account",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Zgłoszony rachunek bankowy firmy staje się rachunkiem do zatwierdzenia: zgłosiła go osoba",
+      "spec": {
+        "match": {
+          "event_type": "bank_account.proposed"
+        },
+        "effect": {
+          "object": {
+            "type": "bank_account",
+            "fields": {
+              "name": "=$.name",
+              "number": "=$.number",
+              "currency": "=$.currency",
+              "bank": "=$.bank",
+              "status": "proposed",
+              "source": "person",
+              "proposed_by": "=$.proposed_by"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-bank-account-from-statement",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Rachunek, z którego przyszedł wyciąg, a którego nikt nie zgłosił, staje się rachunkiem do zatwierdzenia: zgłosił go wyciąg; numer, który nie jest IBAN-em, nie staje się niczym — rachunek zgłasza wtedy osoba",
+      "spec": {
+        "match": {
+          "event_type": "bank.account.seen",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            },
+            {
+              "formula": "=is_iban($.account)"
+            },
+            {
+              "formula": "=count(a in objects(bank_account, number, $.account)) = 0"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "bank_account",
+            "fields": {
+              "name": "=$.account",
+              "number": "=$.account",
+              "currency": "=$.currency",
+              "status": "proposed",
+              "source": "statement",
+              "seen_on": "=$.date"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-bank-account-on-statement",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Rachunek już zgłoszony, z którego przyszedł pierwszy wyciąg, zapisuje dzień tego wyciągu",
+      "spec": {
+        "match": {
+          "event_type": "bank.account.seen",
+          "where": [
+            {
+              "path": "$.market",
+              "op": "eq",
+              "value": "pl"
+            },
+            {
+              "formula": "=count(a in objects(bank_account, number, $.account)) > 0"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "bank_account",
+            "target": "=ref(bank_account, number, $.account)",
+            "set": {
+              "seen_on": "=$.date"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-approve-bank-account",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Zatwierdzony rachunek bankowy jest rachunkiem firmy: kto zatwierdził, i nazwa, jeśli ją poprawił",
+      "spec": {
+        "match": {
+          "event_type": "bank_account.approved"
+        },
+        "effect": {
+          "amend": {
+            "type": "bank_account",
+            "target": "=$.bank_account",
+            "set": {
+              "status": "active",
+              "approved_by": "=$.approved_by",
+              "name": "=$.name"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-reject-bank-account",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Odrzucony rachunek bankowy nie jest rachunkiem firmy: z powodem",
+      "spec": {
+        "match": {
+          "event_type": "bank_account.rejected"
+        },
+        "effect": {
+          "amend": {
+            "type": "bank_account",
+            "target": "=$.bank_account",
+            "set": {
+              "status": "rejected",
+              "reason": "=$.reason"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-close-bank-account",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Zamknięty rachunek bankowy jest zamknięty z dniem zamknięcia",
+      "spec": {
+        "match": {
+          "event_type": "bank_account.closed"
+        },
+        "effect": {
+          "amend": {
+            "type": "bank_account",
+            "target": "=$.bank_account",
+            "set": {
+              "status": "closed",
+              "closed_on": "=$.closed_on"
+            }
+          }
+        }
+      }
+    },
     {
       "rule_id": "pl-bank-operation",
       "priority": 100,

@@ -6,7 +6,7 @@
   "tabs": [
     {
       "view_id": "slownik",
-      "version": 24,
+      "version": 25,
       "notion": "words",
       "title": "Słownik",
       "domain": "finance",
@@ -776,7 +776,12 @@
           "jpk_filing.code": "Kod bramki",
           "jpk_filing.reason": "Powód",
           "jpk_filing.date": "Przygotowano",
-          "jpk_filing.filed_on": "Złożono"
+          "jpk_filing.filed_on": "Złożono",
+          "bank_account.proposed_by": "Zgłosił(a)",
+          "bank_account.approved_by": "Zatwierdził(a)",
+          "bank_account.seen_on": "Na wyciągu od",
+          "bank_account.closed_on": "Zamknięty dnia",
+          "bank_account.source": "Skąd"
         },
         "values": {
           "account.type": {
@@ -1055,11 +1060,22 @@
             "chief_accountant": "Główny księgowy",
             "accountant": "Księgowość",
             "reader": "Podgląd",
-            "all_users": "Wszyscy użytkownicy"
+            "all_users": "Wszyscy użytkownicy",
+            "banking": "Bankowość"
           },
           "group_member.status": {
             "active": "aktywne",
             "ended": "zakończone"
+          },
+          "bank_account.status": {
+            "proposed": "Zgłoszony",
+            "active": "Zatwierdzony",
+            "rejected": "Odrzucony",
+            "closed": "Zamknięty"
+          },
+          "bank_account.source": {
+            "person": "osoba",
+            "statement": "wyciąg"
           },
           "mandate.status": {
             "active": "aktywne",
@@ -1207,6 +1223,11 @@
           "group.declared": "Grupa określona",
           "group.joined": "Dodano do grupy",
           "group.left": "Usunięto z grupy",
+          "bank_account.proposed": "Zgłoszono rachunek bankowy",
+          "bank_account.approved": "Zatwierdzono rachunek bankowy",
+          "bank_account.rejected": "Odrzucono rachunek bankowy",
+          "bank_account.closed": "Zamknięto rachunek bankowy",
+          "bank.account.seen": "Rachunek z wyciągu",
           "access.refused": "Odmowa dostępu",
           "access.recorded": "Logowanie odnotowane",
           "inventory.written_down": "Odpis aktualizujący zapasy",
@@ -1289,6 +1310,10 @@
           "declare_group": "określenie grupy",
           "join_group": "dodanie do grupy",
           "leave_group": "usunięcie z grupy",
+          "propose_bank_account": "dodanie rachunku bankowego",
+          "approve_bank_account": "zatwierdzenie rachunku bankowego",
+          "reject_bank_account": "odrzucenie rachunku bankowego",
+          "close_bank_account": "zamknięcie rachunku bankowego",
           "record_access": "odnotowanie logowania",
           "write_down_inventory": "odpis aktualizujący zapasy",
           "reverse_inventory_write_down": "cofnięcie odpisu zapasów",

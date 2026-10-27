@@ -1,12 +1,17 @@
 {
   "pack": "pl",
-  "version": 53,
+  "version": 54,
   "kind": "market",
   "market": "PL",
   "install": "installation",
   "stage": "initial",
   "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
   "history": [
+    {
+      "versions": "54",
+      "date": "2026-10-27",
+      "changes": "Rachunek bankowy firmy jest zatwierdzany (KK, 2026-10-27: „takie dane jak rachunki bankowe powinna zatwierdzić osoba odpowiedzialna za rachunki”): zgłasza go osoba (numer IBAN sprawdzany: kraj, długość, cyfry kontrolne) albo pierwszy wyciąg z niego; zatwierdza osoba z grupy Bankowość — nigdy ta, która go zgłosiła, chyba że jest w Bankowości sama; dopóki nikogo do Bankowości nie dodano, zatwierdza kierownik firmy; jeden rachunek na numer w firmie; zamknięcie z dniem (rachunki bankowe v4, rachunek bankowy v2, słownik v25)."
+    },
     {
       "versions": "53",
       "date": "2026-10-27",
@@ -224,6 +229,17 @@
     "words"
   ],
   "events": [
+    {
+      "event_type": "group.declared",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/group/banking",
+      "payload": {
+        "name": "banking",
+        "company": "",
+        "description": "Odpowiedzialni za rachunki bankowe firmy: zatwierdzają rachunek, zanim wyciągi z niego trafią do ksiąg",
+        "rights": "door:approve_bank_account door:reject_bank_account door:close_bank_account view:rachunki-bankowe type:bank_account"
+      }
+    },
     {
       "event_type": "account.created",
       "occurred_at": "2026-01-01",
