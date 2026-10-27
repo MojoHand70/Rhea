@@ -215,6 +215,9 @@ func (k KSeF) Pass(ctx context.Context, reads adapter.Reads) ([]core.Event, erro
 // of what was sent, or the evidence is refused as inconsistent: nothing is
 // booked, and the pass error names it for a person.
 func (k KSeF) evidence(r Submission, sent []byte, today string) (core.Event, error) {
+	if r.Original != nil {
+		sent = r.Original // accepted before, under the original's number: the file KSeF holds
+	}
 	if r.Accepted {
 		upo, err := ParseUPO(r.UPO)
 		if err != nil {

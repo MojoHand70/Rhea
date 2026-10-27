@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -84,6 +85,10 @@ type Submission struct {
 	// is unknown; the pass books the final ones even when the session
 	// failed around them.
 	Final bool
+	// Original is the file KSeF already held when this send was a
+	// duplicate of it (440) and the same invoice: the evidence carries it,
+	// its fingerprint and its receipt, not the file sent again.
+	Original []byte
 }
 
 // Reason is the rejection in one line, for a task's description.
@@ -196,8 +201,12 @@ func (c *KSeF2) Submit(ctx context.Context, invoices []Outbound) ([]Submission, 
 	// Every invoice sent is polled and, when accepted, its UPO fetched; a
 	// failure on one leaves the others' evidence in hand instead of
 	// throwing away what KSeF already accepted and numbered.
+	sentXML := make(map[string][]byte, len(invoices))
+	for _, inv := range invoices {
+		sentXML[inv.ID] = inv.XML
+	}
 	for i := range out {
-		if err := c.awaitInvoice(ctx, access, &out[i]); err != nil {
+		if err := c.awaitInvoice(ctx, access, &out[i], sentXML[out[i].ID]); err != nil {
 			if firstErr == nil {
 				firstErr = err
 			}
@@ -207,7 +216,13 @@ func (c *KSeF2) Submit(ctx context.Context, invoices []Outbound) ([]Submission, 
 			out[i].Final = true
 			continue
 		}
-		upo, err := c.upo(ctx, access, session, out[i].Reference)
+		upo, err := "", error(nil)
+		if out[i].Original != nil {
+			// the receipt of the original, in its own session
+			upo, err = c.xmlGet(ctx, access, "/sessions/"+out[i].Session+"/invoices/ksef/"+out[i].KSeFNumber+"/upo")
+		} else {
+			upo, err = c.upo(ctx, access, session, out[i].Reference)
+		}
 		if err != nil {
 			if firstErr == nil {
 				firstErr = err
@@ -434,6 +449,9 @@ type statusInfo struct {
 	Code        int      `json:"code"`
 	Description string   `json:"description"`
 	Details     []string `json:"details"`
+	// Extensions name, for a duplicate (440), the original's KSeF number
+	// and its session: originalKsefNumber, originalSessionReferenceNumber.
+	Extensions map[string]string `json:"extensions"`
 }
 
 func (s statusInfo) String() string {
@@ -479,8 +497,9 @@ func (c *KSeF2) openSession(ctx context.Context, access string, keys []publicKey
 }
 
 // awaitInvoice polls one invoice to its final status: 200 is a KSeF
-// number, anything from 400 up is a rejection with the Ministry's words.
-func (c *KSeF2) awaitInvoice(ctx context.Context, access string, sub *Submission) error {
+// number, a duplicate (440) is compared with the original (duplicate),
+// anything else from 400 up is a rejection with the Ministry's words.
+func (c *KSeF2) awaitInvoice(ctx context.Context, access string, sub *Submission, sent []byte) error {
 	wait := pollFirst
 	for {
 		var st struct {
@@ -496,6 +515,8 @@ func (c *KSeF2) awaitInvoice(ctx context.Context, access string, sub *Submission
 			sub.Accepted, sub.KSeFNumber = true, st.KSeFNumber
 			c.logf("invoice %s accepted: %s", sub.Number, sub.KSeFNumber)
 			return nil
+		case st.Status.Code == 440 && st.Status.Extensions["originalKsefNumber"] != "":
+			return c.duplicate(ctx, access, sub, sent, st.Status.Extensions)
 		case st.Status.Code >= 400:
 			c.logf("invoice %s rejected: %s", sub.Number, st.Status)
 			return nil
@@ -507,9 +528,50 @@ func (c *KSeF2) awaitInvoice(ctx context.Context, access string, sub *Submission
 	}
 }
 
+// duplicate decides a 440: KSeF already holds an invoice of this seller,
+// number and type — the one Rhea sent before, whose answer was lost, or
+// another. The 440 was booked as a final rejection: the invoice was barred
+// from ever being sent, its KSeF number never recorded (review 2026-10-27).
+// Now the original is fetched by its KSeF number and compared (KK,
+// 2026-10-27: "we need to compare content"): the same file, or the same
+// invoice with the day it was written set aside, is this invoice accepted
+// under the original's number and session; another is the rejection KSeF
+// said. An original KSeF does not hand over leaves the fate open.
+func (c *KSeF2) duplicate(ctx context.Context, access string, sub *Submission, sent []byte, ext map[string]string) error {
+	number, session := ext["originalKsefNumber"], ext["originalSessionReferenceNumber"]
+	original, err := c.xmlGet(ctx, access, "/invoices/ksef/"+number)
+	if err != nil {
+		return fmt.Errorf("invoice %s is a duplicate of %s, which KSeF did not hand over to compare: %w", sub.Number, number, err)
+	}
+	if !sameInvoice([]byte(original), sent) {
+		c.logf("invoice %s rejected: KSeF holds another invoice under its number, %s", sub.Number, number)
+		return nil
+	}
+	sum := sha256.Sum256([]byte(original))
+	sub.Accepted, sub.KSeFNumber, sub.Session, sub.Original = true, number, session, []byte(original)
+	sub.InvoiceHash = base64.StdEncoding.EncodeToString(sum[:])
+	c.logf("invoice %s was accepted before, as %s", sub.Number, number)
+	return nil
+}
+
+// writtenAt is the day an FA(3) file was written, the one thing two files
+// of one invoice written on two days differ in.
+var writtenAt = regexp.MustCompile(`<DataWytworzeniaFa>[^<]*</DataWytworzeniaFa>`)
+
+// sameInvoice reports whether two FA(3) files are one invoice: the same
+// bytes, or the same with the day each was written set aside.
+func sameInvoice(a, b []byte) bool {
+	return bytes.Equal(a, b) || bytes.Equal(writtenAt.ReplaceAll(a, nil), writtenAt.ReplaceAll(b, nil))
+}
+
 // upo fetches the official receipt of one accepted invoice, as XML.
 func (c *KSeF2) upo(ctx context.Context, access, session, reference string) (string, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", c.BaseURL+"/sessions/"+session+"/invoices/"+reference+"/upo", nil)
+	return c.xmlGet(ctx, access, "/sessions/"+session+"/invoices/"+reference+"/upo")
+}
+
+// xmlGet is one GET of a document KSeF answers as XML.
+func (c *KSeF2) xmlGet(ctx context.Context, access, path string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", c.BaseURL+path, nil)
 	if err != nil {
 		return "", err
 	}
@@ -525,7 +587,7 @@ func (c *KSeF2) upo(ctx context.Context, access, session, reference string) (str
 		return "", err
 	}
 	if res.StatusCode != 200 {
-		return "", fmt.Errorf("GET upo: %d %s", res.StatusCode, strings.TrimSpace(string(body)))
+		return "", fmt.Errorf("GET %s: %d %s", path, res.StatusCode, strings.TrimSpace(string(body)))
 	}
 	return string(body), nil
 }

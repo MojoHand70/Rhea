@@ -1,6 +1,7 @@
 package pl
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -44,7 +45,12 @@ type fakeKSeFAPI struct {
 	polls    map[string]int
 	received map[string][]byte // invoice reference -> plain XML
 	numbers  map[string]string // invoice reference -> invoice number
-	closed   bool
+	// originals are the files KSeF already holds by invoice number: sent
+	// again, an invoice of one of these numbers is a duplicate (440), and its
+	// original is served by its KSeF number; a nil file is one KSeF will not
+	// hand over.
+	originals map[string][]byte
+	closed    bool
 	// loggedInBy is how the last login proved who it was: "token" or
 	// "signature" — KSeF issues certificates only after a signature.
 	loggedInBy string
@@ -70,6 +76,7 @@ func (f *fakeKSeFAPI) handler() http.Handler {
 	f.tokenKey, tokenCert = selfSigned(f.t)
 	f.symKey, symCert = selfSigned(f.t)
 	f.polls, f.received, f.numbers = map[string]int{}, map[string][]byte{}, map[string]string{}
+	original := func(number string) string { return KSeFReference(f.nip, "2026-08-26", number) }
 	mux := http.NewServeMux()
 	reply := func(w http.ResponseWriter, code int, v any) {
 		w.Header().Set("Content-Type", "application/json")
@@ -315,8 +322,10 @@ func (f *fakeKSeFAPI) handler() http.Handler {
 			reply(w, 200, map[string]any{"referenceNumber": ref, "status": map[string]any{"code": 150, "description": "Trwa przetwarzanie"}})
 			return
 		}
-		if strings.HasSuffix(number, "/DUP") {
-			reply(w, 200, map[string]any{"referenceNumber": ref, "status": map[string]any{"code": 440, "description": "Duplikat faktury", "details": []string{"originalKsefNumber: 5265877635-20250826-0100001AF629-AF"}}})
+		if _, dup := f.originals[number]; dup {
+			reply(w, 200, map[string]any{"referenceNumber": ref, "status": map[string]any{"code": 440, "description": "Duplikat faktury",
+				"details":    []string{"Duplikat faktury. Faktura o numerze KSeF: " + original(number) + " została już prawidłowo przesłana do systemu w sesji: SESSION-0"},
+				"extensions": map[string]string{"originalSessionReferenceNumber": "SESSION-0", "originalKsefNumber": original(number)}}})
 			return
 		}
 		reply(w, 200, map[string]any{"referenceNumber": ref, "ksefNumber": KSeFReference(f.nip, "2026-09-21", number),
@@ -325,6 +334,20 @@ func (f *fakeKSeFAPI) handler() http.Handler {
 	mux.HandleFunc("GET /sessions/SESSION-1/invoices/{ref}/upo", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/xml")
 		w.Write([]byte(`<?xml version="1.0" encoding="utf-8"?><Potwierdzenie><NumerReferencyjnySesji>SESSION-1</NumerReferencyjnySesji><Dokument><NumerFaktury>` + f.numbers[r.PathValue("ref")] + `</NumerFaktury></Dokument></Potwierdzenie>`))
+	})
+	mux.HandleFunc("GET /invoices/ksef/{ksefNumber}", func(w http.ResponseWriter, r *http.Request) {
+		for number, file := range f.originals {
+			if original(number) == r.PathValue("ksefNumber") && file != nil {
+				w.Header().Set("Content-Type", "application/xml")
+				w.Write(file)
+				return
+			}
+		}
+		refuse(w, 404, "Faktura o podanym numerze KSeF nie istnieje")
+	})
+	mux.HandleFunc("GET /sessions/SESSION-0/invoices/ksef/{ksefNumber}/upo", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/xml")
+		w.Write([]byte(`<?xml version="1.0" encoding="utf-8"?><Potwierdzenie><NumerReferencyjnySesji>SESSION-0</NumerReferencyjnySesji><Dokument><NumerKSeFDokumentu>` + r.PathValue("ksefNumber") + `</NumerKSeFDokumentu></Dokument></Potwierdzenie>`))
 	})
 	mux.HandleFunc("POST /sessions/online/SESSION-1/close", func(w http.ResponseWriter, r *http.Request) {
 		f.mu.Lock()
@@ -355,6 +378,8 @@ func TestKSeF2AgainstTheFakeMinistry(t *testing.T) {
 		return body
 	}
 	good, dup := invoice("FV/1/2026"), invoice("FV/2/2026/DUP")
+	// KSeF already holds another invoice under the duplicate's number
+	api.originals = map[string][]byte{"FV/2/2026/DUP": bytes.Replace(dup, []byte("<P_15>1230.00</P_15>"), []byte("<P_15>999.00</P_15>"), 1)}
 	subs, err := client.Submit(context.Background(), []Outbound{{ID: "sales_invoice-1", Number: "FV/1/2026", XML: good}, {ID: "sales_invoice-2", Number: "FV/2/2026/DUP", XML: dup}})
 	if err != nil {
 		t.Fatal(err)
@@ -372,7 +397,7 @@ func TestKSeF2AgainstTheFakeMinistry(t *testing.T) {
 		t.Fatalf("the hash is of the XML sent: %s", a.InvoiceHash)
 	}
 	if d.Accepted || d.Code != 440 || d.Description != "Duplikat faktury" || len(d.Details) != 1 || d.UPO != "" ||
-		d.Reason() != "KSeF 440: Duplikat faktury (originalKsefNumber: 5265877635-20250826-0100001AF629-AF)" {
+		d.Reason() != "KSeF 440: Duplikat faktury (Duplikat faktury. Faktura o numerze KSeF: "+KSeFReference(api.nip, "2026-08-26", "FV/2/2026/DUP")+" została już prawidłowo przesłana do systemu w sesji: SESSION-0)" {
 		t.Fatalf("the rejected invoice: %+v", d)
 	}
 	// What the Ministry decrypted is what Rhea wrote, byte for byte.
@@ -641,5 +666,64 @@ func TestEnrollCertificate(t *testing.T) {
 	signed, _ := seal.SignAuthTokenRequest("20250101-CR-0123456789ABCDEF0123-0123456789-AB", api.nip, time.Now())
 	if _, err := first.LoginSigned(ctx, signed); err != nil {
 		t.Fatalf("a login signed elsewhere: %v", err)
+	}
+}
+
+// A duplicate is compared with the original KSeF holds (KK, 2026-10-27:
+// "Yes, we need to compare content"): an invoice whose answer was lost — the
+// network, a poll or the session's deadline cut it off — is sent again, KSeF
+// answers 440 with the original's number, and the 440 was booked as a final
+// rejection: the content's fingerprint barred it from ever being sent, the
+// KSeF number was never recorded, and the JPK named it as an invoice outside
+// KSeF (review 2026-10-27, high). Now the original is fetched by its KSeF
+// number and compared: the same invoice — the same file, or the same with the
+// day it was written set aside — is accepted under the original's number,
+// with the original's file and receipt; another invoice is the rejection
+// KSeF said; an original KSeF does not hand over leaves the fate open.
+func TestKSeF2ADuplicateIsComparedWithTheOriginal(t *testing.T) {
+	api := &fakeKSeFAPI{t: t, token: "20250101-TK-SECRET", nip: "8058083055"}
+	srv := httptest.NewServer(api.handler())
+	defer srv.Close()
+	client := &KSeF2{BaseURL: srv.URL, NIP: api.nip, Token: api.token,
+		Sleep: func(context.Context, time.Duration) error { return nil },
+		Log:   func(format string, args ...any) { t.Logf(format, args...) }}
+	invoice := func(number, created string, gross int64) []byte {
+		body, err := WriteFA3(FA3Invoice{
+			Seller:   FA3Party{NIP: api.nip, Name: "Rhea Test sp. z o.o.", Address: "ul. Testowa 1, 00-001 Warszawa"},
+			Buyer:    FA3Party{NIP: "5265877635", Name: "Nabywca S.A."},
+			Currency: "PLN", IssueDate: "2026-09-21", Number: number, RateCode: "23",
+			Net: gross * 100 / 123, VAT: gross - gross*100/123, Gross: gross, Created: created, SystemInfo: "Rhea test",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return body
+	}
+	same, other, held := invoice("FV/7/2026", "2026-09-22T08:00:00Z", 123000), invoice("FV/8/2026", "2026-09-22T08:00:00Z", 123000), invoice("FV/9/2026", "2026-09-22T08:00:00Z", 123000)
+	api.originals = map[string][]byte{
+		"FV/7/2026": invoice("FV/7/2026", "2026-09-21T08:00:00Z", 123000), // sent the day before, its answer lost
+		"FV/8/2026": invoice("FV/8/2026", "2026-09-21T08:00:00Z", 246000), // another invoice under the number
+		"FV/9/2026": nil,                                                  // KSeF will not hand it over
+	}
+	subs, err := client.Submit(context.Background(), []Outbound{{ID: "s7", Number: "FV/7/2026", XML: same},
+		{ID: "s8", Number: "FV/8/2026", XML: other}, {ID: "s9", Number: "FV/9/2026", XML: held}})
+	if err == nil {
+		t.Fatal("an original KSeF did not hand over is no answer")
+	}
+	if len(subs) != 3 {
+		t.Fatalf("submissions: %+v", subs)
+	}
+	s7, s8, s9 := subs[0], subs[1], subs[2]
+	orig := sha256.Sum256(api.originals["FV/7/2026"])
+	if !s7.Accepted || !s7.Final || s7.KSeFNumber != KSeFReference(api.nip, "2026-08-26", "FV/7/2026") || s7.Session != "SESSION-0" ||
+		!strings.Contains(s7.UPO, "SESSION-0") || string(s7.Original) != string(api.originals["FV/7/2026"]) ||
+		s7.InvoiceHash != base64.StdEncoding.EncodeToString(orig[:]) {
+		t.Fatalf("the same invoice, sent again: %+v", s7)
+	}
+	if s8.Accepted || !s8.Final || s8.Code != 440 {
+		t.Fatalf("another invoice under the number: %+v", s8)
+	}
+	if s9.Accepted || s9.Final {
+		t.Fatalf("an original KSeF did not hand over: %+v", s9)
 	}
 }
