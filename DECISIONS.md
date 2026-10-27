@@ -5746,3 +5746,35 @@ where the design was silent, each with its reason:
   użytkownicy.
 - *Owed with step 2* (approval steps inside an App): KK's answer that nobody is put into a group that
   approves before one of their devices receives notifications — no group approves anything yet.
+
+## 2026-10-27 — A bank account approved by Bankowość (step 2 of "Tasks, groups and the phone"; KK: "yes step 2")
+
+Built: Rhea d1d8356 (the kernel: a record guards its approval), 19bc898 + 7877e13 (a statement says its account once,
+no question for a person), fc61300 (is_iban), 2d61326 + fe30a86 (Poland pack v54: Rachunki bankowe with the workflow,
+lines waiting), 3dd5f5b (/api/moves), 4006c77 (a record of no company); rheaface 72970bb (the App's button, Dziś's card).
+Claude's choices where the design was silent:
+
+- **The approval lives on the kind of record**, not in one App's screen (KK: a table is used by all Apps): its lifecycle
+  names the state every record begins in and, per transition, the group whose people make it, the field naming who may
+  not (the proposer), and the door and button that make it. The kernel checks it at the door before the fact is written —
+  a refusal leaves nothing in the worklist — and again whenever a chain books.
+- **The proposer approves alone only when alone in the group**; the record then shows the same person as proposer and
+  approver. While nobody was put in a group every company has, its manager is in it (as Grupy shows).
+- **Bankowość is a group every company has** (the Poland pack's master data), giving exactly the bank account's buttons and
+  list, so a person only in Bankowość approves without being an accountant.
+- **A record of no company is its operator's to move**, never the machine's: it exists only in the operator's tools and in
+  stories that keep no company; no company's door can write one, and none is offered on a person's Dziś.
+- **The account a statement names is said once by the reader and is no question for a person**: where a pack proposes the
+  account from it, the proposal is the question. A number that is not an IBAN proposes nothing; a person proposes it.
+- **One account per number** in a company (the kind of record's key), the number an IBAN checked for its country's length
+  and check digits wherever it comes from.
+- *Assessed and left* (2026-10-27): **each account's own ledger account** (130-01, 130-02…) — postings stay on 130 until
+  the company's own chart is decided (KK's direction of 2026-10-24, under discussion); **the bank's name read from the
+  number** — needs the NBP's register of sort codes as master data, never written from memory; **the white-list check of
+  the company's own account at approval** — the register channel exists, next; **a rejected account proposed again** — its
+  number stays taken by the rejected record until reopening is a transition someone asks for.
+- *Owed with step 4* (2026-10-27, invariant 10's notifications aside): KK's answer that nobody is put into a group that
+  approves before one of their devices receives notifications — there is no phone notification yet.
+- *Deploying*: the bank channel binds its reader at code version 2, so after a deploy it waits for the bank channel's
+  v2 to be approved, and reads every statement it has not read yet once it is; the house approves the Poland pack v54 and
+  the bank channel v2 together.

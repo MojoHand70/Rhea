@@ -4548,6 +4548,15 @@ their own rights; the grants made before read as what they became. On the desk, 
 an invitation carries a role and groups. Claude's choices are in DECISIONS under the day. Next: step 2,
 an App's approval step naming its group — the bank account App.
 
+**Step 2 shipped (2026-10-27): the bank account approved by Bankowość.** A kind of record names the state it begins in
+and, per move, the group whose people make it and who may not; the kernel holds every App to it, at the door and when a
+chain books. Rachunki bankowe (Poland pack v54): proposed by a person ("+ Dodanie rachunku bankowego") or by the first
+statement of the account, the IBAN checked, one per number; approved, rejected or closed by Bankowość (its manager until
+handed over), never by the proposer while another could; a statement line of an unapproved account waits and the
+approval releases it. Dziś shows a card for every decision a person may make (/api/moves), with its buttons. Choices and
+what was left are in DECISIONS under the day. Next: step 3, Zadania — the same list as a table, inline and in bulk, in
+every activity.
+
 **The tenant** (KK agreed the proposal): a level the kernel does not have yet — the contract with
 Rhea. A tenant holds an accounting office with its clients, or companies directly; the Tenant Owner
 manages the contract and, by that role alone, sees no company's books.
