@@ -6,7 +6,7 @@
   "tabs": [
     {
       "view_id": "slownik",
-      "version": 25,
+      "version": 26,
       "notion": "words",
       "title": "Słownik",
       "domain": "finance",
@@ -781,7 +781,15 @@
           "bank_account.approved_by": "Zatwierdził(a)",
           "bank_account.seen_on": "Na wyciągu od",
           "bank_account.closed_on": "Zamknięty dnia",
-          "bank_account.source": "Skąd"
+          "bank_account.source": "Skąd",
+          "fx_rate.base": "Z waluty",
+          "fx_rate.quote": "Na walutę",
+          "fx_rate.rate": "Kurs",
+          "intercompany-positions.root_event": "Dokument",
+          "intercompany-positions.receivable": "Należność",
+          "intercompany-positions.payable": "Zobowiązanie",
+          "intercompany-positions.difference": "Różnica",
+          "invoice-by-customer.invoices": "Liczba faktur"
         },
         "values": {
           "account.type": {

@@ -629,6 +629,10 @@ func (s *Server) serveList(ctx context.Context, w http.ResponseWriter, vd *core.
 		fds[i] = fd
 		cols[i] = columnOut{Field: c.Field, Label: c.Label, Type: fd.Type}
 	}
+	if err := s.marketHeaders(ctx, vd, spec.ObjectType, cols); err != nil {
+		writeErr(w, 500, err)
+		return
+	}
 	rows := make([][]cellOut, 0, len(objs))
 	ids := make([]string, 0, len(objs))
 	for _, o := range objs {
@@ -746,6 +750,10 @@ func (s *Server) serveAnalysis(ctx context.Context, w http.ResponseWriter, vd *c
 	// as minor units (BIGINT, invariant 6) and crosses as the decimal string.
 	cols, rows, rowsOf, err := s.analysisData(ctx, spec, p)
 	if err != nil {
+		writeErr(w, 500, err)
+		return
+	}
+	if err := s.marketHeaders(ctx, vd, "", cols); err != nil {
 		writeErr(w, 500, err)
 		return
 	}

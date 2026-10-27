@@ -1,6 +1,7 @@
 package shell
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -69,6 +70,56 @@ func (s *Server) mergedWords(ctx context.Context) (*core.WordsSpec, error) {
 		out.Merge(spec)
 	}
 	return &out, nil
+}
+
+// marketHeaders names, in the company's words, the columns of a view whose
+// packs bring no words of their own (KK's screenshot, 2026-10-27: Wszystkie
+// firmy headed NAME, KIND, COUNTRY). The core and the common packs label
+// their lists and reports in English for any market; a market's words name
+// them where they name the column — a list's as its kind's field (kind.field,
+// else the field), a report's as the view's (view.column, else the column).
+// A pack with words of its own labels its lists in its language on purpose,
+// often shorter than its words ("Nr inw." for "Numer"), and keeps them; so
+// does a view no pack declares (a company's saved report).
+func (s *Server) marketHeaders(ctx context.Context, vd *core.ViewDef, kind string, cols []columnOut) error {
+	words, err := s.mergedWords(ctx)
+	if err != nil || words == nil {
+		return err
+	}
+	decl, err := s.Store.PackDeclarations(ctx)
+	if err != nil {
+		return err
+	}
+	vds, err := s.effectiveViewDefs(ctx)
+	if err != nil {
+		return err
+	}
+	wordsViews := map[string]bool{}
+	for _, v := range vds {
+		if v.Notion == "words" {
+			wordsViews[v.ID] = true
+		}
+	}
+	declared := false
+	for _, ms := range decl {
+		if !slices.ContainsFunc(ms, func(m core.Member) bool { return m.Kind == core.KindViewDef && m.Name == vd.ID }) {
+			continue
+		}
+		declared = true
+		if slices.ContainsFunc(ms, func(m core.Member) bool { return m.Kind == core.KindViewDef && wordsViews[m.Name] }) {
+			return nil // its pack speaks for itself
+		}
+	}
+	if !declared {
+		return nil
+	}
+	of := cmp.Or(kind, vd.ID)
+	for i, c := range cols {
+		if name := cmp.Or(words.Fields[of+"."+c.Field], words.Fields[c.Field]); name != "" {
+			cols[i].Label = name
+		}
+	}
+	return nil
 }
 
 // serveStatement lays one object's own figures out as the statement says:

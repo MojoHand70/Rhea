@@ -1,12 +1,17 @@
 {
   "pack": "pl",
-  "version": 54,
+  "version": 55,
   "kind": "market",
   "market": "PL",
   "install": "installation",
   "stage": "initial",
   "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
   "history": [
+    {
+      "versions": "55",
+      "date": "2026-10-27",
+      "changes": "Listy i raporty, które przynosi rdzeń i pakiety wspólne, mają polskie nagłówki ze Słownika (KK, 2026-10-27: „Wszystkie firmy” pokazywały NAME, KIND, COUNTRY): firmy, dziennik, plan kont, kursy walut, faktury zakupu, wystawione dokumenty, zestawienia obrotów i sald firmy i grupy, pozycje wewnątrzgrupowe, faktury według odbiorców. Kursy walut: „Z waluty”, „Na walutę”, „Kurs” — wcześniej Słownik nazywał je „Podstawa”, „Kurs”, „Stawka”."
+    },
     {
       "versions": "54",
       "date": "2026-10-27",
