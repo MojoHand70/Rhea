@@ -223,3 +223,87 @@ func readTextLayerFor(pdf []byte) (map[string]any, error) {
 	}
 	return out, nil
 }
+
+// A PDF purchase invoice is read only when the company bought it (review
+// 2026-10-27, high): the reader never asked whose invoice it read, so the
+// company's own sales invoice, e-mailed back or scanned with the purchases,
+// became a purchase whose VAT was deducted. Now, where the company's own
+// record says its VAT id, an invoice it issued, or one whose buyer is read
+// as another, is reported unreadable with the reason; a buyer the reading
+// missed is a gap in the reading, not a refusal.
+func TestThePDFReaderBooksOnlyWhatTheCompanyBought(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	x := &exec.Executor{Store: s}
+	for _, pk := range []string{"common/documents.json", "pl/pdf-invoice.json"} {
+		sum, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", pk), "test")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, _, _, err := x.ApproveBundle(ctx, sum.Bundle, "krzysztof", "2026-09-30"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := s.InsertObjectType(ctx, core.ObjectType{Name: "company", Version: 1, Domain: "parties", LabelField: "name",
+		Fields: []core.FieldDef{{Name: "name", Type: "string", Required: true}, {Name: "kind", Type: "string"}, {Name: "vat_id", Type: "string"}}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.InsertRuleVersion(ctx, core.Rule{ID: "register-company", Status: core.StatusActive, Priority: 100,
+		EffectiveFrom: "2026-01-01", CreatedBy: "test", Description: "companies", Spec: core.RuleSpec{
+			Match: core.Match{EventType: "company.registered"},
+			Effect: core.Effect{Object: core.ObjectTemplate{Type: "company", Fields: map[string]string{
+				"name": "=$.name", "kind": "=$.kind", "vat_id": "=$.vat_id"}}}}}); err != nil {
+		t.Fatal(err)
+	}
+	self, _ := json.Marshal(map[string]any{"name": "Helios sp. z o.o.", "kind": "self", "vat_id": "PL8058083055"})
+	if _, err := s.AppendEvent(ctx, core.Event{Kind: core.KindRaw, Type: "company.registered", OccurredAt: "2026-09-01", Payload: self, DedupKey: "self"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, errs := x.ProcessPending(ctx); len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	readings := map[string]map[string]string{
+		"ours":   {"number": "FS/1/2026", "supplier_vat_id": "PL 805-808-30-55", "buyer_nip": "DE123456789"},
+		"theirs": {"number": "R-9", "supplier_vat_id": "DE123456789", "buyer_nip": "PL5265877635"},
+		"bought": {"number": "R-1", "supplier_vat_id": "DE123456789", "buyer_nip": "PL8058083055"},
+		"unsaid": {"number": "R-2", "supplier_vat_id": "DE123456789"},
+	}
+	saved := adapter.ModelReader
+	t.Cleanup(func() { adapter.ModelReader = saved })
+	adapter.ModelReader = func(_ context.Context, _ string, pdf []byte, _ string) (string, error) {
+		rd := map[string]string{"invoice_date": "2026-09-21", "supplier": "a supplier", "net": "100.00", "vat": "19.00",
+			"gross": "119.00", "currency": "EUR", "confidence": "0.99"}
+		for k, v := range readings[strings.TrimPrefix(string(pdf), "%PDF-1.4 ")] {
+			rd[k] = v
+		}
+		b, _ := json.Marshal(rd)
+		return string(b), nil
+	}
+	for name := range readings {
+		if _, err := x.TriggerActivity(ctx, "receive_document", map[string]any{
+			"file":   map[string]any{"name": name + ".pdf", "media_type": "application/pdf", "bytes": []byte("%PDF-1.4 " + name)},
+			"source": "email", "occurred_at": "2026-09-21"}, "shell:krzysztof", ""); err != nil {
+			t.Fatal(err)
+		}
+	}
+	reader, _ := adapter.Lookup("pdf_invoice")
+	if res, err := adapter.Run(ctx, s, x, reader); err != nil || res.PassErr != nil {
+		t.Fatalf("pass: %+v %v", res, err)
+	}
+	raws, _ := s.EventsByKind(ctx, core.KindRaw)
+	bought := map[string]bool{}
+	unreadable := 0
+	for _, ev := range raws {
+		var m map[string]any
+		_ = json.Unmarshal(ev.Payload, &m)
+		switch ev.Type {
+		case "purchase.invoice.received":
+			bought[m["number"].(string)] = true
+		case adapter.EventDocumentUnreadable:
+			unreadable++
+		}
+	}
+	if len(bought) != 2 || !bought["R-1"] || !bought["R-2"] || unreadable != 2 {
+		t.Fatalf("bought %v, unreadable %d", bought, unreadable)
+	}
+}

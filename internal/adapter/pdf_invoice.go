@@ -153,6 +153,10 @@ func (r *PDFInvoice) Pass(ctx context.Context, reads Reads) ([]core.Event, error
 	if err != nil {
 		return nil, err
 	}
+	own, err := ownTaxID(ctx, reads)
+	if err != nil {
+		return nil, err
+	}
 	sort.Slice(docs, func(i, j int) bool { return docs[i].ID < docs[j].ID })
 	var out []core.Event
 	for _, d := range docs {
@@ -178,6 +182,17 @@ func (r *PDFInvoice) Pass(ctx context.Context, reads Reads) ([]core.Event, error
 		fact, confidence, err := r.validate(answer)
 		if err != nil {
 			out = append(out, r.unreadable(hash, name, err.Error()))
+			continue
+		}
+		// A purchase is one the company bought: its own sale, scanned with
+		// the purchases, was booked as one and its VAT deducted (review
+		// 2026-10-27). A buyer the reading missed is a gap, not a refusal.
+		if seller, _ := fact["supplier_nip"].(string); own != "" && sameTaxID(seller, own) {
+			out = append(out, r.unreadable(hash, name, fmt.Sprintf("invoice %s was issued by this company (%s) — a sale of its own, not a purchase", factText(fact, "number"), own)))
+			continue
+		}
+		if buyer, _ := fact["buyer_nip"].(string); own != "" && buyer != "" && !sameTaxID(buyer, own) {
+			out = append(out, r.unreadable(hash, name, fmt.Sprintf("invoice %s was bought by %s, not by this company (%s)", factText(fact, "number"), buyer, own)))
 			continue
 		}
 		fact["document"] = hash
@@ -229,6 +244,56 @@ func (r *PDFInvoice) Pass(ctx context.Context, reads Reads) ([]core.Event, error
 	}
 	return out, nil
 }
+
+// ownTaxID is the VAT id of the company a pass reads for — its one company
+// record of kind self (the core's parties) — or "" when it has none, or more
+// than one.
+func ownTaxID(ctx context.Context, reads Reads) (string, error) {
+	companies, err := reads.ObjectsByType(ctx, "company")
+	if err != nil {
+		return "", err
+	}
+	own, selves := "", 0
+	for _, c := range companies {
+		if c.State["kind"] == "self" {
+			own, _ = c.State["vat_id"].(string)
+			selves++
+		}
+	}
+	if selves != 1 {
+		return "", nil
+	}
+	return own, nil
+}
+
+// sameTaxID reports whether two VAT ids name one taxpayer as written on
+// paper: letters and digits alone, upper case, and either may leave out
+// the country prefix the other writes.
+func sameTaxID(a, b string) bool {
+	norm := func(s string) string {
+		var out strings.Builder
+		for _, r := range strings.ToUpper(s) {
+			if r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' {
+				out.WriteRune(r)
+			}
+		}
+		return out.String()
+	}
+	a, b = norm(a), norm(b)
+	if a == "" || b == "" {
+		return false
+	}
+	bare := func(s string) string {
+		if len(s) > 2 && s[0] >= 'A' && s[0] <= 'Z' && s[1] >= 'A' && s[1] <= 'Z' {
+			return s[2:]
+		}
+		return s
+	}
+	return a == b || bare(a) == bare(b) && (bare(a) == a || bare(b) == b)
+}
+
+// factText is one of a fact's text fields, empty when it has none.
+func factText(fact map[string]any, k string) string { v, _ := fact[k].(string); return v }
 
 // read asks the model when there is one, the text layer otherwise, and
 // names the reader.
