@@ -1,12 +1,12 @@
 {
   "app": "parties",
-  "version": 2,
+  "version": 1,
   "title": "Companies",
   "layer": "core",
   "data": [
     {
       "name": "company",
-      "version": 2,
+      "version": 1,
       "domain": "finance",
       "is_document": false,
       "label_field": "name",
@@ -35,29 +35,7 @@
           "name": "country",
           "type": "string",
           "required": false
-        },
-        {
-          "name": "financial_year_start",
-          "type": "enum",
-          "required": false,
-          "values": [
-            "01",
-            "02",
-            "03",
-            "04",
-            "05",
-            "06",
-            "07",
-            "08",
-            "09",
-            "10",
-            "11",
-            "12"
-          ]
         }
-      ],
-      "amendable": [
-        "financial_year_start"
       ]
     },
     {
@@ -169,65 +147,5 @@
         }
       }
     ]
-  },
-  "actions": [
-    {
-      "name": "set_financial_year",
-      "domain": "finance",
-      "description": "The company acted for says the month its financial year begins in: January for the calendar year, another month for a year of twelve full months from the first of it. Reports count their opening balances and \"from the start of the year\" from that day; a company that says nothing keeps the calendar year",
-      "spec": {
-        "inputs": [
-          {
-            "name": "financial_year_start",
-            "type": "enum",
-            "required": true,
-            "values": [
-              "01",
-              "02",
-              "03",
-              "04",
-              "05",
-              "06",
-              "07",
-              "08",
-              "09",
-              "10",
-              "11",
-              "12"
-            ]
-          },
-          {
-            "name": "occurred_at",
-            "type": "date"
-          }
-        ],
-        "emits": "company.financial_year.set",
-        "who": [
-          "human"
-        ]
-      }
-    }
-  ],
-  "rules": [
-    {
-      "rule_id": "core-set-financial-year",
-      "priority": 100,
-      "effective_from": "2026-01-01",
-      "description": "The month the company's financial year begins in, as it says, on its own record",
-      "spec": {
-        "match": {
-          "event_type": "company.financial_year.set"
-        },
-        "effect": {
-          "amend": {
-            "type": "company",
-            "target": "=ref(company, kind, \"self\")",
-            "set": {
-              "financial_year_start": "=$.financial_year_start"
-            }
-          }
-        }
-      }
-    }
-  ]
+  }
 }

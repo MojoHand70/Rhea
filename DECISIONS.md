@@ -5503,17 +5503,22 @@ This should probably be first Rhea question in onboarding implementation intervi
   never later than today's; today's month while nothing is closed.
 - **The statutory columns**: BO Wn/Ma, obroty okresu Wn/Ma, obroty narastająco Wn/Ma, saldo Wn/Ma.
 - **A company's financial year** is the month it begins in, on the company's own record
-  (`financial_year_start`), set through `set_financial_year`; a company that says nothing keeps the calendar
-  year. It is the first question Rhea asks when a company is set up (the face).
+  (`financial_year_start`), set through `declare_financial_year`; a company that says nothing keeps the
+  calendar year. It is the first question Rhea asks when a company is set up (the face).
 
 *Claude, the spec silent:* the opening balance is every entry dated before the year's first day, so until a
 year's closing entries (dated on its balance day) are booked, its revenue and costs stand in the next year's
 opening balances — the books as they are, the totals agreeing. A row is an account with an opening balance
 or a movement in the year. A period across two years counts "narastająco" from the year its last day falls
 in. The default month reads every book's closes. A scope acting for no company takes the year its companies
-agree on, January when they differ. `set_financial_year` names no company: it sets the company acted for,
-its rule finding the company's own record — the rights check reads an input named `company` as the company
-acted for, and a company's own record has another id. The Polish column names are words keyed
+agree on, January when they differ. `declare_financial_year` names no company: it sets the company acted
+for, its rule finding the company's own record — the rights check reads an input named `company` as the
+company acted for, and a company's own record has another id. The financial year is the Poland pack's (its
+company v8, its "parties" App v4), not the core's: the core cannot add a field to a kind of record a market
+has extended, its versions being one sequence across packs — the first core v6 gave the core's company and
+"parties" App a v2 of their own, numbers the Poland pack had used, and every deploy to white01 stopped at
+`rhea init` (2026-10-27). A market without its own company kind has the calendar year until kinds a company
+or a pack can add to (DIRECTION, "still to settle"). The Polish column names are words keyed
 `trial-balance.<field>`.
 
 *Assessed and left:* a change of financial year (a transitional year) and a first year joined to the next

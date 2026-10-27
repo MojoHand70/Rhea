@@ -10,7 +10,7 @@
     {
       "versions": "50",
       "date": "2026-10-27",
-      "changes": "Rok obrotowy firmy (KK, 2026-10-27): firma mówi, od którego miesiąca zaczyna się jej rok obrotowy (rdzeń v6, set_financial_year) — styczeń to rok kalendarzowy, inny miesiąc to dwanaście pełnych miesięcy od jego pierwszego dnia (ustawa o rachunkowości art. 3 ust. 1 pkt 9); firma to przechowuje (company v8, financial_year_start). Nie podany — rok kalendarzowy. Zestawienie obrotów i sald po polsku, jak je opisuje art. 18 ust. 1 ustawy o rachunkowości (rdzeń v6): BO Wn i Ma, obroty okresu, obroty narastająco od początku roku obrotowego, saldo Wn i Ma (słownik v21)."
+      "changes": "Rok obrotowy firmy (KK, 2026-10-27): firma, w której działasz, mówi, od którego miesiąca zaczyna się jej rok obrotowy (declare_financial_year) — styczeń to rok kalendarzowy, inny miesiąc to dwanaście pełnych miesięcy od jego pierwszego dnia (ustawa o rachunkowości art. 3 ust. 1 pkt 9); firma to przechowuje (company v8, financial_year_start). Nie podany — rok kalendarzowy. Zestawienie obrotów i sald po polsku, jak je opisuje art. 18 ust. 1 ustawy o rachunkowości (rdzeń v6): BO Wn i Ma, obroty okresu, obroty narastająco od początku roku obrotowego, saldo Wn i Ma (słownik v21)."
     },
     {
       "versions": "49",

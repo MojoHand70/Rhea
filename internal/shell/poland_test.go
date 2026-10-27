@@ -115,13 +115,14 @@ func TestM3PolandPack(t *testing.T) {
 	// recompute_cit_advance, spread_cost), 49 master-data events. (The counts
 	// below are the pack as it stands; v44 added enter_company and its two rules,
 	// v45 wrote the pack as 24 Apps, v46 named the core's Apps in its words, v47 gave
-	// Rachunki bankowe its two lists, the bank's lines and its accounts.)
+	// Rachunki bankowe its two lists, the bank's lines and its accounts, v50 the
+	// company's financial year, declare_financial_year and its rule.)
 	packPath := filepath.Join("..", "..", "packs", "pl", "pack.json")
 	sum, err := pack.Load(ctx, s, packPath, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 41 || sum.Views != 40 || sum.Rules != 138 || sum.Activities != 39 || sum.Events != 67 || sum.Apps != 24 || sum.Skipped != 0 ||
+	if sum.Types != 41 || sum.Views != 40 || sum.Rules != 139 || sum.Activities != 40 || sum.Events != 67 || sum.Apps != 24 || sum.Skipped != 0 ||
 		sum.Bundle != "pack-pl-v50" {
 		t.Fatalf("first load: %+v", sum)
 	}
@@ -130,7 +131,7 @@ func TestM3PolandPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Apps != 0 || sum.Skipped != 349 || sum.Bundle != "" {
+	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Apps != 0 || sum.Skipped != 351 || sum.Bundle != "" {
 		t.Fatalf("reload: %+v", sum)
 	}
 

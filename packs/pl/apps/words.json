@@ -1155,7 +1155,7 @@
           "company.entered": "Firma wpisana do kartoteki",
           "client.terms.set": "Ustalono warunki klienta",
           "supplier.terms.set": "Ustalono warunki dostawcy",
-          "company.financial_year.set": "Firma podała swój rok obrotowy"
+          "company.financial_year.declared": "Firma podała swój rok obrotowy"
         },
         "doors": {
           "appoint_deputy": "wyznaczenie zastępcy",
@@ -1231,7 +1231,7 @@
           "set_supplier_terms": "Warunki dostawcy",
           "install_pack": "Zainstaluj pakiet",
           "switch_off_pack": "Wyłącz pakiet",
-          "set_financial_year": "rok obrotowy"
+          "declare_financial_year": "rok obrotowy"
         },
         "account_groups": {
           "0": "Aktywa trwałe",

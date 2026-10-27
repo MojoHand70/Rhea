@@ -3,6 +3,7 @@ package shell_test
 import (
 	"encoding/json"
 	"net/url"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -29,7 +30,7 @@ func TestAReportIsComputedForThePeriodAsked(t *testing.T) {
 		Domain: "finance", Function: "analysis", Spec: spec}); err != nil {
 		t.Fatal(err)
 	}
-	w.mustDoor("kk", a, "set_financial_year", map[string]any{"financial_year_start": "04"})
+	w.mustDoor("kk", a, "declare_financial_year", map[string]any{"financial_year_start": "04"})
 
 	type served struct {
 		Rows   [][]struct{ V string } `json:"rows"`
@@ -84,8 +85,11 @@ func TestAReportIsComputedForThePeriodAsked(t *testing.T) {
 	}
 }
 
-// newBooksWorld is the core installed and approved, with two companies, each
-// with its own record: Alfa, whose owner is kk, and Beta, whose owner is olga.
+// newBooksWorld is the core and the Poland pack installed and approved — the
+// Poland pack's company carries the financial year, the core's cannot (one
+// version sequence per kind, which the market has extended) — with two
+// companies, each with its own record: Alfa, whose owner is kk, and Beta,
+// whose owner is olga.
 func newBooksWorld(t *testing.T) (w *grantsWorld, alfa, beta string) {
 	t.Helper()
 	w = newGrantsWorld(t)
@@ -100,6 +104,13 @@ func newBooksWorld(t *testing.T) (w *grantsWorld, alfa, beta string) {
 		if _, _, errs, err := w.x.ApproveBundle(w.ctx, sum.Bundle, "operator", w.today); err != nil || len(errs) != 0 {
 			t.Fatalf("approve %s: %v %v", sum.Bundle, err, errs)
 		}
+	}
+	pl, err := pack.Load(w.ctx, w.s, filepath.Join("..", "..", "packs", "pl", "pack.json"), "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, errs, err := w.x.ApproveBundle(w.ctx, pl.Bundle, "operator", w.today); err != nil || len(errs) != 0 {
+		t.Fatalf("approve %s: %v %v", pl.Bundle, err, errs)
 	}
 	if _, err := w.s.InsertRuleVersion(w.ctx, core.Rule{ID: "test-own-company", Status: core.StatusActive, Priority: 100, EffectiveFrom: "2026-01-01",
 		CreatedBy: "test", Description: "the company's own record", Spec: core.RuleSpec{Match: core.Match{EventType: "test.company.entered"},

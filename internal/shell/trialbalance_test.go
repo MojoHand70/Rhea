@@ -23,8 +23,6 @@ import (
 func TestTheTrialBalanceIsTheStatutoryOneForAPeriod(t *testing.T) {
 	w, a, b := newBooksWorld(t)
 	for _, r := range []core.Rule{
-		{ID: "test-account", Description: "an account", Spec: core.RuleSpec{Match: core.Match{EventType: "test.account.opened"},
-			Effect: core.Effect{Object: core.ObjectTemplate{Type: "account", Fields: map[string]string{"code": "=$.code", "name": "=$.name", "type": "=$.type"}}}}},
 		{ID: "test-posting", Description: "a line of the books", Spec: core.RuleSpec{Match: core.Match{EventType: "test.posted"},
 			Effect: core.Effect{Object: core.ObjectTemplate{Type: "posting", Fields: map[string]string{"entry": "=$.entry", "line": "=$.line", "book": "main",
 				"account": "=$.account", "side": "=$.side", "amount": "=$.amount", "currency": "PLN", "date": "=$.date"}}}}},
@@ -34,7 +32,7 @@ func TestTheTrialBalanceIsTheStatutoryOneForAPeriod(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	w.mustDoor("kk", a, "set_financial_year", map[string]any{"financial_year_start": "04"})
+	w.mustDoor("kk", a, "declare_financial_year", map[string]any{"financial_year_start": "04"})
 	event := func(typ, date, key string, payload map[string]any) {
 		t.Helper()
 		var out map[string]any
@@ -42,14 +40,17 @@ func TestTheTrialBalanceIsTheStatutoryOneForAPeriod(t *testing.T) {
 			t.Fatalf("%s: %d %v", key, code, out)
 		}
 	}
-	accounts := map[string]string{}
-	for _, c := range [][3]string{{"130", "Rachunek bankowy", "bank"}, {"201", "Rozrachunki z odbiorcami", "debtor"}, {"700", "Sprzedaż", "revenue"}} {
-		event("test.account.opened", "2026-01-01", "acc-"+c[0], map[string]any{"code": c[0], "name": c[1], "type": c[2]})
-		ids, err := w.s.FindObjectIDsByField(w.ctx, "account", "code", c[0])
+	accounts, names := map[string]string{}, map[string]string{} // the Poland pack's chart of accounts
+	for _, code := range []string{"130", "201", "700"} {
+		ids, err := w.s.FindObjectIDsByField(w.ctx, "account", "code", code)
 		if err != nil || len(ids) != 1 {
-			t.Fatalf("account %s: %v %v", c[0], ids, err)
+			t.Fatalf("account %s: %v %v", code, ids, err)
 		}
-		accounts[c[0]] = ids[0]
+		o, err := w.s.GetObject(w.ctx, ids[0])
+		if err != nil {
+			t.Fatal(err)
+		}
+		accounts[code], names[code] = ids[0], o.State["name"].(string)
 	}
 	entry := func(no, date, debit, credit, amount string) {
 		t.Helper()
@@ -90,9 +91,9 @@ func TestTheTrialBalanceIsTheStatutoryOneForAPeriod(t *testing.T) {
 		got = append(got, row)
 	}
 	want := [][]string{
-		{"main", "130", "Rachunek bankowy", "0.00", "0.00", "0.00", "0.00", "600.00", "0.00", "600.00", "0.00"},
-		{"main", "201", "Rozrachunki z odbiorcami", "1000.00", "0.00", "250.00", "0.00", "250.00", "600.00", "650.00", "0.00"},
-		{"main", "700", "Sprzedaż", "0.00", "1000.00", "0.00", "250.00", "0.00", "250.00", "0.00", "1250.00"},
+		{"main", "130", names["130"], "0.00", "0.00", "0.00", "0.00", "600.00", "0.00", "600.00", "0.00"},
+		{"main", "201", names["201"], "1000.00", "0.00", "250.00", "0.00", "250.00", "600.00", "650.00", "0.00"},
+		{"main", "700", names["700"], "0.00", "1000.00", "0.00", "250.00", "0.00", "250.00", "0.00", "1250.00"},
 	}
 	if !reflect.DeepEqual(got, want) || tb.Period != (core.Period{From: "2026-09-01", To: "2026-09-30", YearFrom: "2026-04-01"}) {
 		t.Fatalf("Alfa's September:\n got %v %+v\nwant %v", got, tb.Period, want)

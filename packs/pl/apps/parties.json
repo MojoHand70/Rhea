@@ -459,6 +459,42 @@
           "=$.vat_id"
         ]
       }
+    },
+    {
+      "name": "declare_financial_year",
+      "domain": "finance",
+      "description": "Firma, w której działasz, mówi, od którego miesiąca zaczyna się jej rok obrotowy: od stycznia to rok kalendarzowy, od innego miesiąca — dwanaście pełnych miesięcy od jego pierwszego dnia. Od tego dnia raporty liczą bilans otwarcia i obroty narastająco; firma, która nic nie powie, ma rok kalendarzowy",
+      "spec": {
+        "inputs": [
+          {
+            "name": "financial_year_start",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "01",
+              "02",
+              "03",
+              "04",
+              "05",
+              "06",
+              "07",
+              "08",
+              "09",
+              "10",
+              "11",
+              "12"
+            ]
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "company.financial_year.declared",
+        "who": [
+          "human"
+        ]
+      }
     }
   ],
   "rules": [
@@ -734,6 +770,33 @@
             }
           }
         }
+      }
+    },
+    {
+      "rule_id": "pl-declare-financial-year",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Miesiąc, od którego zaczyna się rok obrotowy firmy, jak go podała — na jej własnym zapisie",
+      "spec": {
+        "match": {
+          "event_type": "company.financial_year.declared"
+        },
+        "effect": {
+          "amend": {
+            "type": "company",
+            "target": "=ref(company, kind, \"self\")",
+            "set": {
+              "financial_year_start": "=$.financial_year_start"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 3 ust. 1 pkt 9: rok obrotowy to „rok kalendarzowy lub inny okres trwający 12 kolejnych pełnych miesięcy kalendarzowych, stosowany również do celów podatkowych”"
+        ],
+        "scope": "pl"
       }
     }
   ]

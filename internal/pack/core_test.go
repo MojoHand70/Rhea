@@ -11,6 +11,7 @@ import (
 	"rhea/internal/core"
 	"rhea/internal/exec"
 	"rhea/internal/pack"
+	"rhea/internal/store"
 	"rhea/internal/store/storetest"
 )
 
@@ -78,8 +79,8 @@ func TestTheKernelShipsItsCore(t *testing.T) {
 // already holds the core as it first shipped: init drafts there only what the
 // core has added since — the installed_pack record, its two doors and their
 // two rules (core v2), and its thirteen Apps (core v3, 2026-10-26), the
-// company's financial year with its door and rule and the trial balance by
-// period (core v6, 2026-10-27) — and nothing of the common packs.
+// trial balance by period (core v6, 2026-10-27) — and nothing of the common
+// packs.
 func TestACoreAlreadyThereDraftsNothing(t *testing.T) {
 	ctx := context.Background()
 	s := storetest.New(t)
@@ -122,9 +123,44 @@ func TestACoreAlreadyThereDraftsNothing(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, sum := range sums {
-		added := sum.Pack == "core" && sum.Types == 4 && sum.Views == 3 && sum.Rules == 7 && sum.Activities == 5 && sum.Apps == 18 && sum.Bundle == "pack-core-v6"
+		added := sum.Pack == "core" && sum.Types == 3 && sum.Views == 3 && sum.Rules == 6 && sum.Activities == 4 && sum.Apps == 18 && sum.Bundle == "pack-core-v6"
 		if !added && (sum.Bundle != "" || sum.Types+sum.Views+sum.Rules+sum.Activities+sum.Upgraded != 0) || len(sum.Conflicts) != 0 {
 			t.Fatalf("init drafted more than the core added since on a database that holds it: %+v", sum)
+		}
+	}
+}
+
+// A core version loads where a market pack has extended the core's Apps and
+// kinds of record before (white01, 2026-10-27): an App's versions and a
+// kind's are one sequence across packs, and the Poland pack had taken the
+// "parties" App's v2 and v3 and the company kind's v2 to v7. The core v6
+// first written gave its "parties" App and its company a v2 of their own,
+// and every deploy stopped at rhea init — "app parties v2 differs from the
+// one stored" — leaving the new programs installed and the old ones running.
+// A core never takes a number a market has used for the same App or kind.
+func TestTheCoreLoadsWhereAMarketExtendedItsAppsBefore(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	for v := 2; v <= 3; v++ {
+		a := core.App{ID: "parties", Version: v, Title: "Kontrahenci", Layer: "law", Data: []string{"company"}}
+		if err := store.InsertAppRow(ctx, s.Pool, a, core.StatusActive); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for v := 2; v <= 7; v++ {
+		ot := core.ObjectType{Name: "company", Version: v, Domain: "finance", LabelField: "name",
+			Fields: []core.FieldDef{{Name: "name", Type: "string", Required: true}, {Name: "kind", Type: "string", Required: true}, {Name: "nip", Type: "string"}}}
+		if err := store.InsertObjectTypeRow(ctx, s.Pool, ot, core.StatusActive); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sums, err := pack.LoadCore(ctx, s, "init")
+	if err != nil {
+		t.Fatalf("init on the Poland pack's history: %v", err)
+	}
+	for _, sum := range sums {
+		if len(sum.Conflicts) != 0 {
+			t.Fatalf("%s: %v", sum.Pack, sum.Conflicts)
 		}
 	}
 }
