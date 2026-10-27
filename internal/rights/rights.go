@@ -206,13 +206,37 @@ func load(ctx context.Context, s *store.Store, today string) (*world, error) {
 		name, _ := r.State["name"].(string)
 		w.roles[name] = append(w.roles[name], r)
 	}
-	if w.memberships, err = s.ObjectsByType(ctx, "membership"); err != nil {
+	// A grant is one Rhea's own rule wrote, in the company it grants into —
+	// the company that gave it, at its own door. The company each grant
+	// names was believed, whoever wrote it and wherever: a company's own
+	// rule, which an accountant may approve, booked her a membership in
+	// another company or made her its owner, and a fact of the
+	// installation's let the people pack's rule book a grant into a company
+	// nobody acting for it gave (review 2026-10-27, critical 2).
+	rheas, err := s.RheasRules(ctx)
+	if err != nil {
 		return nil, err
 	}
-	if w.mandates, err = s.ObjectsByType(ctx, "mandate"); err != nil {
+	grants := func(typ, into string) ([]core.Object, error) {
+		all, err := s.ObjectsByType(ctx, typ)
+		if err != nil {
+			return nil, err
+		}
+		var out []core.Object
+		for _, o := range all {
+			if rheas[o.RuleID] && o.Company != "" && o.Company == str(o, into) {
+				out = append(out, o)
+			}
+		}
+		return out, nil
+	}
+	if w.memberships, err = grants("membership", "company"); err != nil {
 		return nil, err
 	}
-	if w.substitutions, err = s.ObjectsByType(ctx, "substitution"); err != nil {
+	if w.mandates, err = grants("mandate", "client"); err != nil {
+		return nil, err
+	}
+	if w.substitutions, err = grants("substitution", "company"); err != nil {
 		return nil, err
 	}
 	return w, nil

@@ -180,3 +180,83 @@ func TestGrantsFromTheLog(t *testing.T) {
 	}
 	_ = core.ActorHuman
 }
+
+// A grant is the people pack's, written in the company it grants into
+// (review 2026-10-27, critical 2): the rights read every membership, mandate
+// and substitution with the owner's eyes and believed the company each
+// named, whichever rule wrote it and wherever. Anna, an accountant at the
+// office, approved a rule of the office's own that books a membership — her
+// right to approve the office's own rules is enough — and named another
+// company, or herself its owner; or a door of the installation's let
+// Rhea's own rule book a grant into a company nobody acting for it gave.
+// Each made her a member where nobody let her in.
+func TestAGrantIsThePeoplePacksInItsOwnCompany(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	x := &exec.Executor{Store: s, Today: func() string { return "2026-10-20" }}
+	sum, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", "common", "people.json"), "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, errs, err := x.ApproveBundle(ctx, sum.Bundle, "krzysztof", "2026-09-01"); err != nil || len(errs) != 0 {
+		t.Fatalf("approve: %v %v", err, errs)
+	}
+	trigger := func(ctx context.Context, name string, inputs map[string]any) {
+		t.Helper()
+		tr, err := x.TriggerActivity(ctx, name, inputs, "shell:kk", "")
+		if err != nil || tr.Booked != 1 || len(tr.Errors) != 0 {
+			t.Fatalf("%s: %+v %v", name, tr, err)
+		}
+	}
+	submit := func(ctx context.Context, typ string, payload map[string]any) {
+		t.Helper()
+		trigger(ctx, "submit_event", map[string]any{"event_type": typ, "occurred_at": "2026-10-01", "payload": payload})
+	}
+	office, other := "PL5250001111", "PL5260001246"
+	at := func(company string) context.Context { return store.WithCompany(ctx, company) }
+	trigger(ctx, "register_person", map[string]any{"name": "Krzysztof Kowal", "handle": "kk", "role": "owner"})
+	trigger(ctx, "register_person", map[string]any{"name": "Anna Nowak", "handle": "anna", "role": "accountant"})
+	id := func(handle string) string {
+		ids, err := s.FindObjectIDsByField(ctx, "person", "handle", handle)
+		if err != nil || len(ids) != 1 {
+			t.Fatalf("person %s: %v %v", handle, ids, err)
+		}
+		return ids[0]
+	}
+	kk, anna := id("kk"), id("anna")
+	trigger(at(office), "grant_membership", map[string]any{"person": anna, "company": office, "role": "accountant", "from": "2026-01-01", "granted_by": "kk"})
+	trigger(at(other), "grant_membership", map[string]any{"person": kk, "company": other, "role": "owner", "from": "2026-01-01", "granted_by": "kk"})
+
+	// the office's own rule, booking a membership wherever its fact says
+	claim := core.Rule{ID: "claim@" + office, Company: office, Status: core.StatusActive, Priority: 100, EffectiveFrom: "2026-01-01",
+		CreatedBy: "agent", Description: "a claim", Spec: core.RuleSpec{Match: core.Match{EventType: "claim.made"},
+			Effect: core.Effect{Object: core.ObjectTemplate{Type: "membership", Fields: map[string]string{
+				"person": "=$.person", "company": "=$.company", "role": "=$.role", "from": "=$.from", "status": "active", "granted_by": "=$.granted_by"}}}}}
+	if _, err := s.InsertRuleVersion(ctx, claim); err != nil {
+		t.Fatal(err)
+	}
+	submit(at(office), "claim.made", map[string]any{"person": anna, "company": other, "role": "owner", "from": "2026-01-01", "granted_by": "kk"})
+	submit(at(office), "claim.made", map[string]any{"person": anna, "company": office, "role": "owner", "from": "2026-01-01", "granted_by": "kk"})
+	// the installation's facts, booked by the people pack's own rules into
+	// a company no fact of its own named
+	installation := store.WithInstallation(ctx)
+	submit(installation, "membership.granted", map[string]any{"person": anna, "company": other, "role": "owner", "from": "2026-01-01", "granted_by": "kk"})
+	submit(installation, "mandate.granted", map[string]any{"office": office, "client": other, "scope": "*", "from": "2026-01-01", "granted_by": "kk"})
+	submit(installation, "substitution.appointed", map[string]any{"person": kk, "deputy": anna, "company": other, "from": "2026-01-01", "to": "2026-12-31", "granted_by": "kk"})
+	submit(at(office), "substitution.appointed", map[string]any{"person": kk, "deputy": anna, "company": other, "from": "2026-01-01", "to": "2026-12-31", "granted_by": "kk"})
+
+	p, err := rights.Resolve(ctx, s, "anna", "2026-10-20")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := p.Companies(); len(got) != 1 || got[0] != office {
+		t.Fatalf("anna reaches %v: %+v", got, p.Grants)
+	}
+	if _, ok := p.May(office, "door", "grant_membership", "people"); ok {
+		t.Fatalf("anna made herself the office's owner: %+v", p.Grants)
+	}
+	// the grants given at their own company's door still hold
+	if k, _ := rights.Resolve(ctx, s, "kk", "2026-10-20"); len(k.Grants) != 1 || k.Grants[0].Company != other {
+		t.Fatalf("kk's own grant: %+v", k.Grants)
+	}
+}
