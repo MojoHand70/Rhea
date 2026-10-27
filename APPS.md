@@ -66,7 +66,10 @@ invoices, the document sheet, Dziś's cards — until step 2 gives it a definiti
 and "What the face knows that is not its own" list them.
 
 **One owner.** Every kind of record, view, door and rule of a pack is in exactly one App of that
-pack; a check fails on a part in none or in two.
+pack; a check fails on a part in none or in two. Owning is defining, never fencing (KK,
+2026-10-27): "a Data Table can be defined by one app, but this Data Table should be accessible
+system-wide. Other apps can use it both for read and write" — through `uses`. So what must hold
+for every record of a table, an approval among it, belongs to the table, not to one App's screen.
 
 **Across packs** (Claude's choice). A pack may bring a later version of another pack's App, whole, as
 it brings later versions of a kind of record today. The core has Faktury zakupu: purchase invoices
@@ -258,7 +261,8 @@ the face's check and the live walk guard what the person sees.
    The sales-invoice App's workflow, step 3.
 2. **Dziś's decision cards** — the month-end card (which month, its VAT), the bank-line
    classification card, the approval card: each is an App's proposal. Dziś becomes the place every
-   App's *propose* steps appear, drawn generically — steps 1 and 4.
+   App's *propose* steps appear, drawn generically — steps 1 and 4. KK, 2026-10-27: they become
+   tasks in *Zadania*, Dziś's card tells of them (DIRECTION "Tasks, groups and the phone").
 3. **The document sheet** (288 lines) — the invoice's layout, the bank line, "Rozłóż w czasie", the
    cost account: the Apps' detail views and actions, step 2.
 4. **The result and receivables sheets** — statement views in the Poland pack, step 2.

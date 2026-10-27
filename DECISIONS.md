@@ -5568,3 +5568,16 @@ waiting for a rule (queries/pending.sql), about four times per invoice.
   and JPK_KR report. Both are lawful (UoR art. 25 ust. 1 pkt 2). Not built: the kernel refuses a negative
   amount on a posting line (internal/exec/postings.go), so every reversal today is black (packs/pl/REVIEW.md
   FB-17 names the gap).
+
+## 2026-10-27 — Approvals reach people: groups, Zadania, the phone (KK, answering the questions posed the same day)
+
+The design is DIRECTION "Tasks, groups and the phone"; its open points wait for KK.
+
+- **A table is defined by one App and read and written by every App** (KK, correcting Claude's
+  reading of APPS.md's one owner: "we NEVER designed apps like that"). An approval that must hold for
+  every record of a table belongs to the table, whichever App writes it.
+- **Notifications on the phone are required for everyone who approves** (KK, 1a): nobody is put into a
+  group that approves before one of their devices receives them.
+- **Who adds a person to a group that approves:** the Rhea Designer, the Tenant Owner, the Office
+  Manager, the Company Manager (KK).
+- **A client's approval step may name a group of its accounting office, under the mandate** (KK: yes).

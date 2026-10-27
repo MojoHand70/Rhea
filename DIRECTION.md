@@ -4426,6 +4426,121 @@ before its second company is admitted.
 One line: *a lesson is a sentence she can be held to, taught once for the office, earned
 into automation by its record, and shared as the profession's library.*
 
+## Tasks, groups and the phone: who acts on an approval, and how they hear of it (KK, 2026-10-27)
+
+On Helios's desk Rachunki bankowe showed nothing while 53 statement lines were in the books: the
+core's bank account record exists and nothing in the Poland pack fills it. Asked, Rhea said she
+was never taught it and drafted a skill that makes any account registered live at once. KK: "such
+important metadata like bank accounts should be approved by someone responsible for bank accounts,
+this might be an accountant or chief accountant. Accountant should check and validate the data
+before accepted to the system" — an App that adds a bank account, does the mechanical checks, and
+has a workflow with an approval step. Agreed as the first App with a workflow (step 3 of "Rhea
+Apps and business packs"). With it KK named the two things every approval lacks: how a person
+learns there is something to do, and who "someone responsible for banks" is.
+
+**Two approvals, not one.** Teaching Rhea how bank accounts are registered is approved once, by
+whoever releases Apps. Accepting each bank account is approved every time, by the people
+responsible for banks. The draft on Dziś had only the first.
+
+**A table is defined by one App and used by all** (KK, correcting Claude): "a Data Table can be
+defined by one app, but this Data Table should be accessible system-wide. Other apps can use it
+both for read and write." APPS.md's one owner is where a table is defined, never who may touch it.
+Because any App may write a table, an approval guards the table, not one App's screen: a bank
+account written by any App arrives proposed, and only the approval step makes it active.
+
+**The bank account, as the proof** (proposed, Claude; KK: in Rachunki bankowe, "add a button to
+launch a tab").
+- *Proposed* from three places: a person, by the button; a statement from an account nobody
+  registered (every line names its account); the white list showing an account the company
+  declared for its NIP that is not registered.
+- *Checked* at once by the kernel and the market, no model: the IBAN's checksum and length for its
+  country (ISO 13616, every market); the bank read from the number; not registered already; the
+  currency; in Poland, on the white list for the company's NIP, the Ministry's requestId kept as
+  the proof of the check. Each result shows on the record, not only pass or fail.
+- *Approved* by a member of the responsible group who did not propose it, unless nobody else is in
+  it — then alone, and the record says so. At approval the ledger account it books to (130-01,
+  130-02…): every statement line books to 130 today, right with one account, wrong with two.
+- *Closed* with a date; a statement for it after that day is flagged.
+
+The supplier's bank account goes the same way next. Today a purchase invoice's account replaces the
+supplier's without a check (the Poland pack's "Rachunek dostawcy z faktury zakupu (KSeF) uzupełnia
+IBAN kontrahenta"), the shape of the common "we have changed banks" fraud. No money leaves through
+Rhea yet, so it is owed before payments, not urgent.
+
+**Roles are the system's; the business is groups** (KK): "By roles I meant the built in roles in
+the system, and we have to have them … I think these are enough. The rest we can manage by
+Groups."
+- *Rhea Designer* — designs Apps and runs interviews.
+- *Tenant Owner* — owns the tenant's contract with Rhea.
+- *Office Manager* — manages the accounting office's parameters and master data.
+- *Company Manager* — owns a company, which may be an accounting office's client.
+- *User*.
+- *Guest*.
+
+"A group has no role assigned" (KK). A group holds people and other groups; an App's steps, and who
+may use it, name groups. This replaces the role of 2026-10-19 ("People and rights" above: a named
+set of rights, data in a pack, a company able to declare its own); where the people pack's five
+roles of today go is open below.
+
+**Groups.** KK: "If Rhea, while designing an app hears 'This should be approved by someone
+responsible for Banks', she could or even should create a dedicated User Group for that purpose and
+then ask who to add to this Group."
+- Rhea proposes the group with the App's draft and asks who is in it, naming the company's people:
+  "Kto ma być w Bankowości?"
+- Who adds a person to a group that approves (KK): the Rhea Designer, the Tenant Owner, the Office
+  Manager, the Company Manager.
+- A client's step may name a group of its accounting office, under the mandate (KK: yes) — one
+  accountant spread over many clients.
+- Proposed (Claude): members are people or groups, and a circle is refused; membership has dates,
+  as a company membership does, so the books answer who could approve on a given day; an App does
+  not go into production with a step whose group is empty.
+
+**Zadania.** KK: "the 'Dziś' activity needs a new function: Worklist or we can call it 'Zadania' or
+'Todos', which would be the list of tasks a user has to do. A normal table but with a) inline
+buttons and possibility of 'bulk action' = select several tasks (checkbox them) and if they have
+the same actions to do like eg. Approve or Reject, display those buttons on toolbar. The same Todo
+lists should be in every activity but prefiltered to apps from that activity." Dziś's card tells
+of them. Proposed (Claude):
+- One list read from what waits — every App step waiting for a person or a group is a task — and
+  kept nowhere of its own, so it cannot disagree with the books and replay rebuilds it.
+- Dziś's decision cards (a skill waiting, a statement line nothing settled, the month to close, the
+  look-back) become tasks, so the card and the list always agree.
+- Columns: what, the App, the record (it opens), since, by when, for whom (the person, or the
+  group's name).
+- Twelve ticked are twelve acts, each signed and each checked on its own; one refused stops none,
+  and the toolbar says which and why.
+- A group's task is settled by the first member who acts; the others see who did.
+
+**The phone.** KK: "One of the things i would ultimately like to have is a very good notification
+on mobiles … we should even require that."
+- Required for everyone who approves (KK): Rhea puts nobody into a group that approves before one
+  of their devices receives notifications.
+- Proposed (Claude): Web Push through the face, which already installs as an app (its manifest and
+  service worker) — Android at once, an iPhone from its home screen (iOS 16.4 and later). What it
+  needs is the device's permission, asked when the passkey is enrolled on the phone, not the phone's
+  number; no SMS.
+- Proposed (Claude): a notification opens the task and never approves from the lock screen —
+  approving stays a signed act of a signed-in person; the lock screen names the kind of task and
+  the company, never an amount or an account number; tasks arriving within minutes make one
+  notification.
+
+**Order** (proposed): groups → a workflow step naming who may move it (step 3) → Zadania → the
+phone. The bank account App proves all four; the supplier's account follows.
+
+**Open, for KK.**
+1. *Today's five roles* (owner, chief accountant, accountant, reader, support). Proposed: owner →
+   Company Manager; chief accountant, accountant and reader → User, in groups the pack makes in
+   every company (Księgowość, Podgląd…), a new company's Company Manager in each until handed
+   over; support → the house's timed access, as decided 2026-10-21.
+2. *Rhea's own staff*, who approve Rhea's shared rules (the house today). Proposed: a group in
+   Rhea's own company, not a seventh role.
+3. *The tenant* — a level the kernel does not have. Proposed: a tenant holds an accounting office
+   with its clients, or companies directly; the Tenant Owner manages the contract and, by that role
+   alone, sees no company's books.
+4. *A User in no group.* Proposed: Dziś and their own tasks, nothing else.
+5. *A statement from an account not yet approved.* Its lines wait, one approval releasing them all
+   (proposed), or they book to 130 and move after.
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
