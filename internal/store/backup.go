@@ -109,6 +109,13 @@ func (s *Store) Backup(ctx context.Context, w io.Writer) (BackupCounts, error) {
 	return counts, bw.Flush()
 }
 
+// maxBackupLine is the longest line a backup holds: a blob's row, its bytes
+// written as hex — twice the largest file a door takes — and a megabyte for
+// the row around them. At 64 MiB a backup holding a 32 MiB file was written
+// and never read again: verify, the upload and restore refused it, and every
+// backup after it (review 2026-10-27).
+const maxBackupLine = 2*core.MaxFileBytes + 1<<20
+
 // VerifyBackup reads a backup without a database and says whether it is
 // whole: its end line is there and names exactly what it carried. A
 // format-1 backup has no end line and cannot be verified.
@@ -117,7 +124,7 @@ func VerifyBackup(r io.Reader) (BackupCounts, error) {
 	var maxID int64
 	var end *backupEnd
 	sc := bufio.NewScanner(r)
-	sc.Buffer(make([]byte, 1<<20), 64<<20)
+	sc.Buffer(make([]byte, 1<<20), maxBackupLine)
 	first := true
 	for sc.Scan() {
 		if len(sc.Bytes()) == 0 {
@@ -320,7 +327,7 @@ func (s *Store) restore(ctx context.Context, r io.Reader, st *stamper) (BackupCo
 	var maxID int64
 	var end *backupEnd
 	sc := bufio.NewScanner(r)
-	sc.Buffer(make([]byte, 1<<20), 64<<20) // a blob row carries its bytes
+	sc.Buffer(make([]byte, 1<<20), maxBackupLine) // a blob row carries its bytes
 	first := true
 	for sc.Scan() {
 		line := sc.Bytes()

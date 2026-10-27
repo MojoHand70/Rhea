@@ -427,3 +427,27 @@ func TestARestoreRefusesABackupThatIsNotWhole(t *testing.T) {
 		t.Fatalf("a format-1 backup: %v", err)
 	}
 }
+
+// A backup holding the largest file a door takes is whole and restores
+// (review 2026-10-27, high): a door takes a file of 32 MiB, the backup writes
+// its bytes as hex — 64 MiB and the row around them on one line — and both
+// readers stopped at 64 MiB a line. rhea backup said it was written; verify,
+// the upload and restore then refused it, and every backup after it.
+func TestABackupOfTheLargestFileRestores(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	data := bytes.Repeat([]byte{0xA5}, core.MaxFileBytes)
+	if _, err := store.PutBlob(store.WithCompany(ctx, "PL5250001111"), s.Pool, core.HashBytes(data), "application/pdf", data); err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	if _, err := s.Backup(ctx, &buf); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.VerifyBackup(bytes.NewReader(buf.Bytes())); err != nil {
+		t.Fatalf("verify: %v", err)
+	}
+	if _, err := storetest.NewBare(t).Restore(ctx, bytes.NewReader(buf.Bytes())); err != nil {
+		t.Fatalf("restore: %v", err)
+	}
+}
