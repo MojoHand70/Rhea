@@ -1,6 +1,6 @@
 {
   "app": "tax-declarations",
-  "version": 1,
+  "version": 2,
   "title": "Deklaracje podatkowe",
   "layer": "law",
   "data": [
@@ -57,6 +57,401 @@
           ]
         }
       ]
+    },
+    {
+      "name": "jpk_filing",
+      "version": 1,
+      "domain": "finance",
+      "is_document": true,
+      "label_field": "name",
+      "fields": [
+        {
+          "name": "document",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "period",
+          "type": "string"
+        },
+        {
+          "name": "gateway",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "to_sign",
+            "signed",
+            "sent",
+            "accepted",
+            "rejected"
+          ]
+        },
+        {
+          "name": "request",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "package",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "signed",
+          "type": "string"
+        },
+        {
+          "name": "reference",
+          "type": "string"
+        },
+        {
+          "name": "upo",
+          "type": "string"
+        },
+        {
+          "name": "code",
+          "type": "int"
+        },
+        {
+          "name": "reason",
+          "type": "string"
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "filed_on",
+          "type": "date"
+        }
+      ],
+      "lifecycle": {
+        "field": "status",
+        "transitions": {
+          "to_sign": [
+            "signed"
+          ],
+          "signed": [
+            "sent",
+            "rejected"
+          ],
+          "sent": [
+            "accepted",
+            "rejected"
+          ],
+          "rejected": [
+            "signed"
+          ]
+        }
+      },
+      "amendable": [
+        "signed",
+        "reference",
+        "upo",
+        "code",
+        "reason",
+        "filed_on"
+      ]
     }
+  ],
+  "tabs": [
+    {
+      "view_id": "jpk-filings",
+      "version": 1,
+      "notion": "list",
+      "title": "Wysyłka JPK",
+      "domain": "finance",
+      "function": "jpk",
+      "spec": {
+        "object_type": "jpk_filing",
+        "columns": [
+          {
+            "field": "period",
+            "label": "Okres"
+          },
+          {
+            "field": "name",
+            "label": "Plik"
+          },
+          {
+            "field": "status",
+            "label": "Status"
+          },
+          {
+            "field": "reference",
+            "label": "Numer referencyjny"
+          },
+          {
+            "field": "filed_on",
+            "label": "Złożono"
+          },
+          {
+            "field": "reason",
+            "label": "Powód"
+          }
+        ]
+      }
+    }
+  ],
+  "record": {
+    "of": "jpk_filing",
+    "tabs": [
+      {
+        "view_id": "jpk-filing-detail",
+        "version": 1,
+        "notion": "detail",
+        "title": "Wysyłka JPK",
+        "domain": "finance",
+        "function": "jpk",
+        "spec": {
+          "object_type": "jpk_filing",
+          "sections": [
+            {
+              "title": "Plik",
+              "fields": [
+                "period",
+                "name",
+                "document",
+                "gateway",
+                "date"
+              ]
+            },
+            {
+              "title": "Podpis",
+              "fields": [
+                "status",
+                "request",
+                "signed"
+              ]
+            },
+            {
+              "title": "Bramka",
+              "fields": [
+                "reference",
+                "filed_on",
+                "upo",
+                "code",
+                "reason"
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "actions": [
+    {
+      "name": "sign_jpk_filing",
+      "version": 1,
+      "domain": "finance",
+      "description": "Wgraj podpisany plik wysyłki JPK: plik do podpisu pobrany z tej wysyłki, podpisany podpisem kwalifikowanym (z pełnomocnictwem UPL-1 dla klienta) albo profilem zaufanym na gov.pl. Rhea sprawdza, że to zgłoszenie tej wysyłki, wysyła je do bramki Ministerstwa i zachowuje UPO",
+      "spec": {
+        "inputs": [
+          {
+            "name": "filing",
+            "type": "ref<jpk_filing>",
+            "required": true
+          },
+          {
+            "name": "file",
+            "type": "file",
+            "required": true
+          }
+        ],
+        "emits": "jpk.filing.signed",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "jpk_gateway",
+      "version": 1,
+      "domain": "finance",
+      "description": "Kanał bramki JPK Ministerstwa Finansów (e-dokumenty.mf.gov.pl, specyfikacja v5.6.0): przekazany plik JPK_V7M zaszyfrowany dla bramki i zgłoszenie do podpisu (jpk.filing.prepared); podpisane zgłoszenie sprawdzone i wysłane (jpk.filing.sent); status do skutku — złożony z UPO (jpk.filing.accepted) albo odmowa z kodem i słowami bramki (jpk.filing.rejected). Uruchamia się sam co minutę",
+      "spec": {
+        "inputs": [],
+        "emits": "jpk.filing.prepared",
+        "who": [
+          "adapter"
+        ],
+        "channel": {
+          "adapter": "jpk_gateway",
+          "code_version": 1,
+          "format": "bramka e-dokumenty.mf.gov.pl: InitUploadSigned, Put Blob, FinishUpload, Status; ZIP, AES-256-CBC, klucz RSA Ministerstwa",
+          "identity": "klucz jpk_gateway/prepared/<skrót przekazanego pliku>; jpk_gateway/sent|rejected/<id wysyłki>/<skrót podpisanego pliku>; jpk_gateway/accepted|rejected/<id wysyłki>/<numer referencyjny>",
+          "confidence": {
+            "policy": "exact"
+          },
+          "events": [
+            "jpk.filing.prepared",
+            "jpk.filing.sent",
+            "jpk.filing.accepted",
+            "jpk.filing.rejected"
+          ],
+          "volume": "documents",
+          "market": "pl",
+          "poll": "1m"
+        }
+      }
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "pl-jpk-filing-prepared",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Przekazany plik JPK (po skrócie) zaszyfrowany dla bramki staje się wysyłką JPK do podpisu: plik, okres, bramka, zgłoszenie do podpisu i zaszyfrowana paczka (Specyfikacja interfejsów usług JPK v5.6.0 (CIRF, 10.09.2026), §1.2–1.3)",
+      "spec": {
+        "match": {
+          "event_type": "jpk.filing.prepared"
+        },
+        "effect": {
+          "object": {
+            "type": "jpk_filing",
+            "fields": {
+              "document": "=$.document",
+              "name": "=$.name",
+              "period": "=$.period",
+              "gateway": "=$.gateway",
+              "status": "to_sign",
+              "request": "=$.request.hash",
+              "package": "=$.package.hash",
+              "date": "=$.date"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-jpk-filing-signed",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Podpisany plik wgrany przez osobę: wysyłka JPK czeka na wysłanie z tym podpisem (Specyfikacja interfejsów usług JPK v5.6.0 (CIRF, 10.09.2026), §1.3.1)",
+      "spec": {
+        "match": {
+          "event_type": "jpk.filing.signed"
+        },
+        "effect": {
+          "amend": {
+            "type": "jpk_filing",
+            "target": "=$.filing",
+            "set": {
+              "status": "signed",
+              "signed": "=$.file.hash"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-jpk-filing-sent",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Wysłana do bramki: wysyłka JPK niesie numer referencyjny sesji (Specyfikacja interfejsów usług JPK v5.6.0 (CIRF, 10.09.2026), §2.2.1–2.2.3)",
+      "spec": {
+        "match": {
+          "event_type": "jpk.filing.sent"
+        },
+        "effect": {
+          "amend": {
+            "type": "jpk_filing",
+            "target": "=$.filing",
+            "set": {
+              "status": "sent",
+              "reference": "=$.reference"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-jpk-filing-accepted",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Bramka przyjęła dokument (status 200): wysyłka JPK złożona, z UPO i dniem złożenia (Specyfikacja interfejsów usług JPK v5.6.0 (CIRF, 10.09.2026), §2.2.4)",
+      "spec": {
+        "match": {
+          "event_type": "jpk.filing.accepted"
+        },
+        "effect": {
+          "amend": {
+            "type": "jpk_filing",
+            "target": "=$.filing",
+            "set": {
+              "status": "accepted",
+              "upo": "=$.upo.hash",
+              "filed_on": "=$.date"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-jpk-filing-rejected",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Odmowa — bramki (kod i jej słowa) albo Rhea (podpisany plik nie jest zgłoszeniem tej wysyłki): wysyłka JPK odrzucona z powodem; nowy podpisany plik wysyła ją ponownie (Specyfikacja interfejsów usług JPK v5.6.0 (CIRF, 10.09.2026), §2.2.1, §2.2.4)",
+      "spec": {
+        "match": {
+          "event_type": "jpk.filing.rejected"
+        },
+        "effect": {
+          "amend": {
+            "type": "jpk_filing",
+            "target": "=$.filing",
+            "set": {
+              "status": "rejected",
+              "code": "=$.code",
+              "reason": "=$.reason"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-jpk-rejection-task",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Odrzucona wysyłka JPK staje się zadaniem na dziś (kategoria: podatki, priorytet wysoki) z powodem odmowy — decyduje człowiek: nowy podpis albo poprawiony JPK",
+      "spec": {
+        "match": {
+          "event_type": "jpk.filing.rejected"
+        },
+        "effect": {
+          "object": {
+            "type": "task",
+            "fields": {
+              "title": "Wysyłka JPK odrzucona",
+              "status": "open",
+              "due_date": "=$.date",
+              "priority": "high",
+              "category": "taxes",
+              "description": "=$.reason"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "uses": [
+    "task"
   ]
 }

@@ -25,7 +25,7 @@
   - every PDF the model reads waits for a person (gate at 1.00) — trust earned per lesson, DIRECTION "The learning process"
   - lessons per company, not per office: set_cost_account, set_tax_treatment, classify_bank_operation said again for every client — same brief
   - she could propose from the document and waits to be told: a fixed asset, a cost spread over months
-  - the month's end by hand: close, JPK downloaded and sent elsewhere, the client told what to pay — send the JPK under the office's signature, the note "you pay X by the 25th" to the client
+  - the month's end by hand: close, JPK downloaded and sent elsewhere, the client told what to pay — the note "you pay X by the 25th" to the client; sending the JPK under the office's signature is in the kernel (2026-10-27: the jpk_gateway channel seals, the accountant signs outside Rhea and uploads the signed file, Rhea sends and keeps the UPO; proved on the Ministry's test gateway) — owed: the face's three touches (download the file to sign, upload the signed one, see the UPO) and RHEA_JPK_ENV on white01
   - the measure: the accountant's touches per document and minutes per client-month, wrong amounts zero — in the business generator
 - law watching - build a law watch (KK 2026-10-19: later, together with "biegły rewident")
   - as an accountant does it: watch the official sources → find the rules resting on the changed article → draft the rule's next version from the day the law applies → approval → tell the owner what it means for them

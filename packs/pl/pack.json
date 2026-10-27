@@ -1,12 +1,17 @@
 {
   "pack": "pl",
-  "version": 51,
+  "version": 52,
   "kind": "market",
   "market": "PL",
   "install": "installation",
   "stage": "initial",
   "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
   "history": [
+    {
+      "versions": "52",
+      "date": "2026-10-27",
+      "changes": "Wysyłka JPK do bramki Ministerstwa, podpisana przez osobę (KK, 2026-10-27): przekazany plik JPK_V7M Rhea szyfruje dla bramki i daje plik do podpisu; księgowy podpisuje go swoim podpisem kwalifikowanym (z UPL-1) albo właściciel profilem zaufanym, poza Rheą, i wgrywa podpisany plik (sign_jpk_filing); Rhea sprawdza, że to zgłoszenie tej wysyłki, wysyła i zachowuje UPO albo kod i słowa bramki, a odrzucona wysyłka staje się zadaniem na dziś (kanał jpk_gateway, uruchamia się sam co minutę; deklaracje podatkowe v2, wysyłka JPK v1, słownik v23)."
+    },
     {
       "versions": "51",
       "date": "2026-10-27",

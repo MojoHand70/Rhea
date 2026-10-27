@@ -123,7 +123,7 @@ func TestCohabitation(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	for _, id := range []string{"pack-pl-v51", "pack-de-v4"} {
+	for _, id := range []string{"pack-pl-v52", "pack-de-v4"} {
 		post("/api/bundles/"+id+"/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	}
 	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {

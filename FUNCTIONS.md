@@ -773,10 +773,13 @@ The owner's basis → what to pay, when. *Now: not yet.*
 
 **51. The JPK_V7M file** — the accountant · not yet on the desk
 → the file for the month, as the Ministry's schema wants it. *Now: kernel only.*
-- [ ] the file passes the Ministry's schema
+- [x] the file passes the Ministry's schema (2026-10-27: the Ministry's test gateway filed the story's file, its UPO naming Schemat_JPK_V7M(3)_v1-0E.xsd)
 
 **52. Send the JPK** — the accountant · not yet on the desk
-→ sent, with its UPO. *Now: not yet.*
+→ sent, with its UPO. *Now: kernel only (2026-10-27): the JPK channel seals the handed-over file and gives the request to
+sign; the accountant signs it with their own qualified signature (UPL-1 for the client) or the owner with a trusted
+profile on gov.pl, outside Rhea, and uploads the signed file (sign_jpk_filing); the channel sends it and keeps the UPO,
+or the gateway's code and words as a task. Proved on the Ministry's test gateway; the desk shows none of it yet.*
 - [ ] the UPO is kept with the month
 
 **53. Quarterly VAT (JPK_V7K)** — Rhea, for a small taxpayer · *Now: not yet.*

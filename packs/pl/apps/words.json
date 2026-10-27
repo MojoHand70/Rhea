@@ -6,7 +6,7 @@
   "tabs": [
     {
       "view_id": "slownik",
-      "version": 22,
+      "version": 23,
       "notion": "words",
       "title": "Słownik",
       "domain": "finance",
@@ -366,6 +366,12 @@
             "label": "Pozycja PZ",
             "plural": "Pozycje PZ",
             "shape": "card",
+            "kind": "entry"
+          },
+          "jpk_filing": {
+            "label": "Wysyłka JPK",
+            "plural": "Wysyłki JPK",
+            "shape": "paper",
             "kind": "entry"
           }
         },
@@ -740,7 +746,21 @@
           "group-trial-balance.ytd_debit": "Narastająco Wn",
           "group-trial-balance.ytd_credit": "Narastająco Ma",
           "group-trial-balance.closing_debit": "Saldo Wn",
-          "group-trial-balance.closing_credit": "Saldo Ma"
+          "group-trial-balance.closing_credit": "Saldo Ma",
+          "jpk_filing.document": "Przekazany plik",
+          "jpk_filing.name": "Plik",
+          "jpk_filing.period": "Okres",
+          "jpk_filing.gateway": "Bramka",
+          "jpk_filing.status": "Status",
+          "jpk_filing.request": "Plik do podpisu",
+          "jpk_filing.package": "Paczka zaszyfrowana",
+          "jpk_filing.signed": "Podpisany plik",
+          "jpk_filing.reference": "Numer referencyjny",
+          "jpk_filing.upo": "UPO",
+          "jpk_filing.code": "Kod bramki",
+          "jpk_filing.reason": "Powód",
+          "jpk_filing.date": "Przygotowano",
+          "jpk_filing.filed_on": "Złożono"
         },
         "values": {
           "account.type": {
@@ -1084,6 +1104,13 @@
             "10": "1 października",
             "11": "1 listopada",
             "12": "1 grudnia"
+          },
+          "jpk_filing.status": {
+            "to_sign": "Do podpisu",
+            "signed": "Podpisana",
+            "sent": "Wysłana",
+            "accepted": "Złożona",
+            "rejected": "Odrzucona"
           }
         },
         "events": {
@@ -1165,7 +1192,12 @@
           "company.entered": "Firma wpisana do kartoteki",
           "client.terms.set": "Ustalono warunki klienta",
           "supplier.terms.set": "Ustalono warunki dostawcy",
-          "company.financial_year.declared": "Firma podała swój rok obrotowy"
+          "company.financial_year.declared": "Firma podała swój rok obrotowy",
+          "jpk.filing.prepared": "Wysyłka JPK przygotowana do podpisu",
+          "jpk.filing.signed": "Wgrano podpisany plik JPK",
+          "jpk.filing.sent": "JPK wysłany do bramki",
+          "jpk.filing.accepted": "Bramka przyjęła JPK (UPO)",
+          "jpk.filing.rejected": "Wysyłka JPK odrzucona"
         },
         "doors": {
           "appoint_deputy": "wyznaczenie zastępcy",
@@ -1241,7 +1273,9 @@
           "set_supplier_terms": "Warunki dostawcy",
           "install_pack": "Zainstaluj pakiet",
           "switch_off_pack": "Wyłącz pakiet",
-          "declare_financial_year": "rok obrotowy"
+          "declare_financial_year": "rok obrotowy",
+          "sign_jpk_filing": "podpisany plik JPK",
+          "jpk_gateway": "kanał bramki JPK"
         },
         "account_groups": {
           "0": "Aktywa trwałe",

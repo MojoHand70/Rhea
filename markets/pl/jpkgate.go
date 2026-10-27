@@ -362,6 +362,14 @@ func SelfSignedSignerRSA(nip, givenName, surname string, now time.Time) (*CertSi
 	return &CertSigner{Cert: cert, Key: key}, nil
 }
 
+// What can be wrong with a signed file handed back, beside a file that is
+// no XML at all: no signature, no request in it, another package's request.
+var (
+	ErrJPKUnsigned     = errors.New("jpk gateway: the file carries no signature — sign the request with a qualified signature or a trusted profile and hand back the signed file")
+	ErrJPKNoRequest    = errors.New("jpk gateway: the signed file holds no InitUpload request")
+	ErrJPKOtherRequest = errors.New("jpk gateway: the signed file is another request than the one prepared for this filing — sign the request downloaded for it")
+)
+
 // CheckSignedJPKRequest says whether a signed file is the prepared request,
 // signed: it carries a signature, and the request in it names this package
 // — its key, its document, its part. A file signed for another package
@@ -374,11 +382,11 @@ func CheckSignedJPKRequest(prepared, signed []byte) error {
 		return fmt.Errorf("jpk gateway: the prepared request is no InitUpload: %w", err)
 	}
 	if !jpkHasSignature(signed) {
-		return errors.New("jpk gateway: the file carries no signature — sign the request with a qualified signature or a trusted profile and hand back the signed file")
+		return ErrJPKUnsigned
 	}
 	got, ok := jpkFindRequest(signed)
 	if !ok {
-		return errors.New("jpk gateway: the signed file holds no InitUpload request")
+		return ErrJPKNoRequest
 	}
 	wd, gd := want.Document, got.Document
 	same := got.EncryptionKey.Value == want.EncryptionKey.Value &&
@@ -391,7 +399,7 @@ func CheckSignedJPKRequest(prepared, signed []byte) error {
 		same = g.FileName == w.FileName && g.ContentLength == w.ContentLength && g.HashValue.Value == w.HashValue.Value
 	}
 	if !same {
-		return errors.New("jpk gateway: the signed file is another request than the one prepared for this filing — sign the request downloaded for it")
+		return ErrJPKOtherRequest
 	}
 	return nil
 }

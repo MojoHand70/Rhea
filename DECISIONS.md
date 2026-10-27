@@ -5688,3 +5688,25 @@ toolchain to 1.26.10 and x/text (19 reachable vulnerabilities). Then the review'
   but Rhea's file of one invoice differs by its day of writing (the creation time), so the content is
   compared with that time set aside: the same invoice is accepted under the original KSeF number,
   another is a problem for a person.
+
+## 2026-10-27 — Sending the JPK: the channel and the filing (Claude, the spec silent, under KK's choice of the signed file)
+
+- **A filing per handed-over JPK file, named by its hash.** The channel jpk_gateway seals every
+  JPK_V7M handed over through issue_document, on its own (it runs every minute), and offers the
+  request to sign; the person's two acts are handing the file over and uploading the signed request
+  (sign_jpk_filing). The filing names the file by its hash, not by a reference to the issued
+  document, so the Poland pack carries no load-time tie to the documents pack; the hash is also the
+  content the filing seals.
+- **A refused filing takes a new signed file** (a signature the gateway refused, a signer without
+  UPL-1, the wrong file uploaded); a file whose content the gateway refused needs a corrected JPK,
+  which is a new file and so a new filing. A refusal becomes a task on Dziś, as a KSeF refusal does.
+- **The gateway's answers are facts with files**: the package and the request at preparation, the
+  UPO at filing, kept in the company's store under their hashes (af105ec); the facts are keyed by
+  what they are, so a pass run twice appends nothing, and one pass of the channel runs at a time
+  across processes (72a7c91).
+- **A filing prepared for one gateway is never sent to another**: test and production seal with
+  different certificates; a filing prepared for test while the server sends to prod is refused with
+  that reason.
+- **Assessed and left:** the face's three touches (download the file to sign, upload the signed
+  one, see the status and the UPO) are the face's, built apart; the kernel serves the files
+  (/api/blobs) and the door. Authorisation data waits on KK (above).

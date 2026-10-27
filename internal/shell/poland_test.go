@@ -3,6 +3,7 @@ package shell_test
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,6 +11,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"testing/cryptotest"
+	"time"
 
 	"rhea/internal/adapter"
 	"rhea/internal/agent"
@@ -116,14 +119,17 @@ func TestM3PolandPack(t *testing.T) {
 	// below are the pack as it stands; v44 added enter_company and its two rules,
 	// v45 wrote the pack as 24 Apps, v46 named the core's Apps in its words, v47 gave
 	// Rachunki bankowe its two lists, the bank's lines and its accounts, v50 the
-	// company's financial year, declare_financial_year and its rule.)
+	// company's financial year, declare_financial_year and its rule, v52 the JPK
+	// filing: the jpk_filing kind, its list and record, sign_jpk_filing, the
+	// jpk_gateway channel, the five rules of a filing's life and the task a
+	// refused filing becomes.)
 	packPath := filepath.Join("..", "..", "packs", "pl", "pack.json")
 	sum, err := pack.Load(ctx, s, packPath, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 41 || sum.Views != 40 || sum.Rules != 139 || sum.Activities != 40 || sum.Events != 67 || sum.Apps != 24 || sum.Skipped != 0 ||
-		sum.Bundle != "pack-pl-v51" {
+	if sum.Types != 42 || sum.Views != 42 || sum.Rules != 145 || sum.Activities != 42 || sum.Events != 67 || sum.Apps != 24 || sum.Skipped != 0 ||
+		sum.Bundle != "pack-pl-v52" {
 		t.Fatalf("first load: %+v", sum)
 	}
 	// Idempotent: a reload changes nothing — its 24 Apps skipped with the rest.
@@ -131,7 +137,7 @@ func TestM3PolandPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Apps != 0 || sum.Skipped != 351 || sum.Bundle != "" {
+	if sum.Types != 0 || sum.Views != 0 || sum.Rules != 0 || sum.Activities != 0 || sum.Events != 0 || sum.Apps != 0 || sum.Skipped != 362 || sum.Bundle != "" {
 		t.Fatalf("reload: %+v", sum)
 	}
 
@@ -151,7 +157,7 @@ func TestM3PolandPack(t *testing.T) {
 	// Approving the pack's bundle IS the installation: its types, views and
 	// rules activate together, and the chart of accounts and the VAT rates
 	// materialize from the waiting events.
-	post("/api/bundles/pack-pl-v51/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-pl-v52/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {
 		t.Fatalf("worklist not cleared after approvals: %d", len(wl))
 	}
@@ -586,6 +592,92 @@ func TestM3PolandPack(t *testing.T) {
 	blob, err := s.GetBlob(ctx, docs[0].State["hash"].(string))
 	if err != nil || string(blob.Bytes) != file {
 		t.Fatalf("the bytes under the hash are the file rendered: %v", err)
+	}
+
+	// The return goes out, signed by a person (KK, 2026-10-27). The JPK
+	// channel seals the handed-over file for the gateway and offers the
+	// request to sign; a person signs it outside Rhea and hands the signed
+	// file back through sign_jpk_filing; the channel checks it is that
+	// request, sends it, and books the gateway's UPO. Every pass is keyed by
+	// what it does, so a pass run again appends nothing.
+	jpkPass := func(want int) {
+		t.Helper()
+		ch := pl.JPKChannel{Gateway: pl.FakeJPKGateway{}, Today: func() string { return "2026-10-05" }}
+		run, err := adapter.Run(ctx, s, srv.Exec, ch)
+		if err != nil || run.PassErr != nil || run.Submitted != want {
+			t.Fatalf("the JPK channel's pass: %d appended, %d duplicates, %v %v; want %d appended", run.Submitted, run.Duplicates, err, run.PassErr, want)
+		}
+	}
+	filing := func() core.Object {
+		t.Helper()
+		fs, _ := s.ObjectsByType(ctx, "jpk_filing")
+		if len(fs) != 1 {
+			t.Fatalf("%d JPK filings, want the one for September", len(fs))
+		}
+		return fs[0]
+	}
+	// Sealing draws a fresh key each time; told twice (invariant 4, which
+	// compares the raw facts too), the story draws the same ones.
+	cryptotest.SetGlobalRandom(t, 52)
+	jpkPass(1)
+	jpkPass(0)
+	f := filing()
+	if f.State["status"] != "to_sign" || f.State["document"] != docs[0].State["hash"] || f.State["period"] != "2026-09" ||
+		f.State["gateway"] != "fake" || f.State["name"] != "JPK_V7M_5250001111_202609.xml" {
+		t.Fatalf("the filing prepared: %v", f.State)
+	}
+	request, err := s.GetBlob(ctx, f.State["request"].(string))
+	if err != nil || !strings.Contains(string(request.Bytes), "<FileName>JPK_V7M_5250001111_202609.xml</FileName>") {
+		t.Fatalf("the request to sign: %v %.300s", err, request.Bytes)
+	}
+	signedAt := time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)
+	signer, err := pl.SelfSignedSignerRSA("5250001111", "Jan", "Testowy", signedAt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	signed, err := pl.SignJPKRequest(request.Bytes, signer, signedAt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	handBack := func(name string, b []byte) {
+		t.Helper()
+		var sign map[string]any
+		post("/api/activities/sign_jpk_filing/trigger", map[string]any{"actor": "krzysztof", "inputs": map[string]any{
+			"filing": f.ID, "file": map[string]any{"name": name, "media_type": "application/xml", "content_base64": base64.StdEncoding.EncodeToString(b)}}}, &sign)
+		if sign["booked"].(float64) != 1 || filing().State["status"] != "signed" {
+			t.Fatalf("the file handed back: %v, the filing %v", sign, filing().State)
+		}
+	}
+	// First the request comes back unsigned, as a hurried person sends it:
+	// refused before it goes anywhere, and the refusal is a task for today.
+	handBack("JPK_V7M_5250001111_202609_do_podpisu.xml", request.Bytes)
+	jpkPass(1)
+	if f = filing(); f.State["status"] != "rejected" || !strings.Contains(fmt.Sprint(f.State["reason"]), "nie ma podpisu") {
+		t.Fatalf("an unsigned file: %v", f.State)
+	}
+	refusedTask := false
+	for _, task := range func() []core.Object { ts, _ := s.ObjectsByType(ctx, "task"); return ts }() {
+		if task.State["title"] == "Wysyłka JPK odrzucona" && task.State["status"] == "open" && strings.Contains(fmt.Sprint(task.State["description"]), "nie ma podpisu") {
+			refusedTask = true
+		}
+	}
+	if !refusedTask {
+		t.Fatal("the refused filing is no task for today")
+	}
+	handBack("JPK_V7M_5250001111_202609_podpisany.xml", signed)
+	jpkPass(1) // sent
+	if f = filing(); f.State["status"] != "sent" || f.State["reference"] == nil {
+		t.Fatalf("the filing sent: %v", f.State)
+	}
+	jpkPass(1) // the gateway's answer
+	jpkPass(0)
+	f = filing()
+	if f.State["status"] != "accepted" || f.State["filed_on"] != "2026-10-05" {
+		t.Fatalf("the filing filed: %v", f.State)
+	}
+	upo, err := s.GetBlob(ctx, f.State["upo"].(string))
+	if err != nil || !strings.Contains(string(upo.Bytes), f.State["reference"].(string)) {
+		t.Fatalf("the UPO kept: %v %s", err, upo.Bytes)
 	}
 
 	// After the return is filed, a September invoice turns up late. It is
