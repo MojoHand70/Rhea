@@ -803,3 +803,50 @@ func TestACompanyWithBooksIsNobodysToClaim(t *testing.T) {
 		t.Fatalf("the first claim of a fresh company: %d %v", code, out)
 	}
 }
+
+// A saved report is the company's own (KK, 2026-10-27: "Absolutely, saved
+// reports are company own"): a kept answer was a view every company shares,
+// so once a company approved it, its title — the question asked, a name in
+// it — and its query stood in every company's menu (review 2026-10-27,
+// critical 3's rest). Now a kept answer is the company's view: approved
+// inside the company, seen where the company is, nowhere else.
+func TestASavedReportIsTheCompanysOwn(t *testing.T) {
+	w := newGrantsWorld(t)
+	a, b := "PL5250001111", "PL5260001246"
+	w.person("Krzysztof Kowal", "kk", a, "owner")
+	w.person("Olga Nowa", "olga", b, "owner")
+	answered, err := w.x.TriggerActivity(store.WithCompany(w.ctx, a), "host_answered", map[string]any{"question": "Notes for Jan Kowalski?",
+		"sql": "SELECT COUNT(*) AS notes FROM objects WHERE object_type = 'note'", "reading": "One note.",
+		"visual": `{"kind":"table","title":"Notes for Jan Kowalski"}`, "result": `{"columns":["notes"],"rows":[[1]]}`, "rows": 1, "asked_by": "kk", "occurred_at": w.today},
+		"agent:test", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var kept struct {
+		ID string `json:"bundle_id"`
+	}
+	if code := w.call("kk", a, "POST", fmt.Sprintf("/api/answers/%d/keep", answered.EventID), nil, &kept); code != 200 || kept.ID == "" {
+		t.Fatalf("keeping the answer: %d %+v", code, kept)
+	}
+	if code := w.call("kk", a, "POST", "/api/bundles/"+kept.ID+"/approve", map[string]any{}, nil); code != 200 {
+		t.Fatalf("a's owner approving a's saved report: %d", code)
+	}
+	nav := func(person, company string) string {
+		t.Helper()
+		var out any
+		if code := w.call(person, company, "GET", "/api/nav", nil, &out); code != 200 {
+			t.Fatalf("nav for %s: %d", person, code)
+		}
+		b, _ := json.Marshal(out)
+		return string(b)
+	}
+	if !strings.Contains(nav("kk", a), "Notes for Jan Kowalski") {
+		t.Fatal("a's saved report is not in a's menu")
+	}
+	if got := nav("olga", b); strings.Contains(got, "Kowalski") {
+		t.Fatalf("a's saved report in b's menu: %s", got)
+	}
+	if code := w.call("", "", "GET", "/api/nav", nil, nil); code != 200 {
+		t.Fatalf("the installation's menu: %d", code)
+	}
+}

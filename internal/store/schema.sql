@@ -325,6 +325,40 @@ BEGIN
     ALTER POLICY rule_scope ON rule USING (rhea_in_scope(company)) WITH CHECK (rhea_may_write(company));
 END;
 $$;
+-- A view's company (KK, 2026-10-27: "saved reports are company own"): a
+-- company's own view — a kept answer, its title the question asked and its
+-- query — is seen, and written, only in a scope that names the company, as
+-- its rules are; Rhea's views (no company) are every scope's to read and the
+-- installation's alone to write. A view's id keeps its company through every
+-- version. NULL is Rhea's, so a backup from before restores as it was.
+ALTER TABLE view_def ADD COLUMN IF NOT EXISTS company TEXT;
+ALTER TABLE view_def ENABLE ROW LEVEL SECURITY;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'view_def' AND policyname = 'view_def_scope') THEN
+        CREATE POLICY view_def_scope ON view_def TO rhea_app USING (rhea_in_scope(company)) WITH CHECK (rhea_may_write(company));
+    END IF;
+    ALTER POLICY view_def_scope ON view_def USING (rhea_in_scope(company)) WITH CHECK (rhea_may_write(company));
+END;
+$$;
+CREATE OR REPLACE FUNCTION view_company_fixed() RETURNS trigger AS $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM public.view_def WHERE view_id = NEW.view_id
+               AND COALESCE(company, '') <> COALESCE(NEW.company, '')) THEN
+        RAISE EXCEPTION 'view % belongs to another company or to Rhea: a company''s own view is a view of its own', NEW.view_id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'view_company_fixed') THEN
+        CREATE TRIGGER view_company_fixed BEFORE INSERT ON view_def
+            FOR EACH ROW EXECUTE FUNCTION view_company_fixed();
+    END IF;
+END;
+$$;
+ALTER TABLE view_def ENABLE ALWAYS TRIGGER view_company_fixed;
 -- A company's file is seen, and written, only where the company is. A file
 -- with no company is the installation's own, seen only in its own scope:
 -- files kept before they carried a company are each named company's by the

@@ -166,9 +166,10 @@ func (x *Executor) learnedProposal(ctx context.Context, rule core.Rule, company 
 // companysOwn reports whether a door that is Rhea staff's when it changes how
 // every company's books are kept acts here on the acting company's own alone
 // (KK, 2026-10-22: company rules and Rhea's global rules): approving its own
-// rule; approving or rejecting its own bundle, whose rules are all its own and
-// whose types, views and doors are new words nobody had — a new name changes
-// no other company's books, a new version of one every company shares does;
+// rule; approving or rejecting its own bundle, whose rules and views are all
+// its own (a saved report is the company's, KK 2026-10-27) and whose types
+// and doors are new words nobody had — a new name changes no other company's
+// books, a new version of one every company shares does;
 // a backfill acting for it, which plans and books its own past alone. Then the
 // company's right is enough. Anything else, or anything it cannot read, stays
 // staff's. A new door is the company's word only when it acts in the company
@@ -192,6 +193,14 @@ func (x *Executor) companysOwn(ctx context.Context, door string, inputs map[stri
 			return false
 		}
 		for _, m := range b.Members {
+			if m.Kind == core.KindViewDef {
+				// a view is the company's own, whatever its version
+				v, _, err := x.Store.GetViewDefVersion(ctx, m.Name, m.Version)
+				if err != nil || v.Company != company {
+					return false
+				}
+				continue
+			}
 			if m.Kind == core.KindRule && !own(m.Name) || m.Kind != core.KindRule && m.Version != 1 {
 				return false
 			}

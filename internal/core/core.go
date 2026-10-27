@@ -676,6 +676,10 @@ type ViewDef struct {
 	Domain   string          `json:"domain"`
 	Function string          `json:"function"` // submenu grouping
 	Spec     json.RawMessage `json:"spec"`
+	// Company is a company's own view — a saved report — seen and approved
+	// only where the company is (KK, 2026-10-27); empty, Rhea's, every
+	// company's.
+	Company string `json:"company,omitempty"`
 }
 
 // ListSpec: spec of a `list` notion.

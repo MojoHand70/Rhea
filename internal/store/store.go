@@ -1007,10 +1007,14 @@ func (s *Store) InsertViewDef(ctx context.Context, v core.ViewDef) error {
 
 // InsertViewDefRow appends one (view_id, version, status) row.
 func InsertViewDefRow(ctx context.Context, q Querier, v core.ViewDef, status string) error {
+	var company *string
+	if v.Company != "" {
+		company = &v.Company
+	}
 	_, err := q.Exec(ctx, `
-		INSERT INTO view_def (view_id, version, status, notion, title, domain, function, spec)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-		v.ID, v.Version, status, v.Notion, v.Title, v.Domain, v.Function, v.Spec)
+		INSERT INTO view_def (view_id, version, status, notion, title, domain, function, spec, company)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		v.ID, v.Version, status, v.Notion, v.Title, v.Domain, v.Function, v.Spec, company)
 	return err
 }
 
@@ -1020,10 +1024,10 @@ func (s *Store) GetViewDefVersion(ctx context.Context, id string, version int) (
 	var v core.ViewDef
 	var status string
 	err := s.Pool.QueryRow(ctx, `
-		SELECT view_id, version, notion, title, domain, function, spec, status
+		SELECT view_id, version, notion, title, domain, function, spec, status, COALESCE(company, '')
 		FROM view_def WHERE view_id = $1 AND version = $2
 		ORDER BY CASE status WHEN 'draft' THEN 1 ELSE 0 END LIMIT 1`,
-		id, version).Scan(&v.ID, &v.Version, &v.Notion, &v.Title, &v.Domain, &v.Function, &v.Spec, &status)
+		id, version).Scan(&v.ID, &v.Version, &v.Notion, &v.Title, &v.Domain, &v.Function, &v.Spec, &status, &v.Company)
 	if err != nil {
 		return v, "", fmt.Errorf("view %s v%d: %w", id, version, err)
 	}
@@ -1033,7 +1037,7 @@ func (s *Store) GetViewDefVersion(ctx context.Context, id string, version int) (
 // LatestViewDefs returns the newest active version of every view definition.
 func (s *Store) LatestViewDefs(ctx context.Context) ([]core.ViewDef, error) {
 	rows, err := s.Pool.Query(ctx, `
-		SELECT DISTINCT ON (view_id) view_id, version, notion, title, domain, function, spec
+		SELECT DISTINCT ON (view_id) view_id, version, notion, title, domain, function, spec, COALESCE(company, '')
 		FROM view_def WHERE status = 'active' ORDER BY view_id, version DESC`)
 	if err != nil {
 		return nil, err
@@ -1042,7 +1046,7 @@ func (s *Store) LatestViewDefs(ctx context.Context) ([]core.ViewDef, error) {
 	var out []core.ViewDef
 	for rows.Next() {
 		var v core.ViewDef
-		if err := rows.Scan(&v.ID, &v.Version, &v.Notion, &v.Title, &v.Domain, &v.Function, &v.Spec); err != nil {
+		if err := rows.Scan(&v.ID, &v.Version, &v.Notion, &v.Title, &v.Domain, &v.Function, &v.Spec, &v.Company); err != nil {
 			return nil, err
 		}
 		out = append(out, v)

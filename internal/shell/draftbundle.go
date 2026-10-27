@@ -70,6 +70,9 @@ func StoreBundleDraft(ctx context.Context, st *store.Store, k *network.Knowledge
 		members = append(members, core.Member{Kind: core.KindObjectType, Name: t.Name, Version: v})
 	}
 	for _, view := range bd.ViewDefs {
+		// a company's view is its own, named for it as its rules are (KK,
+		// 2026-10-27: saved reports are company own)
+		view.ID, view.Company = core.OwnedID(view.ID, company), company
 		v, err := st.NextViewDefVersion(ctx, view.ID)
 		if err != nil {
 			return core.Bundle{}, err
