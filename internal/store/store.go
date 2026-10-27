@@ -30,6 +30,12 @@ var unmatchedSQL string
 //go:embed queries/pending.sql
 var pendingSQL string
 
+//go:embed queries/last_event.sql
+var lastEventSQL string
+
+//go:embed queries/explained.sql
+var explainedSQL string
+
 //go:embed queries/latest_rules.sql
 var latestRulesSQL string
 
@@ -550,11 +556,46 @@ func (s *Store) UnmatchedRawEvents(ctx context.Context) ([]core.Event, error) {
 // time events included — the worklist is the human view of the same
 // question minus the uneventful days.
 func (s *Store) PendingEvents(ctx context.Context) ([]core.Event, error) {
-	rows, err := s.Pool.Query(ctx, pendingSQL, CompanyOf(ctx))
+	return s.PendingEventsAfter(ctx, 0, 0)
+}
+
+// PendingEventsAfter is the part of that set after one event, up to another
+// (0: no bound) — what came since the executor last read the log.
+func (s *Store) PendingEventsAfter(ctx context.Context, after, upTo int64) ([]core.Event, error) {
+	rows, err := s.Pool.Query(ctx, pendingSQL, CompanyOf(ctx), after, upTo)
 	if err != nil {
 		return nil, err
 	}
 	return scanEvents(rows)
+}
+
+// LastEventID is the newest event the caller's scope sees (0 in an empty log).
+func (s *Store) LastEventID(ctx context.Context) (int64, error) {
+	var id int64
+	err := s.Pool.QueryRow(ctx, lastEventSQL).Scan(&id)
+	return id, err
+}
+
+// Explained says which of these events some event names as its cause: a
+// rule has acted on them.
+func (s *Store) Explained(ctx context.Context, ids []int64) (map[int64]bool, error) {
+	out := map[int64]bool{}
+	if len(ids) == 0 {
+		return out, nil
+	}
+	rows, err := s.Pool.Query(ctx, explainedSQL, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out[id] = true
+	}
+	return out, rows.Err()
 }
 
 // LatestEventOfType returns the newest event of one type, or ok=false when

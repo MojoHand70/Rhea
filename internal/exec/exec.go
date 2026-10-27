@@ -29,6 +29,8 @@ type Executor struct {
 	// books are busy instead of queueing on. Zero waits as long as the
 	// caller's context lets it (the operator's tools); rhea serve sets it.
 	LockWait time.Duration
+	// waiting remembers the facts still waiting for a rule (waiting.go).
+	waiting *waitingMemory
 	// draftTypes overlays a bundle's draft object types for its dry run:
 	// set only on a simulation's private copy of the executor, never on the
 	// one that books.
@@ -62,7 +64,7 @@ func (x *Executor) ProcessPending(ctx context.Context) (int, []error) {
 	}
 	var booked int
 	for {
-		events, err := x.Store.PendingEvents(ctx)
+		events, err := x.waitingFacts(ctx)
 		if err != nil {
 			return booked, []error{err}
 		}
