@@ -559,3 +559,23 @@ func TestABareNumberKeepsItsUnitThroughAFormula(t *testing.T) {
 		t.Fatalf("a count times a price in a raw fact: %v, %v", v, err)
 	}
 }
+
+// A number longer than any the books can hold is refused before it is read
+// (review 2026-10-27, high): a door took {"amount": "777…7.5"} and a rule's
+// condition read it — a megabyte of digits took seconds, four took a minute,
+// all under the executor's one lock, and the fact stayed in the log to be
+// read again on every pass and every replay. A number past the bits a value
+// may hold (maxBits) is refused at the text, in time that does not grow.
+func TestALongNumberIsRefusedAtItsText(t *testing.T) {
+	long := strings.Repeat("7", 100_000) + ".5"
+	if _, err := ParseDecimal(long); err == nil {
+		t.Fatal("a hundred thousand digits read as a number")
+	}
+	if _, err := ParseMoney(long); err == nil {
+		t.Fatal("a hundred thousand digits read as money")
+	}
+	// the longest number a value may hold still reads
+	if _, err := ParseDecimal(strings.Repeat("9", 1200) + ".25"); err != nil {
+		t.Fatalf("1200 digits: %v", err)
+	}
+}

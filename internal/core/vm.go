@@ -707,10 +707,20 @@ func rawOf(v Value) any {
 
 func ratInt(n int64) *big.Rat { return new(big.Rat).SetInt64(n) }
 
+// maxDecimalText is the longest text a number may be written in: the digits
+// of a value at maxBits (1234), a sign and a point. Reading a megabyte of
+// digits took seconds under the executor's lock, four took a minute, and the
+// fact was read again on every pass and replay (review 2026-10-27).
+const maxDecimalText = 1240
+
 // parseDecimal accepts a plain decimal: optional sign, digits, optional
-// fraction. Nothing else — no exponents, no fractions, no floats.
+// fraction. Nothing else — no exponents, no fractions, no floats, and
+// nothing longer than a value may hold.
 func parseDecimal(s string) (*big.Rat, error) {
 	t := strings.TrimSpace(s)
+	if len(t) > maxDecimalText {
+		return nil, fmt.Errorf("a number of %d characters is longer than any a value holds (%d)", len(t), maxDecimalText)
+	}
 	body := strings.TrimPrefix(t, "-")
 	whole, frac, _ := strings.Cut(body, ".")
 	if whole == "" || !digits(whole) || (frac != "" && !digits(frac)) || strings.Count(body, ".") > 1 {
