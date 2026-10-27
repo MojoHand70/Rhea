@@ -137,6 +137,9 @@ type Querier interface {
 
 // --- events ---------------------------------------------------------------
 
+// AppendEvent writes one event inside the caller's transaction (or on q
+// as it is). A fact rules act on is refused unless the caller holds the
+// kernel's lock: a transaction cannot take it half way.
 func AppendEvent(ctx context.Context, q Querier, ev core.Event) (int64, error) {
 	return appendEvent(ctx, q, ev, false)
 }
@@ -162,6 +165,11 @@ func appendEvent(ctx context.Context, q Querier, ev core.Event, skipDuplicate bo
 	// door — nobody opened one — and signed "kernel".
 	if ev.Kind == core.KindRaw && core.ReservedEventType(ev.Type) && ev.ActivityName == "" && !(ev.Type == core.EventAccessRefused && ev.Actor == "kernel") {
 		return 0, fmt.Errorf("event type %q is a system verb — it enters only through its declared activity", ev.Type)
+	}
+	// A fact rules act on is recorded under the kernel's lock, so no chain
+	// ever runs beside a half-written one (lock.go).
+	if ruleFood(ev) && !Locked(ctx) {
+		return 0, fmt.Errorf("a fact rules act on (%s) is recorded under the kernel's lock — through a door, or the store's AppendEvent, which takes it", ev.Type)
 	}
 	// The file is the fact: a document.received names files the store holds,
 	// or it is not appended. Whoever emits it — a door, a channel, a pack —
@@ -230,7 +238,17 @@ func appendEvent(ctx context.Context, q Querier, ev core.Event, skipDuplicate bo
 	return id, err
 }
 
+// AppendEvent records one event on its own; a fact rules act on waits for
+// the kernel's lock (the clock's day, a pack's master data).
 func (s *Store) AppendEvent(ctx context.Context, ev core.Event) (int64, error) {
+	if ruleFood(ev) {
+		held, release, err := s.Lock(ctx, 0)
+		if err != nil {
+			return 0, err
+		}
+		defer release()
+		ctx = held
+	}
 	return AppendEvent(ctx, s.Pool, ev)
 }
 
@@ -239,6 +257,17 @@ func (s *Store) AppendEvent(ctx context.Context, ev core.Event) (int64, error) {
 // cheap-now item). Events the log already has, by dedup key, are skipped and
 // counted; any other failure rolls the whole batch back.
 func (s *Store) AppendEvents(ctx context.Context, evs []core.Event) (appended, duplicates int, err error) {
+	for _, ev := range evs {
+		if ruleFood(ev) { // the batch waits for the kernel's lock as one fact does
+			held, release, err := s.Lock(ctx, 0)
+			if err != nil {
+				return 0, 0, err
+			}
+			defer release()
+			ctx = held
+			break
+		}
+	}
 	tx, err := s.Pool.Begin(ctx)
 	if err != nil {
 		return 0, 0, err
