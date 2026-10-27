@@ -4541,6 +4541,13 @@ on mobiles … we should even require that."
 **Order** (proposed): groups → a workflow step naming who may move it (step 3) → Zadania → the
 phone. The bank account App proves all four; the supplier's account follows.
 
+**Step 1 shipped (2026-10-27): the roles and the groups.** Rhea 76aa148, 4be004a, ecc33d7 (people pack v5,
+Poland pack v53), rheaface 24d45d1. The seven roles, their rights the kernel's; groups that give rights,
+nest, have dates and count only for a person let in; the four groups every company has; nobody raises
+their own rights; the grants made before read as what they became. On the desk, Użytkownicy has Grupy;
+an invitation carries a role and groups. Claude's choices are in DECISIONS under the day. Next: step 2,
+an App's approval step naming its group — the bank account App.
+
 **The tenant** (KK agreed the proposal): a level the kernel does not have yet — the contract with
 Rhea. A tenant holds an accounting office with its clients, or companies directly; the Tenant Owner
 manages the contract and, by that role alone, sees no company's books.
