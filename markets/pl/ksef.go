@@ -26,6 +26,10 @@ type KSeFClient interface {
 	Submit(ctx context.Context, invoices []Outbound) ([]Submission, error)
 }
 
+// signedInAs is a client that knows the NIP its session signs in as: the
+// national API's. The fake signs in as nobody.
+type signedInAs interface{ SignedInAs() string }
+
 // KSeF is the Poland pack's statutory adapter, documents out (DIRECTION
 // 2026-10-15): every sales_invoice without an accepted ksef_submission is
 // written as FA(3) and sent; the evidence comes back as events keyed by
@@ -143,6 +147,15 @@ func (k KSeF) Pass(ctx context.Context, reads adapter.Reads) ([]core.Event, erro
 		fa, err := k.invoiceFor(inv, companies, rates, today)
 		if err != nil {
 			problems = append(problems, err.Error())
+			continue
+		}
+		// A session sends as the one NIP it signed in as: a pass runs per
+		// company, and another company's invoices went out under it, were
+		// refused, and the refusals were kept as final (review
+		// 2026-10-27). An invoice of another seller is a person's problem,
+		// not evidence.
+		if c, ok := k.Client.(signedInAs); ok && fa.Seller.NIP != c.SignedInAs() {
+			problems = append(problems, fmt.Sprintf("invoice %s is sold by NIP %s, and KSeF is signed in as %s — not sent", fa.Number, fa.Seller.NIP, c.SignedInAs()))
 			continue
 		}
 		body, err := WriteFA3(fa)

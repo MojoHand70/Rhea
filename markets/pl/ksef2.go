@@ -709,3 +709,6 @@ func crc8(data []byte) byte {
 	}
 	return crc
 }
+
+// SignedInAs is the NIP the session signs in as: whose invoices it sends.
+func (c *KSeF2) SignedInAs() string { return c.NIP }

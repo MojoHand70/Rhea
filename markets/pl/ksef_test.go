@@ -617,3 +617,58 @@ func TestKSeFSendsACompanysInvoicesWithTheInstallationsRates(t *testing.T) {
 		t.Fatalf("each invoice accepted under its own company: %v", by)
 	}
 }
+
+// signedIn is a KSeF session signed in as one NIP, recording what it sends
+// and answering as the fake does.
+type signedIn struct {
+	nip  string
+	sent *[]string
+}
+
+func (c signedIn) SignedInAs() string { return c.nip }
+
+func (c signedIn) Submit(ctx context.Context, invoices []pl.Outbound) ([]pl.Submission, error) {
+	for _, o := range invoices {
+		*c.sent = append(*c.sent, o.Number)
+	}
+	return pl.FakeKSeF{}.Submit(ctx, invoices)
+}
+
+// KSeF sends a company's invoices only as that company (review 2026-10-27,
+// high): a pass runs per company, but the session signs in with the one NIP
+// the installation was given — another company's invoices went out under
+// it, KSeF refused them, and each refusal was kept as final by its content,
+// never to be sent again. An invoice whose seller is not the NIP the session
+// signs in as is a problem for a person, not evidence, and is not sent.
+func TestKSeFSendsOnlyAsTheSeller(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	x := &exec.Executor{Store: s}
+	installPoland(t, s, x)
+	append1(t, s, x, "company.registered", "2026-09-01", "self", map[string]any{"name": "Rhea Test sp. z o.o.", "kind": "self",
+		"vat_id": "PL8058083055", "country": "PL", "iban": "PL83101010230000261395100000", "address": "ul. Testowa 1, 00-001 Warszawa"})
+	append1(t, s, x, "company.registered", "2026-09-01", "buyer", map[string]any{"name": "Nabywca S.A.", "kind": "customer",
+		"vat_id": "PL5265877635", "country": "PL", "iban": "PL60102010260000042270201111", "address": "ul. Próbna 2, 00-002 Warszawa"})
+	for i, number := range []string{"FV/1/2026", "FV/2/2026"} {
+		append1(t, s, x, "sales.invoice.issued", "2026-09-21", fmt.Sprintf("inv-%d", i), map[string]any{
+			"number": number, "issue_date": "2026-09-21", "seller_nip": "PL8058083055", "buyer_nip": "PL5265877635",
+			"net": "1000.00", "vat": "230.00", "gross": "1230.00", "vat_rate": "23", "currency": "PLN", "intragroup": "no", "market": "pl"})
+	}
+	var sent []string
+	other := pl.KSeF{Client: signedIn{nip: "5250001111", sent: &sent}, Today: func() string { return "2026-09-22" }}
+	run, err := adapter.Run(ctx, s, x, other)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sent) != 0 || run.PassErr == nil || !strings.Contains(run.PassErr.Error(), "5250001111") {
+		t.Fatalf("sent as another company: %v, %v", sent, run.PassErr)
+	}
+	if subs, _ := s.ObjectsByType(ctx, "ksef_submission"); len(subs) != 0 {
+		t.Fatalf("evidence booked for invoices never sent: %v", subs)
+	}
+	// signed in as the seller, both go
+	own := pl.KSeF{Client: signedIn{nip: "8058083055", sent: &sent}, Today: func() string { return "2026-09-22" }}
+	if run, err := adapter.Run(ctx, s, x, own); err != nil || run.PassErr != nil || len(sent) != 2 {
+		t.Fatalf("sent as the seller: %v, %v / %v", sent, err, run.PassErr)
+	}
+}
