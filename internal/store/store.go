@@ -48,6 +48,9 @@ var eventsOfTypesSQL string
 //go:embed queries/object_roots.sql
 var objectRootsSQL string
 
+//go:embed queries/object_sources.sql
+var objectSourcesSQL string
+
 type Store struct {
 	Pool *pgxpool.Pool
 }
@@ -415,6 +418,26 @@ func (s *Store) ObjectRoots(ctx context.Context, typ string) (map[string]int64, 
 			return nil, err
 		}
 		out[id] = root
+	}
+	return out, rows.Err()
+}
+
+// ObjectSources maps each object of one type to the record it was made
+// from, within the context's company; an object a raw fact made directly
+// is not in the map.
+func (s *Store) ObjectSources(ctx context.Context, typ string) (map[string]string, error) {
+	rows, err := s.Pool.Query(ctx, objectSourcesSQL, typ, CompanyOf(ctx))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]string{}
+	for rows.Next() {
+		var id, from string
+		if err := rows.Scan(&id, &from); err != nil {
+			return nil, err
+		}
+		out[id] = from
 	}
 	return out, rows.Err()
 }

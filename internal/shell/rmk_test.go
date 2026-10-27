@@ -158,6 +158,40 @@ func TestPrepaidCosts(t *testing.T) {
 	if got := fmt.Sprint(cellVals(rm.Rows)); got != "[[UBZ/2026 Nabywca S.A. 403 2026-08-01 2027-01-31 600.00 400.00 200.00] [LIC/2026 Nabywca S.A. 403 2026-09-01 2027-08-31 1200.00 300.00 900.00] [SRV/2026 Nabywca S.A. 403 2026-09-01 2026-10-31 50.01 50.01 0.00]]" {
 		t.Fatalf("the schedules: %s", got)
 	}
+	// A line of the books names the record it was made from (KK 2026-10-27:
+	// an RMK entry opened onto "Tego nie ma w księgach" — it shares no
+	// invoice's fact): the spread's entry its schedule, a month's share its
+	// release, the list and the one object alike.
+	var made struct {
+		Objects []struct {
+			ID       string         `json:"object_id"`
+			Rule     string         `json:"rule_id"`
+			MadeFrom string         `json:"made_from"`
+			State    map[string]any `json:"state"`
+		} `json:"objects"`
+	}
+	w.get("/api/objects?type=posting", &made)
+	kinds := map[string]int{}
+	for _, p := range made.Objects {
+		want := map[string]string{"pl-post-prepaid-cost": "prepaid_cost-", "pl-post-prepaid-release": "prepaid_release-"}[p.Rule]
+		if want == "" {
+			continue
+		}
+		if len(p.MadeFrom) < len(want) || p.MadeFrom[:len(want)] != want {
+			t.Fatalf("%s made from %q, want a %s…", p.ID, p.MadeFrom, want)
+		}
+		var one struct {
+			MadeFrom string `json:"made_from"`
+		}
+		w.get("/api/objects/"+p.ID, &one)
+		if one.MadeFrom != p.MadeFrom {
+			t.Fatalf("%s alone made from %q, in the list %q", p.ID, one.MadeFrom, p.MadeFrom)
+		}
+		kinds[want]++
+	}
+	if kinds["prepaid_cost-"] != 6 || kinds["prepaid_release-"] == 0 {
+		t.Fatalf("RMK entries seen: %v", kinds)
+	}
 	var rano rows
 	w.get("/api/views/rano", &rano)
 	found := false

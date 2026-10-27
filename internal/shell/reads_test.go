@@ -112,8 +112,9 @@ func TestFaceReads(t *testing.T) {
 	}
 	var posts struct {
 		Objects []struct {
-			ID   string `json:"object_id"`
-			Root int64  `json:"root_event_id"`
+			ID       string `json:"object_id"`
+			Root     int64  `json:"root_event_id"`
+			MadeFrom string `json:"made_from"`
 		} `json:"objects"`
 	}
 	get("/api/objects?type=posting", 200, &posts)
@@ -121,6 +122,12 @@ func TestFaceReads(t *testing.T) {
 	for _, p := range posts.Objects {
 		if p.Root == one.Root {
 			booked++
+			// The invoice's fact made its entry beside the invoice, not
+			// from it: no record between them, the root names both (an RMK
+			// entry names its record — TestPrepaidCosts).
+			if p.MadeFrom != "" {
+				t.Fatalf("posting %s made from %q, want none", p.ID, p.MadeFrom)
+			}
 		}
 	}
 	if booked != 3 {

@@ -17,10 +17,24 @@ import (
 // is made of. A face built apart reads only this API; nothing here writes.
 
 // objectOut is an object with the raw event its chain starts from: the fact
-// it ultimately explains, shared by everything that fact became.
+// it ultimately explains, shared by everything that fact became — and the
+// record it was made from, when a record made it: an RMK entry its RMK
+// record, a month's share its release, so a line of the books opens
+// through what it books even where no invoice shares its fact.
 type objectOut struct {
 	core.Object
-	RootEventID int64 `json:"root_event_id"`
+	RootEventID int64  `json:"root_event_id"`
+	MadeFrom    string `json:"made_from,omitempty"`
+}
+
+// provenance reads one type's roots and sources together.
+func (s *Server) provenance(ctx context.Context, typ string) (map[string]int64, map[string]string, error) {
+	roots, err := s.Store.ObjectRoots(ctx, typ)
+	if err != nil {
+		return nil, nil, err
+	}
+	from, err := s.Store.ObjectSources(ctx, typ)
+	return roots, from, err
 }
 
 // handleObjects lists one type's objects, each with its state as the
@@ -40,14 +54,14 @@ func (s *Server) handleObjects(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 500, err)
 		return
 	}
-	roots, err := s.Store.ObjectRoots(r.Context(), typ)
+	roots, from, err := s.provenance(r.Context(), typ)
 	if err != nil {
 		writeErr(w, 500, err)
 		return
 	}
 	out := make([]objectOut, len(objs))
 	for i, o := range objs {
-		out[i] = objectOut{Object: o, RootEventID: roots[o.ID]}
+		out[i] = objectOut{Object: o, RootEventID: roots[o.ID], MadeFrom: from[o.ID]}
 	}
 	writeJSON(w, 200, map[string]any{"type": typ, "objects": out})
 }
@@ -61,12 +75,12 @@ func (s *Server) handleObject(w http.ResponseWriter, r *http.Request) {
 	if !s.allowType(w, r, o.Type) {
 		return
 	}
-	roots, err := s.Store.ObjectRoots(r.Context(), o.Type)
+	roots, from, err := s.provenance(r.Context(), o.Type)
 	if err != nil {
 		writeErr(w, 500, err)
 		return
 	}
-	writeJSON(w, 200, objectOut{Object: o, RootEventID: roots[o.ID]})
+	writeJSON(w, 200, objectOut{Object: o, RootEventID: roots[o.ID], MadeFrom: from[o.ID]})
 }
 
 // handleSaid is what the host said in a narrative view, newest first: the
