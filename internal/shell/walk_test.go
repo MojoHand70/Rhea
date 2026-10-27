@@ -159,6 +159,7 @@ func TestEveryReadIsTheCompanysOwn(t *testing.T) {
 		{"GET /api/rights", "GET", "/api/rights?company=" + b, nil},
 		{"GET /api/groups", "GET", "/api/groups", nil},
 		{"GET /api/groups", "GET", "/api/groups?company=" + b, nil},
+		{"GET /api/moves", "GET", "/api/moves", nil},
 		{"GET /api/whoami", "GET", "/api/whoami", nil},
 		{"GET /api/registers", "GET", "/api/registers", nil},
 		{"GET /api/registers/{name}", "GET", "/api/registers/no-such?id=5260250995", nil}, // public records, and no register reached from a test

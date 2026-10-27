@@ -329,43 +329,67 @@ func Groups(ctx context.Context, s *store.Store, company, today string) ([]Group
 // is its manager's, until handed over. The answer is the refusal's reason,
 // empty when the person may.
 func MayMove(ctx context.Context, s *store.Store, handle, company, group, proposer, today string) (string, error) {
-	if core.ActorKind(handle) != core.ActorHuman {
-		return fmt.Sprintf("a person in %s makes this move, never the machine", group), nil
-	}
-	w, err := load(ctx, s, today)
+	m, err := NewMoveCheck(ctx, s, today)
 	if err != nil {
 		return "", err
 	}
+	return m.May(handle, company, group, proposer), nil
+}
+
+// A MoveCheck answers MayMove for many records with the log read once — the
+// list of what waits for a person (GET /api/moves).
+type MoveCheck struct{ w *world }
+
+// NewMoveCheck reads who is in what on the books' day.
+func NewMoveCheck(ctx context.Context, s *store.Store, today string) (*MoveCheck, error) {
+	w, err := load(ctx, s, today)
+	if err != nil {
+		return nil, err
+	}
+	return &MoveCheck{w: w}, nil
+}
+
+// May is MayMove's answer: the refusal's reason, empty when the person may.
+func (m *MoveCheck) May(handle, company, group, proposer string) string {
+	w := m.w
+	if core.ActorKind(handle) != core.ActorHuman {
+		return fmt.Sprintf("a person in %s makes this move, never the machine", group)
+	}
 	id, ok := w.byHandle[handle]
 	if !ok || str(w.persons[id], "status") == "left" {
-		return fmt.Sprintf("%s is no person let into Rhea — a person in %s makes this move", handle, group), nil
+		return fmt.Sprintf("%s is no person let into Rhea — a person in %s makes this move", handle, group)
 	}
 	movers := w.movers(company, group)
 	if len(movers) == 0 {
-		return fmt.Sprintf("nobody is in %s here — put someone in it first", group), nil
+		return fmt.Sprintf("nobody is in %s here — put someone in it first", group)
 	}
 	if !movers[id] {
-		return fmt.Sprintf("a person in %s makes this move, and you are not in it", group), nil
+		return fmt.Sprintf("a person in %s makes this move, and you are not in it", group)
 	}
 	if proposer != "" && proposer == handle && len(movers) > 1 {
-		return fmt.Sprintf("you proposed it — another person in %s makes this move", group), nil
+		return fmt.Sprintf("you proposed it — another person in %s makes this move", group)
 	}
-	return "", nil
+	return ""
+}
+
+// Movers is everyone in a company who may make a move a group is given.
+func (m *MoveCheck) Movers(company, group string) []string {
+	var out []string
+	for id := range m.w.movers(company, group) {
+		out = append(out, str(m.w.persons[id], "handle"))
+	}
+	sort.Strings(out)
+	return out
 }
 
 // Movers is everyone who may make a move a group is given, in a company,
 // today — the people a task waiting for the group is for.
 func Movers(ctx context.Context, s *store.Store, company, group, today string) ([]string, error) {
-	w, err := load(ctx, s, today)
+	m, err := NewMoveCheck(ctx, s, today)
 	if err != nil {
 		return nil, err
 	}
-	var out []string
-	for id := range w.movers(company, group) {
-		out = append(out, str(w.persons[id], "handle"))
-	}
-	sort.Strings(out)
-	return out, nil
+	return m.Movers(company, group), nil
 }
 
 // movers is the people of a group in a company today, by person id.
