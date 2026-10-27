@@ -1,12 +1,17 @@
 {
   "pack": "pl",
-  "version": 48,
+  "version": 49,
   "kind": "market",
   "market": "PL",
   "install": "installation",
   "stage": "initial",
   "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
   "history": [
+    {
+      "versions": "49",
+      "date": "2026-10-27",
+      "changes": "Rozliczenia międzyokresowe w swoich miesiącach (zrzut KK z porannej notatki Heliosa): część kosztu za miesiąc liczy się do ostatniego dnia miesiąca poprzedzającego ten, który się zaczął, w którymkolwiek dniu zegar go otworzy — dotąd zegar, który pierwszy raz ruszył 19 października, sprawił, że już 18 października wróciła w koszty część październikowa; przeniesienie kosztu na 640 ma datę faktury, w tym miesiącu, w którym koszt wszedł do ksiąg — gdy ten miesiąc jest zamknięty, jak dotąd w dniu rozłożenia."
+    },
     {
       "versions": "48",
       "date": "2026-10-27",

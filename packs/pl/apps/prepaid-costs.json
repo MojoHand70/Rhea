@@ -261,7 +261,7 @@
       "rule_id": "pl-post-prepaid-cost",
       "priority": 200,
       "effective_from": "2026-01-01",
-      "description": "Koszt rozłożony w czasie przechodzi z kosztów na rozliczenia międzyokresowe: Wn 640 / Ma konto kosztu, w dniu rozłożenia",
+      "description": "Koszt rozłożony w czasie przechodzi z kosztów na rozliczenia międzyokresowe: Wn 640 / Ma konto kosztu, w dniu faktury — w tym miesiącu, w którym jej koszt wszedł do ksiąg; gdy ten miesiąc jest zamknięty, w dniu rozłożenia",
       "spec": {
         "match": {
           "event_type": "object.materialized",
@@ -277,6 +277,7 @@
           "postings": {
             "book": "pl-stat",
             "currency": "PLN",
+            "date": "=$.state.invoice.invoice_date",
             "lines": [
               {
                 "account": "640",
@@ -302,7 +303,7 @@
       "rule_id": "pl-release-prepaid-costs",
       "priority": 100,
       "effective_from": "2026-01-01",
-      "description": "Gdy zaczyna się miesiąc, każdy koszt rozkładany w czasie oddaje swoją część za miesiąc, który się skończył: narastająco — kwota razy miesiące okresu, które już minęły, przez wszystkie jego miesiące, minus to, co już wróciło w koszty; ostatni miesiąc dopełnia do kwoty; koszt rozłożony później oddaje od razu miesiące, które minęły",
+      "description": "Gdy zaczyna się miesiąc, każdy koszt rozkładany w czasie oddaje swoją część za miesiąc, który się skończył — liczony do ostatniego dnia miesiąca poprzedniego, w którymkolwiek dniu zegar otworzy nowy: narastająco — kwota razy miesiące okresu, które już minęły, przez wszystkie jego miesiące, minus to, co już wróciło w koszty; ostatni miesiąc dopełnia do kwoty; koszt rozłożony później oddaje przy najbliższym otwarciu miesiąca wszystkie miesiące, które minęły",
       "spec": {
         "match": {
           "event_type": "time.month_opened",
@@ -320,10 +321,10 @@
               "prepaid": "=$.line.object_id",
               "invoice": "=$.line.state.invoice",
               "account": "=$.line.state.account",
-              "period": "=month($.doc.date - 1)",
-              "amount": "=max((if(min(max(months_between($.line.state.start, $.doc.date - 1) + 1, 0), $.line.state.months) >= $.line.state.months, $.line.state.amount, round($.line.state.amount * min(max(months_between($.line.state.start, $.doc.date - 1) + 1, 0), $.line.state.months) / $.line.state.months, 2, half_up))) - (sum(r in objects(prepaid_release, prepaid, $.line.object_id) : r.amount)), 0)",
-              "released": "=if(min(max(months_between($.line.state.start, $.doc.date - 1) + 1, 0), $.line.state.months) >= $.line.state.months, $.line.state.amount, round($.line.state.amount * min(max(months_between($.line.state.start, $.doc.date - 1) + 1, 0), $.line.state.months) / $.line.state.months, 2, half_up))",
-              "closed_on": "=$.doc.date - 1"
+              "period": "=month(end_of_month(add_months($.doc.date, -1)))",
+              "amount": "=max((if(min(max(months_between($.line.state.start, end_of_month(add_months($.doc.date, -1))) + 1, 0), $.line.state.months) >= $.line.state.months, $.line.state.amount, round($.line.state.amount * min(max(months_between($.line.state.start, end_of_month(add_months($.doc.date, -1))) + 1, 0), $.line.state.months) / $.line.state.months, 2, half_up))) - (sum(r in objects(prepaid_release, prepaid, $.line.object_id) : r.amount)), 0)",
+              "released": "=if(min(max(months_between($.line.state.start, end_of_month(add_months($.doc.date, -1))) + 1, 0), $.line.state.months) >= $.line.state.months, $.line.state.amount, round($.line.state.amount * min(max(months_between($.line.state.start, end_of_month(add_months($.doc.date, -1))) + 1, 0), $.line.state.months) / $.line.state.months, 2, half_up))",
+              "closed_on": "=end_of_month(add_months($.doc.date, -1))"
             }
           }
         }

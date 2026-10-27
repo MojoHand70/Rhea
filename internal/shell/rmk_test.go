@@ -3,6 +3,7 @@ package shell_test
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"testing"
 
 	"rhea/internal/core"
@@ -211,5 +212,93 @@ func TestPrepaidCosts(t *testing.T) {
 	after, _ := s.AllObjects(ctx)
 	if !reflect.DeepEqual(before, after) {
 		t.Fatal("replay does not reproduce the schedules")
+	}
+}
+
+// TestPrepaidCostsInTheirMonths (KK's screenshot, 2026-10-27): on white01
+// BIU/17/2026 (799,00, 14 September) was spread over twelve months from 1
+// September on 18 October, September already closed, and the clock opened
+// October only on the 19th, its first day running. The release took the
+// day before the clock ran for the month's end, counted October as over
+// and gave back September's and October's shares, 133,17, with October
+// twelve days from its end; and the move to 640 was dated the day it was
+// entered, whatever month the invoice's cost stood in. Now the release
+// counts the months up to the one that opened, whatever day the clock
+// runs, and the move is dated on the invoice's date — a closed month
+// sending it to the day it was entered, as before.
+func TestPrepaidCostsInTheirMonths(t *testing.T) {
+	w := newCITWorld(t)
+	ctx, s, x, door := w.ctx, w.s, w.x, w.door
+	door("declare_company_form", map[string]any{"company": w.self, "vat_status": "active", "books": "full", "income_tax": "cit",
+		"from": "2026-01-01", "occurred_at": "2026-08-01"})
+	w.buy("biu", "BIU/17/2026", "2026-09-14", "5260001246", "799.00", "183.77", "982.77")
+	w.buy("ins", "INS/2026", "2026-10-02", "5260001246", "1200.00", "276.00", "1476.00")
+	invoice := map[string]string{}
+	docs, _ := s.ObjectsByType(ctx, "purchase_invoice")
+	for _, d := range docs {
+		invoice[d.ID] = d.State["number"].(string)
+		invoice[d.State["number"].(string)] = d.ID
+	}
+	monthOpens := func(date string) {
+		t.Helper()
+		if _, err := s.AppendEvent(ctx, core.Event{Kind: core.KindRaw, Type: core.EventMonthOpened, OccurredAt: date,
+			Payload: []byte(fmt.Sprintf(`{"month":%q,"date":%q}`, date[:7], date)), DedupKey: "time/month/" + date[:7]}); err != nil {
+			t.Fatal(err)
+		}
+		if _, errs := x.ProcessPending(ctx); len(errs) > 0 {
+			t.Fatalf("month opens %s: %v", date, errs)
+		}
+	}
+	// What the RMK did to the books: each entry by the invoice it spreads,
+	// the period a share is for, the day it is dated and its amount.
+	booked := func() []string {
+		t.Helper()
+		pcs, _ := s.ObjectsByType(ctx, "prepaid_cost")
+		rels, _ := s.ObjectsByType(ctx, "prepaid_release")
+		of := map[string]string{}
+		for _, pc := range pcs {
+			of[pc.ID] = invoice[pc.State["invoice"].(string)] + " na 640"
+		}
+		for _, r := range rels {
+			of[r.ID] = fmt.Sprintf("%s za %v", invoice[r.State["invoice"].(string)], r.State["period"])
+		}
+		var lines struct {
+			Objects []struct {
+				MadeFrom string         `json:"made_from"`
+				State    map[string]any `json:"state"`
+			} `json:"objects"`
+		}
+		w.get("/api/objects?type=posting", &lines)
+		var out []string
+		for _, p := range lines.Objects {
+			if what, ok := of[p.MadeFrom]; ok && p.State["side"] == "debit" {
+				out = append(out, fmt.Sprintf("%s %v %s", what, p.State["date"], core.FormatMoney(int64(p.State["amount"].(float64)))))
+			}
+		}
+		sort.Strings(out)
+		return out
+	}
+
+	w.closeMonth("2026-09-30", "2026-10-05")
+	door("spread_cost", map[string]any{"invoice": invoice["BIU/17/2026"], "start": "2026-09-01", "months": 12, "occurred_at": "2026-10-18"})
+	monthOpens("2026-10-19")
+	// An October invoice spread later in October, October open: the move
+	// stands on the invoice's own day.
+	door("spread_cost", map[string]any{"invoice": invoice["INS/2026"], "start": "2026-10-01", "months": 12, "occurred_at": "2026-10-20"})
+	if got := fmt.Sprint(booked()); got != "[BIU/17/2026 na 640 2026-10-18 799.00 BIU/17/2026 za 2026-09 2026-10-19 66.58 INS/2026 na 640 2026-10-02 1200.00]" {
+		t.Fatalf("October to date: %s", got)
+	}
+	// November opens on its first day: October's shares, dated its last.
+	monthOpens("2026-11-01")
+	if got := fmt.Sprint(booked()); got != "[BIU/17/2026 na 640 2026-10-18 799.00 BIU/17/2026 za 2026-09 2026-10-19 66.58 BIU/17/2026 za 2026-10 2026-10-31 66.59 INS/2026 na 640 2026-10-02 1200.00 INS/2026 za 2026-10 2026-10-31 100.00]" {
+		t.Fatalf("October whole: %s", got)
+	}
+	before, _ := s.AllObjects(ctx)
+	if _, err := x.Replay(ctx); err != nil {
+		t.Fatal(err)
+	}
+	after, _ := s.AllObjects(ctx)
+	if !reflect.DeepEqual(before, after) {
+		t.Fatal("replay does not reproduce the RMK")
 	}
 }
