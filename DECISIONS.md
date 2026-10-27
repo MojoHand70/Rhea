@@ -5523,7 +5523,14 @@ or a pack can add to (DIRECTION, "still to settle"). The Polish column names are
 
 *Assessed and left:* a change of financial year (a transitional year) and a first year joined to the next
 (art. 3 ust. 1 pkt 9) — the month set applies to every period, past ones too, until a company needs a
-transition. The group trial balance (EUR) takes no period yet.
+transition.
+
+*Then, the same day* (KK: "Can you fix the group trial balance?", core v7, Poland v51): the group trial
+balance in EUR takes the period too, in the company trial balance's columns. *Claude, the spec silent:* every
+company's lines translate at the EUR rate of the period's last day — the latest published on or before it,
+the first there is when none is that old — opening balances and turnover alike, as one closing rate did
+before; the translation difference (CTA) balances each pair of columns. Average rates for turnover and
+historical rates for equity wait for the consolidation itself.
 
 ## 2026-10-27 — One invoice no longer rereads the whole log (Claude, the spec silent; KK: "If we can fix it, let's try")
 
