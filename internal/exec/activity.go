@@ -171,7 +171,8 @@ func (x *Executor) learnedProposal(ctx context.Context, rule core.Rule, company 
 // no other company's books, a new version of one every company shares does;
 // a backfill acting for it, which plans and books its own past alone. Then the
 // company's right is enough. Anything else, or anything it cannot read, stays
-// staff's.
+// staff's. A new door is the company's word only when it acts in the company
+// alone (ownDoor).
 func (x *Executor) companysOwn(ctx context.Context, door string, inputs map[string]any, company string) bool {
 	if company == "" {
 		return false
@@ -194,12 +195,40 @@ func (x *Executor) companysOwn(ctx context.Context, door string, inputs map[stri
 			if m.Kind == core.KindRule && !own(m.Name) || m.Kind != core.KindRule && m.Version != 1 {
 				return false
 			}
+			if m.Kind == core.KindActivity && !x.ownDoor(ctx, m) {
+				return false
+			}
 		}
 		return true
 	case "approve_backfill":
 		return true
 	}
 	return false
+}
+
+// ownDoor reports whether a new door a company's bundle carries acts in the
+// company alone: its facts are the company's (not the installation's), it
+// reaches no other company's books, it reads through no channel (a channel is
+// code, Rhea's), and the fact it sends is its own — a type no other door
+// declares, which would come through that door's rights. A new door was the
+// company's word whatever it did: an accountant approved one that wrote the
+// installation's membership.granted, and Rhea's own rule booked her into
+// another company (review 2026-10-27, critical 3).
+func (x *Executor) ownDoor(ctx context.Context, m core.Member) bool {
+	a, err := x.Store.GetActivityVersion(ctx, m.Name, m.Version)
+	if err != nil || a.Spec.Installation || a.Spec.Everywhere || a.Spec.Channel != nil || a.Spec.Passthrough() {
+		return false
+	}
+	acts, err := x.Store.ActiveActivities(ctx)
+	if err != nil {
+		return false
+	}
+	for _, other := range acts {
+		if other.Name != a.Name && other.Spec.Allows(a.Spec.Emits) {
+			return false
+		}
+	}
+	return true
 }
 
 // announced are the doors that change Rhea's own definitions when they do not
