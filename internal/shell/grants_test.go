@@ -747,3 +747,29 @@ func TestTheLiveStreamIsTheListenersOwn(t *testing.T) {
 		t.Fatal("olga heard nothing of her own booking")
 	}
 }
+
+// The host speaks only for a company the books hold (review 2026-10-27,
+// high): POST /api/speak?company=JUNK0 asked the model and filed her words
+// under JUNK0 in the log, which made JUNK0 a company — every morning's alarm
+// paid a model call for it from then on, and each such key left its own
+// analysis copy on disk. A company no fact names is answered 404, and the
+// model is not asked.
+func TestTheHostSpeaksForNoCompanyTheBooksDoNotHold(t *testing.T) {
+	w := newGrantsWorld(t)
+	w.person("Krzysztof Kowal", "kk", "PL5250001111", "owner")
+	if code := w.call("", "JUNK0", "POST", "/api/speak", nil, nil); code != 404 {
+		t.Fatalf("speaking for JUNK0: %d", code)
+	}
+	if n := w.asked.Load(); n != 0 {
+		t.Fatalf("the model was asked %d times for JUNK0", n)
+	}
+	companies, err := w.s.Companies(w.ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range companies {
+		if c == "JUNK0" {
+			t.Fatalf("JUNK0 became a company: %v", companies)
+		}
+	}
+}

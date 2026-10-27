@@ -208,6 +208,21 @@ func (s *Server) handleSpeak(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 403, fmt.Errorf("refused: %s holds no company to speak for", p.Handle))
 		return
 	}
+	// Her words are a fact under the company spoken for: for a key no fact
+	// names, they made it a company — every morning's alarm paid a model call
+	// for it from then on, and each key left its own analysis copy (review
+	// 2026-10-27). She speaks for a company the books hold, or not at all.
+	if c := store.CompanyOf(ctx); c != "" {
+		held, err := s.Store.Companies(store.WithOwner(ctx))
+		if err != nil {
+			writeErr(w, 500, err)
+			return
+		}
+		if !contains(held, c) {
+			writeErr(w, 404, fmt.Errorf("no company %s in these books", c))
+			return
+		}
+	}
 	vds, err := s.effectiveViewDefs(ctx)
 	if err != nil {
 		writeErr(w, 500, err)
