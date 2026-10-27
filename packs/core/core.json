@@ -1,12 +1,17 @@
 {
   "pack": "core",
-  "version": 6,
+  "version": 7,
   "kind": "core",
   "install": "installation",
   "description": "Core: what Rhea is with nothing installed — the ledger's vocabulary (company, account, posting, the period's lock, exchange rates), the invoice's common shape and its tax rate, contractors, Rachunki i karty's bank accounts, bank lines and settlements, and tasks. Market-neutral; the kernel carries it in its binary and rhea init drafts what a database lacks.",
   "stage": "initial",
   "disclaimer": "This pack was prepared by artificial intelligence (AI). It is an initial version: its definitions may contain errors and will change as accountants, tax advisers and auditors review them.",
   "history": [
+    {
+      "versions": "7",
+      "date": "2026-10-27",
+      "changes": "The group trial balance in EUR for a period too (KK, 2026-10-27): the same columns as a company's — each account's balance when the financial year opened, the period's turnover, the turnover since the year opened, the balance at the period's end — every company's lines translated at the EUR rate of the period's last day (the latest published on or before it), the translation difference balancing each pair of columns. Each row names its accounts. It summed every line since the books began at the latest rate there was."
+    },
     {
       "versions": "6",
       "date": "2026-10-27",

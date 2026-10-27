@@ -6,7 +6,7 @@
   "tabs": [
     {
       "view_id": "slownik",
-      "version": 21,
+      "version": 22,
       "notion": "words",
       "title": "Słownik",
       "domain": "finance",
@@ -730,7 +730,17 @@
           "trial-balance.ytd_debit": "Narastająco Wn",
           "trial-balance.ytd_credit": "Narastająco Ma",
           "trial-balance.closing_debit": "Saldo Wn",
-          "trial-balance.closing_credit": "Saldo Ma"
+          "trial-balance.closing_credit": "Saldo Ma",
+          "group-trial-balance.code": "Konto",
+          "group-trial-balance.account": "Nazwa konta",
+          "group-trial-balance.opening_debit": "BO Wn",
+          "group-trial-balance.opening_credit": "BO Ma",
+          "group-trial-balance.debit": "Obroty Wn",
+          "group-trial-balance.credit": "Obroty Ma",
+          "group-trial-balance.ytd_debit": "Narastająco Wn",
+          "group-trial-balance.ytd_credit": "Narastająco Ma",
+          "group-trial-balance.closing_debit": "Saldo Wn",
+          "group-trial-balance.closing_credit": "Saldo Ma"
         },
         "values": {
           "account.type": {

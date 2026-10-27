@@ -114,3 +114,111 @@ func TestTheTrialBalanceIsTheStatutoryOneForAPeriod(t *testing.T) {
 		t.Fatalf("Beta's trial balance: %d %v %+v", code, tb.Rows, tb.Period)
 	}
 }
+
+// The group trial balance in EUR is for a period too (KK, 2026-10-27): the
+// same columns as a company's, every company's lines translated at the EUR
+// rate of the period's last day — the latest published on or before it —
+// and the translation difference (CTA) balancing each pair of columns. It
+// summed every line since the books began at the latest rate there was.
+//
+// Alfa keeps PLN, Beta EUR; the rate is 4.25 at September's end, 4.10 at
+// October's. In September: 201 opens at 200,00 Wn (December's 850,00 PLN),
+// turns 140,00 Wn in the month (Alfa's 170,00 PLN and Beta's 100,00 EUR)
+// and 140,00 / 100,00 since January, and closes at 240,00 Wn; 700 closes at
+// 340,00 Ma; 130 holds May's 425,00 PLN and Beta's 10,00 EUR, a line with no
+// other side, which the CTA line balances in the month, the year and the
+// close. October's line counts nowhere.
+func TestTheGroupTrialBalanceIsForAPeriodToo(t *testing.T) {
+	w, a, b := newBooksWorld(t)
+	if _, err := w.s.InsertRuleVersion(w.ctx, core.Rule{ID: "test-posting", Status: core.StatusActive, Priority: 100, EffectiveFrom: "2025-01-01", CreatedBy: "test",
+		Description: "a line of the books", Spec: core.RuleSpec{Match: core.Match{EventType: "test.posted"},
+			Effect: core.Effect{Object: core.ObjectTemplate{Type: "posting", Fields: map[string]string{"entry": "=$.entry", "line": "=$.line", "book": "main",
+				"account": "=$.account", "side": "=$.side", "amount": "=$.amount", "currency": "=$.currency", "date": "=$.date"}}}}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := w.s.InsertRuleVersion(w.ctx, core.Rule{ID: "test-fx-rate", Status: core.StatusActive, Priority: 100, EffectiveFrom: "2025-01-01", CreatedBy: "test",
+		Description: "a published rate, as the NBP channel brings it", Spec: core.RuleSpec{Match: core.Match{EventType: "fx.rate.published"},
+			Effect: core.Effect{Object: core.ObjectTemplate{Type: "fx_rate", Fields: map[string]string{"code": "=$.code", "base": "=$.base", "quote": "=$.quote", "date": "=$.date", "rate": "=$.rate"}}}}}); err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range [][2]string{{"2026-09-30", "4.25"}, {"2026-10-31", "4.10"}} {
+		if code := w.call("", "", "POST", "/api/events", map[string]any{"event_type": "fx.rate.published", "occurred_at": r[0], "dedup_key": "nbp-" + r[0],
+			"payload": map[string]any{"code": "EUR/PLN/" + r[0], "base": "EUR", "quote": "PLN", "date": r[0], "rate": r[1]}}, nil); code != 200 {
+			t.Fatalf("rate %s: %d", r[0], code)
+		}
+	}
+	accounts := map[string]string{}
+	for _, code := range []string{"130", "201", "700"} {
+		ids, err := w.s.FindObjectIDsByField(w.ctx, "account", "code", code)
+		if err != nil || len(ids) != 1 {
+			t.Fatalf("account %s: %v %v", code, ids, err)
+		}
+		accounts[code] = ids[0]
+	}
+	line := func(person, company, key, date, account, side, amount, currency string) {
+		t.Helper()
+		var out map[string]any
+		if code := w.call(person, company, "POST", "/api/events", map[string]any{"event_type": "test.posted", "occurred_at": date, "dedup_key": key,
+			"payload": map[string]any{"entry": key, "line": 1, "account": accounts[account], "side": side, "amount": amount, "currency": currency, "date": date}}, &out); code != 200 || out["booked"] != float64(1) {
+			t.Fatalf("%s: %d %v", key, code, out)
+		}
+	}
+	entry := func(person, company, no, date, debit, credit, amount, currency string) {
+		t.Helper()
+		line(person, company, no+"-1", date, debit, "debit", amount, currency)
+		line(person, company, no+"-2", date, credit, "credit", amount, currency)
+	}
+	entry("kk", a, "FV/12", "2025-12-10", "201", "700", "850.00", "PLN")
+	entry("kk", a, "WB/5", "2026-05-10", "130", "201", "425.00", "PLN")
+	entry("kk", a, "FV/9", "2026-09-05", "201", "700", "170.00", "PLN")
+	entry("kk", a, "WB/10", "2026-10-02", "130", "201", "42.50", "PLN")
+	entry("olga", b, "INV/9", "2026-09-20", "201", "700", "100.00", "EUR")
+	line("olga", b, "ODD/9", "2026-09-25", "130", "debit", "10.00", "EUR")
+
+	// read by one who sees the group: kk let into Beta as well, acting for neither
+	w.mustDoor("", b, "grant_membership", map[string]any{"person": w.personID("kk"), "company": b, "role": "owner", "from": "2026-01-01", "granted_by": "operator"})
+	var gtb struct {
+		Columns []struct {
+			Field string `json:"field"`
+		} `json:"columns"`
+		Rows   [][]struct{ V string } `json:"rows"`
+		Of     [][]string             `json:"row_objects"`
+		Period core.Period            `json:"period"`
+	}
+	if code := w.call("kk", "", "GET", "/api/views/group-trial-balance?from=2026-09-01&to=2026-09-30", nil, &gtb); code != 200 {
+		t.Fatalf("the group trial balance: %d", code)
+	}
+	var fields []string
+	for _, c := range gtb.Columns {
+		fields = append(fields, c.Field)
+	}
+	if want := []string{"code", "account", "opening_debit", "opening_credit", "debit", "credit", "ytd_debit", "ytd_credit", "closing_debit", "closing_credit"}; !reflect.DeepEqual(fields, want) {
+		t.Fatalf("columns %v, want %v", fields, want)
+	}
+	var got [][]string
+	for _, r := range gtb.Rows {
+		var row []string
+		for i, c := range r {
+			if i != 1 { // the account's name is the chart's
+				row = append(row, c.V)
+			}
+		}
+		got = append(got, row)
+	}
+	want := [][]string{
+		{"130", "0.00", "0.00", "10.00", "0.00", "110.00", "0.00", "110.00", "0.00"},
+		{"201", "200.00", "0.00", "140.00", "0.00", "140.00", "100.00", "240.00", "0.00"},
+		{"700", "0.00", "200.00", "0.00", "140.00", "0.00", "140.00", "0.00", "340.00"},
+		{"CTA", "0.00", "0.00", "0.00", "10.00", "0.00", "10.00", "0.00", "10.00"},
+	}
+	if !reflect.DeepEqual(got, want) || gtb.Period != (core.Period{From: "2026-09-01", To: "2026-09-30", YearFrom: "2026-01-01"}) {
+		t.Fatalf("the group's September in EUR:\n got %v %+v\nwant %v", got, gtb.Period, want)
+	}
+	if !reflect.DeepEqual(gtb.Of, [][]string{{accounts["130"]}, {accounts["201"]}, {accounts["700"]}, {}}) {
+		t.Fatalf("each row names its account, the CTA none: %v", gtb.Of)
+	}
+	// October at October's rate: December's 850,00 PLN opens at 207,32
+	if code := w.call("kk", "", "GET", "/api/views/group-trial-balance?from=2026-10-01&to=2026-10-31", nil, &gtb); code != 200 || len(gtb.Rows) < 2 || gtb.Rows[1][0].V != "201" || gtb.Rows[1][2].V != "207.32" {
+		t.Fatalf("October's rate: %d %v", code, gtb.Rows)
+	}
+}
