@@ -5640,3 +5640,32 @@ Next without a decision, each touching the face too: the machine routes ask the 
 clock's and the morning's timers on white01 send it); a person's door names its act (the face's
 own calls send a key) before the kernel refuses a fact with neither a key nor an identity; the Go
 toolchain to 1.26.10 and x/text (19 reachable vulnerabilities). Then the review's mediums and lows.
+
+## 2026-10-27 — The JPK goes out from Rhea, signed by a person (KK, answering the questions posed the same day)
+
+- **The signed file first** (KK, of three ways posed: signed file, authorisation data, both). Rhea
+  prepares the package and the request (InitUpload); the accountant signs the request with their own
+  qualified signature (UPL-1 filed for the client), or the owner with a trusted profile on gov.pl,
+  outside Rhea, and hands the signed file back; Rhea checks it is that request and sends, and keeps
+  the UPO. It works for a sole trader and a company alike and Rhea holds no key. Authorisation data
+  (sole traders only, a password-like income figure Rhea would have to keep) waits.
+- **Test sends to the Ministry's test gateway are allowed** (KK), for a made-up company only.
+- The Month-end note (DIRECTION 2026-10-15) said there is no test environment for JPK: there is,
+  test-e-dokumenty.mf.gov.pl (the interface specification v5.6.0 of 10 September 2026, §2.2), and it
+  takes a self-made certificate. On it, the same day, the story's JPK_V7M for the made-up company
+  (NIP 8058083055) went the whole way — session, upload to the Ministry's storage, finish, status 120,
+  then 200 with the UPO, which names the reference, the NIP, the office 1471, the schema
+  Schemat_JPK_V7M(3)_v1-0E.xsd and the document's SHA-256 Rhea declared. The request also validates
+  against the Ministry's InitUpload.xsd (xmllint).
+- **The signer is a person with a NIP or PESEL in the certificate.** A self-made certificate with a
+  company seal's VATPL-<NIP> came back 423 ("certificate without the required attributes"); a
+  person's TINPL-<NIP> filed. The gateway checks the signer's identifiers against the powers to sign
+  (420 without UPL-1), so an accountant's qualified certificate must carry their PESEL or NIP.
+- **The key wrap is RSA PKCS#1 v1.5**, as the specification says (§1.2.3) — not OAEP, as the
+  reference project's README (jdg-ksiegowy, MIT) says while its code does PKCS#1 v1.5.
+- **No setting, no sending.** RHEA_JPK_ENV names the gateway (test | prod), "fake" a simulation by
+  name; unset or misspelled, the channel refuses. A fake UPO in real books would say a return was
+  filed that was not — KSeF's fake-by-default is not repeated here.
+- **Assessed and left: one part.** A file over 60 MB zipped goes to the gateway in parts; Rhea
+  refuses it with that reason. A JPK_V7M that large is millions of records, far beyond the offices
+  and companies Rhea serves now; the blob store caps a door's file at 32 MiB anyway.
