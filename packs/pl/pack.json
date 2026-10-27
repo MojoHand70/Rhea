@@ -10,7 +10,7 @@
     {
       "versions": "53",
       "date": "2026-10-27",
-      "changes": "Słownik nazywa role i grupy (KK, 2026-10-27: role są systemowe, resztą zarządzają grupy): siedem ról — Projektant Rhei, Właściciel umowy, Kierownik biura, Kierownik firmy, Użytkownik, Gość, Wsparcie Rhei — i cztery grupy każdej firmy — Główny księgowy, Księgowość, Podgląd, Wszyscy użytkownicy; miejsce w grupie, dodanie do grupy i usunięcie z niej (pakiet osób v5; słownik v24)."
+      "changes": "Słownik nazywa role i grupy (KK, 2026-10-27: role są systemowe, resztą zarządzają grupy): siedem ról — Projektant Rhei, Właściciel umowy, Kierownik biura, Kierownik firmy, Użytkownik, Gość, Wsparcie Rhei — i cztery grupy każdej firmy — Główny księgowy, Księgowość, Podgląd, Wszyscy użytkownicy; miejsce w grupie, dodanie do grupy i usunięcie z niej; Grupy w Użytkownikach, obok Kto co może (pakiet osób v5; słownik v24)."
     },
     {
       "versions": "52",

@@ -1679,6 +1679,10 @@
                   },
                   {
                     "app": "people",
+                    "tab": "desk:groups"
+                  },
+                  {
+                    "app": "people",
                     "tab": "desk:invites"
                   },
                   {
@@ -1689,6 +1693,9 @@
                   },
                   {
                     "kind": "group"
+                  },
+                  {
+                    "kind": "group_member"
                   },
                   {
                     "kind": "substitution"
