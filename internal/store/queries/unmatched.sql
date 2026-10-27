@@ -20,5 +20,8 @@ WHERE e.kind = 'raw'
   AND e.event_type NOT LIKE 'access.%'
   -- time passing is infrastructure: an uneventful day is not a question
   AND e.event_type NOT LIKE 'time.%'
+  -- a statement saying which account it is of is not a question either: where a pack proposes the
+  -- account from it, the proposal is, waiting on Today for a person in Bankowość (2026-10-27)
+  AND e.event_type <> 'bank.account.seen'
   AND NOT EXISTS (SELECT 1 FROM event d WHERE d.cause_event_id = e.event_id)
 ORDER BY e.event_id

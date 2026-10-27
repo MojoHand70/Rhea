@@ -118,8 +118,8 @@ func TestMT940ReadsTheStore(t *testing.T) {
 	if debits == 0 {
 		t.Fatal("no purchase payment in two months — the generator pays nobody")
 	}
-	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != lines+1 {
-		t.Fatalf("worklist = %d, want the %d lines and the account said, no pack here to read them", len(wl), lines)
+	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != lines {
+		t.Fatalf("worklist = %d, want the %d lines — the account said is no question for a person", len(wl), lines)
 	}
 	if res, err := adapter.Run(ctx, s, x, adapter.MT940{}); err != nil || res.Submitted != 0 {
 		t.Fatalf("second pass = %+v, %v", res, err)

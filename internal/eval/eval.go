@@ -749,7 +749,9 @@ func Intake(ctx context.Context, st *store.Store, x *exec.Executor, c Corpus, di
 		}
 		if res.Submitted > 0 {
 			for _, ev := range res.Events {
-				if !strings.HasPrefix(ev.Type, "document.") {
+				// a reader's own record of what it read — a file read, an
+				// account a statement is of — is no business fact
+				if !strings.HasPrefix(ev.Type, "document.") && ev.Type != adapter.EventBankAccountSeen {
 					n++
 				}
 			}
