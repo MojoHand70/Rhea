@@ -5416,3 +5416,34 @@ its own data and history.
   account (on the firm since "Inne konto kosztów", which books by it today), and the `contractor` kind (only
   a bank line uses it). Adding a client by hand before any invoice waits too: a door naming a firm that is
   already a client would leave a fact no rule explains.
+
+## 2026-10-27 — Looking back over what the books already hold: asked of Rhea, approved by a person (KK)
+
+Klienci and Dostawcy start empty in a company whose invoices came before them. Claude proposed that Dziś
+offer "Zaksięguj przeszłość" after a pack version is approved. KK: *"'Book the past' a bit scares me. It
+sounds like you would like to book something into past periods"* — and the same button can do that: a new
+posting rule's look-back books entries into past open months (a closed month's go to today). Then KK:
+*"maybe it should work that way: i should ask Rhea to review the old records and refill the new records?"*
+and, on the shape that followed, *"That's the way how I would do it."*
+
+- **A person asks; Rhea says what she would do; a person approves it.** Asked in the conversation, she
+  answers with what the look-back would add — the records of each kind, and the entries it would book by
+  month and amount, or none — and the approval is the recorded decision. The model passes the request on
+  and reads the answer back; the rules do the work, and nothing reaches the books before the approval.
+- **Records only, or entries.** A look-back that only adds records (Klienci and Dostawcy) is approved in
+  one step. One that books entries shows the months and amounts first and is never offered on Dziś.
+- **She offers it once herself**, so an empty Klienci is not taken for a broken one.
+- **Scale** (KK: *"What if Client has 100 thousand invoices?"*): the conversation first, then a company of
+  100,000 invoices measured and the look-back made to work in portions — reading only what the new rules
+  can touch, the lock let go between portions, safe to stop and resume, one approval — before the first
+  large client (KK: *"I think it's a much better approach"*).
+- **A migration is an App version's own rules** (KK: *"It is a little bit like with a new version for code,
+  sometimes you have to do migration scripts"*): Claude's three kinds of change — it only adds; it would
+  have decided differently; it needs what no fact holds — go into DIRECTION's App designer as a proposal
+  (KK: *"Yes, i think you can add this"*).
+
+*Claude, the spec silent:*
+- **The dry run says it** (`summary` beside the plan): the records of each kind it adds or changes; the
+  entries it books, by month, book and currency, with their debits summed; the chains a closed month sends
+  to the look-back's own day. Postings are entries, never counted among records.
+- **The name** "Zaksięguj przeszłość" goes from every screen: what a look-back does is said by what it adds.

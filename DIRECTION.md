@@ -4219,6 +4219,32 @@ record and shows what moves, what changes and what stays — the list the produc
 > no longer has — Rhea proposes "Do akceptacji". 1 stays on v4 and finishes there: v5 requires an
 > MPK it lacks; it moves once someone gives one.
 
+**What a new version does to what is already there** (Claude's proposal, 2026-10-27; KK: "Yes, i
+think you can add this"). In code, data sits in tables and a migration script rewrites them, once. In
+Rhea the facts stay as they happened and the records are what the rules make of them, so a version's
+own rules are its migration: nobody writes a script, the look-back applies the rules to the facts the
+books already hold, every record it adds says which old fact and which rule made it, and replay
+reproduces it. KK asked whether this works on invoices only: on every fact — documents, bank lines,
+what people typed into forms — and on every App, a client's own included. Three kinds, each its own
+tool:
+
+1. *It only adds* — something new drawn from facts already there: Klienci and Dostawcy from past
+   invoices, subscriptions from a supplier billing the same amount every month. The look-back: a
+   person asks Rhea, or she offers it once herself; she says what it would add; a person approves
+   (DECISIONS 2026-10-27). Built; at volume it works in portions.
+2. *It would have decided differently* — another account, another rate. What was booked is never
+   rewritten: the difference is a correction entry, an accountant's deliberate act, as a korekta is.
+   The look-back deliberately leaves it alone. Not built.
+3. *It needs what no fact holds* — credit limits for 37 existing clients. No rule can invent them;
+   Rhea proposes what she can see (each client's usual days between issue and due date) and a person
+   confirms, many at a time — the fill a breaking change carries, done with the person. Not built.
+
+The production card says which kind a version is — "Ta wersja tylko dodaje: 37 klientów, żadnych
+zapisów" — and a version of the second or third kind says so and has no one-step approval. Two
+limits: rules on dates (the 10th of each month) stay out of the look-back, their catch-up being the
+clock's; a field that moves (the supplier's cost account, from the firm to Dostawcy) fills its new
+place from the old facts, and the old place keeps its history, as an old paper form does.
+
 **The first App to design with it: purchase invoices described and approved.** Most purchase
 invoices from Polish suppliers already arrive through KSeF, so Rhea's first question is which job
 is meant — describing and approving those that arrive (opis merytoryczny, MPK, akceptacja), or
