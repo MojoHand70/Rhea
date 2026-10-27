@@ -5447,3 +5447,10 @@ and, on the shape that followed, *"That's the way how I would do it."*
   entries it books, by month, book and currency, with their debits summed; the chains a closed month sends
   to the look-back's own day. Postings are entries, never counted among records.
 - **The name** "Zaksięguj przeszłość" goes from every screen: what a look-back does is said by what it adds.
+- **Where she offers it** (rheaface e5fd674): on Dziś, once per plan — "Nie teraz" is kept in the person's
+  browser for that plan's fingerprint, and a later approval that changes what she would add asks again; only a
+  look-back that adds records and books nothing, and only to a person who may approve it. In the conversation
+  and on Pakiety after an install dated back, any look-back, entries shown by month and amount, the button
+  saying "Uzupełnij i zaksięguj" when it books. *Assessed and left until the scale step* (dated 2026-10-27,
+  invariant 10): Dziś reads the dry run each time the books are loaded, and the dry run reads the company's
+  whole past — nothing at white01's size, measured with the 100,000 invoices before the first large client.
