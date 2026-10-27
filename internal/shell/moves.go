@@ -60,6 +60,9 @@ func (s *Server) handleMoves(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		for _, o := range objs {
+			if p != nil && o.Company == "" {
+				continue // the installation's own record is its operator's, never on a person's Dziś
+			}
 			state, _ := o.State[lc.Field].(string)
 			for key, mv := range lc.Moves {
 				from, to, _ := strings.Cut(key, ">")

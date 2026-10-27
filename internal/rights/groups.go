@@ -355,6 +355,12 @@ func (m *MoveCheck) May(handle, company, group, proposer string) string {
 	if core.ActorKind(handle) != core.ActorHuman {
 		return fmt.Sprintf("a person in %s makes this move, never the machine", group)
 	}
+	if company == "" {
+		// A record of no company — the installation's own, which no
+		// company's door can write — has no group's people: its operator
+		// decides, as the operator keeps the installation (2026-10-27).
+		return ""
+	}
 	id, ok := w.byHandle[handle]
 	if !ok || str(w.persons[id], "status") == "left" {
 		return fmt.Sprintf("%s is no person let into Rhea — a person in %s makes this move", handle, group)

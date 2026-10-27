@@ -199,6 +199,18 @@ func TestARecordGuardsItsMoves(t *testing.T) {
 	}
 	_, err = door(inB, "approve_account", map[string]any{"account": fmt.Sprintf("account-%d", there.EventID), "approved_by": "x"})
 	refused(err, "nobody is in Bankowość here")
+	// a record of no company — the installation's own, which no company's
+	// door writes — has no group's people: its operator decides, never the
+	// machine
+	inst, err := door(ctx, "propose_account", map[string]any{"number": "GB82WEST12345698765432", "proposed_by": "operator"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = x.TriggerActivity(ctx, "approve_account", map[string]any{"account": fmt.Sprintf("account-%d", inst.EventID), "approved_by": "kernel"}, "kernel", "")
+	refused(err, "never the machine")
+	if tr, err := door(ctx, "approve_account", map[string]any{"account": fmt.Sprintf("account-%d", inst.EventID), "approved_by": "operator"}); err != nil || tr.Booked != 1 {
+		t.Fatalf("the operator approves the installation's own: %+v %v", tr, err)
+	}
 	assertReplayIdentical(t, x)
 }
 
