@@ -5778,3 +5778,16 @@ Claude's choices where the design was silent:
 - *Deploying*: the bank channel binds its reader at code version 2, so after a deploy it waits for the bank channel's
   v2 to be approved, and reads every statement it has not read yet once it is; the house approves the Poland pack v54 and
   the bank channel v2 together.
+
+## 2026-10-27 — A list from a pack with no words of its own is headed in the market's words (Claude, the spec silent)
+
+KK's screenshot: Wszystkie firmy headed NAME, KIND, COUNTRY. The core and the common packs label their lists
+and reports in English for any market and bring no words; a market's words now name their columns where
+they name the field — a list's as its kind's field (`company.kind` → Rola), a report's as the view's column
+(`trial-balance.debit` → Obroty Wn), which the words already held for both trial balances and nothing read.
+A pack with words of its own keeps the labels it gave its lists: 32 of the Poland pack's are shorter than
+its words on purpose ("Nr inw." for "Numer"), so the words never override them. The kernel decides it when
+it serves a list or a report, from which packs declare the view; a view no pack declares (a company's saved
+report) keeps its labels. Poland pack v55 adds what was missing: FX rates as "Z waluty", "Na walutę",
+"Kurs" (the words had borrowed "Kurs" and "Stawka" from elsewhere), the intercompany positions, invoices by
+customer.
