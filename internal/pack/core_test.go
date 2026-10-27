@@ -77,8 +77,9 @@ func TestTheKernelShipsItsCore(t *testing.T) {
 // vocabulary inserted, the common packs and the Poland pack approved),
 // already holds the core as it first shipped: init drafts there only what the
 // core has added since — the installed_pack record, its two doors and their
-// two rules (core v2), and its thirteen Apps (core v3, 2026-10-26) — and
-// nothing of the common packs.
+// two rules (core v2), and its thirteen Apps (core v3, 2026-10-26), the
+// company's financial year with its door and rule and the trial balance by
+// period (core v6, 2026-10-27) — and nothing of the common packs.
 func TestACoreAlreadyThereDraftsNothing(t *testing.T) {
 	ctx := context.Background()
 	s := storetest.New(t)
@@ -121,7 +122,7 @@ func TestACoreAlreadyThereDraftsNothing(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, sum := range sums {
-		added := sum.Pack == "core" && sum.Types == 3 && sum.Views == 2 && sum.Rules == 6 && sum.Activities == 4 && sum.Apps == 18 && sum.Bundle == "pack-core-v5"
+		added := sum.Pack == "core" && sum.Types == 4 && sum.Views == 3 && sum.Rules == 7 && sum.Activities == 5 && sum.Apps == 18 && sum.Bundle == "pack-core-v6"
 		if !added && (sum.Bundle != "" || sum.Types+sum.Views+sum.Rules+sum.Activities+sum.Upgraded != 0) || len(sum.Conflicts) != 0 {
 			t.Fatalf("init drafted more than the core added since on a database that holds it: %+v", sum)
 		}

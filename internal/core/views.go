@@ -137,7 +137,7 @@ type QueueSpec struct {
 type WordsSpec struct {
 	Lang   string               `json:"lang"`
 	Types  map[string]TypeWords `json:"types,omitempty"`
-	Fields map[string]string    `json:"fields,omitempty"` // field name, or "type.field" for one type's
+	Fields map[string]string    `json:"fields,omitempty"` // field name, or "type.field" for one type's, "view.field" for a report's column
 	// Values names the values of an enum field (or "type.field"), and of the
 	// few kernel words that are not fields (a warrant's basis).
 	Values        map[string]map[string]string `json:"values,omitempty"`

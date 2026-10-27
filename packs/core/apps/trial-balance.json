@@ -1,18 +1,19 @@
 {
   "app": "trial-balance",
-  "version": 1,
+  "version": 2,
   "title": "Trial balance",
   "layer": "core",
   "tabs": [
     {
       "view_id": "trial-balance",
-      "version": 2,
+      "version": 3,
       "notion": "analysis",
       "title": "Trial balance",
       "domain": "finance",
       "function": "analysis",
       "spec": {
         "sql_file": "trial-balance.sql",
+        "period": true,
         "columns": [
           {
             "field": "book",
@@ -30,6 +31,16 @@
             "type": "string"
           },
           {
+            "field": "opening_debit",
+            "label": "Opening debit",
+            "type": "money"
+          },
+          {
+            "field": "opening_credit",
+            "label": "Opening credit",
+            "type": "money"
+          },
+          {
             "field": "debit",
             "label": "Debit",
             "type": "money"
@@ -40,8 +51,23 @@
             "type": "money"
           },
           {
-            "field": "balance",
-            "label": "Balance",
+            "field": "ytd_debit",
+            "label": "Debit, year to date",
+            "type": "money"
+          },
+          {
+            "field": "ytd_credit",
+            "label": "Credit, year to date",
+            "type": "money"
+          },
+          {
+            "field": "closing_debit",
+            "label": "Closing debit",
+            "type": "money"
+          },
+          {
+            "field": "closing_credit",
+            "label": "Closing credit",
             "type": "money"
           }
         ]

@@ -5481,3 +5481,41 @@ please, let's try to fix this?"*.
 `json` input is its whole payload; words spoken before this have no figures, and the face links them as
 it did. Measured on the live model (claude-sonnet-4-6): the recorded Poland morning 3 of 3 accepted, 8
 figures each; Helios's October 3 of 3, "koszty −665,83" with its sign.
+
+## 2026-10-27 — A report's period, the statutory trial balance, a company's financial year (KK)
+
+KK on Zestawienie obrotów i sald: *"Can we drill to account listing from trial balance? To see what the
+amount consists of?"* and *"What if I would like to see the Trial Balance for a different month than
+current? … in some reports like Trial Balance, there is no Accounting Period column and should not be."*
+The trial balance summed every entry since the books began — no period at all — where UoR art. 18 ust. 1
+describes it per period: opening balances, the period's turnover and the turnover from the start of the
+financial year, closing balances, and their totals. Claude proposed; KK: *"Agreed on all three points.
+Let's go."*, and added: *"We need to be able to define 'Financial Year' per company in company settings.
+This should probably be first Rhea question in onboarding implementation interview."*
+
+- **A period is a parameter of the report, never a column.** An analysis view says it takes one
+  (`"period": true`); its SQL reads `{{period_from}}`, `{{period_to}}`, `{{year_from}}`, which the kernel
+  fills with dates it checked itself (`?from=&to=`, refused unless two days in order); the period is served
+  beside the rows, and a face offers Okres on every report that says it takes one.
+- **The drill and the period together**: a row of the trial balance names its account, and a face opens the
+  account's ledger for the period shown. One core version (v6) and one Poland version (v50) to approve.
+- **The month a report opens on is the first month not yet closed**: the month after the last month closed,
+  never later than today's; today's month while nothing is closed.
+- **The statutory columns**: BO Wn/Ma, obroty okresu Wn/Ma, obroty narastająco Wn/Ma, saldo Wn/Ma.
+- **A company's financial year** is the month it begins in, on the company's own record
+  (`financial_year_start`), set through `set_financial_year`; a company that says nothing keeps the calendar
+  year. It is the first question Rhea asks when a company is set up (the face).
+
+*Claude, the spec silent:* the opening balance is every entry dated before the year's first day, so until a
+year's closing entries (dated on its balance day) are booked, its revenue and costs stand in the next year's
+opening balances — the books as they are, the totals agreeing. A row is an account with an opening balance
+or a movement in the year. A period across two years counts "narastająco" from the year its last day falls
+in. The default month reads every book's closes. A scope acting for no company takes the year its companies
+agree on, January when they differ. `set_financial_year` names no company: it sets the company acted for,
+its rule finding the company's own record — the rights check reads an input named `company` as the company
+acted for, and a company's own record has another id. The Polish column names are words keyed
+`trial-balance.<field>`.
+
+*Assessed and left:* a change of financial year (a transitional year) and a first year joined to the next
+(art. 3 ust. 1 pkt 9) — the month set applies to every period, past ones too, until a company needs a
+transition. The group trial balance (EUR) takes no period yet.

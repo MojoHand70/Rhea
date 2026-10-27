@@ -346,8 +346,12 @@ func (s *Server) handlePreviewBundle(w http.ResponseWriter, r *http.Request) {
 		}
 		p := figurePreview{ViewID: v.ID, Title: v.Title}
 		spec, err := s.analysisSpec(ctx, v.Spec)
+		var period core.Period
 		if err == nil {
-			p.Columns, p.Rows, _, err = s.analysisData(ctx, spec)
+			period, _, err = s.periodOf(ctx, spec, nil)
+		}
+		if err == nil {
+			p.Columns, p.Rows, _, err = s.analysisData(ctx, spec, period)
 		}
 		if err != nil {
 			p.Error = err.Error()

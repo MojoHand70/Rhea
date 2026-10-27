@@ -106,7 +106,11 @@ func (s *Server) narrativeFigures(ctx context.Context, vd *core.ViewDef) (map[st
 			if err != nil {
 				return nil, nil, factRefs{}, 500, err
 			}
-			cols, rows, _, err := s.analysisData(ctx, as)
+			p, code, err := s.periodOf(ctx, as, nil) // she speaks of the month being worked on
+			if err != nil {
+				return nil, nil, factRefs{}, code, err
+			}
+			cols, rows, _, err := s.analysisData(ctx, as, p)
 			if err != nil {
 				return nil, nil, factRefs{}, 500, err
 			}
@@ -721,6 +725,9 @@ func (s *Server) analysisSpec(ctx context.Context, raw json.RawMessage) (core.An
 	if err := json.Unmarshal(raw, &spec); err != nil {
 		return spec, err
 	}
+	if err := spec.CheckPeriod(); err != nil {
+		return spec, err
+	}
 	if spec.Tally == nil {
 		return spec, nil
 	}
@@ -735,7 +742,8 @@ func (s *Server) analysisSpec(ctx context.Context, raw json.RawMessage) (core.An
 	return spec, err
 }
 
-func (s *Server) analysisData(ctx context.Context, spec core.AnalysisSpec) ([]columnOut, [][]cellOut, [][]string, error) {
+// A report that takes a period is computed for p (periodOf).
+func (s *Server) analysisData(ctx context.Context, spec core.AnalysisSpec, p core.Period) ([]columnOut, [][]cellOut, [][]string, error) {
 	s.duck.Lock() // the rebuild and the read are one step: no other rebuild between them
 	defer s.duck.Unlock()
 	path := project.PathOf(ctx, s.DuckPath) // the scope's own copy, the company acted for's within it
@@ -743,6 +751,9 @@ func (s *Server) analysisData(ctx context.Context, spec core.AnalysisSpec) ([]co
 		return nil, nil, nil, err
 	}
 	sql := strings.ReplaceAll(spec.SQL, core.TodayInSQL, "DATE '"+s.Clock.Today()+"'")
+	if spec.Period {
+		sql = p.SQL(sql)
+	}
 	cols, rows, err := project.Query(ctx, path, sql)
 	if err != nil {
 		return nil, nil, nil, err

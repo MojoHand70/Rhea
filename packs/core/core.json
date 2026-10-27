@@ -1,12 +1,17 @@
 {
   "pack": "core",
-  "version": 5,
+  "version": 6,
   "kind": "core",
   "install": "installation",
   "description": "Core: what Rhea is with nothing installed — the ledger's vocabulary (company, account, posting, the period's lock, exchange rates), the invoice's common shape and its tax rate, contractors, Rachunki i karty's bank accounts, bank lines and settlements, and tasks. Market-neutral; the kernel carries it in its binary and rhea init drafts what a database lacks.",
   "stage": "initial",
   "disclaimer": "This pack was prepared by artificial intelligence (AI). It is an initial version: its definitions may contain errors and will change as accountants, tax advisers and auditors review them.",
   "history": [
+    {
+      "versions": "6",
+      "date": "2026-10-27",
+      "changes": "A company's financial year (KK, 2026-10-27): the company says the month its year begins in through set_financial_year — January for the calendar year — and keeps it on its own record (financial_year_start). Reports that take a period count their opening balances and \"from the start of the year\" from its first day; a company that says nothing keeps the calendar year. The trial balance is the one the law describes (UoR art. 18 ust. 1), for the period a person picks: each account's balance when the financial year opened, the period's turnover, the turnover since the year opened and the balance at the period's end, each on its side; asked for no period, it is the first month the books have not closed. Each row names its account, so a face opens the account's ledger from it. It summed every entry since the books began."
+    },
     {
       "versions": "5",
       "date": "2026-10-27",

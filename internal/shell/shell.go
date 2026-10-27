@@ -498,7 +498,7 @@ func (s *Server) handleView(w http.ResponseWriter, r *http.Request) {
 	case "detail":
 		s.serveDetail(ctx, w, vd, r.URL.Query().Get("object_id"))
 	case "analysis":
-		s.serveAnalysis(ctx, w, vd)
+		s.serveAnalysis(ctx, w, vd, r.URL.Query())
 	case "scheduling":
 		s.serveScheduling(ctx, w, vd)
 	case "matching":
@@ -727,22 +727,30 @@ func (s *Server) serveDetail(ctx context.Context, w http.ResponseWriter, vd *cor
 	})
 }
 
-func (s *Server) serveAnalysis(ctx context.Context, w http.ResponseWriter, vd *core.ViewDef) {
+func (s *Server) serveAnalysis(ctx context.Context, w http.ResponseWriter, vd *core.ViewDef, q url.Values) {
 	spec, err := s.analysisSpec(ctx, vd.Spec)
 	if err != nil {
 		writeErr(w, 500, err)
+		return
+	}
+	p, code, err := s.periodOf(ctx, spec, q)
+	if err != nil {
+		writeErr(w, code, err)
 		return
 	}
 	// The read side is derived state: rebuilt from the log so it is always
 	// fresh. At M0 scale this is cheap. Columns pair up with the spec's
 	// declarations by position; a declared money column arrives from DuckDB
 	// as minor units (BIGINT, invariant 6) and crosses as the decimal string.
-	cols, rows, rowsOf, err := s.analysisData(ctx, spec)
+	cols, rows, rowsOf, err := s.analysisData(ctx, spec, p)
 	if err != nil {
 		writeErr(w, 500, err)
 		return
 	}
 	out := map[string]any{"view": vd, "columns": cols, "rows": rows}
+	if spec.Period {
+		out["period"] = p // what it was computed for: the face shows it and asks for another
+	}
 	if rowsOf != nil {
 		out["row_objects"] = rowsOf // what each row is made of: ?view=&row=&col= on /api/explain says how
 	}

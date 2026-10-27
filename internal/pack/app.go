@@ -233,6 +233,12 @@ func withQueryFile(v core.ViewDef, app string, read func(string) ([]byte, error)
 	if v.Spec, err = json.Marshal(spec); err != nil {
 		return v, err
 	}
+	var as core.AnalysisSpec
+	if v.Notion == "analysis" && json.Unmarshal(v.Spec, &as) == nil {
+		if err := as.CheckPeriod(); err != nil {
+			return v, fmt.Errorf("app %s: view %s: %w", app, v.ID, err)
+		}
+	}
 	return v, nil
 }
 

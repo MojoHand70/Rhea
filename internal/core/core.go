@@ -711,6 +711,13 @@ type AnalysisSpec struct {
 	SQL     string       `json:"sql"`
 	Columns []ColumnSpec `json:"columns"`
 	Tally   *TallySpec   `json:"tally,omitempty"`
+	// Period says the report is computed for a period a person picks (a
+	// month, a quarter, a year, from one day to another): its SQL reads the
+	// period's days (PeriodFromInSQL…), the kernel puts the period in, and
+	// a face offers the choice (KK, 2026-10-27). A period is a parameter of
+	// the report, never a column to filter: a trial balance's opening
+	// balance is no row's.
+	Period bool `json:"period,omitempty"`
 }
 
 // RowsOfColumn is the analysis column through which a view says what each

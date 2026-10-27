@@ -241,7 +241,13 @@ func (s *Server) explainCell(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 500, err)
 		return
 	}
-	cols, rows, rowsOf, err := s.analysisData(ctx, spec)
+	// the cell of the period it was read in: ?from=&to= as the view was asked
+	p, code, err := s.periodOf(ctx, spec, q)
+	if err != nil {
+		writeErr(w, code, err)
+		return
+	}
+	cols, rows, rowsOf, err := s.analysisData(ctx, spec, p)
 	if err != nil {
 		writeErr(w, 500, err)
 		return

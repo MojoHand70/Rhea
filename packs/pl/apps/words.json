@@ -6,7 +6,7 @@
   "tabs": [
     {
       "view_id": "slownik",
-      "version": 20,
+      "version": 21,
       "notion": "words",
       "title": "Słownik",
       "domain": "finance",
@@ -719,7 +719,18 @@
           "switched_off_by": "Kto wyłączył",
           "pz.supplier_document": "Dokument dostawcy",
           "pz.location": "Magazyn",
-          "pz_line.document": "Dokument PZ"
+          "pz_line.document": "Dokument PZ",
+          "financial_year_start": "Rok obrotowy od",
+          "trial-balance.code": "Konto",
+          "trial-balance.account": "Nazwa konta",
+          "trial-balance.opening_debit": "BO Wn",
+          "trial-balance.opening_credit": "BO Ma",
+          "trial-balance.debit": "Obroty Wn",
+          "trial-balance.credit": "Obroty Ma",
+          "trial-balance.ytd_debit": "Narastająco Wn",
+          "trial-balance.ytd_credit": "Narastająco Ma",
+          "trial-balance.closing_debit": "Saldo Wn",
+          "trial-balance.closing_credit": "Saldo Ma"
         },
         "values": {
           "account.type": {
@@ -1049,6 +1060,20 @@
           "installed_pack.status": {
             "installed": "zainstalowany",
             "switched_off": "wyłączony"
+          },
+          "financial_year_start": {
+            "01": "1 stycznia (rok kalendarzowy)",
+            "02": "1 lutego",
+            "03": "1 marca",
+            "04": "1 kwietnia",
+            "05": "1 maja",
+            "06": "1 czerwca",
+            "07": "1 lipca",
+            "08": "1 sierpnia",
+            "09": "1 września",
+            "10": "1 października",
+            "11": "1 listopada",
+            "12": "1 grudnia"
           }
         },
         "events": {
@@ -1129,7 +1154,8 @@
           "development_costs.amortised": "Odpis prac rozwojowych",
           "company.entered": "Firma wpisana do kartoteki",
           "client.terms.set": "Ustalono warunki klienta",
-          "supplier.terms.set": "Ustalono warunki dostawcy"
+          "supplier.terms.set": "Ustalono warunki dostawcy",
+          "company.financial_year.set": "Firma podała swój rok obrotowy"
         },
         "doors": {
           "appoint_deputy": "wyznaczenie zastępcy",
@@ -1204,7 +1230,8 @@
           "set_client_terms": "Warunki klienta",
           "set_supplier_terms": "Warunki dostawcy",
           "install_pack": "Zainstaluj pakiet",
-          "switch_off_pack": "Wyłącz pakiet"
+          "switch_off_pack": "Wyłącz pakiet",
+          "set_financial_year": "rok obrotowy"
         },
         "account_groups": {
           "0": "Aktywa trwałe",

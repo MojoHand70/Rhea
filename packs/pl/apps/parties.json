@@ -1,12 +1,12 @@
 {
   "app": "parties",
-  "version": 3,
+  "version": 4,
   "title": "Kontrahenci",
   "layer": "law",
   "data": [
     {
       "name": "company",
-      "version": 7,
+      "version": 8,
       "domain": "finance",
       "is_document": false,
       "label_field": "name",
@@ -129,6 +129,25 @@
           "name": "owner_account",
           "type": "string",
           "required": false
+        },
+        {
+          "name": "financial_year_start",
+          "type": "enum",
+          "required": false,
+          "values": [
+            "01",
+            "02",
+            "03",
+            "04",
+            "05",
+            "06",
+            "07",
+            "08",
+            "09",
+            "10",
+            "11",
+            "12"
+          ]
         }
       ],
       "amendable": [
@@ -146,7 +165,8 @@
         "cost_account",
         "tax_account",
         "zus_account",
-        "owner_account"
+        "owner_account",
+        "financial_year_start"
       ]
     },
     {
