@@ -122,6 +122,10 @@ type ObjectType struct {
 	// lifecycle field is amendable implicitly, under its transition law;
 	// every other field is fixed at birth unless listed here.
 	Amendable []string `json:"amendable,omitempty"`
+	// Key names the field that tells one record of the type from another in
+	// a company (2026-10-27): a second record with the same value is refused,
+	// whichever rule makes it — one bank account per number.
+	Key string `json:"key,omitempty"`
 }
 
 // CanAmend reports whether rules may set a field after materialization.
@@ -130,10 +134,41 @@ func (t ObjectType) CanAmend(field string) bool {
 }
 
 // LifecycleDef: the status field and its allowed moves, as data. The initial
-// status at materialization is unconstrained beyond the enum's value set.
+// status at materialization is unconstrained beyond the enum's value set,
+// unless the type names one.
 type LifecycleDef struct {
 	Field       string              `json:"field"`
 	Transitions map[string][]string `json:"transitions"` // from → allowed to
+	// Initial is the state every record of the type begins in, whichever
+	// rule of whichever App makes it (KK, 2026-10-27: the approval guards the
+	// table, not one App's screen) — a bank account is proposed, never born
+	// approved.
+	Initial string `json:"initial,omitempty"`
+	// Moves says who may make a transition, "from>to" → the move: the
+	// workflow's approval steps, kept on the record they guard.
+	Moves map[string]Move `json:"moves,omitempty"`
+}
+
+// A Move is a transition only some people make (KK, 2026-10-27, "Tasks,
+// groups and the phone"): the people of a group of the record's company;
+// never the person a field of the record names — the one who proposed it —
+// unless nobody else is in the group; through a door, its button's words.
+// The kernel checks it at the door, before the fact is written, and again
+// whenever a rule makes the move, so no App goes round it.
+type Move struct {
+	Group string `json:"group"`
+	NotBy string `json:"not_by,omitempty"` // a field holding the handle of who may not make it
+	Door  string `json:"door,omitempty"`   // the door that makes it: the button
+	Label string `json:"label,omitempty"`  // the button's words
+}
+
+// MoveOf is the move a transition makes, if the type guards it.
+func (lc *LifecycleDef) MoveOf(from, to string) (Move, bool) {
+	if lc == nil {
+		return Move{}, false
+	}
+	m, ok := lc.Moves[from+">"+to]
+	return m, ok
 }
 
 type FieldDef struct {
@@ -141,6 +176,10 @@ type FieldDef struct {
 	Type     string   `json:"type"` // string | int | decimal | date | money | enum | ref<type>
 	Required bool     `json:"required"`
 	Values   []string `json:"values,omitempty"` // enum: the allowed value set
+	// Format narrows a string to a shape the kernel checks wherever the
+	// value comes from — a door's input or a rule's output: "iban" (ISO
+	// 13616, its country's length and its check digits).
+	Format string `json:"format,omitempty"`
 }
 
 // RefTarget extracts the target type from a ref field type:
@@ -195,6 +234,14 @@ func (t ObjectType) Validate() error {
 		if f.Type != "enum" && len(f.Values) > 0 {
 			return fmt.Errorf("field %q: values only belong on enum fields", f.Name)
 		}
+		if f.Format != "" && (f.Type != "string" || !slices.Contains(Formats, f.Format)) {
+			return fmt.Errorf("field %q: format %q is not one a %s field takes (%s on a string)", f.Name, f.Format, f.Type, strings.Join(Formats, ", "))
+		}
+	}
+	if t.Key != "" {
+		if _, ok := t.Field(t.Key); !ok {
+			return fmt.Errorf("key %q is not a field of %q", t.Key, t.Name)
+		}
 	}
 	if t.LabelField != "" {
 		if _, ok := t.Field(t.LabelField); !ok {
@@ -224,6 +271,23 @@ func (t ObjectType) Validate() error {
 			for _, to := range tos {
 				if !slices.Contains(fd.Values, to) {
 					return fmt.Errorf("lifecycle transition %q→%q: not a value of %q", from, to, lc.Field)
+				}
+			}
+		}
+		if lc.Initial != "" && !slices.Contains(fd.Values, lc.Initial) {
+			return fmt.Errorf("lifecycle of %q begins in %q, not a value of %q", t.Name, lc.Initial, lc.Field)
+		}
+		for key, m := range lc.Moves {
+			from, to, ok := strings.Cut(key, ">")
+			if !ok || !slices.Contains(lc.Transitions[from], to) {
+				return fmt.Errorf("lifecycle of %q: move %q is not a declared transition (from>to)", t.Name, key)
+			}
+			if m.Group == "" {
+				return fmt.Errorf("lifecycle of %q: move %q names no group", t.Name, key)
+			}
+			if m.NotBy != "" {
+				if _, ok := t.Field(m.NotBy); !ok {
+					return fmt.Errorf("lifecycle of %q: move %q: not_by %q is not a field", t.Name, key, m.NotBy)
 				}
 			}
 		}

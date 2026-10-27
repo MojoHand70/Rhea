@@ -507,6 +507,9 @@ func (x *Executor) expandChain(ctx context.Context, root core.Event, rules []cor
 		}
 		lo, hi = hi, len(nodes)
 	}
+	if err := x.vetChain(ctx, root, nodes, base, baseGet); err != nil {
+		return nil, err
+	}
 	return nodes, nil
 }
 
@@ -941,6 +944,9 @@ func (x *Executor) amendOne(ctx context.Context, r core.Rule, objType core.Objec
 		if err := vouchRef(fd, tp, val, get); err != nil {
 			return nil, fmt.Errorf("rule %s v%d set %q: %w", r.ID, r.Version, name, err)
 		}
+		if err := core.CheckFormat(fd, val); err != nil {
+			return nil, fmt.Errorf("rule %s v%d set %w", r.ID, r.Version, err)
+		}
 		set[name] = val
 		if c != nil {
 			if calc == nil {
@@ -1009,6 +1015,9 @@ func Expand(tmpl core.ObjectTemplate, objType core.ObjectType, payload any, env 
 		}
 		if err := vouchRef(fd, t, v, env.Get); err != nil {
 			return nil, nil, fmt.Errorf("field %q: %w", name, err)
+		}
+		if err := core.CheckFormat(fd, v); err != nil {
+			return nil, nil, fmt.Errorf("field %w", err)
 		}
 		state[name] = v
 		if c != nil {

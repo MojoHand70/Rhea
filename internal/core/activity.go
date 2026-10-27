@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -287,6 +288,9 @@ func (a Activity) Validate() error {
 		if f.Type != "enum" && len(f.Values) > 0 {
 			return fmt.Errorf("activity %q input %q: values only belong on enum inputs", a.Name, f.Name)
 		}
+		if f.Format != "" && (f.Type != "string" || !slices.Contains(Formats, f.Format)) {
+			return fmt.Errorf("activity %q input %q: format %q is not one a %s input takes", a.Name, f.Name, f.Format, f.Type)
+		}
 	}
 	if src, ok := sp.emitsSource(); ok {
 		fd, declared := byName[src]
@@ -496,6 +500,13 @@ func coerceInput(f FieldDef, v any) (any, error) {
 		s, ok := v.(string)
 		if !ok {
 			return nil, fmt.Errorf("input %q wants a string, got %T", f.Name, v)
+		}
+		if f.Format == "iban" {
+			// kept as the bank prints it on a statement: no spaces, capitals
+			s = NormalIBAN(s)
+			if err := CheckIBAN(s); err != nil {
+				return nil, fmt.Errorf("input %q: %w", f.Name, err)
+			}
 		}
 		return s, nil
 	case "int":

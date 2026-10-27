@@ -358,6 +358,18 @@ func (x *Executor) TriggerActivity(ctx context.Context, name string, inputs map[
 		ActivityName: act.Name, ActivityVersion: act.Version,
 		Company: store.CompanyOf(ctx), // the caller's scope: the fact's company
 	}
+	// A fact that would move a record its type guards, or make a second of
+	// its key, is refused here, before it is written (2026-10-27).
+	if err := x.precheck(ctx, ev); err != nil {
+		var refused *rights.ErrRefused
+		if errors.As(err, &refused) {
+			refused.Door = act.Name
+			if rerr := x.RecordRefusal(ctx, refused); rerr != nil {
+				return Triggered{}, rerr
+			}
+		}
+		return Triggered{}, err
+	}
 	var out Triggered
 	apply, err := x.prepareReaction(ctx, &ev, &out)
 	if err != nil {

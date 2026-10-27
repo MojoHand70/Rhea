@@ -318,3 +318,76 @@ func Groups(ctx context.Context, s *store.Store, company, today string) ([]Group
 	})
 	return out, nil
 }
+
+// MayMove answers whether a person may make a move a kind of record gives
+// to a group, in a company, on the books' day (KK, 2026-10-27): the move is
+// a person's, never the machine's; the person is in the group there —
+// their own place, a group in it, an office's group of that name reaching
+// a client through its mandate, standing in for someone who is; and when
+// the record names who proposed it, that person makes the move only when
+// nobody else could. A group every company has that nobody was put in yet
+// is its manager's, until handed over. The answer is the refusal's reason,
+// empty when the person may.
+func MayMove(ctx context.Context, s *store.Store, handle, company, group, proposer, today string) (string, error) {
+	if core.ActorKind(handle) != core.ActorHuman {
+		return fmt.Sprintf("a person in %s makes this move, never the machine", group), nil
+	}
+	w, err := load(ctx, s, today)
+	if err != nil {
+		return "", err
+	}
+	id, ok := w.byHandle[handle]
+	if !ok || str(w.persons[id], "status") == "left" {
+		return fmt.Sprintf("%s is no person let into Rhea — a person in %s makes this move", handle, group), nil
+	}
+	movers := w.movers(company, group)
+	if len(movers) == 0 {
+		return fmt.Sprintf("nobody is in %s here — put someone in it first", group), nil
+	}
+	if !movers[id] {
+		return fmt.Sprintf("a person in %s makes this move, and you are not in it", group), nil
+	}
+	if proposer != "" && proposer == handle && len(movers) > 1 {
+		return fmt.Sprintf("you proposed it — another person in %s makes this move", group), nil
+	}
+	return "", nil
+}
+
+// Movers is everyone who may make a move a group is given, in a company,
+// today — the people a task waiting for the group is for.
+func Movers(ctx context.Context, s *store.Store, company, group, today string) ([]string, error) {
+	w, err := load(ctx, s, today)
+	if err != nil {
+		return nil, err
+	}
+	var out []string
+	for id := range w.movers(company, group) {
+		out = append(out, str(w.persons[id], "handle"))
+	}
+	sort.Strings(out)
+	return out, nil
+}
+
+// movers is the people of a group in a company today, by person id.
+func (w *world) movers(company, group string) map[string]bool {
+	out := map[string]bool{}
+	for id, p := range w.persons {
+		if str(p, "status") == "left" {
+			continue
+		}
+		for _, g := range w.resolve(id) {
+			if g.Company == company && g.Group == group {
+				out[id] = true
+				break
+			}
+		}
+	}
+	if _, everyones := w.groups["|"+group]; len(out) == 0 && everyones && group != core.GroupAllUsers {
+		for _, m := range w.memberships {
+			if role, _, ok := core.RoleOf(str(m, "role")); ok && role == core.RoleCompanyManager && str(m, "company") == company && w.current(m) {
+				out[str(m, "person")] = true
+			}
+		}
+	}
+	return out
+}
