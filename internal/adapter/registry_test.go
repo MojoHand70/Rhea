@@ -5,7 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"rhea/internal/core"
 	"rhea/internal/exec"
@@ -277,5 +280,84 @@ func TestPassKeepsItsFiles(t *testing.T) {
 		if _, err := Run(asAlfa, s, x, probe{[]core.Event{ev}}); err == nil {
 			t.Errorf("a file %+v was taken", bad)
 		}
+	}
+}
+
+// slowProbe counts how many of its passes run at once.
+type slowProbe struct{ active, most *int32 }
+
+func (slowProbe) Name() string     { return "slowprobe" }
+func (slowProbe) CodeVersion() int { return 1 }
+func (p slowProbe) Pass(context.Context, Reads) ([]core.Event, error) {
+	n := atomic.AddInt32(p.active, 1)
+	for {
+		m := atomic.LoadInt32(p.most)
+		if n <= m || atomic.CompareAndSwapInt32(p.most, m, n) {
+			break
+		}
+	}
+	time.Sleep(150 * time.Millisecond)
+	atomic.AddInt32(p.active, -1)
+	return nil, nil
+}
+
+// One pass of a channel at a time, in this process and across processes
+// (invariant 10): two passes of a channel that sends — KSeF, the JPK
+// gateway — would both send what the log still owes, the CLI's beside the
+// server's, two servers' side by side. A second pass waits for the first;
+// another process holding the channel's lock holds every pass here.
+func TestOnePassOfAChannelAtATime(t *testing.T) {
+	Register(Implemented{Name: "slowprobe", CodeVersion: 1, Format: "test fixture"})
+	ctx := context.Background()
+	s := storetest.New(t)
+	x := &exec.Executor{Store: s}
+	ch := probeChannel(core.StatusActive, 1)
+	ch.Name, ch.Spec.Channel.Adapter = "slowprobe_channel", "slowprobe"
+	if _, err := s.InsertActivityVersion(ctx, ch); err != nil {
+		t.Fatal(err)
+	}
+	var active, most int32
+	a := slowProbe{&active, &most}
+	var wg sync.WaitGroup
+	for i := 0; i < 4; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if _, err := Run(ctx, s, x, a); err != nil {
+				t.Error(err)
+			}
+		}()
+	}
+	wg.Wait()
+	if most != 1 {
+		t.Fatalf("%d passes of one channel ran at once", most)
+	}
+
+	// another process holds the channel's lock: a pass here waits for it
+	other, err := s.Pool.Acquire(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer other.Release()
+	if _, err := other.Exec(ctx, `SELECT pg_advisory_lock(1128808782, hashtext('slowprobe'))`); err != nil { // "CHAN", the channel's name
+		t.Fatal(err)
+	}
+	done := make(chan error, 1)
+	go func() { _, err := Run(ctx, s, x, a); done <- err }()
+	select {
+	case err := <-done:
+		t.Fatalf("a pass ran while another process held the channel: %v", err)
+	case <-time.After(400 * time.Millisecond):
+	}
+	if _, err := other.Exec(ctx, `SELECT pg_advisory_unlock(1128808782, hashtext('slowprobe'))`); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("still waiting after the other process let go")
 	}
 }

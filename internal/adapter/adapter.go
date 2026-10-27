@@ -180,6 +180,13 @@ type Result struct {
 // not residue: the whole pass is refused and nothing is appended — and the
 // same holds for any failure inside the batch.
 func Run(ctx context.Context, s *store.Store, x *exec.Executor, a Adapter) (Result, error) {
+	// One pass of a channel at a time, here and in every other process: two
+	// passes of a channel that sends would both send what the log owes.
+	release, err := s.LockChannel(ctx, a.Name())
+	if err != nil {
+		return Result{}, err
+	}
+	defer release()
 	// A pass is one company's. Run as the owner it fans out over every
 	// company the log holds and then the installation's own documents;
 	// run for an office it fans out over the office's clients; each pass

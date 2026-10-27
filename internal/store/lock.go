@@ -2,8 +2,10 @@ package store
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"rhea/internal/core"
@@ -101,4 +103,60 @@ func (s *Store) Lock(ctx context.Context, wait time.Duration) (context.Context, 
 // namespaces — what the executor's waiting set holds (queries/pending.sql).
 func ruleFood(ev core.Event) bool {
 	return ev.Kind == core.KindRaw && !core.ReservedEventType(ev.Type)
+}
+
+// One pass of a channel at a time (invariant 10): two passes of a channel
+// that sends — KSeF, the JPK gateway — would both send what the log still
+// owes, the CLI's pass beside the server's, two servers side by side. The
+// lock is an advisory lock keyed by the channel's name (the class "CHAN"),
+// held on a dedicated connection for the pass; in process, a gate per
+// channel queues the waiters first, so they do not hold the pool's
+// connections while the pass needs them (the kernel lock's lesson, G5).
+
+//go:embed queries/channel_lock.sql
+var channelLockSQL string
+
+//go:embed queries/channel_unlock.sql
+var channelUnlockSQL string
+
+var (
+	channelGatesMu sync.Mutex
+	channelGates   = map[string]chan struct{}{}
+)
+
+func channelGate(name string) chan struct{} {
+	channelGatesMu.Lock()
+	defer channelGatesMu.Unlock()
+	g, ok := channelGates[name]
+	if !ok {
+		g = make(chan struct{}, 1)
+		channelGates[name] = g
+	}
+	return g
+}
+
+// LockChannel takes a channel's lock for one pass, waiting as long as ctx
+// lets it; release lets it go. A dropped connection releases it.
+func (s *Store) LockChannel(ctx context.Context, name string) (release func(), err error) {
+	gate := channelGate(name)
+	select {
+	case gate <- struct{}{}:
+	case <-ctx.Done():
+		return nil, fmt.Errorf("waiting for channel %s: %w", name, ctx.Err())
+	}
+	conn, err := s.Pool.Acquire(ctx)
+	if err != nil {
+		<-gate
+		return nil, fmt.Errorf("waiting for channel %s: %w", name, err)
+	}
+	if _, err := conn.Exec(ctx, channelLockSQL, name); err != nil {
+		conn.Release()
+		<-gate
+		return nil, fmt.Errorf("waiting for channel %s: %w", name, err)
+	}
+	return func() {
+		_, _ = conn.Exec(context.Background(), channelUnlockSQL, name)
+		conn.Release()
+		<-gate
+	}, nil
 }
