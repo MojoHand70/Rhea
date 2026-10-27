@@ -323,3 +323,55 @@ func TestMT940LinesOfTwoYearsAreTwoLines(t *testing.T) {
 		t.Fatalf("2026's line once and 2027's line once: %v", dates)
 	}
 }
+
+// A bank line is keyed by its statement's opening day (review 2026-10-27,
+// high): the key named the statement's year and number, and a bank that
+// writes the same number on every daily statement ("1", "00001/001") gave
+// the second day's lines the first day's keys — they were taken for lines
+// already logged, the file was marked read, and the payments never reached
+// the books. Now the key names the day the statement opens; a line logged
+// before under the year's key, or under the key with neither, is still
+// known when the same statement comes again.
+func TestMT940ADailyStatementNumberIsEachDaysOwn(t *testing.T) {
+	ctx := context.Background()
+	s := storetest.New(t)
+	x := &exec.Executor{Store: s}
+	installIntake(t, s, x)
+	sum, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", "pl", "bank-mt940.json"), "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, errs, err := x.ApproveBundle(ctx, sum.Bundle, "krzysztof", "2026-01-01"); err != nil || len(errs) != 0 {
+		t.Fatalf("approve: %v %v", err, errs)
+	}
+	account := "PL61109010140000071219812874"
+	statement := func(day, amount, opening, closing string) []byte {
+		return []byte(":20:STMT\r\n:25:" + account + "\r\n:28C:1\r\n:60F:C2609" + day + "PLN" + opening + "\r\n" +
+			":61:2609" + day + "09" + day + "C" + amount + "NTRFNONREF//1\r\n:86:PRZELEW PRZYCHODZACY|FS " + day + "/26|Mazowiecka Hurtownia S.A.|PL10105000997603123456789123\r\n" +
+			":62F:C2609" + day + "PLN" + closing + "\r\n-\r\n")
+	}
+	// The 14th's line, read before the key named the day: under the year's.
+	old, _ := json.Marshal(map[string]any{"date": "2026-09-14", "amount": "10.00", "currency": "PLN", "direction": "credit",
+		"reference": "FS 14/26", "account": account, "statement": "1", "line": 1})
+	if _, err := s.AppendEvent(ctx, core.Event{Kind: core.KindRaw, Type: "bank.statement.line", OccurredAt: "2026-09-14", Payload: old,
+		DedupKey: "bank_mt940/" + account + "/2026/1/1", Actor: "adapter:bank_mt940", ActivityName: "bank_mt940", ActivityVersion: 1}); err != nil {
+		t.Fatal(err)
+	}
+	receive(t, x, "14.sta", "text/plain", "bank", "2026-09-14", statement("14", "10,00", "1000,00", "1010,00"))
+	receive(t, x, "15.sta", "text/plain", "bank", "2026-09-15", statement("15", "100,00", "1010,00", "1110,00"))
+	receive(t, x, "16.sta", "text/plain", "bank", "2026-09-16", statement("16", "250,00", "1110,00", "1360,00"))
+	if res, err := adapter.Run(ctx, s, x, adapter.MT940{}); err != nil || res.PassErr != nil {
+		t.Fatalf("pass: %+v %v", res, err)
+	}
+	lines, err := s.EventsOfTypes(ctx, []string{"bank.statement.line"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	dates := map[string]int{}
+	for _, l := range lines {
+		dates[l.OccurredAt]++
+	}
+	if len(lines) != 3 || dates["2026-09-14"] != 1 || dates["2026-09-15"] != 1 || dates["2026-09-16"] != 1 {
+		t.Fatalf("each day's line once: %v", dates)
+	}
+}

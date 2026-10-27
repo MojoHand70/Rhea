@@ -53,9 +53,10 @@ func (m MT940) Pass(ctx context.Context, reads Reads) ([]core.Event, error) {
 		return nil, err
 	}
 	sort.Slice(docs, func(i, j int) bool { return docs[i].ID < docs[j].ID })
-	// Lines logged before the key named the statement's year were keyed by
-	// account, statement number and line: such a line read again from
-	// another file is the one already logged when its date is the same.
+	// Lines logged before the key named the statement's day were keyed by
+	// account, the year and statement number and line, or without the year:
+	// such a line read again from another file is the one already logged
+	// when its date is the same.
 	legacy := map[string]bool{}
 	if er, ok := reads.(interface {
 		EventsOfTypes(ctx context.Context, types []string) ([]core.Event, error)
@@ -109,15 +110,20 @@ func (m MT940) Pass(ctx context.Context, reads Reads) ([]core.Event, error) {
 					return out, err
 				}
 				// a re-downloaded statement is the same statement: keyed on
-				// the account, the year, the statement number and the line —
-				// banks number statements within the year, and without the
-				// year January 2027's statement 38 was January 2026's
-				// (review 2026-10-21, D1)
-				if legacy[fmt.Sprintf("bank_mt940/%s/%s/%d", st.Account, st.Number, l.Seq)+"@"+l.Date] {
+				// the account, the day the statement opens, its number and
+				// the line. Banks number statements within the year, and
+				// without the year January 2027's statement 38 was January
+				// 2026's (review 2026-10-21, D1); some write the same number
+				// on every daily statement, and with only the year the
+				// second day's lines were the first day's (review
+				// 2026-10-27). A line logged under an older key — the
+				// year's, or neither — is known by that key and its date.
+				if legacy[fmt.Sprintf("bank_mt940/%s/%s/%d", st.Account, st.Number, l.Seq)+"@"+l.Date] ||
+					legacy[fmt.Sprintf("bank_mt940/%s/%.4s/%s/%d", st.Account, st.From, st.Number, l.Seq)+"@"+l.Date] {
 					continue
 				}
 				out = append(out, core.Event{Type: "bank.statement.line", OccurredAt: l.Date,
-					Payload: payload, DedupKey: fmt.Sprintf("bank_mt940/%s/%.4s/%s/%d", st.Account, st.From, st.Number, l.Seq)})
+					Payload: payload, DedupKey: fmt.Sprintf("bank_mt940/%s/%s/%s/%d", st.Account, st.From, st.Number, l.Seq)})
 			}
 		}
 		read, _ := json.Marshal(map[string]any{
