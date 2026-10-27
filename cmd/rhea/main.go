@@ -630,6 +630,25 @@ func main() {
 				log.Printf("stopping: %v", err)
 			}
 		}()
+		// Channels that run on their own: each that says how often is run
+		// that often for every company, by the server's own timer — a
+		// person's act reaches the outside world with no command (KK,
+		// 2026-10-19). One pass of a channel at a time, across processes.
+		own := &adapter.Own{Store: s, Exec: x, Log: log.Printf}
+		go func() {
+			tick := time.NewTicker(15 * time.Second)
+			defer tick.Stop()
+			for {
+				select {
+				case <-stopping.Done():
+					return
+				case now := <-tick.C:
+					if _, err := own.Tick(store.WithOwner(ctx), now); err != nil {
+						log.Printf("channels on their own: %v", err)
+					}
+				}
+			}
+		}()
 		if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 			log.Fatal(err)
 		}

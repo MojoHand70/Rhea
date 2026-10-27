@@ -103,6 +103,11 @@ type ChannelSpec struct {
 	// lesson): provenance of the raw side, declared as data, never a
 	// reader's guess. Empty: the channel's facts say their market themselves.
 	Market string `json:"market,omitempty"`
+	// Poll makes the channel run on its own: the server runs its pass this
+	// often for every company ("1m", from ten seconds to a day), so a
+	// person's act reaches the outside world without a command (KK,
+	// 2026-10-19: users act in the interface). Empty: a command runs it.
+	Poll string `json:"poll,omitempty"`
 }
 
 // ConfidenceSpec says how sure a channel's reader is.
@@ -171,6 +176,11 @@ func (c ChannelSpec) validate(a Activity) error {
 	case "", VolumeDocuments, VolumeStream:
 	default:
 		return fmt.Errorf("channel %q: volume must be %q or %q", a.Name, VolumeDocuments, VolumeStream)
+	}
+	if c.Poll != "" {
+		if every, err := time.ParseDuration(c.Poll); err != nil || every < 10*time.Second || every > 24*time.Hour {
+			return fmt.Errorf("channel %q: poll %q is not a duration from 10s to 24h", a.Name, c.Poll)
+		}
 	}
 	if len(sp.Inputs) > 0 {
 		return fmt.Errorf("channel %q: a channel is triggered by code and declares no inputs", a.Name)
