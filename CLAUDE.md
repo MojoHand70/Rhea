@@ -21,7 +21,7 @@ another one. `DIRECTION.md` holds the briefs, `DECISIONS.md` the decisions.
   db/user/password `rhea` (local-only experiment; no secrets pretence).
   Driver `github.com/jackc/pgx/v5`.
 - DuckDB (read/analysis side) via `github.com/duckdb/duckdb-go/v2`, file `data/rhea.duckdb`.
-- Anthropic Go SDK; model from env `RHEA_MODEL` (default `claude-sonnet-4-6`), key from
+- Anthropic Go SDK; model from env `RHEA_MODEL` (default `claude-sonnet-5-5`), key from
   `ANTHROPIC_API_KEY`. Never hard-code either.
 - Shell: `net/http` + embedded vanilla HTML/JS/CSS from `web/`. No framework, no build step.
 - SQL lives in `.sql` files embedded with `//go:embed`, never in Go string literals.

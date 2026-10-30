@@ -120,7 +120,7 @@ func Model() string {
 	if m := os.Getenv("RHEA_MODEL"); m != "" {
 		return m
 	}
-	return "claude-sonnet-4-6"
+	return "claude-sonnet-5-5"
 }
 
 // New returns an Agent backed by the Anthropic API (key from ANTHROPIC_API_KEY).

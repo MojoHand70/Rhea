@@ -5866,3 +5866,28 @@ choice.
   parameters.
 - This is step 2 of the Apps (APPS.md "variables"), begun with reports. Order: the parameter definition in
   the kernel; Rhea proposing at keeping; the selector on the desk; the phone.
+
+## 2026-10-30 — Rhea runs on Claude Sonnet 5.5 by default; the host speaks at low effort where thinking cannot be switched off (KK: "Can we switch Rhea to Sonnet 5.5?")
+- **Why Sonnet 5.5:** the current Sonnet, at $2 in / $10 out per million tokens against Sonnet 4.6's
+  $3 / $15, the same 1M context; the face already runs on this generation (Opus 5.5 at low effort).
+  `RHEA_MODEL` still names any other model. The deploy sets no model, so the next deploy moves white01
+  to Sonnet 5.5 unless its kernel.env names one.
+- **The host's speaking call** (the morning, every spoken answer) switched the model's thinking off; the
+  5.5 generation answers that with HTTP 400. On a Claude model the call now carries no thinking
+  parameter and asks for low effort — valid on every Claude model since 4.6, a little thought allowed,
+  the words in seconds. A model that is not Claude (a local one behind `ANTHROPIC_BASE_URL`) is
+  switched off as before. Drafting rules, reading documents and answering questions keep the model's
+  default (high effort on Sonnet 5.5): that is where judgment is paid for.
+- **A decline** (the API's `refusal` stop reason, from this generation's classifiers) is an error naming
+  the API's category and explanation; before, it was an empty answer that failed later as "no JSON" or a
+  morning silent without a reason.
+- **Assessed and left:** the server-side refusal fallback (a beta re-serving a declined request on another
+  model) — single-turn accounting prompts should rarely be declined, a decline should be seen, and the
+  beta would not pass a local endpoint. Prompt caching of the rule grammar and the catalog (a stable
+  prefix of ~20K tokens, cached reads at a tenth of the price) — a measured need first: the kernel
+  records none of the usage figures the API returns with every answer; a usage line per call is the
+  step before any pricing decision. Rough estimate the same day: a small company costs about $2.5 a month
+  (ten PDFs read, two morning narratives a day, a question a day, three rule drafts); KSeF invoices,
+  bank lines, postings, VAT and JPK cost no tokens; questions and mornings carry the bill, not documents.
+- Claude models before 4.6 reject `effort`; `RHEA_MODEL` naming one would break the host's speaking,
+  not drafting. Not guarded: nobody runs them.
