@@ -171,3 +171,28 @@ func TestWordsOfferQuestionsToStart(t *testing.T) {
 		}
 	}
 }
+
+// A hidden section names what the Nav Bar does not draw (KK 2026-10-30: the
+// raw record lists of the people pack sat beside the screens built from
+// them, "Grupy" twice): its items are placed, so no rest catches them, and
+// a face reads the mark and leaves them out.
+func TestWordsHideTheRawLists(t *testing.T) {
+	var w WordsSpec
+	if err := json.Unmarshal([]byte(`{"lang": "pl", "activities": [
+		{"id": "settings", "title": "Ustawienia", "end": true, "sections": [
+			{"id": "users", "title": "Użytkownicy", "items": [{"app": "people", "tab": "desk:access"}]},
+			{"id": "users-records", "title": "Zapisy o użytkownikach", "hidden": true, "items": [{"kind": "membership"}, {"kind": "group_member"}]}]}]}`), &w); err != nil {
+		t.Fatal(err)
+	}
+	if err := w.Check(); err != nil {
+		t.Fatalf("a hidden section of raw lists: %v", err)
+	}
+	secs := w.Activities[0].Sections
+	if secs[0].Hidden || !secs[1].Hidden || len(secs[1].Items) != 2 || secs[1].Items[1].Kind != "group_member" {
+		t.Fatalf("the hidden section as read: %+v", secs)
+	}
+	b, _ := json.Marshal(secs[1])
+	if !strings.Contains(string(b), `"hidden":true`) {
+		t.Fatalf("the mark is not written back: %s", b)
+	}
+}

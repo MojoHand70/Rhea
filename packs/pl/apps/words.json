@@ -13,7 +13,7 @@
   "tabs": [
     {
       "view_id": "slownik",
-      "version": 28,
+      "version": 29,
       "notion": "words",
       "title": "Słownik",
       "domain": "finance",
@@ -1402,13 +1402,12 @@
           "group-trial-balance": "Zestawienie obrotów i sald grupy (EUR)",
           "invoice-by-customer": "Sprzedaż według nabywców",
           "intercompany-positions": "Rozrachunki wewnątrz grupy",
-          "who-can-do-what": "Kto co może",
+          "who-can-do-what": "Uprawnienia",
           "desk:today": "Dziś",
           "desk:company": "Firma",
           "desk:settings": "Wygląd i biurko",
-          "desk:access": "Kto ma dostęp",
+          "desk:access": "Użytkownicy",
           "desk:groups": "Grupy",
-          "desk:invites": "Zaproszenia",
           "desk:packs": "Pakiety",
           "client-list": "Klienci",
           "supplier-list": "Dostawcy"
@@ -1728,16 +1727,19 @@
                   },
                   {
                     "app": "people",
-                    "tab": "who-can-do-what"
-                  },
-                  {
-                    "app": "people",
                     "tab": "desk:groups"
                   },
                   {
                     "app": "people",
-                    "tab": "desk:invites"
-                  },
+                    "tab": "who-can-do-what"
+                  }
+                ]
+              },
+              {
+                "id": "users-records",
+                "title": "Zapisy o użytkownikach",
+                "hidden": true,
+                "items": [
                   {
                     "kind": "person"
                   },
@@ -1745,19 +1747,19 @@
                     "kind": "role"
                   },
                   {
-                    "kind": "group"
+                    "kind": "membership"
                   },
                   {
-                    "kind": "group_member"
+                    "kind": "mandate"
                   },
                   {
                     "kind": "substitution"
                   },
                   {
-                    "kind": "membership"
+                    "kind": "group"
                   },
                   {
-                    "kind": "mandate"
+                    "kind": "group_member"
                   }
                 ]
               },

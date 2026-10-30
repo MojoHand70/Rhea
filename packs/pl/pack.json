@@ -1,12 +1,17 @@
 {
   "pack": "pl",
-  "version": 57,
+  "version": 58,
   "kind": "market",
   "market": "PL",
   "install": "installation",
   "stage": "initial",
   "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
   "history": [
+    {
+      "versions": "58",
+      "date": "2026-10-30",
+      "changes": "Słownik v29: pod Ustawienia › Użytkownicy trzy ekrany, nazwane jak w polskim oprogramowaniu dla firm — Użytkownicy, Grupy, Uprawnienia — a zaproszenia na ekranie Użytkownicy; surowe listy zapisów o ludziach (osoby, role, członkostwa, umocowania biur, zastępstwa, grupy, miejsca w grupach) w sekcji ukrytej, której pasek nie rysuje (KK, 2026-10-30: siedem pozycji, Grupy dwa razy). Bez zmian reguł."
+    },
     {
       "versions": "57",
       "date": "2026-10-30",

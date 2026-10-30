@@ -1,6 +1,6 @@
 {
   "app": "people",
-  "version": 3,
+  "version": 4,
   "title": "People",
   "layer": "platform",
   "place": {
@@ -405,24 +405,20 @@
   "tabs": [
     {
       "desk": "access",
-      "title": "Who has access"
-    },
-    {
-      "view_id": "who-can-do-what",
-      "version": 1,
-      "notion": "rights",
-      "title": "Who can do what",
-      "domain": "people",
-      "function": "rights",
-      "spec": {}
+      "title": "Users"
     },
     {
       "desk": "groups",
       "title": "Groups"
     },
     {
-      "desk": "invites",
-      "title": "Invitations"
+      "view_id": "who-can-do-what",
+      "version": 2,
+      "notion": "rights",
+      "title": "Permissions",
+      "domain": "people",
+      "function": "rights",
+      "spec": {}
     }
   ],
   "actions": [

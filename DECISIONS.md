@@ -5901,3 +5901,15 @@ choice.
   are now, like rules, those whose very latest version is active: a draft above does not suspend them,
   a removal does. The `app.` namespace is the kernel's. A report kept before kept reports were Apps
   (the morning of 2026-10-30, KK's RZiS) has a view and no App: the same door removes it by its view.
+- 2026-10-30 — Użytkownicy is three screens (KK: "We have built a system so twisted… All the naming is
+  confusing"; the screenshot: seven entries, "Grupy" twice, "Miejsca w grupach", "Umocowania biur").
+  Named as Polish business software names them: Użytkownicy (who is in, with role and deputy, and the
+  invitation from there), Grupy (each group, its members, what it gives), Uprawnienia (who may do what).
+  "Kto ma dostęp" was Google Drive's wording, "Kto co może" Claude's; both go. The raw record lists of
+  the people pack (osoby, role, członkostwa, umocowania biur, zastępstwa, grupy, miejsca w grupach)
+  are named in a hidden section — `hidden` on a section of the arrangement: named, so no rest catches
+  them; not drawn by any Nav Bar; reached from the records that refer to them. Umocowania biur stay
+  hidden until the office has a client screen of its own. The cause: every kind of record gets a list
+  by default and the people screens were built by hand on top — the case the Apps rule was written
+  for. Outside the kernel the word is "action" (Polish "czynność"), never "door" or "verb"; the code
+  keeps the spec's "activity".

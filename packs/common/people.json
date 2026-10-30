@@ -1,11 +1,16 @@
 {
   "pack": "common-people",
-  "version": 6,
+  "version": 7,
   "kind": "core",
   "install": "installation",
   "stage": "initial",
   "disclaimer": "This pack was prepared by artificial intelligence (AI). It is an initial version: its rules may contain errors and will change as accountants, tax advisers and auditors review them.",
   "history": [
+    {
+      "versions": "7",
+      "date": "2026-10-30",
+      "changes": "The People App shows three screens, named as business software names them — Users, Groups, Permissions — and the invitations sit on Users (KK, 2026-10-30: seven entries under Użytkownicy, Grupy twice, the raw lists beside the screens built from them). The who-can-do-what screen is Permissions. No rule changes."
+    },
     {
       "versions": "6",
       "date": "2026-10-30",

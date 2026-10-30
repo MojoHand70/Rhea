@@ -242,11 +242,16 @@ type NavActivity struct {
 // puts its items in the Nav Bar itself, where it stands. Rest marks the one section, of the
 // whole arrangement, that takes the Apps no activity places — a pack's
 // these words do not know yet: a function is never hidden (KK 2026-10-26).
+// Hidden marks a section the Nav Bar does not draw: its items are named,
+// so they fall under no rest, and reached from the records that refer to
+// them — the raw lists behind a screen built for people (KK 2026-10-30:
+// "Grupy" twice, "Miejsca w grupach", "Umocowania biur" under Użytkownicy).
 type NavSection struct {
-	ID    string    `json:"id,omitempty"`
-	Title string    `json:"title,omitempty"`
-	Items []NavItem `json:"items,omitempty"`
-	Rest  bool      `json:"rest,omitempty"`
+	ID     string    `json:"id,omitempty"`
+	Title  string    `json:"title,omitempty"`
+	Items  []NavItem `json:"items,omitempty"`
+	Rest   bool      `json:"rest,omitempty"`
+	Hidden bool      `json:"hidden,omitempty"`
 }
 
 // NavItem opens an App — on one of its tabs where Tab names it (a view's id,

@@ -97,13 +97,13 @@ func TestIntercompany(t *testing.T) {
 	if _, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", "common", "people.json"), "test"); err != nil {
 		t.Fatal(err)
 	}
-	post("/api/bundles/pack-common-people-v6/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-common-people-v7/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	for _, p := range []string{"pl", "de"} {
 		if _, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", p, "pack.json"), "test"); err != nil {
 			t.Fatal(err)
 		}
 	}
-	for _, id := range []string{"pack-pl-v57", "pack-de-v5"} {
+	for _, id := range []string{"pack-pl-v58", "pack-de-v5"} {
 		post("/api/bundles/"+id+"/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	}
 	activate("register-company", core.RuleSpec{
