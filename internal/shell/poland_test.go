@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"testing/cryptotest"
 	"time"
@@ -23,6 +24,11 @@ import (
 	"rhea/internal/store/storetest"
 	"rhea/markets/pl"
 )
+
+// storySigner is the Poland story's signing person, one key per process.
+var storySigner = sync.OnceValues(func() (*pl.CertSigner, error) {
+	return pl.SelfSignedSignerRSA("5250001111", "Jan", "Testowy", time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC))
+})
 
 // TestM3PolandPack is the market-pack milestone (SPEC M3): Poland arrives as
 // one data file — wzorcowy plan kont, VAT rates, the KSeF invoice schema,
@@ -645,8 +651,15 @@ func TestM3PolandPack(t *testing.T) {
 	if err != nil || !strings.Contains(string(request.Bytes), "<FileName>JPK_V7M_5250001111_202609.xml</FileName>") {
 		t.Fatalf("the request to sign: %v %.300s", err, request.Bytes)
 	}
+	// The person's key is drawn once for the whole run, not once per
+	// telling: the seeded random source is the process's, and other tests'
+	// goroutines draw from it too, so a key drawn here could differ between
+	// two tellings and sign the same request into two different files
+	// (invariant 4: told twice, the facts are the same — the signed file's
+	// hash among them). With one RSA key the signature is PKCS#1 v1.5,
+	// the same bytes for the same request whatever else draws random.
 	signedAt := time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)
-	signer, err := pl.SelfSignedSignerRSA("5250001111", "Jan", "Testowy", signedAt)
+	signer, err := storySigner()
 	if err != nil {
 		t.Fatal(err)
 	}
