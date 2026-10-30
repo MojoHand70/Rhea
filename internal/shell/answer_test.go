@@ -42,6 +42,9 @@ func TestAnswerFromTheBooks(t *testing.T) {
 		Clock: adapter.Clock{Now: func() time.Time { return time.Date(2026, 10, 18, 9, 0, 0, 0, time.UTC) }},
 		Agent: &agent.Agent{Complete: func(ctx context.Context, system, user string) (string, error) {
 			asked = append(asked, user)
+			if len(replies) == 0 {
+				return "", fmt.Errorf("nothing queued for the author")
+			}
 			r := replies[0]
 			replies = replies[1:]
 			return r, nil
@@ -345,8 +348,8 @@ func TestAnswerFromTheBooks(t *testing.T) {
 	if again.Report != monthly || again.Title != "Sprzedaż we wrześniu" || again.Period == nil || again.Period.To != "2026-08-31" || len(again.Rows) != 1 || again.Rows[0][0] != "2000.00" || again.Visual.Kind != "kpi" {
 		t.Fatalf("the kept report, for August: %+v", again)
 	}
-	if !strings.Contains(asked[0], monthly+" „Sprzedaż we wrześniu” - sprzedaż netto we wrześniu - takes a period") {
-		t.Fatalf("the author is told the report takes a period:\n%s", asked[0])
+	if !strings.Contains(asked[0], monthly+" „Sprzedaż we wrześniu” - sprzedaż netto we wrześniu - parameters: period (period, default open-month)") {
+		t.Fatalf("the author is told the report's parameters:\n%s", asked[0])
 	}
 	evs, _ = s.EventsOfTypes(ctx, []string{core.EventHostAnswered})
 	last := evs[len(evs)-1]
@@ -411,6 +414,63 @@ func TestAnswerFromTheBooks(t *testing.T) {
 		if code := call("GET", "/api/views/sprzedaz-do-firmy"+bad, nil, nil); code != 400 {
 			t.Fatalf("%s: %d, a value the books do not hold is refused", bad, code)
 		}
+	}
+
+	// Rhea proposes the parameters when she creates a report (KK 2026-10-30):
+	// asked "sales to Nabywca in September", kept, the author makes the firm
+	// and the period its parameters, the firm named as the question wrote it
+	// and found in the books; the card shows them; approved, the report
+	// takes them, and asked "and for August?" the author names them.
+	replies = []string{`{"sql": "SELECT COALESCE(sum(i.net), 0) AS \"Netto\", string_agg(i.id, ',' ORDER BY i.id) AS _of FROM ` + table + ` i JOIN ` + inv.Schema + `.company c ON c.id = i.buyer WHERE c.name = 'Nabywca S.A.' AND strftime(i.issue_date, '%Y-%m') = '2026-09'", "reading": "sprzedaż netto do Nabywcy we wrześniu", "visual": {"kind": "kpi", "value": "Netto", "title": "Sprzedaż do Nabywcy"}}`,
+		`{"sql": "SELECT COALESCE(sum(i.net), 0) AS \"Netto\", string_agg(i.id, ',' ORDER BY i.id) AS _of FROM ` + table + ` i WHERE i.buyer = {{firma}} AND i.issue_date BETWEEN {{period_from}} AND {{period_to}}", "parameters": [{"name": "firma", "kind": "firm", "label": "Klient", "default": "Nabywca S.A."}, {"name": "period", "kind": "period", "label": "Okres", "default": "2026-09"}]}`}
+	call("POST", "/api/answer", map[string]any{"question": "sprzedaż do Nabywcy we wrześniu", "asked_by": "krzysztof"}, &ans)
+	if len(ans.Rows) != 1 || ans.Rows[0][0] != "1500.00" {
+		t.Fatalf("sales to Nabywca in September: %+v", ans.Rows)
+	}
+	asked = nil
+	if code := call("POST", fmt.Sprintf("/api/answers/%d/keep", ans.EventID), nil, &kept); code != 200 {
+		t.Fatalf("keep: %d", code)
+	}
+	if len(asked) != 1 || !strings.Contains(asked[0], "Question: sprzedaż do Nabywcy we wrześniu") || !strings.Contains(asked[0], "c.name = 'Nabywca S.A.'") {
+		t.Fatalf("the author was asked for the parameters once, with the question and the query:\n%v", asked)
+	}
+	var cards []struct {
+		Title      string
+		Parameters []struct {
+			Name, Kind, Label, Default string
+			Value                      any
+		}
+		Rows [][]struct{ V string }
+	}
+	call("GET", "/api/bundles/"+kept.ID+"/preview", nil, &cards)
+	if len(cards) != 1 || len(cards[0].Parameters) != 2 || cards[0].Parameters[0].Name != "firma" || cards[0].Parameters[0].Default != buyerID || cards[0].Parameters[0].Label != "Klient" ||
+		cards[0].Parameters[1].Name != "period" || cards[0].Rows[0][0].V != "1500.00" {
+		t.Fatalf("the card shows the parameters, the firm found by its name: %+v", cards)
+	}
+	if _, _, _, err := x.ApproveBundle(ctx, kept.ID, "krzysztof", "2026-10-18"); err != nil {
+		t.Fatal(err)
+	}
+	byNabywca := fmt.Sprintf("answer-%d", ans.EventID)
+	call("GET", "/api/views/"+byNabywca+"?period=2026-08", nil, &served)
+	if served.Components[0].Rows[0][0] != "2000.00" || served.Parameters[0].Value != buyerID {
+		t.Fatalf("the kept report for August, the firm its default: %+v", served)
+	}
+	asked = nil
+	replies = []string{`{"report": "` + byNabywca + `", "parameters": {"period": "2026-08", "firma": "Nabywca S.A."}, "reading": "sprzedaż do Nabywcy za sierpień"}`}
+	if code := call("POST", "/api/answer", map[string]any{"question": "a za sierpień?", "asked_by": "krzysztof"}, &again); code != 200 || again.Report != byNabywca || len(again.Rows) != 1 || again.Rows[0][0] != "2000.00" {
+		t.Fatalf("the kept report answers for August by its parameters: %d %+v", code, again)
+	}
+	if !strings.Contains(asked[0], byNabywca+" „Sprzedaż do Nabywcy” - sprzedaż netto do Nabywcy we wrześniu - parameters: firma (firm, Klient, default "+buyerID+"); period (period, Okres, default 2026-09)") {
+		t.Fatalf("the author is told the parameters:\n%s", asked[0])
+	}
+	// a proposal that does not hold — a firm the books have not — falls back to the period alone
+	replies = []string{`{"sql": "SELECT COALESCE(sum(i.net), 0) AS \"Netto\", string_agg(i.id, ',' ORDER BY i.id) AS _of FROM ` + table + ` i WHERE strftime(i.issue_date, '%Y-%m') = '2026-08'", "reading": "sprzedaż netto w sierpniu", "visual": {"kind": "kpi", "value": "Netto"}}`,
+		`{"sql": "SELECT 1 FROM x WHERE f = {{firma}}", "parameters": [{"name": "firma", "kind": "firm", "default": "Nikt Taki"}]}`}
+	call("POST", "/api/answer", map[string]any{"question": "sprzedaż w sierpniu", "asked_by": "krzysztof"}, &ans)
+	call("POST", fmt.Sprintf("/api/answers/%d/keep", ans.EventID), nil, &kept)
+	call("GET", "/api/bundles/"+kept.ID+"/preview", nil, &cards)
+	if len(cards) != 1 || len(cards[0].Parameters) != 1 || cards[0].Parameters[0].Name != "period" || cards[0].Parameters[0].Kind != "period" {
+		t.Fatalf("a proposal that does not hold leaves the period alone: %+v", cards)
 	}
 
 	// A dashboard drafted in words: the author sees the collection; on the

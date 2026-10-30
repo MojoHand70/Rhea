@@ -208,6 +208,97 @@ func (s *Server) handleAnswer(w http.ResponseWriter, r *http.Request) {
 // answerTries: the author's query and two fixes after DuckDB's refusal.
 const answerTries = 3
 
+// proposeParameters is what a kept report takes as its parameters (KK
+// 2026-10-30): the author's proposal — the query reading them, each with
+// its default — when it holds on the books (a firm or an account named is
+// found, once; the query runs on the defaults); else the stretch of time
+// the query names as its period; else nothing, the query as it answered.
+func (s *Server) proposeParameters(ctx context.Context, question, sql, reading, title string, visual core.Visual) (string, []core.Parameter) {
+	if s.Agent != nil {
+		ans, err := s.Agent.Parameterise(ctx, agent.ParameterAsk{Question: question, SQL: sql, Reading: reading, Today: s.Clock.Today(), Words: s.words(ctx)})
+		if err == nil && len(ans.Parameters) > 0 {
+			if params, err := s.resolveParameters(ctx, ans.Parameters); err == nil {
+				spec := core.ReportSpec{Parameters: params, Components: []core.ReportComponent{{Title: title, Reading: reading, SQL: ans.SQL, Visual: visual}}}
+				if err := spec.Check(); err == nil {
+					raw, _ := json.Marshal(spec)
+					comps, _, _, err := s.reportComponents(ctx, &core.ViewDef{ID: "proposal", Spec: raw}, nil)
+					if err == nil && comps[0].Error == "" {
+						return ans.SQL, params
+					}
+					log.Printf("keep: the author's parameters do not run: %v %s", err, comps[0].Error)
+				} else {
+					log.Printf("keep: the author's parameters: %v", err)
+				}
+			} else {
+				log.Printf("keep: the author's parameters: %v", err)
+			}
+		} else if err != nil {
+			log.Printf("keep: asking for parameters: %v", err)
+		}
+	}
+	if out, takes := core.Periodise(sql); takes {
+		return out, []core.Parameter{{Name: "period", Kind: "period", Default: core.OpenMonth}}
+	}
+	return sql, nil
+}
+
+// resolveParameters turns the defaults the author wrote by name into the
+// records' ids: a firm by its name or its tax id, an account by its code or
+// its name, each found once among the scope's own; a name found twice or
+// not at all is an error.
+func (s *Server) resolveParameters(ctx context.Context, params []core.Parameter) ([]core.Parameter, error) {
+	out := slices.Clone(params)
+	for i := range out {
+		p := &out[i]
+		if (p.Kind != "firm" && p.Kind != "account") || p.Default == "" {
+			continue
+		}
+		id, err := s.findRecord(ctx, p.Kind, p.Default)
+		if err != nil {
+			return nil, fmt.Errorf("parameter %s: %w", p.Name, err)
+		}
+		p.Default = id
+	}
+	return out, nil
+}
+
+// findRecord is the one firm or account a text names: its id, its name
+// (whole, case aside), its tax id or its code.
+func (s *Server) findRecord(ctx context.Context, kind, text string) (string, error) {
+	typ, keys := "company", []string{"name", "vat_id"}
+	if kind == "account" {
+		typ, keys = "account", []string{"code", "name"}
+	}
+	if o, err := s.Store.GetObject(ctx, text); err == nil && o.Type == typ && ownRow(ctx, o) {
+		return o.ID, nil
+	}
+	objs, err := s.Store.ObjectsByType(ctx, typ)
+	if err != nil {
+		return "", err
+	}
+	var found []string
+	want := strings.ToLower(strings.TrimSpace(text))
+	for _, o := range objs {
+		if !ownRow(ctx, o) {
+			continue
+		}
+		for _, k := range keys {
+			if v, _ := o.State[k].(string); v != "" && strings.ToLower(strings.TrimSpace(v)) == want {
+				found = append(found, o.ID)
+				break
+			}
+		}
+	}
+	switch len(found) {
+	case 1:
+		return found[0], nil
+	case 0:
+		return "", fmt.Errorf("no %s named %q in these books", kind, text)
+	default:
+		return "", fmt.Errorf("%d %ss named %q in these books", len(found), kind, text)
+	}
+}
+
 // keptReports are the company's kept reports as the author is told of them
 // (KK 2026-10-30: a report kept is asked for again, never written again),
 // and each by its id.
@@ -226,7 +317,8 @@ func (s *Server) keptReports(ctx context.Context) ([]agent.AnswerReport, map[str
 		if err := json.Unmarshal(v.Spec, &spec); err != nil {
 			continue
 		}
-		r := agent.AnswerReport{ID: v.ID, Title: v.Title, Period: spec.Period}
+		params := spec.Params()
+		r := agent.AnswerReport{ID: v.ID, Title: v.Title, Period: slices.ContainsFunc(params, func(p core.Parameter) bool { return p.Kind == "period" }), Parameters: params}
 		for _, c := range spec.Components {
 			r.Parts = append(r.Parts, cmp.Or(c.Reading, c.Title))
 		}
@@ -245,6 +337,25 @@ func (s *Server) answerWithReport(ctx context.Context, w http.ResponseWriter, qu
 	if ans.From != "" || ans.To != "" {
 		q.Set("from", ans.From)
 		q.Set("to", ans.To)
+	}
+	// the values the author named for the report's parameters: a firm or an
+	// account by name becomes its id, found once among the scope's own
+	var spec core.ReportSpec
+	_ = json.Unmarshal(vd.Spec, &spec)
+	for name, val := range ans.Parameters {
+		i := slices.IndexFunc(spec.Params(), func(p core.Parameter) bool { return p.Name == name })
+		if i < 0 || val == "" {
+			continue
+		}
+		if p := spec.Params()[i]; p.Kind == "firm" || p.Kind == "account" {
+			id, err := s.findRecord(ctx, p.Kind, val)
+			if err != nil {
+				writeJSON(w, 200, map[string]any{"question": question, "failed": true, "error": err.Error()})
+				return
+			}
+			val = id
+		}
+		q.Set(name, val)
 	}
 	comps, params, code, err := s.reportComponents(ctx, &vd, q)
 	if err != nil {
@@ -490,8 +601,10 @@ const (
 // handleKeepAnswer keeps an answer as a report (KK: what is kept goes through
 // the gate): the query she ran, its reading and its visual become a report
 // with one component, drafted in a bundle that waits for a person's approval
-// with its preview — no second model call, the kept query is the one that
-// answered.
+// with its preview. The author is asked once more, which parameters a
+// person will want to change (KK 2026-10-30); what she proposes is checked
+// on the books before it is drafted, and without her, or when her proposal
+// does not hold, the stretch of time the query names becomes its period.
 func (s *Server) handleKeepAnswer(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	// keeping drafts a bundle: the right to ask for one, never a reader's
@@ -538,10 +651,8 @@ func (s *Server) handleKeepAnswer(w http.ResponseWriter, r *http.Request) {
 	if rs := []rune(title); len(rs) > 80 {
 		title = string(rs[:80])
 	}
-	// the stretch of time the question named becomes the report's period
-	// (KK 2026-10-30: asked for another month, it is the same report)
-	sql, takes := core.Periodise(p.SQL)
-	spec, _ := json.Marshal(core.ReportSpec{Period: takes, Components: []core.ReportComponent{{Title: title, Reading: p.Reading, SQL: sql, Visual: visual}}})
+	sql, params := s.proposeParameters(ctx, p.Question, p.SQL, p.Reading, title, visual)
+	spec, _ := json.Marshal(core.ReportSpec{Parameters: params, Components: []core.ReportComponent{{Title: title, Reading: p.Reading, SQL: sql, Visual: visual}}})
 	viewID := fmt.Sprintf("answer-%d", id)
 	bd := agent.BundleDraft{
 		BundleID:    "keep-" + viewID,

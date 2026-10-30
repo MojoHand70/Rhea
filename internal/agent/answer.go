@@ -32,9 +32,10 @@ type AnswerAsk struct {
 // AnswerReport is a kept report as the author sees it: its id, its title,
 // what its parts count, and whether it takes a period.
 type AnswerReport struct {
-	ID, Title string
-	Parts     []string
-	Period    bool
+	ID, Title  string
+	Parts      []string
+	Period     bool
+	Parameters []core.Parameter // what a person sets before it is computed (KK 2026-10-30)
 }
 
 // CollectionTable is one table of the collection as the author sees it.
@@ -66,6 +67,10 @@ type Answer struct {
 	Report string `json:"report,omitempty"`
 	From   string `json:"from,omitempty"`
 	To     string `json:"to,omitempty"`
+	// Parameters are the values asked for the report's parameters, by name:
+	// a period as a month or two days, a firm or an account by name or id,
+	// a choice among its values, a day, a text.
+	Parameters map[string]string `json:"parameters,omitempty"`
 	// Lesson is the kind of question in general words — no names, digits or
 	// dates — what reaches the Rhea team if she cannot answer it.
 	Lesson string `json:"lesson,omitempty"`
@@ -127,19 +132,21 @@ miesiąc po miesiącu, z sumą"). If the question cannot be answered, it is what
 team so they can teach it.
 
 A KEPT REPORT - the company's reports already kept and approved are listed below, each with what
-its parts count and whether it takes a period. When the question asks for one of them - the same
-report, for a period it takes (a month, a quarter, a year, from one day to another) or as it is -
-do not write a query: name it. {"report": "<its id>", "from": "YYYY-MM-DD", "to": "YYYY-MM-DD",
-"reading": "<one plain sentence: which report, which period>"}; from and to are the period's first
-and last day, only for a report that takes a period, and left out when none is asked. A report
-that takes no period answers only as it was kept. Prefer the kept report to a query of your own
-whenever it is what was asked.
+its parts count and the parameters a person sets before it is computed (a period, a firm, an
+account, a choice among values, a date, a text; each with its default). When the question asks for
+one of them - the same report, for other values of its parameters or as it is - do not write a
+query: name it. {"report": "<its id>", "parameters": {"<name>": "<value>", ...}, "reading": "<one
+plain sentence: which report, for what>"}: a period as a month "2026-08" or two days
+"2026-08-01..2026-08-31", a firm or an account by its name as the question wrote it, a choice as one
+of its values, a date as a day; leave out a parameter the question does not change, and give none
+for a report with no parameters. Prefer the kept report to a query of your own whenever it is what
+was asked.
 
 When the collection holds nothing that could answer the question, say so instead:
 {"cannot": "<why, in the question's language, without figures>", "lesson": "..."}.
 
 Reply with only the JSON object: {"sql": "...", "reading": "...", "visual": {...}, "lesson": "..."},
-{"report": "...", "from": "...", "to": "...", "reading": "..."} or {"cannot": "...", "lesson": "..."}.`
+{"report": "...", "parameters": {...}, "reading": "..."} or {"cannot": "...", "lesson": "..."}.`
 
 // Answer asks the author for a query that answers the question.
 func (a *Agent) Answer(ctx context.Context, ask AnswerAsk) (Answer, error) {
@@ -177,11 +184,27 @@ func answerMessage(ask AnswerAsk) string {
 	if len(ask.Reports) > 0 {
 		sb.WriteString("\nKept reports (approved; name one when it is what was asked):\n")
 		for _, r := range ask.Reports {
-			period := "as kept, no period"
-			if r.Period {
-				period = "takes a period"
+			params := "no parameters, as kept"
+			if len(r.Parameters) > 0 {
+				var ps []string
+				for _, p := range r.Parameters {
+					d := p.Name + " (" + p.Kind
+					if p.Label != "" {
+						d += ", " + p.Label
+					}
+					if p.Default != "" {
+						d += ", default " + p.Default
+					}
+					if len(p.Values) > 0 {
+						d += ", values: " + strings.Join(p.Values, " | ")
+					}
+					ps = append(ps, d+")")
+				}
+				params = "parameters: " + strings.Join(ps, "; ")
+			} else if r.Period {
+				params = "takes a period"
 			}
-			fmt.Fprintf(&sb, "- %s \u201e%s\u201d - %s - %s\n", r.ID, r.Title, strings.Join(r.Parts, "; "), period)
+			fmt.Fprintf(&sb, "- %s \u201e%s\u201d - %s - %s\n", r.ID, r.Title, strings.Join(r.Parts, "; "), params)
 		}
 	}
 	fmt.Fprintf(&sb, "\nToday: %s\n", ask.Today)

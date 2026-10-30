@@ -303,6 +303,9 @@ type figurePreview struct {
 	Rows    [][]cellOut `json:"rows,omitempty"`
 	Total   int         `json:"total"` // rows in all; Rows holds the first few
 	Error   string      `json:"error,omitempty"`
+	// Parameters are what a person will set before the report is computed
+	// (KK 2026-10-30), with the defaults it was computed for here.
+	Parameters []parameterOut `json:"parameters,omitempty"`
 }
 
 // handlePreviewBundle shows what a waiting bundle's figures would show —
@@ -331,13 +334,17 @@ func (s *Server) handlePreviewBundle(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if v.Notion == "report" {
-			comps, _, _, err := s.reportComponents(ctx, &v, nil)
+			comps, params, _, err := s.reportComponents(ctx, &v, nil)
 			if err != nil {
 				out = append(out, figurePreview{ViewID: v.ID, Title: v.Title, Error: err.Error()})
 				continue
 			}
-			for _, c := range comps {
-				out = append(out, componentPreview(v, c))
+			for i, c := range comps {
+				p := componentPreview(v, c)
+				if i == 0 {
+					p.Parameters = params
+				}
+				out = append(out, p)
 			}
 			continue
 		}
