@@ -1,8 +1,16 @@
 {
   "app": "year-close",
-  "version": 1,
+  "version": 2,
   "title": "Zamknięcie roku",
   "layer": "law",
+  "place": {
+    "activity": "books",
+    "section": "close"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "data": [
     {
       "name": "year_close_cost",

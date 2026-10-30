@@ -1,8 +1,15 @@
 {
   "app": "sales-invoices",
-  "version": 3,
+  "version": 5,
   "title": "Faktury sprzedaży",
   "layer": "law",
+  "place": {
+    "activity": "sales"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "data": [
     {
       "name": "sales_invoice",

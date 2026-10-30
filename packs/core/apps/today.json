@@ -1,8 +1,15 @@
 {
   "app": "today",
-  "version": 1,
+  "version": 2,
   "title": "Today",
   "layer": "platform",
+  "place": {
+    "activity": "today"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "tabs": [
     {
       "desk": "today",

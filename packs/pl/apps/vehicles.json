@@ -1,8 +1,15 @@
 {
   "app": "vehicles",
-  "version": 1,
+  "version": 2,
   "title": "Samochody i leasing",
   "layer": "law",
+  "place": {
+    "activity": "assets"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "data": [
     {
       "name": "vehicle",

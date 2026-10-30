@@ -1,11 +1,16 @@
 {
   "pack": "common-documents",
-  "version": 5,
+  "version": 6,
   "kind": "core",
   "install": "installation",
   "stage": "initial",
   "disclaimer": "This pack was prepared by artificial intelligence (AI). It is an initial version: its rules may contain errors and will change as accountants, tax advisers and auditors review them.",
   "history": [
+    {
+      "versions": "6",
+      "date": "2026-10-30",
+      "changes": "Documents says where it sits — Books — and that it shows on the desk and the phone (KK, 2026-10-30: every App states its place and its faces). No other definition changes."
+    },
     {
       "versions": "5",
       "date": "2026-10-26",

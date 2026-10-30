@@ -1,12 +1,17 @@
 {
   "pack": "pl",
-  "version": 56,
+  "version": 57,
   "kind": "market",
   "market": "PL",
   "install": "installation",
   "stage": "initial",
   "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
   "history": [
+    {
+      "versions": "57",
+      "date": "2026-10-30",
+      "changes": "Każda aplikacja mówi, gdzie leży i na których ekranach ją widać (KK, 2026-10-30: „każda aplikacja ma mieć swoją ścieżkę — aktywność i folder — i to, czy widać ją na komputerze i na telefonie”): aplikacja nazywa swoją aktywność i sekcję w niej — Dziś, Sprzedaż, Koszty, Banki, Księgowość i podatki (Księgi, Podatki, Operacje okresowe, Zamknięcie, Sprawozdania, Słowniki i parametry), Środki trwałe, Ustawienia — i pokazuje się na biurku i na telefonie. Słownik dostaje w Księgowości i podatkach sekcję Raporty: tam trafiają raporty zachowane z pytań (każdy z nich jest aplikacją własną firmy). Żadna inna definicja się nie zmienia."
+    },
     {
       "versions": "56",
       "date": "2026-10-30",

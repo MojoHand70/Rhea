@@ -1,8 +1,15 @@
 {
   "app": "purchase-invoices",
-  "version": 2,
+  "version": 4,
   "title": "Faktury zakupu",
   "layer": "law",
+  "place": {
+    "activity": "costs"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "data": [
     {
       "name": "purchase_invoice",

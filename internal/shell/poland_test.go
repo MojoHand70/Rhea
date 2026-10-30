@@ -97,17 +97,17 @@ func TestM3PolandPack(t *testing.T) {
 	if _, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", "common", "people.json"), "test"); err != nil {
 		t.Fatal(err)
 	}
-	post("/api/bundles/pack-common-people-v5/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-common-people-v6/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	// Periods: the close_period door and the lock rule are common verbs.
 	if _, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", "common", "periods.json"), "test"); err != nil {
 		t.Fatal(err)
 	}
-	post("/api/bundles/pack-common-periods-v3/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-common-periods-v4/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	// Documents: the issued_document the JPK file becomes.
 	if _, err := pack.Load(ctx, s, filepath.Join("..", "..", "packs", "common", "documents.json"), "test"); err != nil {
 		t.Fatal(err)
 	}
-	post("/api/bundles/pack-common-documents-v5/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-common-documents-v6/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 
 	// Load the pack: 25 types (the invoices with their open amounts and
 	// dates, the bank operation, the matching difference, the company with
@@ -136,7 +136,7 @@ func TestM3PolandPack(t *testing.T) {
 		t.Fatal(err)
 	}
 	if sum.Types != 42 || sum.Views != 42 || sum.Rules != 152 || sum.Activities != 46 || sum.Events != 68 || sum.Apps != 24 || sum.Skipped != 0 ||
-		sum.Bundle != "pack-pl-v56" {
+		sum.Bundle != "pack-pl-v57" {
 		t.Fatalf("first load: %+v", sum)
 	}
 	// Idempotent: a reload changes nothing — its 24 Apps skipped with the rest.
@@ -164,7 +164,7 @@ func TestM3PolandPack(t *testing.T) {
 	// Approving the pack's bundle IS the installation: its types, views and
 	// rules activate together, and the chart of accounts and the VAT rates
 	// materialize from the waiting events.
-	post("/api/bundles/pack-pl-v56/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-pl-v57/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {
 		t.Fatalf("worklist not cleared after approvals: %d", len(wl))
 	}

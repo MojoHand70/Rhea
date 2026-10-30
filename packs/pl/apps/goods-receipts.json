@@ -1,8 +1,15 @@
 {
   "app": "goods-receipts",
-  "version": 1,
+  "version": 2,
   "title": "Przyjęcia zewnętrzne (PZ)",
   "layer": "law",
+  "place": {
+    "activity": "costs"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "data": [
     {
       "name": "pz",

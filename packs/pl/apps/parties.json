@@ -1,8 +1,16 @@
 {
   "app": "parties",
-  "version": 5,
+  "version": 7,
   "title": "Kontrahenci",
   "layer": "law",
+  "place": {
+    "activity": "books",
+    "section": "parameters"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "data": [
     {
       "name": "company",

@@ -1,8 +1,15 @@
 {
   "app": "packs",
-  "version": 1,
+  "version": 2,
   "title": "Packs",
   "layer": "platform",
+  "place": {
+    "activity": "settings"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "data": [
     {
       "name": "installed_pack",

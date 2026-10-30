@@ -1,8 +1,16 @@
 {
   "app": "equity",
-  "version": 1,
+  "version": 2,
   "title": "Kapitały i wynik",
   "layer": "law",
+  "place": {
+    "activity": "books",
+    "section": "close"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "data": [
     {
       "name": "result_distribution",

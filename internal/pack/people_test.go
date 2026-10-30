@@ -31,7 +31,7 @@ func TestPeoplePack(t *testing.T) {
 	// (2026-10-26); v5 (KK, 2026-10-27): the system's seven roles and four
 	// groups every company has, as master data, and a place in a group —
 	// changed counts because the pack changed.
-	if sum.Types != 7 || sum.Rules != 17 || sum.Activities != 15 || sum.Views != 1 || sum.Events != 11 || sum.Apps != 1 || sum.Bundle != "pack-common-people-v5" {
+	if sum.Types != 7 || sum.Rules != 17 || sum.Activities != 15 || sum.Views != 1 || sum.Events != 11 || sum.Apps != 1 || sum.Bundle != "pack-common-people-v6" {
 		t.Fatalf("load: %+v", sum)
 	}
 	if _, booked, errs, err := x.ApproveBundle(ctx, sum.Bundle, "krzysztof", "2026-09-01"); err != nil || len(errs) != 0 || booked != 11 {

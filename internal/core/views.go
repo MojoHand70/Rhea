@@ -338,8 +338,11 @@ func (w WordsSpec) checkArrangement() error {
 			}
 			if s.Rest {
 				rest++
-			} else if len(s.Items) == 0 {
-				return fmt.Errorf("words: %s holds nothing", where)
+			} else if len(s.Items) == 0 && (s.ID == "" || s.Title == "") {
+				// a section with an id and a title may hold no item of its own:
+				// the Apps that say they sit there fill it (KK 2026-10-30) — a
+				// company's kept reports under Raporty
+				return fmt.Errorf("words: %s holds nothing: give it items, or an id and a title for Apps that place themselves there", where)
 			}
 			for k, it := range s.Items {
 				switch {

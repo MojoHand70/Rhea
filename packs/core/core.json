@@ -1,12 +1,17 @@
 {
   "pack": "core",
-  "version": 8,
+  "version": 9,
   "kind": "core",
   "install": "installation",
   "description": "Core: what Rhea is with nothing installed — the ledger's vocabulary (company, account, posting, the period's lock, exchange rates), the invoice's common shape and its tax rate, contractors, Rachunki i karty's bank accounts, bank lines and settlements, and tasks. Market-neutral; the kernel carries it in its binary and rhea init drafts what a database lacks.",
   "stage": "initial",
   "disclaimer": "This pack was prepared by artificial intelligence (AI). It is an initial version: its definitions may contain errors and will change as accountants, tax advisers and auditors review them.",
   "history": [
+    {
+      "versions": "9",
+      "date": "2026-10-30",
+      "changes": "Every App says where it sits and which faces show it (KK, 2026-10-30: \"all our SmartApps should have their location path and whether they are visible on desktop and on mobile\"): each App names its activity and, where it has one, its section — Today for the day's Apps, Sales for the invoices and clients, Costs for the purchases and suppliers, Bank, Books for the journal, the trial balance, the chart, the rates and the firms, Settings for the platform's own — and shows on the desk and the phone. No other definition changes."
+    },
     {
       "versions": "8",
       "date": "2026-10-30",

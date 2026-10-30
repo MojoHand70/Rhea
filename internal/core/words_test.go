@@ -85,6 +85,18 @@ func TestWordsArrangeTheApps(t *testing.T) {
 	if len(w.Activities) != 3 || w.Activities[0].Sections[0].Items[1].Tab != "desk:flow" || !w.Activities[2].End || !w.Activities[1].Sections[1].Rest {
 		t.Fatalf("read: %+v", w.Activities)
 	}
+	// a section with an id and a title may hold no item of its own: the Apps
+	// that say they sit there fill it (KK 2026-10-30, the kept reports'
+	// Raporty); one with no name for Apps to point at holds nothing
+	empty := w
+	empty.Activities = append([]NavActivity{{ID: "books", Title: "Księgi", Sections: []NavSection{{ID: "reports", Title: "Raporty"}}}}, w.Activities[2:]...)
+	if err := empty.Check(); err != nil {
+		t.Fatalf("a named section standing empty for Apps: %v", err)
+	}
+	empty.Activities[0].Sections[0].Title = ""
+	if err := empty.Check(); err == nil {
+		t.Fatal("a nameless empty section was taken")
+	}
 
 	// a later pack adds to an activity of the same id, to a section of the same
 	// id, and brings an activity of its own; what is there already stays once

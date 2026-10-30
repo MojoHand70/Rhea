@@ -1,8 +1,15 @@
 {
   "app": "tax-calendar",
-  "version": 1,
+  "version": 2,
   "title": "Terminy podatkowe",
   "layer": "law",
+  "place": {
+    "activity": "today"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "tabs": [
     {
       "view_id": "kalendarz-podatkowy",

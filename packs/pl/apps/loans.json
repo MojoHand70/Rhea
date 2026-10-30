@@ -1,8 +1,15 @@
 {
   "app": "loans",
-  "version": 1,
+  "version": 2,
   "title": "Pożyczki",
   "layer": "law",
+  "place": {
+    "activity": "bank"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "data": [
     {
       "name": "loan",

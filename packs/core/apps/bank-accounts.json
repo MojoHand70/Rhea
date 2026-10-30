@@ -1,8 +1,15 @@
 {
   "app": "bank-accounts",
-  "version": 1,
+  "version": 5,
   "title": "Bank accounts and cards",
   "layer": "core",
+  "place": {
+    "activity": "bank"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "data": [
     {
       "name": "bank_account",

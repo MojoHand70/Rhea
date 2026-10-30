@@ -1,8 +1,16 @@
 {
   "app": "suppliers",
-  "version": 2,
+  "version": 3,
   "title": "Suppliers",
   "layer": "core",
+  "place": {
+    "activity": "costs",
+    "section": "suppliers"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "data": [
     {
       "name": "supplier",

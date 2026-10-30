@@ -1,8 +1,16 @@
 {
   "app": "clients",
-  "version": 2,
+  "version": 3,
   "title": "Clients",
   "layer": "core",
+  "place": {
+    "activity": "sales",
+    "section": "customers"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "data": [
     {
       "name": "client",

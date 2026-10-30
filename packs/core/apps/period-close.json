@@ -1,8 +1,16 @@
 {
   "app": "period-close",
-  "version": 1,
+  "version": 3,
   "title": "Period close",
   "layer": "core",
+  "place": {
+    "activity": "books",
+    "section": "close"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "data": [
     {
       "name": "period_lock",

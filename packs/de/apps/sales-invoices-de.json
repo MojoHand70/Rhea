@@ -1,8 +1,15 @@
 {
   "app": "sales-invoices-de",
-  "version": 1,
+  "version": 2,
   "title": "Ausgangsrechnungen",
   "layer": "law",
+  "place": {
+    "activity": "sales"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "uses": [
     "sales_invoice",
     "posting"

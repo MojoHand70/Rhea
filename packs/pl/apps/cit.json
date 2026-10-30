@@ -1,8 +1,16 @@
 {
   "app": "cit",
-  "version": 1,
+  "version": 2,
   "title": "CIT",
   "layer": "law",
+  "place": {
+    "activity": "books",
+    "section": "taxes"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "data": [
     {
       "name": "cit_limit",

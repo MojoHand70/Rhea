@@ -1,8 +1,16 @@
 {
   "app": "people",
-  "version": 2,
+  "version": 3,
   "title": "People",
   "layer": "platform",
+  "place": {
+    "activity": "settings",
+    "section": "users"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "data": [
     {
       "name": "person",

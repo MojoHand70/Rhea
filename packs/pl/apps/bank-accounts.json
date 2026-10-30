@@ -1,8 +1,15 @@
 {
   "app": "bank-accounts",
-  "version": 4,
+  "version": 6,
   "title": "Rachunki bankowe",
   "layer": "law",
+  "place": {
+    "activity": "bank"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "data": [
     {
       "name": "bank_account",

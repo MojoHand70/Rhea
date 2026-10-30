@@ -1,8 +1,16 @@
 {
   "app": "journal",
-  "version": 1,
+  "version": 2,
   "title": "Journal",
   "layer": "core",
+  "place": {
+    "activity": "books",
+    "section": "books"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "data": [
     {
       "name": "posting",

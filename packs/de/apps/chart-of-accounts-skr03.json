@@ -1,8 +1,16 @@
 {
   "app": "chart-of-accounts-skr03",
-  "version": 1,
+  "version": 2,
   "title": "Kontenrahmen SKR03",
   "layer": "law",
+  "place": {
+    "activity": "books",
+    "section": "books"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "uses": [
     "account",
     "vat_rate"

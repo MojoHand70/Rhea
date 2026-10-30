@@ -1,11 +1,16 @@
 {
   "pack": "common-periods",
-  "version": 3,
+  "version": 4,
   "kind": "core",
   "install": "installation",
   "stage": "initial",
   "disclaimer": "This pack was prepared by artificial intelligence (AI). It is an initial version: its rules may contain errors and will change as accountants, tax advisers and auditors review them.",
   "history": [
+    {
+      "versions": "4",
+      "date": "2026-10-30",
+      "changes": "Period close says where it sits — Books, the close — and that it shows on the desk and the phone (KK, 2026-10-30: every App states its place and its faces). No other definition changes."
+    },
     {
       "versions": "3",
       "date": "2026-10-26",

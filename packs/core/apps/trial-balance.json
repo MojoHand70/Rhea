@@ -1,8 +1,16 @@
 {
   "app": "trial-balance",
-  "version": 3,
+  "version": 4,
   "title": "Trial balance",
   "layer": "core",
+  "place": {
+    "activity": "books",
+    "section": "books"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "tabs": [
     {
       "view_id": "trial-balance",

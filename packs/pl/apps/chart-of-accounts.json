@@ -1,8 +1,16 @@
 {
   "app": "chart-of-accounts",
-  "version": 2,
+  "version": 4,
   "title": "Plan kont",
   "layer": "core",
+  "place": {
+    "activity": "books",
+    "section": "books"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "data": [
     {
       "name": "account",

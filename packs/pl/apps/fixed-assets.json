@@ -1,8 +1,15 @@
 {
   "app": "fixed-assets",
-  "version": 1,
+  "version": 2,
   "title": "Środki trwałe",
   "layer": "law",
+  "place": {
+    "activity": "assets"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "data": [
     {
       "name": "fixed_asset",

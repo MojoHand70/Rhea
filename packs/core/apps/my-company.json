@@ -1,8 +1,15 @@
 {
   "app": "my-company",
-  "version": 1,
+  "version": 2,
   "title": "My company",
   "layer": "platform",
+  "place": {
+    "activity": "settings"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "uses": [
     "company"
   ],

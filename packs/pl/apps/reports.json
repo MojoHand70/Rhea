@@ -1,8 +1,16 @@
 {
   "app": "reports",
-  "version": 1,
+  "version": 2,
   "title": "Raporty",
   "layer": "law",
+  "place": {
+    "activity": "books",
+    "section": "statements"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "tabs": [
     {
       "view_id": "wynik",

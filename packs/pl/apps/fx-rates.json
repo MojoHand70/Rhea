@@ -1,8 +1,16 @@
 {
   "app": "fx-rates",
-  "version": 2,
+  "version": 4,
   "title": "Waluty",
   "layer": "law",
+  "place": {
+    "activity": "books",
+    "section": "parameters"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "data": [
     {
       "name": "fx_revaluation",

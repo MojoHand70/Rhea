@@ -1,8 +1,16 @@
 {
   "app": "vat-rates",
-  "version": 1,
+  "version": 3,
   "title": "VAT rates",
   "layer": "core",
+  "place": {
+    "activity": "books",
+    "section": "parameters"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "data": [
     {
       "name": "vat_rate",

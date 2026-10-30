@@ -1,8 +1,15 @@
 {
   "app": "development-costs",
-  "version": 1,
+  "version": 2,
   "title": "Prace rozwojowe",
   "layer": "law",
+  "place": {
+    "activity": "assets"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "data": [
     {
       "name": "development_costs",

@@ -1,8 +1,15 @@
 {
   "app": "tasks",
-  "version": 1,
+  "version": 3,
   "title": "Tasks",
   "layer": "platform",
+  "place": {
+    "activity": "today"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "data": [
     {
       "name": "task",

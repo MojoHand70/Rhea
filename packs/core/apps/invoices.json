@@ -1,8 +1,15 @@
 {
   "app": "invoices",
-  "version": 1,
+  "version": 2,
   "title": "Invoices",
   "layer": "core",
+  "place": {
+    "activity": "books"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "data": [
     {
       "name": "invoice",

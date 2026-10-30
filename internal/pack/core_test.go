@@ -126,7 +126,7 @@ func TestACoreAlreadyThereDraftsNothing(t *testing.T) {
 		// the kinds the core added since (v8: Nowy klient, Nowy dostawca —
 		// two doors, four rules), and bank_account v1, which the
 		// Poland pack no longer carries since v54 brings v2 (2026-10-27)
-		added := sum.Pack == "core" && sum.Types == 4 && sum.Views == 4 && sum.Rules == 10 && sum.Activities == 6 && sum.Apps == 18 && sum.Bundle == "pack-core-v8"
+		added := sum.Pack == "core" && sum.Types == 4 && sum.Views == 4 && sum.Rules == 10 && sum.Activities == 6 && sum.Apps == 18 && sum.Bundle == "pack-core-v9"
 		if !added && (sum.Bundle != "" || sum.Types+sum.Views+sum.Rules+sum.Activities+sum.Upgraded != 0) || len(sum.Conflicts) != 0 {
 			t.Fatalf("init drafted more than the core added since on a database that holds it: %+v", sum)
 		}

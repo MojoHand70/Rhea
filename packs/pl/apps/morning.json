@@ -1,8 +1,15 @@
 {
   "app": "morning",
-  "version": 1,
+  "version": 2,
   "title": "Poranek",
   "layer": "platform",
+  "place": {
+    "activity": "today"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "tabs": [
     {
       "view_id": "poranek",

@@ -1,12 +1,17 @@
 {
   "pack": "pl-warehouse",
-  "version": 2,
+  "version": 3,
   "kind": "market",
   "market": "PL",
   "install": "installation",
   "stage": "initial",
   "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
   "history": [
+    {
+      "versions": "3",
+      "date": "2026-10-30",
+      "changes": "Przyjęcia zewnętrzne mówią, gdzie leżą — Koszty — i że widać je na biurku i na telefonie (KK, 2026-10-30: każda aplikacja ma swoją ścieżkę i swoje ekrany). Żadna inna definicja się nie zmienia."
+    },
     {
       "versions": "2",
       "date": "2026-10-26",

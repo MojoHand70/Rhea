@@ -2,6 +2,7 @@ package pack_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -102,6 +103,51 @@ func TestThePolandPackArrangesItsApps(t *testing.T) {
 		if !placed[id] {
 			wrong = append(wrong, "App "+id+" is placed nowhere")
 		}
+	}
+	// and every App says where it sits and which faces show it (KK 2026-10-30),
+	// agreeing with the arrangement: its activity holds an item of it, and
+	// its section, where it names one, holds an item of it too
+	for _, id := range order {
+		a := apps[id]
+		switch {
+		case a.Place == nil:
+			wrong = append(wrong, "App "+id+" says not where it sits")
+			continue
+		case len(a.Shows) == 0:
+			wrong = append(wrong, "App "+id+" says not which faces show it")
+		}
+		inActivity, inSection := false, a.Place.Section == ""
+		for _, act := range w.Activities {
+			if act.ID != a.Place.Activity {
+				continue
+			}
+			for _, sec := range act.Sections {
+				for _, it := range sec.Items {
+					if it.App != id {
+						continue
+					}
+					inActivity = true
+					if sec.ID == a.Place.Section {
+						inSection = true
+					}
+				}
+			}
+		}
+		if !inActivity || !inSection {
+			wrong = append(wrong, fmt.Sprintf("App %s says it sits at %s/%s, where the arrangement does not put it", id, a.Place.Activity, a.Place.Section))
+		}
+	}
+	// a section with no item of its own is a place Apps fill: the kept reports' Raporty
+	var empty []string
+	for _, act := range w.Activities {
+		for _, sec := range act.Sections {
+			if len(sec.Items) == 0 && !sec.Rest {
+				empty = append(empty, act.ID+"/"+sec.ID)
+			}
+		}
+	}
+	if strings.Join(empty, ",") != "books/reports" {
+		wrong = append(wrong, "the sections standing empty for Apps that place themselves: "+strings.Join(empty, ","))
 	}
 	if len(wrong) > 0 {
 		t.Fatalf("the arrangement: %s", strings.Join(wrong, "; "))

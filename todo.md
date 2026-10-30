@@ -1,5 +1,4 @@
 - web ui
-- places on every pack App (KK 2026-10-30: each App states activity + folder and desk/phone): `place` into the 43 App files from the Polish arrangement, a version bump each, pack versions; the Poland words gain a section "Raporty" (id `reports`) under Księgowość i podatki for kept reports — waits for the core/Poland pack files mid-change in another session (DECISIONS 2026-10-30)
 - business generator
 - biegły rewident
 - rule collaborative editing

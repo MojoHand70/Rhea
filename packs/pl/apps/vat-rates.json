@@ -1,8 +1,16 @@
 {
   "app": "vat-rates",
-  "version": 2,
+  "version": 4,
   "title": "Stawki VAT",
   "layer": "law",
+  "place": {
+    "activity": "books",
+    "section": "parameters"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "uses": [
     "vat_rate"
   ],

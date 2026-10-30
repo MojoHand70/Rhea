@@ -24,7 +24,7 @@ func TestDocumentsPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Types != 2 || sum.Rules != 3 || sum.Views != 1 || sum.Apps != 1 || sum.Bundle != "pack-common-documents-v5" {
+	if sum.Types != 2 || sum.Rules != 3 || sum.Views != 1 || sum.Apps != 1 || sum.Bundle != "pack-common-documents-v6" {
 		t.Fatalf("load: %+v", sum)
 	}
 	if _, _, errs, err := x.ApproveBundle(ctx, sum.Bundle, "krzysztof", "2026-10-01"); err != nil || len(errs) != 0 {

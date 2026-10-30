@@ -1,8 +1,15 @@
 {
   "app": "sales-invoices",
-  "version": 1,
+  "version": 4,
   "title": "Sales invoices",
   "layer": "core",
+  "place": {
+    "activity": "sales"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "data": [
     {
       "name": "sales_invoice",

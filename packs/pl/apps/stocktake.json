@@ -1,8 +1,16 @@
 {
   "app": "stocktake",
-  "version": 1,
+  "version": 2,
   "title": "Inwentaryzacja",
   "layer": "law",
+  "place": {
+    "activity": "books",
+    "section": "periodic"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "data": [
     {
       "name": "stocktake",

@@ -1,8 +1,16 @@
 {
   "app": "documents",
-  "version": 1,
+  "version": 2,
   "title": "Documents",
   "layer": "platform",
+  "place": {
+    "activity": "books",
+    "section": "books"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "data": [
     {
       "name": "received_document",

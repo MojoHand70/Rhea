@@ -1,8 +1,15 @@
 {
   "app": "settings",
-  "version": 1,
+  "version": 2,
   "title": "Desk and look",
   "layer": "platform",
+  "place": {
+    "activity": "settings"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "tabs": [
     {
       "desk": "settings",

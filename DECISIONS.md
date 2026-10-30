@@ -5826,10 +5826,18 @@ period changes, a parameter of the report, never a new draft**.
   `period_from`, `period_to`); keeping such an answer is refused (409: it is that report already), and the
   card offers "Otwórz raport", never "Zachowaj jako raport".
 - **The approval card says where** the App it brought sits, on the desk and on the phone.
-- *Assessed and left*: **places on every pack App** — KK's rule reaches the 43 Apps of the core, the common
-  packs and the Poland pack; each App file gets its `place` from today's Polish arrangement and a version
-  bump, with the pack versions — owed as one mechanical commit once the core and Poland pack files are
-  committed by the session changing them (2026-10-30, clients and suppliers by NIP); **another period on the
-  desk opens as a tab of its own** beside the page (the table replaces itself in place; a page does not
-  yet); **a kept report's own words** — its title is the question's, its place a default a person cannot
-  move yet: moving an App is the designer's (DIRECTION 2026-10-23).
+- **Every pack App states its place and its faces** (later this day, core v9, people v6, periods v4,
+  documents v6, Poland v57, warehouse v3, Germany v5): each of the 48 App files names its activity and,
+  where it has one, its section — from today's Polish arrangement, which the arrangement test now checks
+  it agrees with — and shows on the desk and the phone (the phone draws of each what it can draw today;
+  an App meant for one face alone says so when it is designed). The Polish words gain the section Raporty
+  under Księgowość i podatki, standing empty for the kept reports: a section with an id and a title may
+  hold no item of its own. **An App's versions are one sequence across packs** (the 2026-10-27 deploy
+  stop, kept by its test): the nine Apps the Poland pack and the periods pack bring later versions of
+  (parties, bank accounts, sales and purchase invoices, the chart, rates, tasks, period close) take in the
+  core the next number no pack has used, and in the market pack one above it, so the market's version
+  stays the one a Polish company sees.
+- *Assessed and left*: **another period on the desk opens as a tab of its own** beside the page (the
+  table replaces itself in place; a page does not yet); **a kept report's own words** — its title is the
+  question's, its place a default a person cannot move yet: moving an App is the designer's (DIRECTION
+  2026-10-23).

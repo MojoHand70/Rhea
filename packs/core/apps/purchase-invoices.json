@@ -1,8 +1,15 @@
 {
   "app": "purchase-invoices",
-  "version": 1,
+  "version": 3,
   "title": "Purchase invoices",
   "layer": "core",
+  "place": {
+    "activity": "costs"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "data": [
     {
       "name": "purchase_invoice",

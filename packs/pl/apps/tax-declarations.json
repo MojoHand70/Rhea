@@ -1,8 +1,16 @@
 {
   "app": "tax-declarations",
-  "version": 2,
+  "version": 3,
   "title": "Deklaracje podatkowe",
   "layer": "law",
+  "place": {
+    "activity": "books",
+    "section": "taxes"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "data": [
     {
       "name": "tax_declaration",

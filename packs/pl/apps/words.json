@@ -1,12 +1,19 @@
 {
   "app": "words",
-  "version": 1,
+  "version": 2,
   "title": "Słownik",
   "layer": "platform",
+  "place": {
+    "activity": "settings"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "tabs": [
     {
       "view_id": "slownik",
-      "version": 27,
+      "version": 28,
       "notion": "words",
       "title": "Słownik",
       "domain": "finance",
@@ -1639,6 +1646,10 @@
                     "tab": "wynik-miesiace"
                   }
                 ]
+              },
+              {
+                "id": "reports",
+                "title": "Raporty"
               },
               {
                 "id": "parameters",

@@ -1,8 +1,16 @@
 {
   "app": "parties",
-  "version": 1,
+  "version": 6,
   "title": "Companies",
   "layer": "core",
+  "place": {
+    "activity": "books",
+    "section": "parameters"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
   "data": [
     {
       "name": "company",
