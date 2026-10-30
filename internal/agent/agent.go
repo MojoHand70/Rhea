@@ -106,8 +106,9 @@ type Cluster struct {
 // Read is the model reading a document — a PDF's bytes with an instruction
 // — for the model-read channels; nil when the agent cannot read files.
 // Speak is the host speaking — the same call with the model's thinking
-// switched off: the words are daily and easy, and a local model then answers
-// in seconds instead of a minute (DECISIONS 2026-10-15). Nil falls back to
+// switched off, or at low effort on a Claude model, which cannot switch it
+// off: the words are daily and easy, and the model then answers in seconds
+// instead of a minute (DECISIONS 2026-10-15, 2026-10-30). Nil falls back to
 // Complete, so a test's injected Complete hears the host too.
 type Agent struct {
 	Complete func(ctx context.Context, system, user string) (string, error)
@@ -132,16 +133,25 @@ func New() *Agent {
 	}
 	client := anthropic.NewClient(opts...)
 	ask := func(ctx context.Context, think bool, system string, blocks ...anthropic.ContentBlockParamUnion) (string, error) {
+		model := Model()
 		params := anthropic.MessageNewParams{
-			Model:     anthropic.Model(Model()),
+			Model:     anthropic.Model(model),
 			MaxTokens: 16000,
 			System:    []anthropic.TextBlockParam{{Text: system}},
 			Messages:  []anthropic.MessageParam{anthropic.NewUserMessage(blocks...)},
 		}
-		if !think {
-			// The model's default stands when thinking is wanted; switched
-			// off explicitly, a local model skips its reasoning pass (Ollama
-			// honours the same parameter on its Anthropic endpoint).
+		switch {
+		case think:
+			// The model's default stands when thinking is wanted.
+		case strings.HasPrefix(model, "claude-"):
+			// A Claude model of the 5.5 generation refuses to switch its
+			// thinking off (an HTTP 400). Asked for low effort, with no
+			// thinking parameter, it thinks little and answers in seconds —
+			// on every Claude model since 4.6 (DECISIONS 2026-10-30).
+			params.OutputConfig = anthropic.OutputConfigParam{Effort: anthropic.OutputConfigEffortLow}
+		default:
+			// Switched off explicitly, a local model skips its reasoning
+			// pass (Ollama honours the parameter on its Anthropic endpoint).
 			params.Thinking = anthropic.ThinkingConfigParamUnion{OfDisabled: &anthropic.ThinkingConfigDisabledParam{}}
 		}
 		msg, err := client.Messages.New(ctx, params)
