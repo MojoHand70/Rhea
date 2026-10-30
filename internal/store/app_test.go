@@ -69,9 +69,26 @@ func TestAppRows(t *testing.T) {
 		t.Fatal("an App's company changed under its id")
 	}
 
+	// removed (KK 2026-10-30): a superseded row above the active one takes
+	// the App off every face — the draft above it never did
+	gone := a
+	gone.Version = 3
+	if err := store.InsertAppRow(ctx, s.Pool, gone, core.StatusSuperseded); err != nil {
+		t.Fatal(err)
+	}
+	if apps, err := s.LatestApps(ctx); err != nil || len(apps) != 1 || !reflect.DeepEqual(apps[0], own) {
+		t.Fatalf("an App whose latest version is superseded is still served: %+v %v", apps, err)
+	}
+	if got, status, err := s.LatestApp(ctx, "notatki"); err != nil || status != core.StatusSuperseded || got.Version != 3 {
+		t.Fatalf("the removed App's latest row: v%d %s %v", got.Version, status, err)
+	}
+	if got, status, err := s.LatestApp(ctx, own.ID); err != nil || status != core.StatusActive || got.Version != 1 {
+		t.Fatalf("the company's App's latest row: v%d %s %v", got.Version, status, err)
+	}
+
 	var buf bytes.Buffer
 	counts, err := s.Backup(ctx, &buf)
-	if err != nil || counts["app"] != 4 {
+	if err != nil || counts["app"] != 5 {
 		t.Fatalf("the backup carries every App row: %v %v", counts, err)
 	}
 }

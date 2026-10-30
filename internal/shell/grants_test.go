@@ -896,3 +896,99 @@ func TestASavedReportIsTheCompanysOwn(t *testing.T) {
 		t.Fatalf("the installation's menu: %d", code)
 	}
 }
+
+// A kept report the company no longer wants is removed by its own people
+// (KK 2026-10-30: "how can I delete this report?"): through a door, as a
+// rule is switched off — it leaves the desk, the phone, the menu and the
+// host's answers at once, and the record that it was kept and removed stays
+// in the company's books (invariant 1: nothing is deleted; a removal is a
+// version above). It is the company's own to remove: another company's
+// people cannot, a reader cannot, and a pack's App is nobody's to remove.
+func TestARemovedReportIsGoneFromEveryFace(t *testing.T) {
+	w := newGrantsWorld(t)
+	a, b := "PL5250001111", "PL5260001246"
+	w.person("Krzysztof Kowal", "kk", a, "company_manager")
+	w.person("Ben Reader", "ben", a, "reader")
+	w.person("Olga Nowa", "olga", b, "company_manager")
+	answered, err := w.x.TriggerActivity(store.WithCompany(w.ctx, a), "host_answered", map[string]any{"question": "Notes for Jan Kowalski?",
+		"sql": "SELECT COUNT(*) AS notes FROM objects WHERE object_type = 'note'", "reading": "One note.",
+		"visual": `{"kind":"table","title":"Notes for Jan Kowalski"}`, "result": `{"columns":["notes"],"rows":[[1]]}`, "rows": 1, "asked_by": "kk", "occurred_at": w.today},
+		"agent:test", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var kept struct {
+		ID string `json:"bundle_id"`
+	}
+	if code := w.call("kk", a, "POST", fmt.Sprintf("/api/answers/%d/keep", answered.EventID), nil, &kept); code != 200 {
+		t.Fatalf("keeping the answer: %d", code)
+	}
+	if code := w.call("kk", a, "POST", "/api/bundles/"+kept.ID+"/approve", map[string]any{}, nil); code != 200 {
+		t.Fatalf("approving the kept report: %d", code)
+	}
+	type served struct {
+		App   string `json:"app"`
+		Title string `json:"title"`
+	}
+	apps := func(person, company string) []served {
+		t.Helper()
+		var out []served
+		if code := w.call(person, company, "GET", "/api/apps", nil, &out); code != 200 {
+			t.Fatalf("apps for %s: %d", person, code)
+		}
+		return out
+	}
+	find := func(list []served, title string) string {
+		for _, x := range list {
+			if x.Title == title {
+				return x.App
+			}
+		}
+		return ""
+	}
+	report := find(apps("kk", a), "Notes for Jan Kowalski")
+	if report == "" {
+		t.Fatal("the kept report is no App of a's")
+	}
+	remove := func(person, company, app string) (int, map[string]any) {
+		t.Helper()
+		return w.door(person, company, "remove_app", map[string]any{"app": app, "removed_by": person, "occurred_at": w.today})
+	}
+	if code, out := remove("olga", b, report); code == 200 {
+		t.Fatalf("b's manager removed a's report: %v", out)
+	}
+	if code, out := remove("ben", a, report); code != 403 {
+		t.Fatalf("a's reader removing a's report: %d %v", code, out)
+	}
+	if code, out := remove("kk", a, "people"); code == 200 {
+		t.Fatalf("a pack's App removed by a company: %v", out)
+	}
+	if find(apps("kk", a), "Notes for Jan Kowalski") == "" {
+		t.Fatal("a refused removal removed the report")
+	}
+	if code, out := remove("kk", a, report); code != 200 {
+		t.Fatalf("a's manager removing a's report: %d %v", code, out)
+	}
+	if find(apps("kk", a), "Notes for Jan Kowalski") != "" {
+		t.Fatal("the removed report is still an App")
+	}
+	var nav any
+	w.call("kk", a, "GET", "/api/nav", nil, &nav)
+	if nb, _ := json.Marshal(nav); strings.Contains(string(nb), "Kowalski") {
+		t.Fatalf("the removed report is still in the menu: %s", nb)
+	}
+	if code := w.call("kk", a, "GET", "/api/views/"+report, nil, nil); code == 200 {
+		t.Fatal("the removed report still computes")
+	}
+	if code, _ := remove("kk", a, report); code == 200 {
+		t.Fatal("a removed report removed again")
+	}
+	// the record: kept, then removed, in a's books, by whom
+	removed, err := w.s.EventsOfTypes(store.WithCompany(w.ctx, a), []string{"app.removed"})
+	if err != nil || len(removed) != 1 || removed[0].Actor != "kk" || !strings.Contains(string(removed[0].Payload), report) {
+		t.Fatalf("the removal in a's books: %v %+v", err, removed)
+	}
+	if app, status, err := w.s.LatestApp(store.WithCompany(w.ctx, a), report); err != nil || status != core.StatusSuperseded || app.Version != 2 {
+		t.Fatalf("the removed App's record: v%d %s %v", app.Version, status, err)
+	}
+}

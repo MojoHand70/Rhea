@@ -5891,3 +5891,12 @@ choice.
   bank lines, postings, VAT and JPK cost no tokens; questions and mornings carry the bill, not documents.
 - Claude models before 4.6 reject `effort`; `RHEA_MODEL` naming one would break the host's speaking,
   not drafting. Not guarded: nobody runs them.
+- 2026-10-30 — A kept report is removed, never deleted (KK: "how can I delete this report?"; "what do
+  you mean nothing is ever deleted?"). From the person's side it is a delete: "Usuń raport" on the report
+  itself, asked once; the report leaves the desk, the phone, both searches and Rhea's answers at once.
+  On the record it is what a company's own rule gets when switched off: a door, `remove_app`, writes a
+  version above the App and its own view, superseded, and the fact `app.removed` in the company's books
+  — so an answer the report gave before stays explained (invariant 1). A pack's App and another
+  company's report are nobody's to remove; a reader removes nothing. The Apps and views a face is served
+  are now, like rules, those whose very latest version is active: a draft above does not suspend them,
+  a removal does. The `app.` namespace is the kernel's.

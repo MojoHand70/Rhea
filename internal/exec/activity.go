@@ -565,6 +565,52 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 			return err
 		}, nil
 
+	case "app.removed":
+		// a company's own App — a kept report — switched off as its own rule
+		// is (KK 2026-10-30: from the person's side a delete; on the record a
+		// version above, superseded, with the report's own view)
+		var p struct {
+			App string `json:"app"`
+		}
+		if err := json.Unmarshal(ev.Payload, &p); err != nil {
+			return nil, err
+		}
+		a, status, err := x.Store.LatestApp(ctx, p.App)
+		if err != nil {
+			return nil, fmt.Errorf("app %s: no kept report of this company by that name", p.App)
+		}
+		if a.Company == "" || a.Company != ev.Company {
+			return nil, fmt.Errorf("app %s is not the company's own to remove", p.App)
+		}
+		if status != core.StatusActive {
+			return nil, fmt.Errorf("app %s is %s — only a report that shows can be removed", p.App, status)
+		}
+		var views []core.ViewDef
+		for _, t := range a.Tabs {
+			if t.View == "" {
+				continue
+			}
+			v, vs, err := x.Store.LatestViewDef(ctx, t.View)
+			if err != nil || v.Company != a.Company || vs != core.StatusActive {
+				continue
+			}
+			views = append(views, v)
+		}
+		ev.DedupKey = fmt.Sprintf("remove-app/%s/%d", a.ID, a.Version+1)
+		return func(tx store.Querier) error {
+			a.Version++
+			if err := store.InsertAppRow(ctx, tx, a, core.StatusSuperseded); err != nil {
+				return err
+			}
+			for _, v := range views {
+				v.Version++
+				if err := store.InsertViewDefRow(ctx, tx, v, core.StatusSuperseded); err != nil {
+					return err
+				}
+			}
+			return nil
+		}, nil
+
 	case "rule.approved_for_clients":
 		var p struct {
 			RuleID     string `json:"rule_id"`

@@ -53,11 +53,24 @@ func (s *Store) GetAppVersion(ctx context.Context, id string, version int) (core
 	return a, status, nil
 }
 
-// LatestApps returns the newest active version of every App, by id.
+// LatestApp returns an App's newest row, of any status, with that status:
+// what a removal writes above, and whether the App shows — the active row
+// of a version answers before its draft.
+func (s *Store) LatestApp(ctx context.Context, id string) (core.App, string, error) {
+	var a core.App
+	var spec []byte
+	var status string
+	if err := s.Pool.QueryRow(ctx, latestAppSQL, id).Scan(&spec, &status); err != nil {
+		return a, "", fmt.Errorf("app %s: %w", id, err)
+	}
+	return a, status, json.Unmarshal(spec, &a)
+}
+
+// LatestApps returns the newest active version of every App, by id — of the
+// Apps whose very latest version is not superseded: a draft above the
+// running version does not suspend it; a removal does (2026-10-30).
 func (s *Store) LatestApps(ctx context.Context) ([]core.App, error) {
-	rows, err := s.Pool.Query(ctx, `
-		SELECT DISTINCT ON (app_id) spec FROM app
-		WHERE status = 'active' ORDER BY app_id, version DESC`)
+	rows, err := s.Pool.Query(ctx, latestAppsSQL)
 	if err != nil {
 		return nil, err
 	}

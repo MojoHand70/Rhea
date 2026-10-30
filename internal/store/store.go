@@ -54,6 +54,18 @@ var eventsOfTypesSQL string
 //go:embed queries/object_roots.sql
 var objectRootsSQL string
 
+//go:embed queries/latest_apps.sql
+var latestAppsSQL string
+
+//go:embed queries/latest_app.sql
+var latestAppSQL string
+
+//go:embed queries/latest_view_defs.sql
+var latestViewDefsSQL string
+
+//go:embed queries/latest_view_def.sql
+var latestViewDefSQL string
+
 //go:embed queries/object_sources.sql
 var objectSourcesSQL string
 
@@ -1034,11 +1046,23 @@ func (s *Store) GetViewDefVersion(ctx context.Context, id string, version int) (
 	return v, status, nil
 }
 
-// LatestViewDefs returns the newest active version of every view definition.
+// LatestViewDef returns a view's newest row, of any status, with that
+// status — the active row of a version before its draft.
+func (s *Store) LatestViewDef(ctx context.Context, id string) (core.ViewDef, string, error) {
+	var v core.ViewDef
+	var status string
+	err := s.Pool.QueryRow(ctx, latestViewDefSQL, id).Scan(&v.ID, &v.Version, &v.Notion, &v.Title, &v.Domain, &v.Function, &v.Spec, &status, &v.Company)
+	if err != nil {
+		return v, "", fmt.Errorf("view %s: %w", id, err)
+	}
+	return v, status, nil
+}
+
+// LatestViewDefs returns the newest active version of every view definition
+// — of the views whose very latest version is not superseded: a draft above
+// the running version does not suspend it; a removal does (2026-10-30).
 func (s *Store) LatestViewDefs(ctx context.Context) ([]core.ViewDef, error) {
-	rows, err := s.Pool.Query(ctx, `
-		SELECT DISTINCT ON (view_id) view_id, version, notion, title, domain, function, spec, COALESCE(company, '')
-		FROM view_def WHERE status = 'active' ORDER BY view_id, version DESC`)
+	rows, err := s.Pool.Query(ctx, latestViewDefsSQL)
 	if err != nil {
 		return nil, err
 	}

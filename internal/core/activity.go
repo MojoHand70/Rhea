@@ -215,7 +215,7 @@ func ReservedEventType(t string) bool {
 		strings.HasPrefix(t, "matching.") || strings.HasPrefix(t, "reading.") || strings.HasPrefix(t, "host.") ||
 		strings.HasPrefix(t, "rule.") || strings.HasPrefix(t, "activity.") ||
 		strings.HasPrefix(t, "bundle.") || strings.HasPrefix(t, "backfill.") ||
-		strings.HasPrefix(t, "access.")
+		strings.HasPrefix(t, "access.") || strings.HasPrefix(t, "app.")
 }
 
 // emitsSource returns the input name a passthrough emits template reads:
@@ -743,6 +743,19 @@ func BuiltinActivities() []Activity {
 					{Name: "occurred_at", Type: "date", Required: true},
 				},
 				Emits: "rule.retired",
+				Who:   []string{"human"},
+			},
+		},
+		{
+			Name: "remove_app", Domain: "system",
+			Description: "Remove one of the company's own Apps — a kept report (KK, 2026-10-30): it leaves the desk, the phone, the menu and Rhea's answers at once, and the record that it was kept and removed stays in the company's books, so an answer it gave before stays explained. A pack's App, or another company's, is not the company's to remove.",
+			Spec: ActivitySpec{
+				Inputs: []FieldDef{
+					{Name: "app", Type: "string", Required: true},
+					{Name: "removed_by", Type: "string", Required: true},
+					{Name: "occurred_at", Type: "date", Required: true},
+				},
+				Emits: "app.removed",
 				Who:   []string{"human"},
 			},
 		},

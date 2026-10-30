@@ -160,7 +160,7 @@ func TestInputCoercions(t *testing.T) {
 }
 
 func TestDeclaredActivitiesKeepOutOfKernelNamespaces(t *testing.T) {
-	for _, reserved := range []string{"rule.approved", "activity.approved", "rule.draft_requested"} {
+	for _, reserved := range []string{"rule.approved", "activity.approved", "rule.draft_requested", "app.removed"} {
 		if !core.ReservedEventType(reserved) {
 			t.Errorf("%s not reserved", reserved)
 		}

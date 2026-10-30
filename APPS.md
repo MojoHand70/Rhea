@@ -86,7 +86,10 @@ show it — `shows`. A market's words arrange the Activity Bar and may file an A
 the arrangement does not name sits where it says: in its section where the words have it, at its
 activity's foot where they have no such section, under the rest where they have no such activity —
 never hidden. A kept report is an App of one tab placed at `books` / `reports`, on both faces
-(DECISIONS 2026-10-30). A face lacking an arrangement still files screens by domain and kind.
+(DECISIONS 2026-10-30). A face lacking an arrangement still files screens by domain and kind. A
+company removes a kept report through the `remove_app` door: the App and its own view get a version
+above, superseded, and the report leaves every face; the record that it was kept and removed stays
+(DECISIONS 2026-10-30).
 
 **Who may run it.** In step 1 a person sees an App when they may see its first tab, and within it
 the tabs they may see. A right on the App as a whole (`app:<id>` in a role) comes after step 1,
