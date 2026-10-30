@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 
 	"rhea/internal/core"
@@ -19,9 +20,21 @@ type AnswerAsk struct {
 	Tables   []CollectionTable
 	Words    *core.WordsSpec // the market's names for types, fields and values; nil without a words view
 	Books    []string        // the books the active rules post to
+	// Reports are the company's kept reports (KK 2026-10-30): a question
+	// asking for one of them, for a period it takes, is answered by naming
+	// it, never by writing it again.
+	Reports []AnswerReport
 	// Tried is the earlier query of this very question and what DuckDB said
 	// of it: the retry fixes exactly that.
 	Tried *AnswerTry
+}
+
+// AnswerReport is a kept report as the author sees it: its id, its title,
+// what its parts count, and whether it takes a period.
+type AnswerReport struct {
+	ID, Title string
+	Parts     []string
+	Period    bool
 }
 
 // CollectionTable is one table of the collection as the author sees it.
@@ -48,6 +61,11 @@ type Answer struct {
 	Reading string      `json:"reading,omitempty"`
 	Visual  core.Visual `json:"visual"`
 	Cannot  string      `json:"cannot,omitempty"`
+	// Report names a kept report that answers the question, with the
+	// period it is asked for where the report takes one (KK 2026-10-30).
+	Report string `json:"report,omitempty"`
+	From   string `json:"from,omitempty"`
+	To     string `json:"to,omitempty"`
 	// Lesson is the kind of question in general words — no names, digits or
 	// dates — what reaches the Rhea team if she cannot answer it.
 	Lesson string `json:"lesson,omitempty"`
@@ -108,10 +126,20 @@ names of companies or people and no digits, dates or amounts (e.g. "wpłaty do Z
 miesiąc po miesiącu, z sumą"). If the question cannot be answered, it is what reaches the Rhea
 team so they can teach it.
 
+A KEPT REPORT - the company's reports already kept and approved are listed below, each with what
+its parts count and whether it takes a period. When the question asks for one of them - the same
+report, for a period it takes (a month, a quarter, a year, from one day to another) or as it is -
+do not write a query: name it. {"report": "<its id>", "from": "YYYY-MM-DD", "to": "YYYY-MM-DD",
+"reading": "<one plain sentence: which report, which period>"}; from and to are the period's first
+and last day, only for a report that takes a period, and left out when none is asked. A report
+that takes no period answers only as it was kept. Prefer the kept report to a query of your own
+whenever it is what was asked.
+
 When the collection holds nothing that could answer the question, say so instead:
 {"cannot": "<why, in the question's language, without figures>", "lesson": "..."}.
 
-Reply with only the JSON object: {"sql": "...", "reading": "...", "visual": {...}, "lesson": "..."} or {"cannot": "...", "lesson": "..."}.`
+Reply with only the JSON object: {"sql": "...", "reading": "...", "visual": {...}, "lesson": "..."},
+{"report": "...", "from": "...", "to": "...", "reading": "..."} or {"cannot": "...", "lesson": "..."}.`
 
 // Answer asks the author for a query that answers the question.
 func (a *Agent) Answer(ctx context.Context, ask AnswerAsk) (Answer, error) {
@@ -123,8 +151,13 @@ func (a *Agent) Answer(ctx context.Context, ask AnswerAsk) (Answer, error) {
 	if err := json.Unmarshal([]byte(extractAnswer(text)), &out); err != nil {
 		return Answer{}, fmt.Errorf("answer: %w", err)
 	}
-	out.SQL, out.Cannot = strings.TrimSpace(out.SQL), strings.TrimSpace(out.Cannot)
+	out.SQL, out.Cannot, out.Report = strings.TrimSpace(out.SQL), strings.TrimSpace(out.Cannot), strings.TrimSpace(out.Report)
 	switch {
+	case out.Report != "" && out.SQL == "":
+		if !slices.ContainsFunc(ask.Reports, func(r AnswerReport) bool { return r.ID == out.Report }) {
+			return Answer{}, fmt.Errorf("answer: names a kept report %q the company has not", out.Report)
+		}
+		return out, nil
 	case out.Cannot != "" && out.SQL == "":
 		return out, nil
 	case out.SQL == "":
@@ -140,6 +173,16 @@ func answerMessage(ask AnswerAsk) string {
 	writeCollection(&sb, ask.Tables, ask.Words)
 	if len(ask.Books) > 0 {
 		fmt.Fprintf(&sb, "\nBooks the active rules post to: %s\n", strings.Join(ask.Books, ", "))
+	}
+	if len(ask.Reports) > 0 {
+		sb.WriteString("\nKept reports (approved; name one when it is what was asked):\n")
+		for _, r := range ask.Reports {
+			period := "as kept, no period"
+			if r.Period {
+				period = "takes a period"
+			}
+			fmt.Fprintf(&sb, "- %s \u201e%s\u201d - %s - %s\n", r.ID, r.Title, strings.Join(r.Parts, "; "), period)
+		}
 	}
 	fmt.Fprintf(&sb, "\nToday: %s\n", ask.Today)
 	if ask.Tried != nil {

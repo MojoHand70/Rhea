@@ -47,6 +47,8 @@ start and stay empty until their step.
 | `record` | what one of its records shows, as tabs | detail views |
 | `actions` | what a person or a channel does with it | doors |
 | `rules` | what makes and changes its records and books its facts — a booking rule belongs to the App whose fact it books, not to the journal it writes | rules |
+| `place` | where it sits (KK 2026-10-30): `{"activity": "books", "section": "reports"}` — the activity and the section by the ids a market's words arrange; the words' own arrangement wins where it names the App | — (the face files it) |
+| `shows` | the faces it is visible on (KK 2026-10-30): `["desk", "phone"]`; none named means both | — |
 | `variables` | step 2 | |
 | `workflow` | step 3; until then a record's states stay on its kind of record, as today | |
 | `triggers`, `autonomy` | step 4 | |
@@ -78,10 +80,13 @@ version 6, the Polish rules and doors, and the core's list named as its tab. Whe
 company, a company sees the version its packs bring — the same rule as for a kind of record's
 versions, settled for both at the split.
 
-**Where it sits in the drawer** (Claude's choice): from its first tab, as the drawer files screens
-today — its domain the activity, its kind the folder (Dokumenty i zapisy, Raporty, Kartoteki). A
-tab that is a briefing is also listed under Dziś, opening its App on that tab. No field of its own:
-the category and folder of KK's sketch are read from the first tab rather than written twice.
+**Where it sits** (KK 2026-10-30, replacing Claude's choice of 2026-10-26 to read it from the first
+tab): every App states its location path — `place`, the activity and the section — and which faces
+show it — `shows`. A market's words arrange the Activity Bar and may file an App elsewhere; an App
+the arrangement does not name sits where it says: in its section where the words have it, at its
+activity's foot where they have no such section, under the rest where they have no such activity —
+never hidden. A kept report is an App of one tab placed at `books` / `reports`, on both faces
+(DECISIONS 2026-10-30). A face lacking an arrangement still files screens by domain and kind.
 
 **Who may run it.** In step 1 a person sees an App when they may see its first tab, and within it
 the tabs they may see. A right on the App as a whole (`app:<id>` in a role) comes after step 1,

@@ -88,3 +88,45 @@ func TestAReportSaysItTakesAPeriod(t *testing.T) {
 		}
 	}
 }
+
+// A kept answer's stretch of time becomes the report's period (KK
+// 2026-10-30): a month named whole, or two dates and no more, read the
+// period's days; anything else is left as the author wrote it.
+func TestPeriodise(t *testing.T) {
+	cases := []struct {
+		in, want string
+		takes    bool
+	}{
+		{`SELECT sum(net) FROM s WHERE strftime(issue_date, '%Y-%m') = '2026-09'`,
+			`SELECT sum(net) FROM s WHERE issue_date BETWEEN {{period_from}} AND {{period_to}}`, true},
+		{`SELECT 1 FROM s WHERE STRFTIME(CAST(d AS DATE), '%Y-%m') = '2026-08' AND x = 1`,
+			`SELECT 1 FROM s WHERE CAST(d AS DATE) BETWEEN {{period_from}} AND {{period_to}} AND x = 1`, true},
+		{`SELECT 1 FROM s WHERE date_trunc('month', d) = DATE '2026-09-01'`,
+			`SELECT 1 FROM s WHERE d BETWEEN {{period_from}} AND {{period_to}}`, true},
+		{`SELECT 1 FROM s WHERE d >= DATE '2026-09-01' AND d <= DATE '2026-09-30'`,
+			`SELECT 1 FROM s WHERE d >= {{period_from}} AND d <= {{period_to}}`, true},
+		{`SELECT 1 FROM s WHERE d BETWEEN date '2026-09-30' AND date '2026-09-01' OR d = DATE '2026-09-01'`,
+			`SELECT 1 FROM s WHERE d BETWEEN {{period_to}} AND {{period_from}} OR d = {{period_from}}`, true},
+		// one date is a cutoff, not a period; three say more than a period does
+		{`SELECT 1 FROM s WHERE d <= DATE '2026-10-18'`, `SELECT 1 FROM s WHERE d <= DATE '2026-10-18'`, false},
+		{`SELECT 1 FROM s WHERE d IN (DATE '2026-01-01', DATE '2026-02-01', DATE '2026-03-01')`,
+			`SELECT 1 FROM s WHERE d IN (DATE '2026-01-01', DATE '2026-02-01', DATE '2026-03-01')`, false},
+		{`SELECT count(*) FROM s`, `SELECT count(*) FROM s`, false},
+	}
+	for _, c := range cases {
+		got, takes := Periodise(c.in)
+		if got != c.want || takes != c.takes {
+			t.Errorf("%s\n  got  %s (%v)\n  want %s (%v)", c.in, got, takes, c.want, c.takes)
+		}
+	}
+	// a report that reads a period says so, and one that says so reads it
+	if err := (ReportSpec{Components: []ReportComponent{{SQL: "SELECT 1 WHERE d >= {{period_from}}", Reading: "x", Visual: Visual{Kind: "kpi"}}}}).Check(); err == nil {
+		t.Fatal("a report reading a period without saying it takes one")
+	}
+	if err := (ReportSpec{Period: true, Components: []ReportComponent{{SQL: "SELECT 1", Reading: "x", Visual: Visual{Kind: "kpi"}}}}).Check(); err == nil {
+		t.Fatal("a report saying it takes a period it never reads")
+	}
+	if err := (ReportSpec{Period: true, Components: []ReportComponent{{SQL: "SELECT 1 WHERE d <= {{period_to}}", Reading: "x", Visual: Visual{Kind: "kpi"}}}}).Check(); err != nil {
+		t.Fatal(err)
+	}
+}

@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -81,4 +82,45 @@ func (a AnalysisSpec) CheckPeriod() error {
 		return fmt.Errorf("the report says it takes a period but its query reads none of %s, %s, %s", PeriodFromInSQL, PeriodToInSQL, YearFromInSQL)
 	}
 	return nil
+}
+
+var (
+	dateLiteral  = regexp.MustCompile(`(?i)\bDATE\s*'(\d{4}-\d{2}-\d{2})'`)
+	monthByName  = regexp.MustCompile(`(?i)\bstrftime\(\s*((?:[^()]|\([^()]*\))+?)\s*,\s*'%Y-%m'\s*\)\s*=\s*'(\d{4}-\d{2})'`)
+	monthByTrunc = regexp.MustCompile(`(?i)\bdate_trunc\(\s*'month'\s*,\s*((?:[^()]|\([^()]*\))+?)\s*\)\s*=\s*DATE\s*'(\d{4}-\d{2})-01'`)
+)
+
+// Periodise turns the stretch of time a query was written for into the
+// period's days a report reads (KK 2026-10-30: a kept report asked for
+// another month is the same report, the accounting period its parameter).
+// A month named whole — strftime(d, '%Y-%m') = '2026-09', date_trunc('month',
+// d) = DATE '2026-09-01' — becomes d BETWEEN the period's first and last
+// day; two dates and no more, the earlier and the later, become the first
+// and the last day. Anything else — one date, three, none — is left as it
+// was: the query answers as it answered, for the days it names. The second
+// result says whether the query now reads a period.
+func Periodise(sql string) (string, bool) {
+	out := monthByName.ReplaceAllString(sql, "${1} BETWEEN "+PeriodFromInSQL+" AND "+PeriodToInSQL)
+	out = monthByTrunc.ReplaceAllString(out, "${1} BETWEEN "+PeriodFromInSQL+" AND "+PeriodToInSQL)
+	var dates []string
+	for _, m := range dateLiteral.FindAllStringSubmatch(out, -1) {
+		if !strings.Contains(strings.Join(dates, ","), m[1]) {
+			dates = append(dates, m[1])
+		}
+	}
+	if len(dates) == 2 {
+		from, to := dates[0], dates[1]
+		if from > to {
+			from, to = to, from
+		}
+		out = dateLiteral.ReplaceAllStringFunc(out, func(lit string) string {
+			switch dateLiteral.FindStringSubmatch(lit)[1] {
+			case from:
+				return PeriodFromInSQL
+			default:
+				return PeriodToInSQL
+			}
+		})
+	}
+	return out, ReadsPeriod(out)
 }

@@ -17,9 +17,21 @@ func InsertAppRow(ctx context.Context, q Querier, a core.App, status string) err
 	if err != nil {
 		return err
 	}
-	_, err = q.Exec(ctx, `INSERT INTO app (app_id, version, status, spec) VALUES ($1, $2, $3, $4)`,
-		a.ID, a.Version, status, spec)
+	var company *string
+	if a.Company != "" {
+		company = &a.Company
+	}
+	_, err = q.Exec(ctx, `INSERT INTO app (app_id, version, status, spec, company) VALUES ($1, $2, $3, $4, $5)`,
+		a.ID, a.Version, status, spec, company)
 	return err
+}
+
+// NextAppVersion is the version a new draft of an App takes: one past every
+// row of any status, as for a view.
+func (s *Store) NextAppVersion(ctx context.Context, id string) (int, error) {
+	var v int
+	err := s.Pool.QueryRow(ctx, `SELECT COALESCE(MAX(version), 0) + 1 FROM app WHERE app_id = $1`, id).Scan(&v)
+	return v, err
 }
 
 // GetAppVersion returns one version of an App and its lifecycle status,

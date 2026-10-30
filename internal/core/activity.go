@@ -894,6 +894,11 @@ func BuiltinActivities() []Activity {
 					{Name: "rows", Type: "int", Required: true},
 					{Name: "asked_by", Type: "string", Required: true},
 					{Name: "occurred_at", Type: "date", Required: true},
+					// a question answered by a kept report (KK 2026-10-30): which,
+					// and for which period where the report takes one
+					{Name: "report", Type: "string"},
+					{Name: "period_from", Type: "date"},
+					{Name: "period_to", Type: "date"},
 				},
 				Emits: EventHostAnswered,
 				Who:   []string{"human"},

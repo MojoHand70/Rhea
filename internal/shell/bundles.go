@@ -331,7 +331,7 @@ func (s *Server) handlePreviewBundle(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if v.Notion == "report" {
-			comps, err := s.reportComponents(ctx, &v)
+			comps, _, _, err := s.reportComponents(ctx, &v, nil)
 			if err != nil {
 				out = append(out, figurePreview{ViewID: v.ID, Title: v.Title, Error: err.Error()})
 				continue

@@ -5791,3 +5791,45 @@ it serves a list or a report, from which packs declare the view; a view no pack 
 report) keeps its labels. Poland pack v55 adds what was missing: FX rates as "Z waluty", "Na walutę",
 "Kurs" (the words had borrowed "Kurs" and "Stawka" from elsewhere), the intercompany positions, invoices by
 customer.
+
+## 2026-10-30 — A report approved must be reachable: an App says where it sits and which faces show it; a kept report asked again is the same report for another period (KK)
+
+KK approved a kept RZiS and found it nowhere on the desk (neither Szukaj funkcji nor the box found it); asked
+for the RZiS for August, Rhea drafted it again from scratch and offered to keep it a second time. KK's rule:
+**every Smart App states its location path (the activity and the folder) and whether it is visible on the
+desk and on the phone**; and a kept report asked for another month **is the same report — only the accounting
+period changes, a parameter of the report, never a new draft**.
+
+- **An App carries `place` and `shows`** (kernel, this day): `place: {activity, section}` names, by the ids a
+  market's words arrange, the Activity Bar's activity and the Nav Bar's section the App sits in; `shows:
+  ["desk", "phone"]` names the faces it is visible on, none named meaning both. A market's words may still
+  file an App elsewhere (their arrangement wins); an App the arrangement does not name sits where it says —
+  in its section where the words have it, at its activity's foot where they do not, under the rest where
+  they have no such activity: never hidden. APPS.md's 2026-10-26 choice "no field of its own" is withdrawn.
+- **A kept report is an App** of one tab, the company's own (its id ends "@company", seen only in a scope that
+  names the company — the `app` table carries the company under row-level security, as `view_def` does),
+  placed at `books` / `reports` and shown on both faces. A market's words name the section: the Poland pack
+  owes a section "Raporty" under Księgowość i podatki (not in this commit — the words file was mid-change in
+  another session); until then the desk files a kept report at the foot of Księgowość i podatki.
+- **A kept report takes a period** (Claude's choice of mechanism, the spec silent): at keeping, the stretch
+  of time the author's query names becomes the period's days a report reads (`{{period_from}}`,
+  `{{period_to}}`) — a month named whole (strftime(d, '%Y-%m') = '2026-09'; date_trunc('month', d) = DATE
+  '2026-09-01'), or exactly two dates, the earlier and the later. One date (a cutoff, "so far"), three or
+  none leave the query as it answered: that report takes no period. Opened with none asked, a report that
+  takes one is computed for the first month the books have not closed, as the trial balance is (2026-10-27);
+  the page offers the period before and after.
+- **A question a kept report answers is answered by the kept report**: the author is told the company's
+  kept reports (id, title, what each part counts, whether it takes a period) and names one with the period
+  asked instead of writing a query; the face's understanding step does the same before any author is asked
+  (a page that takes a month, `"month"`), and its matcher without a model finds a kept report by its title.
+  The answer is recorded as any answer is, naming the report and the period (`host_answered` gains `report`,
+  `period_from`, `period_to`); keeping such an answer is refused (409: it is that report already), and the
+  card offers "Otwórz raport", never "Zachowaj jako raport".
+- **The approval card says where** the App it brought sits, on the desk and on the phone.
+- *Assessed and left*: **places on every pack App** — KK's rule reaches the 43 Apps of the core, the common
+  packs and the Poland pack; each App file gets its `place` from today's Polish arrangement and a version
+  bump, with the pack versions — owed as one mechanical commit once the core and Poland pack files are
+  committed by the session changing them (2026-10-30, clients and suppliers by NIP); **another period on the
+  desk opens as a tab of its own** beside the page (the table replaces itself in place; a page does not
+  yet); **a kept report's own words** — its title is the question's, its place a default a person cannot
+  move yet: moving an App is the designer's (DIRECTION 2026-10-23).

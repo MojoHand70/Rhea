@@ -23,6 +23,10 @@ type BundleDraft struct {
 	ViewDefs    []core.ViewDef    `json:"view_defs,omitempty"`
 	Rules       []Draft           `json:"rules,omitempty"`
 	Activities  []ActivityDraft   `json:"activities,omitempty"`
+	// Apps: what binds the parts above into something a face places and
+	// shows (KK 2026-10-30: a kept report is an App with a place); a tab
+	// names a view of this bundle, or one already on the record.
+	Apps []core.App `json:"apps,omitempty"`
 	// Warrant: why this is the proposal. Required — Rhea speaks first with
 	// a standard, and says where it comes from.
 	Warrant *core.Warrant `json:"warrant"`
@@ -188,7 +192,7 @@ func (b *BundleDraft) Validate(catalog []core.ObjectType) error {
 	if b.BundleID == "" || b.Description == "" {
 		return fmt.Errorf("bundle needs bundle_id and description")
 	}
-	if len(b.ObjectTypes)+len(b.Rules)+len(b.ViewDefs)+len(b.Activities) == 0 {
+	if len(b.ObjectTypes)+len(b.Rules)+len(b.ViewDefs)+len(b.Activities)+len(b.Apps) == 0 {
 		return fmt.Errorf("bundle %s proposes nothing", b.BundleID)
 	}
 	if b.Warrant == nil {
@@ -262,6 +266,18 @@ func (b *BundleDraft) Validate(catalog []core.ObjectType) error {
 		act := core.Activity{Name: ad.Name, Status: core.StatusDraft, Domain: ad.Domain,
 			Description: ad.Description, Spec: ad.Spec}
 		if err := act.Validate(); err != nil {
+			return err
+		}
+	}
+	for _, a := range b.Apps {
+		if seen["app:"+a.ID] {
+			return fmt.Errorf("app %s proposed twice", a.ID)
+		}
+		seen["app:"+a.ID] = true
+		if a.Version == 0 {
+			a.Version = 1 // the kernel assigns the version when the draft lands
+		}
+		if err := a.Validate(); err != nil {
 			return err
 		}
 	}

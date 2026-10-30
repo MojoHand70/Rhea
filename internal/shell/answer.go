@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"regexp"
 	"slices"
 	"strconv"
@@ -129,7 +130,12 @@ func (s *Server) handleAnswer(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 500, err)
 		return
 	}
-	ask := agent.AnswerAsk{Question: req.Question, Today: s.Clock.Today(), Tables: tables, Words: s.words(ctx), Books: s.books(ctx)}
+	reports, kept, err := s.keptReports(ctx)
+	if err != nil {
+		writeErr(w, 500, err)
+		return
+	}
+	ask := agent.AnswerAsk{Question: req.Question, Today: s.Clock.Today(), Tables: tables, Words: s.words(ctx), Books: s.books(ctx), Reports: reports}
 	var (
 		ans agent.Answer
 		got componentOut
@@ -157,6 +163,10 @@ func (s *Server) handleAnswer(w http.ResponseWriter, r *http.Request) {
 		}
 		if ans.Cannot != "" {
 			writeJSON(w, 200, map[string]any{"question": req.Question, "cannot": ans.Cannot, "noted": note("cannot", "")})
+			return
+		}
+		if ans.Report != "" {
+			s.answerWithReport(ctx, w, req.Question, req.AskedBy, ans, kept[ans.Report])
 			return
 		}
 		if got, err = s.runQuery(ctx, ans.SQL, ans.Visual); err == nil {
@@ -198,6 +208,90 @@ func (s *Server) handleAnswer(w http.ResponseWriter, r *http.Request) {
 // answerTries: the author's query and two fixes after DuckDB's refusal.
 const answerTries = 3
 
+// keptReports are the company's kept reports as the author is told of them
+// (KK 2026-10-30: a report kept is asked for again, never written again),
+// and each by its id.
+func (s *Server) keptReports(ctx context.Context) ([]agent.AnswerReport, map[string]core.ViewDef, error) {
+	vds, err := s.effectiveViewDefs(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	var out []agent.AnswerReport
+	byID := map[string]core.ViewDef{}
+	for _, v := range vds {
+		if v.Notion != "report" || !s.mayView(ctx, &v) {
+			continue
+		}
+		var spec core.ReportSpec
+		if err := json.Unmarshal(v.Spec, &spec); err != nil {
+			continue
+		}
+		r := agent.AnswerReport{ID: v.ID, Title: v.Title, Period: spec.Period}
+		for _, c := range spec.Components {
+			r.Parts = append(r.Parts, cmp.Or(c.Reading, c.Title))
+		}
+		out = append(out, r)
+		byID[v.ID] = v
+	}
+	return out, byID, nil
+}
+
+// answerWithReport answers a question with a kept report, computed for the
+// period asked (KK 2026-10-30: the RZiS for August is the RZiS kept, the
+// period its parameter): no query is written, nothing waits to be kept
+// again. What she told is recorded as any answer is, naming the report.
+func (s *Server) answerWithReport(ctx context.Context, w http.ResponseWriter, question, askedBy string, ans agent.Answer, vd core.ViewDef) {
+	q := url.Values{}
+	if ans.From != "" || ans.To != "" {
+		q.Set("from", ans.From)
+		q.Set("to", ans.To)
+	}
+	comps, period, code, err := s.reportComponents(ctx, &vd, q)
+	if err != nil {
+		if code == 400 {
+			writeJSON(w, 200, map[string]any{"question": question, "failed": true, "error": err.Error()})
+			return
+		}
+		writeErr(w, code, err)
+		return
+	}
+	first := comps[0]
+	reading := strings.TrimSpace(ans.Reading)
+	if reading == "" {
+		var parts []string
+		for _, c := range comps {
+			parts = append(parts, c.Reading)
+		}
+		reading = strings.Join(parts, " ")
+	}
+	vis, _ := json.Marshal(first.Visual)
+	told := first.Rows
+	if len(told) > 50 {
+		told = told[:50]
+	}
+	names := make([]string, len(first.Columns))
+	for i, c := range first.Columns {
+		names[i] = c.Name
+	}
+	result, _ := json.Marshal(map[string]any{"columns": names, "rows": told, "more": first.More || len(first.Rows) > len(told)})
+	inputs := map[string]any{"question": question, "sql": first.SQL, "reading": reading, "visual": string(vis), "result": string(result),
+		"rows": len(first.Rows), "asked_by": askedBy, "occurred_at": s.Clock.Today(), "report": vd.ID}
+	if period != nil {
+		inputs["period_from"], inputs["period_to"] = period.From, period.To
+	}
+	t, err := s.Exec.TriggerActivity(ctx, "host_answered", inputs, askedBy, "")
+	if err != nil {
+		writeErr(w, 500, err)
+		return
+	}
+	out := map[string]any{"event_id": t.EventID, "question": question, "report": vd.ID, "title": vd.Title, "components": comps, "reading": reading,
+		"visual": first.Visual, "columns": first.Columns, "rows": first.Rows, "row_objects": first.Of, "more": first.More}
+	if period != nil {
+		out["period"] = period
+	}
+	writeJSON(w, 200, out)
+}
+
 // refusalClass is what the house may learn of a failed query: the class of
 // the refusal and, for an unknown function, its name — never the query or
 // the words around it, which may carry the client's names.
@@ -229,6 +323,7 @@ var (
 type componentOut struct {
 	Title   string         `json:"title,omitempty"`
 	Reading string         `json:"reading,omitempty"`
+	SQL     string         `json:"-"` // the query as run, the period in it; the record's, never the face's
 	Visual  core.Visual    `json:"visual"`
 	Columns []answerColumn `json:"columns"`
 	Rows    [][]string     `json:"rows"`
@@ -286,34 +381,54 @@ func (s *Server) runQuery(ctx context.Context, sql string, visual core.Visual) (
 }
 
 // serveReport runs a report's components on the copy as it stands, each in
-// the locked session; one that fails says why, and the others still show.
-func (s *Server) serveReport(ctx context.Context, w http.ResponseWriter, vd *core.ViewDef) {
-	comps, err := s.reportComponents(ctx, vd)
+// the locked session; one that fails says why, and the others still show. A
+// report that takes a period is computed for the one asked (?from=&to=),
+// else the first month the books have not closed, as an analysis view is.
+func (s *Server) serveReport(ctx context.Context, w http.ResponseWriter, vd *core.ViewDef, q url.Values) {
+	comps, period, code, err := s.reportComponents(ctx, vd, q)
 	if err != nil {
-		writeErr(w, 500, err)
+		writeErr(w, code, err)
 		return
 	}
-	writeJSON(w, 200, map[string]any{"view": vd, "components": comps})
+	out := map[string]any{"view": vd, "components": comps}
+	if period != nil {
+		out["period"] = period // what it was computed for: the face shows it and asks for another
+	}
+	writeJSON(w, 200, out)
 }
 
-func (s *Server) reportComponents(ctx context.Context, vd *core.ViewDef) ([]componentOut, error) {
+// reportComponents runs a report's components, for the period asked where
+// the report takes one; the status says whose fault a failure is.
+func (s *Server) reportComponents(ctx context.Context, vd *core.ViewDef, q url.Values) ([]componentOut, *core.Period, int, error) {
 	var spec core.ReportSpec
 	if err := json.Unmarshal(vd.Spec, &spec); err != nil {
-		return nil, err
+		return nil, nil, 500, err
 	}
 	if err := spec.Check(); err != nil {
-		return nil, fmt.Errorf("view %s: %w", vd.ID, err)
+		return nil, nil, 500, fmt.Errorf("view %s: %w", vd.ID, err)
+	}
+	var period *core.Period
+	if spec.Period {
+		p, code, err := s.periodOf(ctx, core.AnalysisSpec{Period: true}, q)
+		if err != nil {
+			return nil, nil, code, err
+		}
+		period = &p
 	}
 	out := make([]componentOut, 0, len(spec.Components))
 	for _, c := range spec.Components {
-		got, err := s.runQuery(ctx, c.SQL, c.Visual)
+		sql := c.SQL
+		if period != nil {
+			sql = period.SQL(sql)
+		}
+		got, err := s.runQuery(ctx, sql, c.Visual)
 		if err != nil {
 			got = componentOut{Visual: c.Visual, Error: err.Error(), Columns: []answerColumn{}, Rows: [][]string{}}
 		}
-		got.Title, got.Reading = c.Title, c.Reading
+		got.Title, got.Reading, got.SQL = c.Title, c.Reading, sql
 		out = append(out, got)
 	}
-	return out, nil
+	return out, period, 0, nil
 }
 
 // The machine's clock is not the books' day: the kernel's clock is (a
@@ -354,6 +469,14 @@ func (s *Server) runLocked(ctx context.Context, sql string) ([]string, []string,
 	return project.RunTyped(ctx, path, sql, answerRows)
 }
 
+// Where a kept report sits (KK 2026-10-30): the activity of the books and
+// its section of reports, by the ids a market's words arrange — a market
+// whose words have no such section files it under the rest, never hidden.
+const (
+	KeptReportActivity = "books"
+	KeptReportSection  = "reports"
+)
+
 // handleKeepAnswer keeps an answer as a report (KK: what is kept goes through
 // the gate): the query she ran, its reading and its visual become a report
 // with one component, drafted in a bundle that waits for a person's approval
@@ -382,9 +505,15 @@ func (s *Server) handleKeepAnswer(w http.ResponseWriter, r *http.Request) {
 		Reading  string `json:"reading"`
 		Visual   string `json:"visual"`
 		AskedBy  string `json:"asked_by"`
+		Report   string `json:"report"`
 	}
 	if err := json.Unmarshal(ev.Payload, &p); err != nil {
 		writeErr(w, 500, err)
+		return
+	}
+	if p.Report != "" {
+		// a kept report answered: there is nothing to keep again (KK 2026-10-30)
+		writeJSON(w, 409, map[string]any{"error": "the answer is the kept report " + p.Report + " already", "report": p.Report})
 		return
 	}
 	var visual core.Visual
@@ -399,13 +528,21 @@ func (s *Server) handleKeepAnswer(w http.ResponseWriter, r *http.Request) {
 	if rs := []rune(title); len(rs) > 80 {
 		title = string(rs[:80])
 	}
-	spec, _ := json.Marshal(core.ReportSpec{Components: []core.ReportComponent{{Title: title, Reading: p.Reading, SQL: p.SQL, Visual: visual}}})
+	// the stretch of time the question named becomes the report's period
+	// (KK 2026-10-30: asked for another month, it is the same report)
+	sql, takes := core.Periodise(p.SQL)
+	spec, _ := json.Marshal(core.ReportSpec{Period: takes, Components: []core.ReportComponent{{Title: title, Reading: p.Reading, SQL: sql, Visual: visual}}})
 	viewID := fmt.Sprintf("answer-%d", id)
 	bd := agent.BundleDraft{
 		BundleID:    "keep-" + viewID,
 		Description: fmt.Sprintf("Report kept from the question of %s: %s", ev.OccurredAt, p.Question),
 		ViewDefs:    []core.ViewDef{{ID: viewID, Notion: "report", Title: title, Domain: "reports", Function: "report", Spec: spec}},
-		Warrant:     &core.Warrant{Basis: "client", Citations: []string{"asked by " + p.AskedBy + " on " + ev.OccurredAt + ": " + p.Question}, Scope: "this company"},
+		// the kept report is an App of one tab, with a place and the faces
+		// it shows on (KK 2026-10-30: a report approved must be reachable):
+		// it sits with the books' reports, on the desk and the phone alike
+		Apps: []core.App{{ID: viewID, Title: title, Layer: "business", Tabs: []core.AppTab{{View: viewID}},
+			Place: &core.AppPlace{Activity: KeptReportActivity, Section: KeptReportSection}, Shows: []string{"desk", "phone"}}},
+		Warrant: &core.Warrant{Basis: "client", Citations: []string{"asked by " + p.AskedBy + " on " + ev.OccurredAt + ": " + p.Question}, Scope: "this company"},
 	}
 	// kept already: the one decision, the one bundle
 	if b, err := s.Store.GetBundle(ctx, bd.BundleID); err == nil {

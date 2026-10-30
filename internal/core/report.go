@@ -95,6 +95,18 @@ func (v Visual) Check(columns []string) error {
 // rows out. A report is kept through the gate like any definition.
 type ReportSpec struct {
 	Components []ReportComponent `json:"components"`
+	// Period says the report is computed for a period a person picks, as
+	// an analysis view is (AnalysisSpec.Period): its components' queries
+	// read the period's days (PeriodFromInSQL…), the kernel puts the period
+	// in, a face offers the choice. A report kept from a question asked
+	// for a month takes the month as its parameter (KK 2026-10-30: only
+	// the accounting period changes).
+	Period bool `json:"period,omitempty"`
+}
+
+// ReadsPeriod says whether a query names a period's days.
+func ReadsPeriod(sql string) bool {
+	return strings.Contains(sql, PeriodFromInSQL) || strings.Contains(sql, PeriodToInSQL) || strings.Contains(sql, YearFromInSQL)
 }
 
 // ReportComponent is one part of a report.
@@ -124,6 +136,13 @@ func (r ReportSpec) Check() error {
 		case !slices.Contains(VisualKinds, c.Visual.Kind):
 			return fmt.Errorf("report: component %d: visual kind %q is not one of %v", i+1, c.Visual.Kind, VisualKinds)
 		}
+	}
+	reads := slices.ContainsFunc(r.Components, func(c ReportComponent) bool { return ReadsPeriod(c.SQL) })
+	switch {
+	case reads && !r.Period:
+		return fmt.Errorf("report: a component reads a period (%s, %s, %s) but the report does not say it takes one (\"period\": true)", PeriodFromInSQL, PeriodToInSQL, YearFromInSQL)
+	case r.Period && !reads:
+		return fmt.Errorf("report: it says it takes a period but no component reads %s, %s or %s", PeriodFromInSQL, PeriodToInSQL, YearFromInSQL)
 	}
 	return nil
 }

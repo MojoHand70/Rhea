@@ -51,9 +51,27 @@ func TestAppRows(t *testing.T) {
 		t.Fatal("the same version approved twice")
 	}
 
+	// a company's own App (a kept report) keeps its company, through every
+	// version, and never changes hands
+	own := core.App{ID: "answer-7@company-95", Version: 1, Title: "RZiS", Layer: "business", Tabs: []core.AppTab{{View: "answer-7@company-95"}}, Company: "company-95"}
+	if err := store.InsertAppRow(ctx, s.Pool, own, core.StatusActive); err != nil {
+		t.Fatal(err)
+	}
+	if v, err := s.NextAppVersion(ctx, own.ID); err != nil || v != 2 {
+		t.Fatalf("the next version of the company's App: %d %v", v, err)
+	}
+	if apps, err := s.LatestApps(ctx); err != nil || len(apps) != 2 || !reflect.DeepEqual(apps[0], own) {
+		t.Fatalf("the company's App, with its company: %+v %v", apps, err)
+	}
+	other := own
+	other.Version, other.Company = 2, "company-96"
+	if err := store.InsertAppRow(ctx, s.Pool, other, core.StatusDraft); err == nil {
+		t.Fatal("an App's company changed under its id")
+	}
+
 	var buf bytes.Buffer
 	counts, err := s.Backup(ctx, &buf)
-	if err != nil || counts["app"] != 3 {
+	if err != nil || counts["app"] != 4 {
 		t.Fatalf("the backup carries every App row: %v %v", counts, err)
 	}
 }

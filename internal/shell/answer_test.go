@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http/httptest"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -255,6 +256,108 @@ func TestAnswerFromTheBooks(t *testing.T) {
 	call("GET", fmt.Sprintf("/api/views/answer-%d", firstID), nil, &rep)
 	if len(rep.Components) != 1 || rep.Components[0].Rows[0][1] != "3500.00" || rep.Components[0].Visual.Kind != "bar" || len(rep.Components[0].Of[0]) != 3 {
 		t.Fatalf("the kept report: %+v", rep)
+	}
+	// Approved, the kept report is an App a face places and shows (KK
+	// 2026-10-30: a report approved must be reachable): one tab, its view;
+	// with the books' reports; on the desk and the phone.
+	type servedApp struct {
+		App   string `json:"app"`
+		Title string `json:"title"`
+		Layer string `json:"layer"`
+		Tabs  []struct {
+			View string `json:"view"`
+		} `json:"tabs"`
+		Place *struct {
+			Activity string `json:"activity"`
+			Section  string `json:"section"`
+		} `json:"place"`
+		Shows    []string `json:"shows"`
+		Domain   string   `json:"domain"`
+		Function string   `json:"function"`
+	}
+	var apps []servedApp
+	call("GET", "/api/apps", nil, &apps)
+	keptID := fmt.Sprintf("answer-%d", firstID)
+	i := slices.IndexFunc(apps, func(a servedApp) bool { return a.App == keptID })
+	if i < 0 {
+		t.Fatalf("the kept report is no App: %+v", apps)
+	}
+	if a := apps[i]; a.Title != "Sprzedaż według klientów" || a.Layer != "business" || len(a.Tabs) != 1 || a.Tabs[0].View != keptID ||
+		a.Place == nil || a.Place.Activity != "books" || a.Place.Section != "reports" || strings.Join(a.Shows, ",") != "desk,phone" || a.Domain != "reports" || a.Function != "report" {
+		t.Fatalf("the kept report's App: %+v", a)
+	}
+
+	// A report kept from a question about one month takes the month as its
+	// parameter (KK 2026-10-30: "it's only the accounting period which
+	// changes"): asked for again, for August, it is the same report computed
+	// for August — the author names it, writes no query, and nothing waits
+	// to be kept a second time.
+	asked = nil
+	replies = []string{`{"sql": "SELECT sum(i.net) AS \"Netto\", string_agg(i.id, ',' ORDER BY i.id) AS _of FROM ` + table + ` i WHERE strftime(i.issue_date, '%Y-%m') = '2026-09'", "reading": "sprzedaż netto we wrześniu", "visual": {"kind": "kpi", "value": "Netto", "title": "Sprzedaż we wrześniu"}}`}
+	call("POST", "/api/answer", map[string]any{"question": "sprzedaż netto we wrześniu", "asked_by": "krzysztof"}, &ans)
+	if len(ans.Rows) != 1 || ans.Rows[0][0] != "1500.00" {
+		t.Fatalf("September's sales: %+v", ans.Rows)
+	}
+	if !strings.Contains(asked[0], "Kept reports") || !strings.Contains(asked[0], keptID+" „Sprzedaż według klientów”") {
+		t.Fatalf("the author is told of the kept reports:\n%s", asked[0])
+	}
+	septID := ans.EventID
+	if code := call("POST", fmt.Sprintf("/api/answers/%d/keep", septID), nil, &kept); code != 200 {
+		t.Fatalf("keep September's: %d", code)
+	}
+	if _, _, _, err := x.ApproveBundle(ctx, kept.ID, "krzysztof", "2026-10-18"); err != nil {
+		t.Fatal(err)
+	}
+	monthly := fmt.Sprintf("answer-%d", septID)
+	var page struct {
+		Components []struct {
+			Rows [][]string
+		}
+		Period *core.Period `json:"period"`
+	}
+	call("GET", "/api/views/"+monthly+"?from=2026-08-01&to=2026-08-31", nil, &page)
+	if page.Period == nil || page.Period.From != "2026-08-01" || len(page.Components) != 1 || len(page.Components[0].Rows) != 1 || page.Components[0].Rows[0][0] != "2000.00" {
+		t.Fatalf("the kept report for August: %+v", page)
+	}
+	call("GET", "/api/views/"+monthly, nil, &page)
+	if page.Period == nil || page.Period.From != "2026-10-01" || page.Period.To != "2026-10-31" {
+		t.Fatalf("asked for no period, the first month not closed: %+v", page.Period)
+	}
+	if code := call("GET", "/api/views/"+monthly+"?from=2026-08-31&to=2026-08-01", nil, nil); code != 400 {
+		t.Fatalf("a period whose days are out of order: %d", code)
+	}
+	asked = nil
+	replies = []string{`{"report": "` + monthly + `", "from": "2026-08-01", "to": "2026-08-31", "reading": "sprzedaż netto za sierpień, z zachowanego raportu"}`}
+	var again struct {
+		EventID int64        `json:"event_id"`
+		Report  string       `json:"report"`
+		Title   string       `json:"title"`
+		Period  *core.Period `json:"period"`
+		Reading string       `json:"reading"`
+		Rows    [][]string   `json:"rows"`
+		Visual  core.Visual  `json:"visual"`
+	}
+	if code := call("POST", "/api/answer", map[string]any{"question": "a za sierpień?", "asked_by": "krzysztof"}, &again); code != 200 {
+		t.Fatalf("answer by the kept report: %d", code)
+	}
+	if again.Report != monthly || again.Title != "Sprzedaż we wrześniu" || again.Period == nil || again.Period.To != "2026-08-31" || len(again.Rows) != 1 || again.Rows[0][0] != "2000.00" || again.Visual.Kind != "kpi" {
+		t.Fatalf("the kept report, for August: %+v", again)
+	}
+	if !strings.Contains(asked[0], monthly+" „Sprzedaż we wrześniu” - sprzedaż netto we wrześniu - takes a period") {
+		t.Fatalf("the author is told the report takes a period:\n%s", asked[0])
+	}
+	evs, _ = s.EventsOfTypes(ctx, []string{core.EventHostAnswered})
+	last := evs[len(evs)-1]
+	if last.ID != again.EventID || !strings.Contains(string(last.Payload), `"report":"`+monthly+`"`) && !strings.Contains(string(last.Payload), `"report": "`+monthly+`"`) ||
+		!strings.Contains(string(last.Payload), "2026-08-31") {
+		t.Fatalf("what she told names the report and the period: %s", last.Payload)
+	}
+	var twice struct {
+		Error  string `json:"error"`
+		Report string `json:"report"`
+	}
+	if code := call("POST", fmt.Sprintf("/api/answers/%d/keep", again.EventID), nil, &twice); code != 409 || twice.Report != monthly {
+		t.Fatalf("keeping what the kept report answered: %d %+v", code, twice)
 	}
 
 	// A dashboard drafted in words: the author sees the collection; on the

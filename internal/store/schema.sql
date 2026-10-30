@@ -359,6 +359,39 @@ BEGIN
 END;
 $$;
 ALTER TABLE view_def ENABLE ALWAYS TRIGGER view_company_fixed;
+-- An App's company (KK, 2026-10-30: a kept report is an App with a place):
+-- a company's own App is seen, and written, only in a scope that names the
+-- company, as its views are; Rhea's and the packs' Apps (no company) are
+-- every scope's to read and the installation's alone to write. An App's id
+-- keeps its company through every version.
+ALTER TABLE app ADD COLUMN IF NOT EXISTS company TEXT;
+ALTER TABLE app ENABLE ROW LEVEL SECURITY;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'app' AND policyname = 'app_scope') THEN
+        CREATE POLICY app_scope ON app TO rhea_app USING (rhea_in_scope(company)) WITH CHECK (rhea_may_write(company));
+    END IF;
+    ALTER POLICY app_scope ON app USING (rhea_in_scope(company)) WITH CHECK (rhea_may_write(company));
+END;
+$$;
+CREATE OR REPLACE FUNCTION app_company_fixed() RETURNS trigger AS $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM public.app WHERE app_id = NEW.app_id
+               AND COALESCE(company, '') <> COALESCE(NEW.company, '')) THEN
+        RAISE EXCEPTION 'app % belongs to another company or to Rhea: a company''s own App is an App of its own', NEW.app_id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'app_company_fixed') THEN
+        CREATE TRIGGER app_company_fixed BEFORE INSERT ON app
+            FOR EACH ROW EXECUTE FUNCTION app_company_fixed();
+    END IF;
+END;
+$$;
+ALTER TABLE app ENABLE ALWAYS TRIGGER app_company_fixed;
 -- A company's file is seen, and written, only where the company is. A file
 -- with no company is the installation's own, seen only in its own scope:
 -- files kept before they carried a company are each named company's by the

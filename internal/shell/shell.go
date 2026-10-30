@@ -514,7 +514,7 @@ func (s *Server) handleView(w http.ResponseWriter, r *http.Request) {
 	case "statement":
 		s.serveStatement(ctx, w, vd, r.URL.Query().Get("object_id"))
 	case "report":
-		s.serveReport(ctx, w, vd)
+		s.serveReport(ctx, w, vd, r.URL.Query())
 	case "rights":
 		s.serveRights(ctx, w, vd, r.URL.Query().Get("company"))
 	default:

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -69,10 +70,13 @@ func StoreBundleDraft(ctx context.Context, st *store.Store, k *network.Knowledge
 		}
 		members = append(members, core.Member{Kind: core.KindObjectType, Name: t.Name, Version: v})
 	}
+	owned := map[string]string{} // a view's id as drafted → as named for the company
 	for _, view := range bd.ViewDefs {
 		// a company's view is its own, named for it as its rules are (KK,
 		// 2026-10-27: saved reports are company own)
+		drafted := view.ID
 		view.ID, view.Company = core.OwnedID(view.ID, company), company
+		owned[drafted] = view.ID
 		v, err := st.NextViewDefVersion(ctx, view.ID)
 		if err != nil {
 			return core.Bundle{}, err
@@ -105,6 +109,35 @@ func StoreBundleDraft(ctx context.Context, st *store.Store, k *network.Knowledge
 			return core.Bundle{}, fmt.Errorf("activity %s: %w", ad.Name, err)
 		}
 		members = append(members, core.Member{Kind: core.KindActivity, Name: a.Name, Version: a.Version})
+	}
+	for _, a := range bd.Apps {
+		// a company's App is its own, as its views are; its tabs name the
+		// bundle's views as the company's, or views already on the record
+		a.ID, a.Company = core.OwnedID(a.ID, company), company
+		a.Tabs = slices.Clone(a.Tabs)
+		for i, t := range a.Tabs {
+			if t.View == "" {
+				continue
+			}
+			if own, ok := owned[t.View]; ok {
+				a.Tabs[i].View = own
+				continue
+			}
+			if ok, err := st.HasViewDef(ctx, t.View); err != nil {
+				return core.Bundle{}, err
+			} else if !ok {
+				return core.Bundle{}, fmt.Errorf("app %s: its tab names view %s, which neither this bundle nor the record has", a.ID, t.View)
+			}
+		}
+		v, err := st.NextAppVersion(ctx, a.ID)
+		if err != nil {
+			return core.Bundle{}, err
+		}
+		a.Version = v
+		if err := store.InsertAppRow(ctx, tx, a, core.StatusDraft); err != nil {
+			return core.Bundle{}, fmt.Errorf("app %s: %w", a.ID, err)
+		}
+		members = append(members, core.Member{Kind: core.KindApp, Name: a.ID, Version: v})
 	}
 	id := core.OwnedID(bd.BundleID, company)
 	for n := 2; ; n++ {

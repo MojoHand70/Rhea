@@ -876,6 +876,22 @@ func TestASavedReportIsTheCompanysOwn(t *testing.T) {
 	if got := nav("olga", b); strings.Contains(got, "Kowalski") {
 		t.Fatalf("a's saved report in b's menu: %s", got)
 	}
+	// the kept report's App is a's alone too (KK 2026-10-30; invariant 9)
+	apps := func(person, company string) string {
+		t.Helper()
+		var out any
+		if code := w.call(person, company, "GET", "/api/apps", nil, &out); code != 200 {
+			t.Fatalf("apps for %s: %d", person, code)
+		}
+		b, _ := json.Marshal(out)
+		return string(b)
+	}
+	if !strings.Contains(apps("kk", a), "Notes for Jan Kowalski") {
+		t.Fatal("a's saved report is no App of a's")
+	}
+	if got := apps("olga", b); strings.Contains(got, "Kowalski") {
+		t.Fatalf("a's saved report among b's Apps: %s", got)
+	}
 	if code := w.call("", "", "GET", "/api/nav", nil, nil); code != 200 {
 		t.Fatalf("the installation's menu: %d", code)
 	}

@@ -43,4 +43,19 @@ func TestAnswer(t *testing.T) {
 	if _, err := a.Answer(context.Background(), ask); err == nil {
 		t.Fatalf("a query that says nothing of what it counts was taken")
 	}
+	// A kept report asked for again, for another month, is named, not
+	// written again (KK 2026-10-30); one the company has not is refused.
+	ask.Reports = []agent.AnswerReport{{ID: "answer-12@company-95", Title: "RZiS", Parts: []string{"przychody, koszty i wynik miesiąca"}, Period: true}}
+	reply = `{"report": "answer-12@company-95", "from": "2026-08-01", "to": "2026-08-31", "reading": "RZiS za sierpień"}`
+	ans, err = a.Answer(context.Background(), ask)
+	if err != nil || ans.Report != "answer-12@company-95" || ans.From != "2026-08-01" || ans.To != "2026-08-31" || ans.SQL != "" {
+		t.Fatalf("a kept report named: %+v %v", ans, err)
+	}
+	if !strings.Contains(seen, "Kept reports") || !strings.Contains(seen, "answer-12@company-95 „RZiS” - przychody, koszty i wynik miesiąca - takes a period") {
+		t.Errorf("the ask lacks the kept reports:\n%s", seen)
+	}
+	reply = `{"report": "answer-99", "reading": "x"}`
+	if _, err := a.Answer(context.Background(), ask); err == nil {
+		t.Fatal("a report the company has not was taken")
+	}
 }
