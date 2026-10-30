@@ -66,9 +66,10 @@ func notesApps() map[string]any {
 			"data":    []any{noteType},
 			"tabs":    []any{noteList, notesTotal(map[string]any{"sql_file": "notes-total.sql"}), map[string]any{"desk": "flow", "title": "Przepływ"}},
 			"record":  map[string]any{"of": "note", "tabs": []any{map[string]any{"desk": "document-sheet", "title": "Notatka"}}},
-			"actions": []any{noteDoor}, "rules": []any{noteRule}},
+			"actions": []any{noteDoor}, "rules": []any{noteRule},
+			"place": map[string]any{"activity": "costs", "section": "notes"}, "shows": []string{"desk", "phone"}},
 		"podsumowanie": map[string]any{"app": "podsumowanie", "version": 1, "title": "Podsumowanie notatek", "layer": "business",
-			"uses": []string{"note"}, "tabs": []any{noteByText}},
+			"uses": []string{"note"}, "tabs": []any{noteByText}, "shows": []string{"desk"}},
 	}
 }
 
@@ -211,9 +212,10 @@ func TestAppsUnpackIntoTodaysDefinitions(t *testing.T) {
 		{ID: "notatki", Version: 1, Title: "Notatki", Layer: "business", Data: []string{"note"},
 			Tabs:    []core.AppTab{{View: "note-list"}, {View: "notes-total"}, {Desk: "flow", Title: "Przepływ"}},
 			Record:  &core.AppRecord{Of: "note", Tabs: []core.AppTab{{Desk: "document-sheet", Title: "Notatka"}}},
-			Actions: []string{"take_note"}, Rules: []string{"note"}},
+			Actions: []string{"take_note"}, Rules: []string{"note"},
+			Place: &core.AppPlace{Activity: "costs", Section: "notes"}, Shows: []string{"desk", "phone"}},
 		{ID: "podsumowanie", Version: 1, Title: "Podsumowanie notatek", Layer: "business", Uses: []string{"note"},
-			Tabs: []core.AppTab{{View: "notes-by-text"}}},
+			Tabs: []core.AppTab{{View: "notes-by-text"}}, Shows: []string{"desk"}},
 	}
 	if !reflect.DeepEqual(apps, wantApps) {
 		t.Fatalf("the Apps, approved: %+v", apps)

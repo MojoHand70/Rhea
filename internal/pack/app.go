@@ -29,6 +29,10 @@ type AppFile struct {
 	Record  *AppFileRecord    `json:"record,omitempty"`
 	Actions []Activity        `json:"actions,omitempty"`
 	Rules   []Rule            `json:"rules,omitempty"`
+	// Place and Shows: where it sits and which faces show it (KK
+	// 2026-10-30), as the App keeps them.
+	Place *core.AppPlace `json:"place,omitempty"`
+	Shows []string       `json:"shows,omitempty"`
 }
 
 // AppFileTab is a tab: a view, whole; another pack's view, named by view (a
@@ -50,7 +54,7 @@ type AppFileRecord struct {
 // the keys an App's file, a tab and a record may carry: a misspelt part
 // ("screens") is refused, never loaded as an App without it
 var (
-	appFileKeys   = []string{"app", "version", "title", "layer", "data", "uses", "tabs", "record", "actions", "rules"}
+	appFileKeys   = []string{"app", "version", "title", "layer", "data", "uses", "tabs", "record", "actions", "rules", "place", "shows"}
 	appTabKeys    = []string{"view_id", "version", "notion", "title", "domain", "function", "spec", "view", "desk"}
 	appRecordKeys = []string{"of", "tabs"}
 )
@@ -123,7 +127,7 @@ type unpacked struct {
 // unpack turns an App's file into the App the kernel keeps and the parts it
 // holds. read gives a file beside the App's (its query files).
 func unpack(f AppFile, read func(name string) ([]byte, error)) (unpacked, error) {
-	u := unpacked{app: core.App{ID: f.App, Version: f.Version, Title: f.Title, Layer: f.Layer, Uses: f.Uses}}
+	u := unpacked{app: core.App{ID: f.App, Version: f.Version, Title: f.Title, Layer: f.Layer, Uses: f.Uses, Place: f.Place, Shows: f.Shows}}
 	for _, t := range f.Data {
 		u.app.Data = append(u.app.Data, t.Name)
 		u.types = append(u.types, t)

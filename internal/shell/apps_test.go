@@ -54,7 +54,7 @@ func TestAppsAreTheCompanysAndThePersons(t *testing.T) {
 				"spec": map[string]any{"match": map[string]any{"event_type": "tally.counted"},
 					"effect": map[string]any{"object": map[string]any{"type": "tally_test", "fields": map[string]any{"what": "=$.what"}}}}}}},
 		"liczenie-raport": map[string]any{"app": "liczenie-raport", "version": 1, "title": "Raport zliczeń", "layer": "business",
-			"uses": []string{"tally_test"}, "tabs": []any{byWhat}},
+			"uses": []string{"tally_test"}, "tabs": []any{byWhat}, "place": map[string]any{"activity": "books", "section": "statements"}, "shows": []string{"desk"}},
 		// rules alone over a kind another App keeps: it opens on that kind's list
 		"liczenie-z-banku": map[string]any{"app": "liczenie-z-banku", "version": 1, "title": "Zliczenia z banku", "layer": "business",
 			"uses": []string{"tally_test"},
@@ -120,6 +120,11 @@ func TestAppsAreTheCompanysAndThePersons(t *testing.T) {
 		} `json:"record"`
 		Actions []string `json:"actions"`
 		Rules   []string `json:"rules"`
+		Place   *struct {
+			Activity string `json:"activity"`
+			Section  string `json:"section"`
+		} `json:"place"`
+		Shows []string `json:"shows"`
 	}
 	appsOf := func(person, company string) map[string]served {
 		t.Helper()
@@ -167,6 +172,10 @@ func TestAppsAreTheCompanysAndThePersons(t *testing.T) {
 	}
 	if len(l.Actions) != 1 || l.Actions[0] != "count_tally" || len(l.Rules) != 1 || l.Rules[0] != "tally-counted" {
 		t.Fatalf("what it consists of: %+v", l)
+	}
+	// an App is served with where it sits and where it shows (KK 2026-10-30)
+	if r, ok := got["liczenie-raport"]; !ok || r.Place == nil || r.Place.Activity != "books" || r.Place.Section != "statements" || strings.Join(r.Shows, ",") != "desk" {
+		t.Fatalf("the report App's place and faces: %+v", r)
 	}
 	if r, ok := got["liczenie-raport"]; !ok || r.Function != "analysis" || !equalTabs(r.Tabs, []tab{{View: "tally-by-what", Title: "Zliczenia według rodzaju"}}) {
 		t.Fatalf("and the report App: %+v", got)

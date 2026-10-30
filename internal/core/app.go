@@ -33,6 +33,34 @@ type App struct {
 	Record  *AppRecord `json:"record,omitempty"`
 	Actions []string   `json:"actions,omitempty"` // its doors
 	Rules   []string   `json:"rules,omitempty"`
+	// Place: where the App sits on a face (KK 2026-10-30: every App says
+	// its location, the activity and the folder) — the Activity Bar's
+	// activity and the Nav Bar's section within it, by the ids a market's
+	// words arrange. A market's words may still file it elsewhere; with
+	// no place and no arrangement naming it, a face files it under the rest.
+	Place *AppPlace `json:"place,omitempty"`
+	// Shows: the faces it is visible on, "desk" and "phone" (KK 2026-10-30);
+	// none named means both.
+	Shows []string `json:"shows,omitempty"`
+	// Company: a company's own App — a kept report — seen only where the
+	// company is (invariant 9), as its views and rules are; empty is Rhea's.
+	Company string `json:"company,omitempty"`
+}
+
+// AppPlace is where an App sits: its activity, and the section of that
+// activity's Nav Bar (none: the activity's own items).
+type AppPlace struct {
+	Activity string `json:"activity"`
+	Section  string `json:"section,omitempty"`
+}
+
+// AppFaces are the faces an App may show on.
+var AppFaces = []string{"desk", "phone"}
+
+// ShownOn says whether the App is visible on a face: every face unless it
+// names the ones it shows on.
+func (a App) ShownOn(face string) bool {
+	return len(a.Shows) == 0 || slices.Contains(a.Shows, face)
 }
 
 // AppTab is one tab: a view, or a screen the desk still draws from its own
@@ -55,7 +83,12 @@ type AppRecord struct {
 // chooses, and the platform that carries them (APPS.md).
 var AppLayers = []string{"core", "law", "business", "platform"}
 
-var appName = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
+// an App's id is a name; a company's own App carries its owner after "@"
+// (OwnedID), as a company's rule or view does
+var (
+	appName    = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*(@[a-z0-9]+(-[a-z0-9]+)*)?$`)
+	appSegment = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
+)
 
 // Validate checks an App's shape. Whether its parts exist, and whether each
 // is in no other App, is the loader's to judge with the pack in hand.
@@ -74,6 +107,22 @@ func (a App) Validate() error {
 	}
 	if len(a.Tabs) == 0 && a.Record == nil && len(a.Data) == 0 && len(a.Uses) == 0 {
 		return fmt.Errorf("app %s: shows nothing — give it a tab or a kind of record", a.ID)
+	}
+	if p := a.Place; p != nil {
+		if !appSegment.MatchString(p.Activity) {
+			return fmt.Errorf("app %s: its place names an activity by its id — lowercase letters, digits and hyphens — not %q", a.ID, p.Activity)
+		}
+		if p.Section != "" && !appSegment.MatchString(p.Section) {
+			return fmt.Errorf("app %s: its place names a section by its id — lowercase letters, digits and hyphens — not %q", a.ID, p.Section)
+		}
+	}
+	for i, f := range a.Shows {
+		if !slices.Contains(AppFaces, f) {
+			return fmt.Errorf("app %s: it shows on %q, which is not one of %v", a.ID, f, AppFaces)
+		}
+		if slices.Contains(a.Shows[:i], f) {
+			return fmt.Errorf("app %s: shows on %s twice", a.ID, f)
+		}
 	}
 	for what, names := range map[string][]string{"kind of record": append(slices.Clone(a.Data), a.Uses...), "door": a.Actions, "rule": a.Rules} {
 		seen := map[string]bool{}
@@ -99,7 +148,7 @@ func (a App) Validate() error {
 				}
 				views[t.View] = true
 			case t.Desk != "":
-				if !appName.MatchString(t.Desk) {
+				if !appSegment.MatchString(t.Desk) {
 					return fmt.Errorf("app %s: %s tab %d: the desk's screen %q is a name — lowercase letters, digits and hyphens", a.ID, where, i+1, t.Desk)
 				}
 				if strings.TrimSpace(t.Title) == "" {

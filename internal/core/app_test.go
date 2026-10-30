@@ -13,9 +13,23 @@ func TestAppValidate(t *testing.T) {
 		Data: []string{"sales_invoice", "ksef_submission"}, Uses: []string{"company", "posting"},
 		Tabs:    []AppTab{{View: "sales-invoice-list"}, {Desk: "flow", Title: "Przepływ"}, {View: "naleznosci-do-pilnowania"}},
 		Record:  &AppRecord{Of: "sales_invoice", Tabs: []AppTab{{Desk: "document-sheet", Title: "Faktura"}, {View: "sales-invoice-detail"}}},
-		Actions: []string{"ksef"}, Rules: []string{"pl-book-sales-invoice"}}
+		Actions: []string{"ksef"}, Rules: []string{"pl-book-sales-invoice"},
+		Place: &AppPlace{Activity: "sales"}, Shows: []string{"desk", "phone"}}
 	if err := good.Validate(); err != nil {
 		t.Fatalf("a whole App: %v", err)
+	}
+	// where it sits and where it shows (KK 2026-10-30): a place names an
+	// activity and may name a section; shows names faces; none named is both
+	if err := (App{ID: "raporty", Version: 1, Title: "Raporty", Layer: "law", Tabs: []AppTab{{View: "wynik"}},
+		Place: &AppPlace{Activity: "books", Section: "statements"}}).Validate(); err != nil {
+		t.Fatalf("a place with its section: %v", err)
+	}
+	if a := (App{Shows: []string{"desk"}}); a.ShownOn("phone") || !a.ShownOn("desk") || !(App{}).ShownOn("phone") {
+		t.Fatal("shows: the faces named, every face when none is")
+	}
+	// a company's own App (a kept report) carries its owner in its id
+	if err := (App{ID: "answer-12@company-95", Version: 1, Title: "RZiS", Layer: "business", Tabs: []AppTab{{View: "answer-12@company-95"}}, Company: "company-95"}).Validate(); err != nil {
+		t.Fatalf("an owned App: %v", err)
 	}
 	// an App with only its data opens on its kind of record's list
 	if err := (App{ID: "stawki-vat", Version: 1, Title: "Stawki VAT", Layer: "law", Data: []string{"vat_rate"}}).Validate(); err != nil {
@@ -53,6 +67,12 @@ func TestAppValidate(t *testing.T) {
 		{"a rule twice", func(a *App) { a.Rules = append(a.Rules, "pl-book-sales-invoice") }},
 		{"a door twice", func(a *App) { a.Actions = append(a.Actions, "ksef") }},
 		{"an empty name", func(a *App) { a.Uses = append(a.Uses, "") }},
+		{"a place with no activity", func(a *App) { a.Place = &AppPlace{Section: "receivables"} }},
+		{"a place whose activity is not an id", func(a *App) { a.Place = &AppPlace{Activity: "Sprzedaż"} }},
+		{"a place whose section is not an id", func(a *App) { a.Place = &AppPlace{Activity: "sales", Section: "Należności"} }},
+		{"a face it does not know", func(a *App) { a.Shows = []string{"desk", "watch"} }},
+		{"a face twice", func(a *App) { a.Shows = []string{"desk", "desk"} }},
+		{"an owner that is not a name", func(a *App) { a.ID = "answer-12@Helios S.A." }},
 	}
 	for _, c := range bad {
 		a := good
