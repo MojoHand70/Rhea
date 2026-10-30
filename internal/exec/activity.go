@@ -568,7 +568,9 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 	case "app.removed":
 		// a company's own App — a kept report — switched off as its own rule
 		// is (KK 2026-10-30: from the person's side a delete; on the record a
-		// version above, superseded, with the report's own view)
+		// version above, superseded, with the report's own view). A report
+		// kept before kept reports were Apps (the morning of 2026-10-30) has
+		// a view and no App: it is removed by its view, under the same name.
 		var p struct {
 			App string `json:"app"`
 		}
@@ -576,31 +578,52 @@ func (x *Executor) prepareReaction(ctx context.Context, ev *core.Event, out *Tri
 			return nil, err
 		}
 		a, status, err := x.Store.LatestApp(ctx, p.App)
-		if err != nil {
-			return nil, fmt.Errorf("app %s: no kept report of this company by that name", p.App)
-		}
-		if a.Company == "" || a.Company != ev.Company {
-			return nil, fmt.Errorf("app %s is not the company's own to remove", p.App)
-		}
-		if status != core.StatusActive {
-			return nil, fmt.Errorf("app %s is %s — only a report that shows can be removed", p.App, status)
+		hasApp := err == nil
+		tabs := a.Tabs
+		if hasApp {
+			if a.Company == "" || a.Company != ev.Company {
+				return nil, fmt.Errorf("app %s is not the company's own to remove", p.App)
+			}
+			if status != core.StatusActive {
+				return nil, fmt.Errorf("app %s is %s — only a report that shows can be removed", p.App, status)
+			}
+		} else {
+			tabs = []core.AppTab{{View: p.App}}
 		}
 		var views []core.ViewDef
-		for _, t := range a.Tabs {
+		for _, t := range tabs {
 			if t.View == "" {
 				continue
 			}
 			v, vs, err := x.Store.LatestViewDef(ctx, t.View)
-			if err != nil || v.Company != a.Company || vs != core.StatusActive {
-				continue
+			switch {
+			case err != nil:
+				if !hasApp {
+					return nil, fmt.Errorf("app %s: no kept report of this company by that name", p.App)
+				}
+			case v.Company == "" || v.Company != ev.Company:
+				if !hasApp {
+					return nil, fmt.Errorf("app %s is not the company's own to remove", p.App)
+				}
+			case vs != core.StatusActive:
+				if !hasApp {
+					return nil, fmt.Errorf("app %s is %s — only a report that shows can be removed", p.App, vs)
+				}
+			default:
+				views = append(views, v)
 			}
-			views = append(views, v)
 		}
-		ev.DedupKey = fmt.Sprintf("remove-app/%s/%d", a.ID, a.Version+1)
+		if hasApp {
+			ev.DedupKey = fmt.Sprintf("remove-app/%s/%d", a.ID, a.Version+1)
+		} else {
+			ev.DedupKey = fmt.Sprintf("remove-view/%s/%d", views[0].ID, views[0].Version+1)
+		}
 		return func(tx store.Querier) error {
-			a.Version++
-			if err := store.InsertAppRow(ctx, tx, a, core.StatusSuperseded); err != nil {
-				return err
+			if hasApp {
+				a.Version++
+				if err := store.InsertAppRow(ctx, tx, a, core.StatusSuperseded); err != nil {
+					return err
+				}
 			}
 			for _, v := range views {
 				v.Version++

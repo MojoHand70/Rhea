@@ -992,3 +992,61 @@ func TestARemovedReportIsGoneFromEveryFace(t *testing.T) {
 		t.Fatalf("the removed App's record: v%d %s %v", app.Version, status, err)
 	}
 }
+
+// A report kept before kept reports were Apps (the morning of 2026-10-30:
+// KK's RZiS) has a view and no App. It is removed through the same door, by
+// its name, with the same refusals — white01 showed no button and the door
+// knew no App, the night of 2026-10-30.
+func TestAReportKeptBeforeReportsWereAppsIsRemovedToo(t *testing.T) {
+	w := newGrantsWorld(t)
+	a, b := "PL5250001111", "PL5260001246"
+	w.person("Krzysztof Kowal", "kk", a, "company_manager")
+	w.person("Ben Reader", "ben", a, "reader")
+	w.person("Olga Nowa", "olga", b, "company_manager")
+	old := "answer-1@" + a
+	if err := w.s.InsertViewDef(store.WithCompany(w.ctx, a), core.ViewDef{ID: old, Version: 1, Notion: "report", Title: "RZiS wrzesień", Domain: "reports", Function: "report",
+		Spec: json.RawMessage(`{"components":[{"title":"RZiS","sql":"SELECT 1 AS n"}]}`), Company: a}); err != nil {
+		t.Fatal(err)
+	}
+	nav := func(person, company string) string {
+		t.Helper()
+		var out any
+		if code := w.call(person, company, "GET", "/api/nav", nil, &out); code != 200 {
+			t.Fatalf("nav for %s: %d", person, code)
+		}
+		b, _ := json.Marshal(out)
+		return string(b)
+	}
+	if !strings.Contains(nav("kk", a), "RZiS wrzesień") {
+		t.Fatal("the old kept report is not in a's menu")
+	}
+	remove := func(person, company string) (int, map[string]any) {
+		t.Helper()
+		return w.door(person, company, "remove_app", map[string]any{"app": old, "removed_by": person, "occurred_at": w.today})
+	}
+	if code, out := remove("olga", b); code == 200 {
+		t.Fatalf("b's manager removed a's old report: %v", out)
+	}
+	if code, out := remove("ben", a); code != 403 {
+		t.Fatalf("a's reader removing a's old report: %d %v", code, out)
+	}
+	if code, out := remove("kk", a); code != 200 {
+		t.Fatalf("a's manager removing a's old report: %d %v", code, out)
+	}
+	if strings.Contains(nav("kk", a), "RZiS wrzesień") {
+		t.Fatal("the removed report is still in the menu")
+	}
+	if code := w.call("kk", a, "GET", "/api/views/"+old, nil, nil); code == 200 {
+		t.Fatal("the removed report still computes")
+	}
+	if code, _ := remove("kk", a); code == 200 {
+		t.Fatal("a removed report removed again")
+	}
+	if v, status, err := w.s.LatestViewDef(store.WithCompany(w.ctx, a), old); err != nil || status != core.StatusSuperseded || v.Version != 2 {
+		t.Fatalf("the removed view's record: v%d %s %v", v.Version, status, err)
+	}
+	removed, err := w.s.EventsOfTypes(store.WithCompany(w.ctx, a), []string{"app.removed"})
+	if err != nil || len(removed) != 1 || removed[0].Actor != "kk" {
+		t.Fatalf("the removal in a's books: %v %+v", err, removed)
+	}
+}

@@ -5899,4 +5899,5 @@ choice.
   — so an answer the report gave before stays explained (invariant 1). A pack's App and another
   company's report are nobody's to remove; a reader removes nothing. The Apps and views a face is served
   are now, like rules, those whose very latest version is active: a draft above does not suspend them,
-  a removal does. The `app.` namespace is the kernel's.
+  a removal does. The `app.` namespace is the kernel's. A report kept before kept reports were Apps
+  (the morning of 2026-10-30, KK's RZiS) has a view and no App: the same door removes it by its view.
