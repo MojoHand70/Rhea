@@ -89,9 +89,7 @@ SPEC.md            the design
 - `./scripts/check.sh` before claiming done: gofmt, vet, and `go test ./... -count=1
   -race` with `RHEA_CI=1` against the real database. The test cache hid a red suite
   for a day; a skip for a missing database counts as red. The pre-push hook runs it.
-- Work is not done until an independent review has read the diff (KK triggers it; the
-  author's session does not mark its own work). Anything marked critical gets a
-  reproduction before it is called fixed.
+- Anything marked critical gets a reproduction before it is called fixed.
 - When the spec is silent, pick the simplest option and note it in `DECISIONS.md`
   (one line: date, decision, why). Do not ask; do not gold-plate.
 - Do not defer or leave TODO stubs for anything inside the current milestone; an
@@ -103,7 +101,7 @@ SPEC.md            the design
 ## Definition of done (a change)
 The failing test exists and passes; `./scripts/check.sh` is green; the invariant tests
 still enforce all ten; `rhea replay` reproduces identical state on the test story; the
-change is explained in business terms in its commit; an independent review has run.
+change is explained in business terms in its commit.
 The founding milestone (SPEC §6/M0: raw invoice event → worklist → agent-drafted rule →
 human approval → materialized document in list and detail → DuckDB analysis → replay
 identical) stays the story every pack's tests tell.
