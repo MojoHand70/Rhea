@@ -5841,3 +5841,28 @@ period changes, a parameter of the report, never a new draft**.
   table replaces itself in place; a page does not yet); **a kept report's own words** — its title is the
   question's, its place a default a person cannot move yet: moving an App is the designer's (DIRECTION
   2026-10-23).
+
+## 2026-10-30 — The context selector: a report's parameters, proposed by Rhea when she creates it (KK, answering the proposal)
+
+KK found the RZiS reachable but with no way to change its period: "Our SmartApps need to have a context
+selector component widget we can use. Every time Rhea creates a report she should think for what set of
+parameters user will want to run that report." KK: "OK from my part" to the proposal, with its recommended
+choice.
+
+- **Parameters belong to each report** (the recommended choice over the App as a whole): declared on the
+  tab, as the period is; the App's selector shows the parameters of the tab in front, and a parameter of
+  the same name set once holds across the App's tabs that read it.
+- **A parameter has a name, a kind and a default.** Kinds for the first build: a period (month, quarter,
+  financial year, from–to), a firm, an account, a choice among the values a column holds, a date. The
+  query reads them where it reads the period today; the kernel puts in values it has checked, never a
+  request's text.
+- **Rhea proposes the parameters when she creates a report**: at keeping, one short step asks the author
+  which parameters a person will want to change, given the question and the query ("sprzedaż do
+  Kowalskiego we wrześniu": the firm, default Kowalski; the period, default September). The approval card
+  shows them as the person will see them. This answers the open item of 2026-10-27 (a report's selection
+  as a parameter).
+- **One selector component** for every App tab that has parameters, drawn by the face at the top of the
+  tab, the same on the desk and the phone; asking her ("a za sierpień?", "a dla Nowaka?") fills the same
+  parameters.
+- This is step 2 of the Apps (APPS.md "variables"), begun with reports. Order: the parameter definition in
+  the kernel; Rhea proposing at keeping; the selector on the desk; the phone.

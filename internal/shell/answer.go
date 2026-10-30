@@ -246,7 +246,7 @@ func (s *Server) answerWithReport(ctx context.Context, w http.ResponseWriter, qu
 		q.Set("from", ans.From)
 		q.Set("to", ans.To)
 	}
-	comps, period, code, err := s.reportComponents(ctx, &vd, q)
+	comps, params, code, err := s.reportComponents(ctx, &vd, q)
 	if err != nil {
 		if code == 400 {
 			writeJSON(w, 200, map[string]any{"question": question, "failed": true, "error": err.Error()})
@@ -255,6 +255,7 @@ func (s *Server) answerWithReport(ctx context.Context, w http.ResponseWriter, qu
 		writeErr(w, code, err)
 		return
 	}
+	period := periodOfParams(params)
 	first := comps[0]
 	reading := strings.TrimSpace(ans.Reading)
 	if reading == "" {
@@ -285,7 +286,7 @@ func (s *Server) answerWithReport(ctx context.Context, w http.ResponseWriter, qu
 		return
 	}
 	out := map[string]any{"event_id": t.EventID, "question": question, "report": vd.ID, "title": vd.Title, "components": comps, "reading": reading,
-		"visual": first.Visual, "columns": first.Columns, "rows": first.Rows, "row_objects": first.Of, "more": first.More}
+		"visual": first.Visual, "columns": first.Columns, "rows": first.Rows, "row_objects": first.Of, "more": first.More, "parameters": params}
 	if period != nil {
 		out["period"] = period
 	}
@@ -385,21 +386,37 @@ func (s *Server) runQuery(ctx context.Context, sql string, visual core.Visual) (
 // report that takes a period is computed for the one asked (?from=&to=),
 // else the first month the books have not closed, as an analysis view is.
 func (s *Server) serveReport(ctx context.Context, w http.ResponseWriter, vd *core.ViewDef, q url.Values) {
-	comps, period, code, err := s.reportComponents(ctx, vd, q)
+	comps, params, code, err := s.reportComponents(ctx, vd, q)
 	if err != nil {
 		writeErr(w, code, err)
 		return
 	}
 	out := map[string]any{"view": vd, "components": comps}
-	if period != nil {
-		out["period"] = period // what it was computed for: the face shows it and asks for another
+	if len(params) > 0 {
+		out["parameters"] = params // what it was computed for: the face offers each, and asks for another
+	}
+	if p := periodOfParams(params); p != nil {
+		out["period"] = p // the report's period, as a face read it since 2026-10-27
 	}
 	writeJSON(w, 200, out)
 }
 
-// reportComponents runs a report's components, for the period asked where
-// the report takes one; the status says whose fault a failure is.
-func (s *Server) reportComponents(ctx context.Context, vd *core.ViewDef, q url.Values) ([]componentOut, *core.Period, int, error) {
+// periodOfParams is the value of the parameter named period, where there is one.
+func periodOfParams(params []parameterOut) *core.Period {
+	for _, p := range params {
+		if p.Name == "period" && p.Kind == "period" {
+			if per, ok := p.Value.(core.Period); ok {
+				return &per
+			}
+		}
+	}
+	return nil
+}
+
+// reportComponents runs a report's components, for the parameters asked
+// (KK 2026-10-30), else their defaults; the status says whose fault a
+// failure is.
+func (s *Server) reportComponents(ctx context.Context, vd *core.ViewDef, q url.Values) ([]componentOut, []parameterOut, int, error) {
 	var spec core.ReportSpec
 	if err := json.Unmarshal(vd.Spec, &spec); err != nil {
 		return nil, nil, 500, err
@@ -407,20 +424,13 @@ func (s *Server) reportComponents(ctx context.Context, vd *core.ViewDef, q url.V
 	if err := spec.Check(); err != nil {
 		return nil, nil, 500, fmt.Errorf("view %s: %w", vd.ID, err)
 	}
-	var period *core.Period
-	if spec.Period {
-		p, code, err := s.periodOf(ctx, core.AnalysisSpec{Period: true}, q)
-		if err != nil {
-			return nil, nil, code, err
-		}
-		period = &p
+	values, params, code, err := s.parameterValues(ctx, spec.Params(), q)
+	if err != nil {
+		return nil, nil, code, err
 	}
 	out := make([]componentOut, 0, len(spec.Components))
 	for _, c := range spec.Components {
-		sql := c.SQL
-		if period != nil {
-			sql = period.SQL(sql)
-		}
+		sql := withParameters(c.SQL, values)
 		got, err := s.runQuery(ctx, sql, c.Visual)
 		if err != nil {
 			got = componentOut{Visual: c.Visual, Error: err.Error(), Columns: []answerColumn{}, Rows: [][]string{}}
@@ -428,7 +438,7 @@ func (s *Server) reportComponents(ctx context.Context, vd *core.ViewDef, q url.V
 		got.Title, got.Reading, got.SQL = c.Title, c.Reading, sql
 		out = append(out, got)
 	}
-	return out, period, 0, nil
+	return out, params, 0, nil
 }
 
 // The machine's clock is not the books' day: the kernel's clock is (a

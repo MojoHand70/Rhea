@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http/httptest"
+	"net/url"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -18,6 +19,7 @@ import (
 	"rhea/internal/exec"
 	"rhea/internal/pack"
 	"rhea/internal/shell"
+	"rhea/internal/store"
 	"rhea/internal/store/storetest"
 )
 
@@ -358,6 +360,57 @@ func TestAnswerFromTheBooks(t *testing.T) {
 	}
 	if code := call("POST", fmt.Sprintf("/api/answers/%d/keep", again.EventID), nil, &twice); code != 409 || twice.Report != monthly {
 		t.Fatalf("keeping what the kept report answered: %d %+v", code, twice)
+	}
+
+	// A report's parameters (KK 2026-10-30, the context selector): a firm, a
+	// period, a choice, each put in by the kernel after checking it, each
+	// served with the value the report was computed for; a value the books
+	// do not hold is refused, never put near a query.
+	companies, _ := s.ObjectsByType(ctx, "company")
+	var buyerID, sellerID string
+	for _, c := range companies {
+		switch c.State["vat_id"] {
+		case "5260001246":
+			buyerID = c.ID
+		case "5250001111":
+			sellerID = c.ID
+		}
+	}
+	paramSpec, _ := json.Marshal(core.ReportSpec{
+		Components: []core.ReportComponent{{Title: "Sprzedaż", Reading: "sprzedaż netto do firmy w okresie, w walucie",
+			SQL:    `SELECT COALESCE(sum(i.net), 0) AS "Netto", string_agg(i.id, ',' ORDER BY i.id) AS _of FROM ` + table + ` i WHERE i.buyer = {{firma}} AND i.issue_date BETWEEN {{period_from}} AND {{period_to}} AND i.currency = {{waluta}}`,
+			Visual: core.Visual{Kind: "kpi", Value: "Netto", Title: "Sprzedaż do firmy"}}},
+		Parameters: []core.Parameter{{Name: "firma", Kind: "firm", Label: "Klient", Default: buyerID}, {Name: "period", Kind: "period", Label: "Okres", Default: "2026-09"},
+			{Name: "waluta", Kind: "choice", Label: "Waluta", Values: []string{"PLN", "EUR"}, Default: "PLN"}}})
+	if err := store.InsertViewDefRow(ctx, s.Pool, core.ViewDef{ID: "sprzedaz-do-firmy", Version: 1, Notion: "report", Title: "Sprzedaż do firmy", Domain: "reports", Function: "report", Spec: paramSpec}, core.StatusActive); err != nil {
+		t.Fatal(err)
+	}
+	var served struct {
+		Components []struct{ Rows [][]string }
+		Parameters []struct {
+			Name  string `json:"name"`
+			Kind  string `json:"kind"`
+			Value any    `json:"value"`
+		} `json:"parameters"`
+		Period *core.Period `json:"period"`
+	}
+	call("GET", "/api/views/sprzedaz-do-firmy", nil, &served)
+	if len(served.Components) != 1 || served.Components[0].Rows[0][0] != "1500.00" || len(served.Parameters) != 3 || served.Parameters[0].Value != buyerID ||
+		served.Period == nil || served.Period.From != "2026-09-01" || served.Parameters[2].Value != "PLN" {
+		t.Fatalf("the report on its defaults: %+v", served)
+	}
+	call("GET", "/api/views/sprzedaz-do-firmy?period=2026-08", nil, &served)
+	if served.Components[0].Rows[0][0] != "2000.00" || served.Period.To != "2026-08-31" {
+		t.Fatalf("for August: %+v", served)
+	}
+	call("GET", "/api/views/sprzedaz-do-firmy?firma="+sellerID+"&period=2026-01-01..2026-12-31", nil, &served)
+	if served.Components[0].Rows[0][0] != "0.00" || served.Parameters[0].Value != sellerID || served.Period.From != "2026-01-01" {
+		t.Fatalf("for another firm, the year: %+v", served)
+	}
+	for _, bad := range []string{"?firma=company-nope", "?firma=" + url.QueryEscape("x' OR '1'='1"), "?waluta=USD", "?period=wrzesień", "?period=2026-09-30..2026-09-01"} {
+		if code := call("GET", "/api/views/sprzedaz-do-firmy"+bad, nil, nil); code != 400 {
+			t.Fatalf("%s: %d, a value the books do not hold is refused", bad, code)
+		}
 	}
 
 	// A dashboard drafted in words: the author sees the collection; on the

@@ -130,3 +130,46 @@ func TestPeriodise(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// A report's parameters (KK 2026-10-30, the context selector): each one the
+// kernel can offer, read by some query; every name a query reads given by
+// one; the period of a report kept before written as the parameter "period".
+func TestReportParameters(t *testing.T) {
+	comp := func(sql string) ReportComponent {
+		return ReportComponent{SQL: sql, Reading: "x", Visual: Visual{Kind: "kpi"}}
+	}
+	good := ReportSpec{Components: []ReportComponent{comp("SELECT 1 FROM s WHERE buyer = {{firm}} AND d BETWEEN {{okres_from}} AND {{okres_to}} AND cur = {{waluta}} AND d <= {{dzien}} AND note = {{tekst}}")},
+		Parameters: []Parameter{{Name: "firm", Kind: "firm", Label: "Klient", Default: "company-95"}, {Name: "okres", Kind: "period", Default: "2026-09"},
+			{Name: "waluta", Kind: "choice", Values: []string{"PLN", "EUR"}, Default: "PLN"}, {Name: "dzien", Kind: "date", Default: "2026-09-30"}, {Name: "tekst", Kind: "text"}}}
+	if err := good.Check(); err != nil {
+		t.Fatalf("a report with every kind of parameter: %v", err)
+	}
+	legacy := ReportSpec{Period: true, Components: []ReportComponent{comp("SELECT 1 FROM s WHERE d BETWEEN {{period_from}} AND {{period_to}} AND y >= {{year_from}}")}}
+	if err := legacy.Check(); err != nil {
+		t.Fatalf("a report kept before, taking a period: %v", err)
+	}
+	if ps := legacy.Params(); len(ps) != 1 || ps[0].Name != "period" || ps[0].Kind != "period" || ps[0].Default != OpenMonth {
+		t.Fatalf("its period as a parameter: %+v", ps)
+	}
+	bad := []struct {
+		why  string
+		spec ReportSpec
+	}{
+		{"a parameter no query reads", ReportSpec{Components: []ReportComponent{comp("SELECT 1")}, Parameters: []Parameter{{Name: "firm", Kind: "firm"}}}},
+		{"a name no parameter gives", ReportSpec{Components: []ReportComponent{comp("SELECT 1 WHERE x = {{firma}}")}}},
+		{"a kind the kernel has not", ReportSpec{Components: []ReportComponent{comp("SELECT {{n}}")}, Parameters: []Parameter{{Name: "n", Kind: "number"}}}},
+		{"a name that is not one", ReportSpec{Components: []ReportComponent{comp("SELECT {{Firm}}")}, Parameters: []Parameter{{Name: "Firm", Kind: "firm"}}}},
+		{"a choice with no values", ReportSpec{Components: []ReportComponent{comp("SELECT {{w}}")}, Parameters: []Parameter{{Name: "w", Kind: "choice"}}}},
+		{"a choice whose default is not among its values", ReportSpec{Components: []ReportComponent{comp("SELECT {{w}}")}, Parameters: []Parameter{{Name: "w", Kind: "choice", Values: []string{"PLN"}, Default: "EUR"}}}},
+		{"a period's default that is none", ReportSpec{Components: []ReportComponent{comp("SELECT {{p_from}}")}, Parameters: []Parameter{{Name: "p", Kind: "period", Default: "September"}}}},
+		{"a date's default that is no day", ReportSpec{Components: []ReportComponent{comp("SELECT {{d}}")}, Parameters: []Parameter{{Name: "d", Kind: "date", Default: "2026-09"}}}},
+		{"values on a firm", ReportSpec{Components: []ReportComponent{comp("SELECT {{f}}")}, Parameters: []Parameter{{Name: "f", Kind: "firm", Values: []string{"a"}}}}},
+		{"a parameter twice", ReportSpec{Components: []ReportComponent{comp("SELECT {{f}}")}, Parameters: []Parameter{{Name: "f", Kind: "firm"}, {Name: "f", Kind: "text"}}}},
+		{"a period it says it takes but never reads", ReportSpec{Period: true, Components: []ReportComponent{comp("SELECT 1")}}},
+	}
+	for _, c := range bad {
+		if err := c.spec.Check(); err == nil {
+			t.Errorf("%s: must be refused", c.why)
+		}
+	}
+}
