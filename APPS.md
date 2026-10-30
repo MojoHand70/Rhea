@@ -49,7 +49,7 @@ start and stay empty until their step.
 | `rules` | what makes and changes its records and books its facts — a booking rule belongs to the App whose fact it books, not to the journal it writes | rules |
 | `place` | where it sits (KK 2026-10-30): `{"activity": "books", "section": "reports"}` — the activity and the section by the ids a market's words arrange; the words' own arrangement wins where it names the App | — (the face files it) |
 | `shows` | the faces it is visible on (KK 2026-10-30): `["desk", "phone"]`; none named means both | — |
-| `variables` | step 2 | |
+| `variables` | step 2 — begun 2026-10-30 with a report's parameters (DECISIONS 2026-10-30, the context selector): a kept report declares what a person sets before it is computed (a period, a firm, an account, a choice, a date, a text), Rhea proposes them when she creates the report, and a face draws one selector for them at the top of the tab | the view's spec (`parameters`) |
 | `workflow` | step 3; until then a record's states stay on its kind of record, as today | |
 | `triggers`, `autonomy` | step 4 | |
 | `connectors` | step 5 | |
