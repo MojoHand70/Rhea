@@ -1,6 +1,6 @@
 {
   "app": "suppliers",
-  "version": 1,
+  "version": 2,
   "title": "Suppliers",
   "layer": "core",
   "data": [
@@ -107,6 +107,45 @@
           "human"
         ]
       }
+    },
+    {
+      "name": "add_supplier",
+      "domain": "finance",
+      "description": "Make a firm our supplier by hand, before any invoice, from the day named, with any of its terms; a firm that is our supplier already stays one supplier, the terms given updating it",
+      "spec": {
+        "inputs": [
+          {
+            "name": "company",
+            "type": "ref<company>",
+            "required": true
+          },
+          {
+            "name": "since",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "payment_term_days",
+            "type": "int"
+          },
+          {
+            "name": "needs_approval",
+            "type": "enum",
+            "values": [
+              "yes",
+              "no"
+            ]
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "supplier.added",
+        "who": [
+          "human"
+        ]
+      }
     }
   ],
   "rules": [
@@ -157,6 +196,61 @@
           "amend": {
             "type": "supplier",
             "target": "=$.supplier",
+            "set": {
+              "payment_term_days": "=$.payment_term_days",
+              "needs_approval": "=$.needs_approval"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "core-supplier-added",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "A firm added by hand is our supplier from the day named, with the terms given then; its first invoice later adds no other",
+      "spec": {
+        "match": {
+          "event_type": "supplier.added",
+          "where": [
+            {
+              "formula": "=count(c in objects(supplier, company, $.company)) = 0"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "supplier",
+            "fields": {
+              "company": "=$.company",
+              "since": "=$.since",
+              "payment_term_days": "=$.payment_term_days",
+              "needs_approval": "=$.needs_approval"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "core-supplier-added-known",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "A firm added again is still one supplier: the terms given update it, what is left out stays as it was, and it is a supplier since it first was",
+      "spec": {
+        "match": {
+          "event_type": "supplier.added",
+          "where": [
+            {
+              "formula": "=count(c in objects(supplier, company, $.company)) > 0"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "supplier",
+            "target": "=ref(supplier, company, $.company)",
             "set": {
               "payment_term_days": "=$.payment_term_days",
               "needs_approval": "=$.needs_approval"

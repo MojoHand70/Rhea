@@ -167,3 +167,67 @@ func TestTheLookBackFindsClientsAndSuppliersInPastInvoices(t *testing.T) {
 		t.Fatal("replay does not reproduce what the look-back filled")
 	}
 }
+
+// TestAClientIsAddedByHand (KK 2026-10-30: "we need to be able to add
+// companies by NIP"): a firm becomes our client by hand before any invoice —
+// a contract signed, its terms agreed — from the day the person names, with
+// the terms given then; its first invoice later finds the client and adds
+// none. Added again, the firm stays one client and the terms given update
+// it. A supplier likewise.
+func TestAClientIsAddedByHand(t *testing.T) {
+	w := newCITWorld(t)
+	ctx, s, x := w.ctx, w.s, w.x
+	sums, err := pack.LoadCore(ctx, s, "init")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, sum := range sums {
+		if sum.Bundle == "" {
+			continue
+		}
+		if _, _, errs, err := x.ApproveBundle(ctx, sum.Bundle, "krzysztof", "2026-09-01"); err != nil || len(errs) != 0 {
+			t.Fatalf("approve %s: %v %v", sum.Bundle, err, errs)
+		}
+	}
+	buyer, restaurant := w.id["Nabywca S.A."], w.id["Restauracja Pod Lipą"]
+	role := func(typ, firm string) []map[string]any {
+		t.Helper()
+		objs, err := s.ObjectsByType(ctx, typ)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out []map[string]any
+		for _, o := range objs {
+			if o.State["company"] == firm {
+				out = append(out, o.State)
+			}
+		}
+		return out
+	}
+	w.door("add_client", map[string]any{"company": buyer, "since": "2026-09-01", "payment_term_days": 14, "occurred_at": "2026-09-01"})
+	if c := role("client", buyer); len(c) != 1 || c[0]["since"] != "2026-09-01" || fmt.Sprint(c[0]["payment_term_days"]) != "14" {
+		t.Fatalf("a client added by hand, from the day named, with its terms: %v", c)
+	}
+	w.sale("fv-1", "FV 1/09/2026", "2026-09-21", "1000.00", "230.00", "1230.00")
+	if c := role("client", buyer); len(c) != 1 || c[0]["since"] != "2026-09-01" {
+		t.Fatalf("its first invoice finds the client and adds none: %v", c)
+	}
+	w.door("add_client", map[string]any{"company": buyer, "since": "2026-10-01", "credit_limit": "5000.00", "occurred_at": "2026-10-01"})
+	if c := role("client", buyer); len(c) != 1 || c[0]["since"] != "2026-09-01" || fmt.Sprint(c[0]["payment_term_days"]) != "14" || c[0]["credit_limit"] == nil {
+		t.Fatalf("added again, one client, the terms given update it: %v", c)
+	}
+	w.door("add_supplier", map[string]any{"company": restaurant, "since": "2026-09-15", "needs_approval": "yes", "occurred_at": "2026-09-15"})
+	w.buy("fz-1", "R 12/2026", "2026-09-26", "5270003330", "100.00", "8.00", "108.00")
+	if sp := role("supplier", restaurant); len(sp) != 1 || sp[0]["since"] != "2026-09-15" || sp[0]["needs_approval"] != "yes" {
+		t.Fatalf("a supplier added by hand: %v", sp)
+	}
+
+	before, _ := s.AllObjects(ctx)
+	if _, err := x.Replay(ctx); err != nil {
+		t.Fatal(err)
+	}
+	after, _ := s.AllObjects(ctx)
+	if !reflect.DeepEqual(before, after) {
+		t.Fatal("replay does not reproduce the clients added by hand")
+	}
+}

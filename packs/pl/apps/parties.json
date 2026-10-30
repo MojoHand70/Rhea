@@ -1,6 +1,6 @@
 {
   "app": "parties",
-  "version": 4,
+  "version": 5,
   "title": "Kontrahenci",
   "layer": "law",
   "data": [
@@ -711,10 +711,10 @@
     },
     {
       "rule_id": "pl-enter-company",
-      "version": 1,
+      "version": 2,
       "priority": 100,
       "effective_from": "2026-01-01",
-      "description": "Firma wpisana bez formy prawnej: nazwa, rodzaj, NIP, kraj, adres i rachunek, jak je wpisano",
+      "description": "Firma wpisana bez formy prawnej: nazwa, rodzaj, NIP, kraj, adres i rachunek, jak je wpisano — firma, której NIP księgi jeszcze nie mają",
       "spec": {
         "match": {
           "event_type": "company.entered",
@@ -722,6 +722,9 @@
             {
               "path": "$.legal_form",
               "op": "absent"
+            },
+            {
+              "formula": "=count(c in objects(company, vat_id, $.vat_id)) = 0"
             }
           ]
         },
@@ -742,10 +745,10 @@
     },
     {
       "rule_id": "pl-enter-company-form",
-      "version": 1,
+      "version": 2,
       "priority": 100,
       "effective_from": "2026-01-01",
-      "description": "Firma wpisana z formą prawną, jaką podał rejestr albo wpisujący: osoba fizyczna albo osoba prawna",
+      "description": "Firma wpisana z formą prawną, jaką podał rejestr albo wpisujący: osoba fizyczna albo osoba prawna — firma, której NIP księgi jeszcze nie mają",
       "spec": {
         "match": {
           "event_type": "company.entered",
@@ -753,6 +756,9 @@
             {
               "path": "$.legal_form",
               "op": "exists"
+            },
+            {
+              "formula": "=count(c in objects(company, vat_id, $.vat_id)) = 0"
             }
           ]
         },
@@ -766,6 +772,34 @@
               "country": "=coalesce($.country, \"PL\")",
               "address": "=coalesce($.address, \"\")",
               "iban": "=coalesce($.iban, \"\")",
+              "legal_form": "=$.legal_form"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "pl-enter-company-known",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Firma, której NIP księgi już mają, jest tą samą firmą — w innej roli, wpisana drugi raz albo przez dwie osoby naraz; to, co rejestr mówi o niej teraz (adres, rachunek, forma prawna), ją uaktualnia, a czego nie podano, zostaje, jak było",
+      "spec": {
+        "match": {
+          "event_type": "company.entered",
+          "where": [
+            {
+              "formula": "=count(c in objects(company, vat_id, $.vat_id)) > 0"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "company",
+            "target": "=ref(company, vat_id, $.vat_id)",
+            "set": {
+              "address": "=$.address",
+              "iban": "=$.iban",
               "legal_form": "=$.legal_form"
             }
           }

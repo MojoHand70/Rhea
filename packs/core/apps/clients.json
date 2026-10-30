@@ -1,6 +1,6 @@
 {
   "app": "clients",
-  "version": 1,
+  "version": 2,
   "title": "Clients",
   "layer": "core",
   "data": [
@@ -138,6 +138,53 @@
           "human"
         ]
       }
+    },
+    {
+      "name": "add_client",
+      "domain": "finance",
+      "description": "Make a firm our client by hand, before any invoice — a contract signed, its terms agreed — from the day named, with any of its terms; a firm that is our client already stays one client, the terms given updating it",
+      "spec": {
+        "inputs": [
+          {
+            "name": "company",
+            "type": "ref<company>",
+            "required": true
+          },
+          {
+            "name": "since",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "payment_term_days",
+            "type": "int"
+          },
+          {
+            "name": "discount_percent",
+            "type": "decimal"
+          },
+          {
+            "name": "credit_limit",
+            "type": "money"
+          },
+          {
+            "name": "price_list",
+            "type": "string"
+          },
+          {
+            "name": "account_manager",
+            "type": "ref<person>"
+          },
+          {
+            "name": "occurred_at",
+            "type": "date"
+          }
+        ],
+        "emits": "client.added",
+        "who": [
+          "human"
+        ]
+      }
     }
   ],
   "rules": [
@@ -188,6 +235,67 @@
           "amend": {
             "type": "client",
             "target": "=$.client",
+            "set": {
+              "payment_term_days": "=$.payment_term_days",
+              "discount_percent": "=$.discount_percent",
+              "credit_limit": "=$.credit_limit",
+              "price_list": "=$.price_list",
+              "account_manager": "=$.account_manager"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "core-client-added",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "A firm added by hand is our client from the day named, with the terms given then; its first invoice later adds no other",
+      "spec": {
+        "match": {
+          "event_type": "client.added",
+          "where": [
+            {
+              "formula": "=count(c in objects(client, company, $.company)) = 0"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "client",
+            "fields": {
+              "company": "=$.company",
+              "since": "=$.since",
+              "payment_term_days": "=$.payment_term_days",
+              "discount_percent": "=$.discount_percent",
+              "credit_limit": "=$.credit_limit",
+              "price_list": "=$.price_list",
+              "account_manager": "=$.account_manager"
+            }
+          }
+        }
+      }
+    },
+    {
+      "rule_id": "core-client-added-known",
+      "version": 1,
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "A firm added again is still one client: the terms given update it, what is left out stays as it was, and it is a client since it first was",
+      "spec": {
+        "match": {
+          "event_type": "client.added",
+          "where": [
+            {
+              "formula": "=count(c in objects(client, company, $.company)) > 0"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "client",
+            "target": "=ref(client, company, $.company)",
             "set": {
               "payment_term_days": "=$.payment_term_days",
               "discount_percent": "=$.discount_percent",

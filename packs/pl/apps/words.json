@@ -6,7 +6,7 @@
   "tabs": [
     {
       "view_id": "slownik",
-      "version": 26,
+      "version": 27,
       "notion": "words",
       "title": "Słownik",
       "domain": "finance",
@@ -789,7 +789,11 @@
           "intercompany-positions.receivable": "Należność",
           "intercompany-positions.payable": "Zobowiązanie",
           "intercompany-positions.difference": "Różnica",
-          "invoice-by-customer.invoices": "Liczba faktur"
+          "invoice-by-customer.invoices": "Liczba faktur",
+          "add_client.company": "Firma",
+          "add_client.since": "Klient od",
+          "add_supplier.company": "Firma",
+          "add_supplier.since": "Dostawca od"
         },
         "values": {
           "account.type": {
@@ -1263,7 +1267,9 @@
           "jpk.filing.signed": "Wgrano podpisany plik JPK",
           "jpk.filing.sent": "JPK wysłany do bramki",
           "jpk.filing.accepted": "Bramka przyjęła JPK (UPO)",
-          "jpk.filing.rejected": "Wysyłka JPK odrzucona"
+          "jpk.filing.rejected": "Wysyłka JPK odrzucona",
+          "client.added": "Klient dodany ręcznie",
+          "supplier.added": "Dostawca dodany ręcznie"
         },
         "doors": {
           "appoint_deputy": "wyznaczenie zastępcy",
@@ -1347,7 +1353,9 @@
           "switch_off_pack": "Wyłącz pakiet",
           "declare_financial_year": "rok obrotowy",
           "sign_jpk_filing": "podpisany plik JPK",
-          "jpk_gateway": "kanał bramki JPK"
+          "jpk_gateway": "kanał bramki JPK",
+          "add_client": "Nowy klient",
+          "add_supplier": "Nowy dostawca"
         },
         "account_groups": {
           "0": "Aktywa trwałe",
