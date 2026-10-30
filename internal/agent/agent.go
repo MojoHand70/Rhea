@@ -158,6 +158,11 @@ func New() *Agent {
 		if err != nil {
 			return "", err
 		}
+		if msg.StopReason == anthropic.StopReasonRefusal {
+			// A decline is an answer with no words: said as an error with
+			// the API's reason, never an empty draft or a silent morning.
+			return "", fmt.Errorf("the model declined (%s): %s", msg.StopDetails.Category, msg.StopDetails.Explanation)
+		}
 		var sb strings.Builder
 		for _, block := range msg.Content {
 			sb.WriteString(block.Text)
