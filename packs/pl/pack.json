@@ -1,12 +1,17 @@
 {
   "pack": "pl",
-  "version": 58,
+  "version": 59,
   "kind": "market",
   "market": "PL",
   "install": "installation",
   "stage": "initial",
   "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
   "history": [
+    {
+      "versions": "59",
+      "date": "2026-11-04",
+      "changes": "Pożyczka albo kredyt z harmonogramem wyceniane w skorygowanej cenie nabycia (art. 28 ust. 8a UoR; KK 2026-11-04: pierwsze równanie, które Rhea rozwiązuje sama): osoba wpisuje umowę raz — prowizję potrąconą przy wypłacie, oprocentowanie, okres, co ile miesięcy rata, rodzaj rat (równe, malejące, odsetki okresowo i kapitał na koniec), termin pierwszej raty — a Rhea liczy raty, efektywną stopę procentową i odsetki każdego okresu; każda rata jest zapisem w zakładce Harmonogram, prowizja obniża zobowiązanie zamiast iść w koszt dnia wypłaty (Wn 240 / Ma 130), odsetki efektywne wchodzą do ksiąg co miesiąc, gdy miesiąc się zaczyna (Wn 751 / Ma 240; dla pożyczki udzielonej Wn 030 / Ma 750), rata z miesiąca, który minął przed wprowadzeniem harmonogramu, wchodzi w miesiącu wprowadzenia; kwota wymaganej zapłaty pożyczki jest odtąd jej skorygowaną ceną nabycia. Pożyczki bez harmonogramu księgują się jak dotąd. Pożyczki v3 (pożyczka v2, rata pożyczki, odsetki za okres), Słownik v30."
+    },
     {
       "versions": "58",
       "date": "2026-10-30",

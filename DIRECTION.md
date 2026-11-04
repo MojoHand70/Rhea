@@ -4573,7 +4573,10 @@ optimisation'. What then? Is it a case for us? Some businesses might require opt
 allocation, in many different aspects of reality: production, logistics, warehousing, employment,
 capital allocation, even cash management." Claude's assessment, accepted by KK the same day and
 recorded here: it is a case for Rhea, the architecture already has the shape for it, and what
-needs deciding is a dividing line, not a new engine. Nothing is built on this brief's day.
+needs deciding is a dividing line, not a new engine. Built the same day, on KK's "let's go":
+the first equation — amortised cost with the effective interest rate as a kernel method the
+formula language calls, and the Poland pack's loan schedule on it (DECISIONS 2026-11-04,
+second entry).
 
 **The dividing line: one right answer, or a good answer among many.** A calculation with one
 right answer belongs inside the kernel and is recomputed on replay. These are the arithmetic
@@ -4761,4 +4764,7 @@ schedule production, so this brief costs a page and no code.
   constraints; a rule checks it, autonomy act/propose/earn it, replay never
   re-solves. The solver sits behind a contract the kernel does not name.
   Order: bookkeeping's equations, the payment run, production with its
-  first client. Nothing built.
+  first client. **The first equation shipped the same day:** amortised
+  cost with the effective interest rate as `amortised_cost(…)`, a method
+  the formula language calls and an `each` walks, the Poland pack's loan
+  schedule built on it (pl v59; DECISIONS 2026-11-04).

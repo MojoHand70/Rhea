@@ -13,7 +13,7 @@
   "tabs": [
     {
       "view_id": "slownik",
-      "version": 29,
+      "version": 30,
       "notion": "words",
       "title": "Słownik",
       "domain": "finance",
@@ -314,6 +314,18 @@
             "plural": "Pożyczki",
             "shape": "card",
             "kind": "master"
+          },
+          "loan_instalment": {
+            "label": "Rata pożyczki",
+            "plural": "Raty pożyczek",
+            "shape": "card",
+            "kind": "entry"
+          },
+          "loan_interest": {
+            "label": "Odsetki od pożyczki za okres",
+            "plural": "Odsetki od pożyczek za okresy",
+            "shape": "card",
+            "kind": "entry"
           },
           "deferred_tax": {
             "label": "Odroczony podatek dochodowy",
@@ -692,6 +704,30 @@
           "loan.nominal": "Wartość nominalna",
           "loan.open": "Kwota wymaganej zapłaty",
           "loan.interest_rate": "Oprocentowanie",
+          "loan.fee": "Prowizja",
+          "loan.measurement": "Wycena",
+          "loan.effective_rate": "Efektywna stopa procentowa",
+          "loan.months": "Okres (miesiące)",
+          "loan.every": "Rata co (miesiące)",
+          "loan.kind": "Rodzaj rat",
+          "loan.first_instalment": "Pierwsza rata",
+          "loan_instalment.loan": "Pożyczka",
+          "loan_instalment.n": "Nr",
+          "loan_instalment.date": "Termin",
+          "loan_instalment.period": "Miesiąc w księgach",
+          "loan_instalment.opening": "Kapitał na początek",
+          "loan_instalment.interest": "Odsetki efektywne",
+          "loan_instalment.nominal_interest": "Odsetki umowne",
+          "loan_instalment.capital": "Kapitał w racie",
+          "loan_instalment.payment": "Rata",
+          "loan_instalment.closing": "Kapitał na koniec",
+          "loan_instalment.rate": "Stopa efektywna za okres (%)",
+          "loan.next_period": "Następne odsetki (miesiąc)",
+          "loan_interest.loan": "Pożyczka",
+          "loan_interest.instalments": "Liczba rat",
+          "loan_interest.period": "Miesiąc",
+          "loan_interest.date": "Dzień",
+          "loan_interest.amount": "Odsetki",
           "deferred_tax.title": "Tytuł",
           "deferred_tax.item": "Składnik",
           "deferred_tax.side": "Strona bilansu",
@@ -1127,6 +1163,15 @@
             "open": "otwarta",
             "repaid": "spłacona"
           },
+          "loan.measurement": {
+            "nominal": "kwota wymaganej zapłaty",
+            "amortised_cost": "skorygowana cena nabycia"
+          },
+          "loan.kind": {
+            "annuity": "raty równe",
+            "equal_capital": "raty malejące",
+            "bullet": "odsetki okresowo, kapitał na koniec"
+          },
           "deferred_tax.side": {
             "asset": "aktywa",
             "liability": "pasywa"
@@ -1258,6 +1303,7 @@
           "loan.granted": "Pożyczka udzielona",
           "loan.repaid": "Spłata pożyczki",
           "loan.interest_charged": "Odsetki od pożyczki",
+          "loan.scheduled": "Harmonogram pożyczki",
           "deferred_tax.recognised": "Odroczony podatek ustalony",
           "deferred_tax.reversed": "Odroczony podatek odwrócony",
           "fx.balances.revalued": "Wycena bilansowa rozrachunków w walucie",
@@ -1345,6 +1391,7 @@
           "grant_loan": "pożyczka udzielona",
           "repay_loan": "spłata pożyczki",
           "charge_loan_interest": "odsetki od pożyczki",
+          "schedule_loan": "harmonogram pożyczki",
           "recognise_deferred_tax": "odroczony podatek dochodowy",
           "reverse_deferred_tax": "odwrócenie odroczonego podatku",
           "revalue_fx_balances": "wycena bilansowa walut",

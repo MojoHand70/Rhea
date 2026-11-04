@@ -1,6 +1,6 @@
 {
   "app": "loans",
-  "version": 2,
+  "version": 3,
   "title": "Pożyczki",
   "layer": "law",
   "place": {
@@ -13,7 +13,7 @@
   "data": [
     {
       "name": "loan",
-      "version": 1,
+      "version": 2,
       "domain": "finance",
       "label_field": "title",
       "lifecycle": {
@@ -27,7 +27,16 @@
       },
       "amendable": [
         "open",
-        "due_date"
+        "due_date",
+        "fee",
+        "measurement",
+        "effective_rate",
+        "interest_rate",
+        "months",
+        "every",
+        "kind",
+        "first_instalment",
+        "next_period"
       ],
       "fields": [
         {
@@ -69,12 +78,67 @@
           "name": "open",
           "type": "money",
           "required": true,
-          "description": "kwota wymaganej zapłaty: nominał plus naliczone odsetki, minus spłaty (art. 28 ust. 1 pkt 7 i 8)"
+          "description": "kwota wymaganej zapłaty: nominał plus naliczone odsetki, minus spłaty (art. 28 ust. 1 pkt 7 i 8); przy wycenie w skorygowanej cenie nabycia — nominał minus prowizja, plus odsetki efektywne, minus spłaty (art. 28 ust. 8a)"
         },
         {
           "name": "interest_rate",
           "type": "decimal",
+          "required": false,
+          "description": "oprocentowanie umowne w skali roku, w procentach (10 to dziesięć procent)"
+        },
+        {
+          "name": "fee",
+          "type": "money",
+          "required": false,
+          "description": "prowizja albo dyskonto potrącone przy wypłacie: tyle mniej przeszło przez rachunek"
+        },
+        {
+          "name": "measurement",
+          "type": "enum",
+          "required": false,
+          "values": [
+            "nominal",
+            "amortised_cost"
+          ],
+          "description": "wycena: w kwocie wymaganej zapłaty albo w skorygowanej cenie nabycia efektywną stopą procentową (art. 28 ust. 1 pkt 7a i 8a)"
+        },
+        {
+          "name": "effective_rate",
+          "type": "decimal",
+          "required": false,
+          "description": "efektywna stopa procentowa w skali roku, w procentach: stopa, którą raty dyskontują się do kwoty otrzymanej"
+        },
+        {
+          "name": "months",
+          "type": "int",
           "required": false
+        },
+        {
+          "name": "every",
+          "type": "int",
+          "required": false,
+          "description": "co ile miesięcy przypada rata: 1, 2, 3, 4, 6 albo 12"
+        },
+        {
+          "name": "kind",
+          "type": "enum",
+          "required": false,
+          "values": [
+            "annuity",
+            "equal_capital",
+            "bullet"
+          ]
+        },
+        {
+          "name": "first_instalment",
+          "type": "date",
+          "required": false
+        },
+        {
+          "name": "next_period",
+          "type": "string",
+          "required": false,
+          "description": "miesiąc, w którym do ksiąg wejdą następne odsetki z harmonogramu; pusty, gdy wszystkie weszły"
         },
         {
           "name": "status",
@@ -84,6 +148,123 @@
             "open",
             "repaid"
           ]
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "loan_instalment",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "date",
+      "fields": [
+        {
+          "name": "loan",
+          "type": "ref<loan>",
+          "required": true
+        },
+        {
+          "name": "n",
+          "type": "int",
+          "required": true
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true,
+          "description": "termin raty z umowy"
+        },
+        {
+          "name": "period",
+          "type": "string",
+          "required": true,
+          "description": "miesiąc, w którym odsetki tej raty wchodzą do ksiąg: miesiąc terminu raty, a dla rat z miesięcy, które minęły przed wprowadzeniem harmonogramu — miesiąc wprowadzenia"
+        },
+        {
+          "name": "opening",
+          "type": "money",
+          "required": true,
+          "description": "skorygowana cena nabycia przed ratą"
+        },
+        {
+          "name": "interest",
+          "type": "money",
+          "required": true,
+          "description": "odsetki za okres efektywną stopą procentową: koszt (przychód) finansowy okresu"
+        },
+        {
+          "name": "nominal_interest",
+          "type": "money",
+          "required": true,
+          "description": "odsetki za okres stopą umowną: część odsetkowa raty"
+        },
+        {
+          "name": "capital",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "payment",
+          "type": "money",
+          "required": true,
+          "description": "rata: odsetki umowne plus kapitał"
+        },
+        {
+          "name": "closing",
+          "type": "money",
+          "required": true,
+          "description": "skorygowana cena nabycia po racie"
+        },
+        {
+          "name": "rate",
+          "type": "decimal",
+          "required": true,
+          "description": "efektywna stopa procentowa za okres raty, w procentach"
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "loan_interest",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "period",
+      "fields": [
+        {
+          "name": "loan",
+          "type": "ref<loan>",
+          "required": true
+        },
+        {
+          "name": "instalments",
+          "type": "int",
+          "required": true,
+          "description": "ile rat harmonogramu oddało odsetki w tym miesiącu: jedna, a więcej, gdy harmonogram wprowadzono po ich terminach"
+        },
+        {
+          "name": "period",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true
         },
         {
           "name": "book",
@@ -138,6 +319,55 @@
           {
             "field": "status",
             "label": "Status"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "harmonogram-pozyczek",
+      "version": 1,
+      "notion": "list",
+      "title": "Harmonogram",
+      "domain": "finance",
+      "function": "rozrachunki",
+      "spec": {
+        "object_type": "loan_instalment",
+        "columns": [
+          {
+            "field": "loan",
+            "label": "Pożyczka"
+          },
+          {
+            "field": "n",
+            "label": "Nr"
+          },
+          {
+            "field": "date",
+            "label": "Termin"
+          },
+          {
+            "field": "opening",
+            "label": "Kapitał na początek"
+          },
+          {
+            "field": "interest",
+            "label": "Odsetki efektywne"
+          },
+          {
+            "field": "nominal_interest",
+            "label": "Odsetki umowne"
+          },
+          {
+            "field": "capital",
+            "label": "Kapitał w racie"
+          },
+          {
+            "field": "payment",
+            "label": "Rata"
+          },
+          {
+            "field": "closing",
+            "label": "Kapitał na koniec"
           }
         ]
       }
@@ -235,6 +465,69 @@
           }
         ],
         "emits": "loan.granted",
+        "who": [
+          "human"
+        ]
+      }
+    },
+    {
+      "name": "schedule_loan",
+      "domain": "finance",
+      "description": "Harmonogram pożyczki albo kredytu z umowy: prowizja potrącona przy wypłacie, oprocentowanie (gdy inne niż przy zaciągnięciu), okres w miesiącach, co ile miesięcy rata, rodzaj rat (równe, malejące, odsetki okresowo i kapitał na koniec), termin pierwszej raty i dzień wprowadzenia do ksiąg; od tej chwili pożyczka wyceniana jest w skorygowanej cenie nabycia efektywną stopą procentową — Rhea sama liczy raty, stopę efektywną i odsetki każdego okresu (art. 28 ust. 8a UoR); jedna pożyczka ma jeden harmonogram",
+      "spec": {
+        "inputs": [
+          {
+            "name": "loan",
+            "type": "ref<loan>",
+            "required": true
+          },
+          {
+            "name": "fee",
+            "type": "money",
+            "required": false
+          },
+          {
+            "name": "rate",
+            "type": "decimal",
+            "required": false
+          },
+          {
+            "name": "months",
+            "type": "int",
+            "required": true
+          },
+          {
+            "name": "every",
+            "type": "int",
+            "required": true
+          },
+          {
+            "name": "kind",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "annuity",
+              "equal_capital",
+              "bullet"
+            ]
+          },
+          {
+            "name": "first_instalment",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "loan.scheduled",
         "who": [
           "human"
         ]
@@ -492,6 +785,347 @@
           "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 28 ust. 11 pkt 2: na dzień nabycia lub powstania ujmuje się w księgach rachunkowych „należności i zobowiązania, w tym również z tytułu pożyczek – według wartości nominalnej” (pytanie I-15 egzaminu 2025: zobowiązania z tytułu pożyczek na dzień ich powstania wycenia się w wartości nominalnej)",
           "ustawa o rachunkowości art. 3 ust. 1 pkt 17: inwestycje to aktywa posiadane w celu osiągnięcia korzyści ekonomicznych, w tym „uzyskania przychodów w formie odsetek” — udzielona pożyczka jest inwestycją, nie należnością z dostaw",
           "wzorcowy plan kont: 030 Udzielone pożyczki (inwestycje), 130 Rachunek bieżący, 240 Pożyczki otrzymane, 750 Przychody finansowe, 751 Koszty finansowe"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-schedule-loan",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Harmonogram pożyczki: Rhea liczy raty z umowy (oprocentowanie umowne, okres, rodzaj rat), stopę efektywną — tę, którą wszystkie raty dyskontują się do kwoty otrzymanej, czyli nominału minus prowizja — i odsetki każdego okresu od skorygowanej ceny nabycia; każda rata jest zapisem z terminem, kapitałem na początek, odsetkami efektywnymi i umownymi, kapitałem w racie, ratą i kapitałem na koniec; ostatnia rata domyka harmonogram do zera; rata z miesiąca, który minął przed wprowadzeniem harmonogramu, wchodzi do ksiąg w miesiącu wprowadzenia; pożyczka otwarta, jeden harmonogram na pożyczkę, oprocentowanie z harmonogramu albo z pożyczki",
+      "spec": {
+        "match": {
+          "event_type": "loan.scheduled",
+          "where": [
+            {
+              "formula": "=$.loan.status = \"open\" and count(i in objects(loan_instalment, loan, $.loan)) = 0"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "loan_instalment",
+            "each": "=amortised_cost($.loan.nominal, coalesce($.fee, 0), coalesce($.rate, $.loan.interest_rate), $.months, $.every, $.kind, $.first_instalment)",
+            "fields": {
+              "loan": "=$.doc.loan",
+              "n": "=$.line.state.n",
+              "date": "=$.line.state.date",
+              "period": "=if(month($.line.state.date) < month($.doc.date), month($.doc.date), month($.line.state.date))",
+              "opening": "=$.line.state.opening",
+              "interest": "=$.line.state.interest",
+              "nominal_interest": "=$.line.state.nominal_interest",
+              "capital": "=$.line.state.capital",
+              "payment": "=$.line.state.payment",
+              "closing": "=$.line.state.closing",
+              "rate": "=$.line.state.rate",
+              "book": "pl-stat"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 28 ust. 8a: skorygowana cena nabycia to wartość początkowa pomniejszona o spłaty kapitału, skorygowana o skumulowaną kwotę zdyskontowanej różnicy między wartością początkową a wartością w terminie wymagalności, wyliczoną za pomocą efektywnej stopy procentowej",
+          "ustawa o rachunkowości art. 28 ust. 1 pkt 7a i 8a: należności i udzielone pożyczki zaliczone do aktywów finansowych oraz zobowiązania finansowe mogą być wyceniane według skorygowanej ceny nabycia",
+          "rozporządzenie Ministra Finansów w sprawie szczegółowych zasad uznawania, metod wyceny, zakresu ujawniania i sposobu prezentacji instrumentów finansowych § 3 pkt 11 i 12: efektywna stopa procentowa to stopa, za pomocą której następuje zdyskontowanie do bieżącej wartości przyszłych przepływów pieniężnych oczekiwanych w okresie do terminu wymagalności",
+          "egzamin na biegłego rewidenta, rachunkowość finansowa (EXAM.md 6.1.1 a, 6.1.8 f): wycena instrumentów finansowych w skorygowanej cenie nabycia"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-measure-loan-at-amortised-cost",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Pożyczka z harmonogramem przechodzi na wycenę w skorygowanej cenie nabycia: zapamiętuje prowizję, warunki rat i efektywną stopę procentową w skali roku, a kwota wymaganej zapłaty spada o prowizję — tyle mniej przeszło przez rachunek; odtąd rośnie o odsetki efektywne i maleje o spłaty",
+      "spec": {
+        "match": {
+          "event_type": "loan.scheduled",
+          "where": [
+            {
+              "formula": "=$.loan.status = \"open\" and count(i in objects(loan_instalment, loan, $.loan)) = 0"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "loan",
+            "target": "=$.loan",
+            "set": {
+              "fee": "=coalesce($.fee, 0)",
+              "measurement": "amortised_cost",
+              "effective_rate": "=effective_rate($.loan.nominal, coalesce($.fee, 0), coalesce($.rate, $.loan.interest_rate), $.months, $.every, $.kind)",
+              "interest_rate": "=coalesce($.rate, $.loan.interest_rate)",
+              "months": "=$.months",
+              "every": "=$.every",
+              "kind": "=$.kind",
+              "first_instalment": "=$.first_instalment",
+              "next_period": "=if(month($.first_instalment) < month($.date), month($.date), month($.first_instalment))",
+              "open": "=$.loan.open - coalesce($.fee, 0)"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 28 ust. 8a: skorygowana cena nabycia to wartość początkowa pomniejszona o spłaty kapitału, skorygowana o skumulowaną kwotę zdyskontowanej różnicy między wartością początkową a wartością w terminie wymagalności, wyliczoną za pomocą efektywnej stopy procentowej",
+          "ustawa o rachunkowości art. 28 ust. 1 pkt 7a i 8a: należności i udzielone pożyczki zaliczone do aktywów finansowych oraz zobowiązania finansowe mogą być wyceniane według skorygowanej ceny nabycia"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-loan-fee-received",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Prowizja potrącona przy wypłacie otrzymanej pożyczki nie jest kosztem dnia wypłaty: obniża zobowiązanie do kwoty otrzymanej, Wn 240 / Ma 130, w dniu wprowadzenia harmonogramu; wraca w koszty przez odsetki efektywne, okres po okresie",
+      "spec": {
+        "match": {
+          "event_type": "loan.scheduled",
+          "where": [
+            {
+              "formula": "=coalesce($.fee, 0) > 0 and $.loan.direction = \"received\" and $.loan.status = \"open\" and count(i in objects(loan_instalment, loan, $.loan)) = 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.date",
+            "lines": [
+              {
+                "account": "240",
+                "debit": "=$.fee"
+              },
+              {
+                "account": "130",
+                "credit": "=$.fee"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 28 ust. 8a: skorygowana cena nabycia — wartość początkowa to kwota, w jakiej składnik został po raz pierwszy wprowadzony do ksiąg; prowizja potrącona przy wypłacie pomniejsza tę wartość i rozlicza się efektywną stopą procentową",
+          "wzorcowy plan kont: 030 Udzielone pożyczki (inwestycje), 130 Rachunek bieżący, 240 Pożyczki otrzymane, 750 Przychody finansowe, 751 Koszty finansowe"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-loan-fee-granted",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Prowizja potrącona przy wypłacie udzielonej pożyczki nie jest przychodem dnia wypłaty: obniża należność do kwoty wypłaconej, Wn 130 / Ma 030, w dniu wprowadzenia harmonogramu; wraca w przychody przez odsetki efektywne, okres po okresie",
+      "spec": {
+        "match": {
+          "event_type": "loan.scheduled",
+          "where": [
+            {
+              "formula": "=coalesce($.fee, 0) > 0 and $.loan.direction = \"granted\" and $.loan.status = \"open\" and count(i in objects(loan_instalment, loan, $.loan)) = 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.date",
+            "lines": [
+              {
+                "account": "130",
+                "debit": "=$.fee"
+              },
+              {
+                "account": "030",
+                "credit": "=$.fee"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 28 ust. 8a: skorygowana cena nabycia — wartość początkowa to kwota, w jakiej składnik został po raz pierwszy wprowadzony do ksiąg; prowizja potrącona przy wypłacie pomniejsza tę wartość i rozlicza się efektywną stopą procentową",
+          "wzorcowy plan kont: 030 Udzielone pożyczki (inwestycje), 130 Rachunek bieżący, 240 Pożyczki otrzymane, 750 Przychody finansowe, 751 Koszty finansowe"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-book-loan-interest",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Gdy zaczyna się miesiąc, każda pożyczka z harmonogramem, której następne odsetki należą do miesiąca, który się skończył, oddaje je do ksiąg jednym zapisem: odsetki efektywne rat tego miesiąca, w terminie raty, gdy to jedna rata w swoim miesiącu, a na ostatni dzień miesiąca, gdy w zapisie są raty z miesięcy, które minęły przed wprowadzeniem harmonogramu; pożyczka, której następny miesiąc odsetek jest inny, nie oddaje nic",
+      "spec": {
+        "match": {
+          "event_type": "time.month_opened",
+          "where": [
+            {
+              "formula": "=count(l in objects(loan, next_period, month(add_months($.date, -1)))) > 0"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "loan_interest",
+            "each": "=objects(loan, next_period, month(add_months($.date, -1)))",
+            "fields": {
+              "loan": "=$.line.object_id",
+              "instalments": "=count(i in objects(loan_instalment, loan, $.line.object_id) where i.period = month(add_months($.doc.date, -1)))",
+              "period": "=month(add_months($.doc.date, -1))",
+              "date": "=if(all(i in objects(loan_instalment, loan, $.line.object_id) where i.period = month(add_months($.doc.date, -1)) : month(i.date) = i.period), max(i in objects(loan_instalment, loan, $.line.object_id) where i.period = month(add_months($.doc.date, -1)) : i.date), end_of_month(add_months($.doc.date, -1)))",
+              "amount": "=sum(i in objects(loan_instalment, loan, $.line.object_id) where i.period = month(add_months($.doc.date, -1)) : i.interest)",
+              "book": "pl-stat"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 28 ust. 8a: odsetki efektywną stopą procentową narastają okres po okresie na skorygowanej cenie nabycia",
+          "ustawa o rachunkowości art. 6 ust. 1: w księgach ujmuje się wszystkie przypadające na dany okres koszty, niezależnie od terminu ich zapłaty",
+          "ustawa o rachunkowości art. 42 ust. 3: wynik operacji finansowych stanowi różnicę między przychodami finansowymi, w szczególności z tytułu odsetek, a kosztami finansowymi, w szczególności z tytułu odsetek"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-scheduled-interest-received",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Odsetki efektywne okresu od otrzymanej pożyczki z harmonogramem są kosztem finansowym i zwiększają zobowiązanie: Wn 751 / Ma 240, w dniu odsetek",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "loan_interest"
+            },
+            {
+              "formula": "=$.state.amount > 0 and $.state.loan.direction = \"received\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.date",
+            "lines": [
+              {
+                "account": "751",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "240",
+                "credit": "=$.state.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 42 ust. 3: wynik operacji finansowych stanowi różnicę między przychodami finansowymi, w szczególności z tytułu odsetek, a kosztami finansowymi, w szczególności z tytułu odsetek",
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 28 ust. 8a: skorygowana cena nabycia rośnie o odsetki efektywną stopą procentową",
+          "wzorcowy plan kont: 030 Udzielone pożyczki (inwestycje), 130 Rachunek bieżący, 240 Pożyczki otrzymane, 750 Przychody finansowe, 751 Koszty finansowe"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-scheduled-interest-granted",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Odsetki efektywne okresu od udzielonej pożyczki z harmonogramem są przychodem finansowym i zwiększają należność: Wn 030 / Ma 750, w dniu odsetek",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "loan_interest"
+            },
+            {
+              "formula": "=$.state.amount > 0 and $.state.loan.direction = \"granted\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.date",
+            "lines": [
+              {
+                "account": "030",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "750",
+                "credit": "=$.state.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 42 ust. 3: wynik operacji finansowych stanowi różnicę między przychodami finansowymi, w szczególności z tytułu odsetek, a kosztami finansowymi, w szczególności z tytułu odsetek",
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 28 ust. 8a: skorygowana cena nabycia rośnie o odsetki efektywną stopą procentową",
+          "wzorcowy plan kont: 030 Udzielone pożyczki (inwestycje), 130 Rachunek bieżący, 240 Pożyczki otrzymane, 750 Przychody finansowe, 751 Koszty finansowe"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-accrue-scheduled-interest",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Odsetki efektywne miesiąca dopisują się do kwoty wymaganej zapłaty pożyczki z harmonogramem — po nich kwota to skorygowana cena nabycia — a pożyczka wskazuje miesiąc następnych odsetek: najbliższy miesiąc rat po tym, który właśnie oddał swoje; pusty, gdy to były ostatnie",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "loan_interest"
+            },
+            {
+              "formula": "=$.state.amount > 0"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "loan",
+            "target": "=$.state.loan",
+            "set": {
+              "open": "=$.state.loan.open + $.state.amount",
+              "next_period": "=if(count(i in objects(loan_instalment, loan, $.state.loan) where i.period > $.state.period) = 0, \"\", min(i in objects(loan_instalment, loan, $.state.loan) where i.period > $.state.period : i.period))"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 28 ust. 8a: skorygowana cena nabycia — wartość początkowa pomniejszona o spłaty kapitału i skorygowana o odsetki efektywną stopą procentową"
         ]
       }
     },

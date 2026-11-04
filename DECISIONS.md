@@ -5934,3 +5934,40 @@ choice.
 - **Order of work:** bookkeeping's own equations first (amortised cost is on the exam and missing),
   the Friday payment run as the first proposer proof, production and logistics with the first client
   whose pack needs them. Nothing built today; the brief is DIRECTION "Optimal decisions".
+
+## 2026-11-04 — The first equation built: amortised cost with the effective interest rate (KK: "OK, let's go")
+- **A kernel method is a function of the formula language.** `amortised_cost(nominal, fee, rate,
+  months, every, kind, first)` returns the schedule of a loan or a bond as a list of rows typed by
+  a type the kernel itself declares (`amortised_cost_row`, served before any pack's), so a fold
+  reads a row's interest as money and an `each` walks the rows as it walks a keyed collection —
+  one instalment record per row, every field explained by the call and its inputs.
+  `effective_rate(…)` is the same method's rate a year, in per cent. The arithmetic brief's
+  precedent (`fifo_cost(…)`), now real.
+- **Exact and bounded.** Rationals throughout; the rate is the contract's own when nothing was
+  kept back, else the root of the discounting equation found by sixty-four bisection steps
+  between zero and one hundred per cent a period — a fixed count, never "until it converges"
+  (DIRECTION arithmetic brief: a loop that runs until a condition holds is never vocabulary).
+  Amounts round to the minor unit half up; the last instalment completes the schedule to zero,
+  the remainder on the last row as an allocation's. The instalments come from the contract's
+  rate first, as the lender computes them; the effective rate discounts those. Rates are in per
+  cent, as the Poland pack writes `interest_rate` ("10" is ten per cent).
+- **One interest fact per loan per month, never one per instalment.** The first draft booked
+  each instalment's interest as its own fact and amended the loan's amount owed from each; the
+  late-schedule case (two instalments due in one month) hit the kernel's guard — two
+  amendments of one record in one chain are refused, since the second would overwrite the
+  first's increase. The fix is in the data, not the guard: the loan names its `next_period`,
+  the month-opening rule keys on it (`objects(loan, next_period, …)`), the month's fact sums the
+  instalments due, and the accrual advances `next_period` in the same amendment. No zero-amount
+  facts for months with nothing due, nothing to subtract on a repeat.
+- **Late understanding goes forward.** An instalment whose month passed before the schedule was
+  entered carries the entering month as its booking period and accrues on that month's last
+  day; the fee is booked on the day the schedule enters the books, not the payout day — a
+  closed month stays closed (DIRECTION "Late understanding").
+- **A loan with a schedule is measured at amortised cost; one without stays at nominal.** The
+  loan's amount owed becomes nominal less fee, plus effective interest, less repayments; the
+  Poland pack v59 adds the schedule action, the instalment and the month's interest records,
+  and the Harmonogram tab. Granted loans mirror received ones (030/750 for 240/751).
+- **Assessed and left:** instalments carry no "booked" mark of their own (the loan's
+  `next_period` says how far the books are); a finance lease's split and the tax view are the
+  second slice; bonds and shares as objects, market price, and the 2025 paper's task I-1 stay
+  missing in EXAM.md 6.1.8 f; the face renders the new tab generically, no face change.
