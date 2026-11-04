@@ -263,7 +263,11 @@ TEMPLATES - every field value in an effect is a template string:
     $.months, 1, \"annuity\", $.first_instalment)", fields from $.line.state.interest …);
     the rate in per cent a year, every the instalment's months (1, 2, 3, 4, 6, 12), kind one
     of annuity, equal_capital, bullet; effective_rate(nominal, fee, rate, months, every, kind)
-    is that rate a year in per cent.
+    is that rate a year in per cent. lease_schedule(value, initial, instalment, months, every,
+    residual, first) is the lessee's schedule of a finance lease (KSR 5) — the contract names
+    the instalments, the rate that discounts them to the value less the first payment splits
+    each into interest and capital, the buy-out paid with the last; the same rows;
+    lease_rate(value, initial, instalment, months, every, residual) is that rate a year.
 Money fields take "=$.path" to a decimal string, "=sum(...)" or a formula. Dates are
 copied as strings or computed. A field typed "ref<T>" links to an object of type T, in
 one of two ways: "=ref(T, field, $.path)" looks it up by a field value (the referenced

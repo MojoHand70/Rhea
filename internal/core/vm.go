@@ -1119,56 +1119,10 @@ func call(name string, args []Value) (Value, error) {
 		}
 		// the day clamps to the target month's length: Jan 31 + 1 month is Feb 28
 		return Value{Kind: KDate, Str: addMonths(d, int(n)).Format("2006-01-02")}, nil
-	case "amortised_cost", "effective_rate":
-		// the kernel method (amortised.go): its inputs read as the kinds
-		// the checker admitted, its rows typed by the kernel's own type
-		nominal, err := toMinor(args[0])
-		if err != nil {
-			return Value{}, fmt.Errorf("%s: the nominal: %w", name, err)
-		}
-		fee, err := toMinor(args[1])
-		if err != nil {
-			return Value{}, fmt.Errorf("%s: the fee: %w", name, err)
-		}
-		rate, k, err := toNum(args[2])
-		if err != nil || k == KMoney {
-			return Value{}, fmt.Errorf("%s: the rate is a number in per cent, not %s", name, args[2].Kind)
-		}
-		months, err := toInt(args[3])
-		if err != nil {
-			return Value{}, fmt.Errorf("%s: the months: %w", name, err)
-		}
-		every, err := toInt(args[4])
-		if err != nil {
-			return Value{}, fmt.Errorf("%s: the instalment's months: %w", name, err)
-		}
-		if args[5].Kind != KString {
-			return Value{}, fmt.Errorf("%s: the kind is a word, one of %v", name, AmortisedKinds)
-		}
-		first := "2000-01-01" // the rate does not depend on the dates
-		if name == "amortised_cost" {
-			d, err := toDate(args[6])
-			if err != nil {
-				return Value{}, fmt.Errorf("%s: the first instalment's date: %w", name, err)
-			}
-			first = d.Format("2006-01-02")
-		}
-		a, err := AmortisedCost(nominal, fee, rate, int(months), int(every), args[5].Str, first)
-		if err != nil {
-			return Value{}, err
-		}
-		if name == "effective_rate" {
-			return Value{Kind: KDecimal, Num: a.AnnualPct()}, nil
-		}
-		origin := fmt.Sprintf("amortised_cost(%s, %s, %s, %d, %d, %s, %s)", FormatMoney(nominal), FormatMoney(fee), rate.RatString(), months, every, args[5].Str, first)
-		out := Value{Kind: KList, Type: amortisedRowType.Name, Origin: origin}
-		raws := make([]any, 0, len(a.Rows))
-		for i, state := range a.States() {
-			out.List = append(out.List, Value{Kind: KObject, Raw: state, Type: amortisedRowType.Name, Origin: fmt.Sprintf("%s[%d]", origin, i)})
-			raws = append(raws, state)
-		}
-		out.Raw = raws
-		return out, nil
+	case "amortised_cost", "effective_rate", "lease_schedule", "lease_rate":
+		// the kernel methods (amortised.go): inputs read as the kinds the
+		// checker admitted, rows typed by the kernel's own type
+		return callAmortised(name, args)
 	case "sum": // the legacy form over a fanned-out list
 		if args[0].Kind != KList {
 			return Value{}, fmt.Errorf("sum() needs a list, got %s", args[0].Kind)

@@ -56,7 +56,12 @@ import (
 // schedule of a loan or a bond at amortised cost with the effective
 // interest rate (amortised.go), a list of amortised_cost_row objects an
 // each may walk; effective_rate(nominal, fee, rate, months, every, kind) —
-// that rate per year, in per cent, to four places.
+// that rate per year, in per cent, to four places;
+// lease_schedule(value, initial, instalment, months, every, residual, first)
+// — the lessee's schedule of a finance lease (KSR 5): the contract names the
+// instalments, and the rate that discounts them to the value less the first
+// payment splits each into interest and capital; lease_rate(value, initial,
+// instalment, months, every, residual) — that rate per year, in per cent.
 // Division is admitted only under a round(): where precision can be lost,
 // the stance is declared, never implied.
 
@@ -963,11 +968,16 @@ func (e *checkEnv) checkCall(n *node, rounded bool) (ty, error) {
 			return anyT, fmt.Errorf("at %d: is_iban wants text, got %s", n.pos, x.kind)
 		}
 		return ty{kind: KBool}, nil
-	case "amortised_cost", "effective_rate":
-		// the kernel method's inputs: two amounts, a rate, two whole
-		// numbers of months, a kind, and for the schedule the first day
+	case "amortised_cost", "effective_rate", "lease_schedule", "lease_rate":
+		// the kernel methods' inputs — a loan's: two amounts, a rate, two
+		// whole numbers of months, a kind; a lease's: three amounts, two
+		// whole numbers of months, the buy-out — and for a schedule the
+		// first instalment's day
 		want := []string{"an amount", "an amount", "a rate", "whole months", "whole months", "a kind", "a date"}
-		if n.text == "effective_rate" {
+		if n.text == "lease_schedule" || n.text == "lease_rate" {
+			want = []string{"an amount", "an amount", "an amount", "whole months", "whole months", "an amount", "a date"}
+		}
+		if n.text == "effective_rate" || n.text == "lease_rate" {
 			want = want[:6]
 		}
 		if err := argc(len(want)); err != nil {
@@ -993,7 +1003,7 @@ func (e *checkEnv) checkCall(n *node, rounded bool) (ty, error) {
 				return anyT, fmt.Errorf("at %d: %s wants %s as argument %d, got %s", n.pos, n.text, w, i+1, x.kind)
 			}
 		}
-		if n.text == "effective_rate" {
+		if n.text == "effective_rate" || n.text == "lease_rate" {
 			return ty{kind: KDecimal}, nil
 		}
 		return ty{kind: KList, typ: amortisedRowType.Name}, nil

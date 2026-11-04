@@ -221,3 +221,72 @@ func TestFormulaAmortisedCostIsRowsAFormulaWalks(t *testing.T) {
 	// A refusal names the method's law.
 	wantErr(t, `=count(r in amortised_cost($.nominal, $.nominal, $.rate, $.months, 12, "bullet", $.first))`, p, "int", env, "must stay below the nominal")
 }
+
+func TestLeaseScheduleSplitsEachPaymentByTheInternalRate(t *testing.T) {
+	// A car: 100 000 net, 10 000 paid on handover, 35 monthly instalments of
+	// 2 700 and a 1 000 buy-out with the last: 95 500 paid for 90 000 owed,
+	// 5 500 of interest in all, 4.0321% a year.
+	a, err := LeaseSchedule(10000000, 1000000, 270000, 35, 1, 100000, "2027-02-15")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(a.Rows) != 35 || row(a.Rows[0]) != "1 9000000 29696 29696 240304 270000 8759696" ||
+		row(a.Rows[1]) != "2 8759696 28903 28903 241097 270000 8518599" || row(a.Rows[34]) != "35 368784 1216 1216 368784 370000 0" {
+		t.Fatalf("the lease: first %s, second %s, last %s", row(a.Rows[0]), row(a.Rows[1]), row(a.Rows[34]))
+	}
+	if a.PeriodPct().FloatString(8) != "0.32995434" || a.AnnualPct().FloatString(4) != "4.0321" {
+		t.Fatalf("the lease's rate: %s a month, %s a year", a.PeriodPct().FloatString(8), a.AnnualPct().FloatString(4))
+	}
+	var interest int64
+	for _, r := range a.Rows {
+		interest += r.Interest
+	}
+	if interest != 550000 || a.Rows[0].Date != "2027-02-15" || a.Rows[34].Date != "2029-12-15" {
+		t.Fatalf("5 500 of interest over the term, from February 2027 to December 2029: %d %s %s", interest, a.Rows[0].Date, a.Rows[34].Date)
+	}
+	// Payments that are exactly the value: no interest, every instalment capital.
+	z, err := LeaseSchedule(1200000, 0, 100000, 12, 1, 0, "2027-01-01")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if z.Rate.Sign() != 0 || z.Rows[0].Interest != 0 || z.Rows[11].Closing != 0 {
+		t.Fatalf("a lease at no cost: %s %+v", z.Rate.RatString(), z.Rows[0])
+	}
+	for _, c := range []struct {
+		value, initial, inst, residual int64
+		want                           string
+	}{
+		{10000000, 10000000, 270000, 0, "must stay below the value"},
+		{10000000, 0, 0, 0, "the instalment must be above zero"},
+		{10000000, 0, 100000, 0, "are below the"},
+	} {
+		if _, err := LeaseSchedule(c.value, c.initial, c.inst, 12, 1, c.residual, "2027-01-01"); err == nil || !strings.Contains(err.Error(), c.want) {
+			t.Fatalf("%+v: err = %v, want %q", c, err, c.want)
+		}
+	}
+
+	// As a formula: rows an each walks, the rate a year, the draft gate.
+	terms := ObjectType{Name: "door:record_lease", Fields: []FieldDef{
+		{Name: "value", Type: "money"}, {Name: "initial", Type: "money"}, {Name: "instalment", Type: "money"},
+		{Name: "months", Type: "int"}, {Name: "residual", Type: "money"}, {Name: "first", Type: "date"},
+	}}
+	env := &Env{Typed: map[string]string{"$": terms.Name}, Types: func(name string) (ObjectType, bool) { return terms, name == terms.Name }, Raw: true}
+	p := `{"value": "100000.00", "initial": "10000.00", "instalment": "2700.00", "months": 35, "residual": "1000.00", "first": "2027-02-15"}`
+	call := `lease_schedule($.value, $.initial, $.instalment, $.months, 1, $.residual, $.first)`
+	if v, _ := evalFormula(t, "=sum(r in "+call+" : r.interest)", p, "money", env); v != int64(550000) {
+		t.Fatalf("the interest over the lease: %v", v)
+	}
+	if v, _ := evalFormula(t, "=sum(r in "+call+" : r.capital)", p, "money", env); v != int64(9000000) {
+		t.Fatalf("the capital repaid is what was owed: %v", v)
+	}
+	if v, _ := evalFormula(t, `=lease_rate($.value, $.initial, $.instalment, $.months, 1, $.residual)`, p, "decimal", env); v != "4.0321" {
+		t.Fatalf("the lease's rate a year: %v", v)
+	}
+	tm, _ := ParseTemplate("=" + call)
+	if !tm.IsRows() {
+		t.Fatal("a lease's rows are a collection an each may walk")
+	}
+	if _, err := ParseFormula(`lease_rate($.value, $.initial)`); err == nil || !strings.Contains(err.Error(), "takes 6 argument") {
+		t.Fatalf("arity: %v", err)
+	}
+}
