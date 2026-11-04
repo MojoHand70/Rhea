@@ -4564,6 +4564,78 @@ manages the contract and, by that role alone, sees no company's books.
 **A statement from an account not yet approved** (KK agreed the proposal): its lines wait, and one
 approval releases them all; nothing books to an account nobody has checked.
 
+## Optimal decisions: one right answer, or a good plan among many (KK, 2026-11-04)
+
+KK's question: "We constructed Rhea to make decisions based on rules, right? What if a decision
+requires a bit more? An additional calculation or goal function optimisation or resolution of a
+system of equations? I mean, I understand, the rule says 'you need to calculate this
+optimisation'. What then? Is it a case for us? Some businesses might require optimum resource
+allocation, in many different aspects of reality: production, logistics, warehousing, employment,
+capital allocation, even cash management." Claude's assessment, accepted by KK the same day and
+recorded here: it is a case for Rhea, the architecture already has the shape for it, and what
+needs deciding is a dividing line, not a new engine. Nothing is built on this brief's day.
+
+**The dividing line: one right answer, or a good answer among many.** A calculation with one
+right answer belongs inside the kernel and is recomputed on replay. These are the arithmetic
+brief's family (2026-10-08): standards with names, as kernel methods parameterised by rules, in
+exact arithmetic with declared rounding, bounded, total — FIFO, allocation with the remainder,
+MRP netting, matching with N sides. A system of equations whose solution is unique belongs here
+too, and two such systems sit inside plain bookkeeping, not in a factory: the effective interest
+rate of a loan at amortised cost (the root of one equation; EXAM.md marks amortised cost missing
+at 6.1.1 a and 6.1.8 f, so it is the first equation Rhea has to solve, and it is on the syllabus),
+and the costs of auxiliary departments that serve each other (the boiler house heats the
+workshop, the workshop repairs the boiler: a linear system, one answer, exactly computable).
+
+An optimisation is different in kind: which invoices to pay this Friday, how to sequence next
+week's production, how to route the trucks, who works which shift, where the capital goes. There
+is no single right answer; two solvers give two equally good plans, the same solver with another
+time limit gives a third, and the arithmetic inside is floating point. It can never sit where
+rules sit: replay would not reproduce the books (invariant 4) and floats would reach money
+(invariant 6).
+
+**A solver is a proposer, the fourth after the person, the agent and a connector.** The door
+already exists three times: a person proposes and approves; the agent proposes a draft that a
+person activates; a connector brings an answer in as a fact. A solver takes the same door:
+
+1. *The goal and the constraints are a definition.* Drafted in the interview, approved by a
+   person, versioned like a rule. The goal function is the most policy-laden thing in a firm —
+   "pay every supplier by the due date, take discounts above one percent, never go below the
+   thirty-thousand floor" is a business decision, not a solver setting — so it passes the gate.
+   Rhea proposes the standard goal with its warrant; the person accepts or overrides.
+2. *The solver runs outside the deterministic path*, reading the locked analysis copy as of a
+   place in the log, as the agent's queries do, within the scope the person acts in.
+3. *Its plan lands as a fact*: the inputs it saw (the as-of), the model version, the solver and
+   its version, the objective value, and the constraints that bound. The binding constraints are
+   the "why" the host reads out: "I held Orlen's invoice because paying it would take the balance
+   below your floor; it is due Monday." Every amount in the plan is minor units, rounded once by
+   the model's declared rounding before it becomes a fact.
+4. *A rule checks the plan.* Finding a good plan is hard; checking one is cheap and
+   deterministic: every supplier within its due date, every machine within its hours, the balance
+   above the floor. A plan that fails the check is residue in the worklist, never booked.
+5. *The App's autonomy applies* as decided for every automatic action: act, propose, or earn it
+   (the learning brief's trust). The approved plan is the fact the rules book from; the simulation
+   gate shows its effect as a diff before approval. Replay replays the plan and never re-solves.
+
+**What the language gains, when it is built.** A *model* as a definition (goal, constraints, the
+App's variables it reads, its declared rounding), versioned and approved. A *solver contract* the
+way markets and channels have one: the kernel knows no solver by name; a pure Go simplex covers
+the first linear cases, a mixed-integer solver runs as a separate process behind the contract when
+a client needs it; nothing is chosen now. A *plan fact* with the provenance above, its dedup key
+the model version and the as-of, so a plan proposed twice is one plan (invariant 10). A *checking
+rule* over the plan, in the formula language, no new vocabulary. The switch is the one scheduling
+got (KK, 2026-10-05: automation outruns unorganised reality): supersede the model, pause the App,
+stop the clock, and the log says so.
+
+**Order of work.** First, bookkeeping's own equations as kernel methods, with the pack that needs
+them: amortised cost and the effective interest rate (the exam), reciprocal cost allocation, cost
+of goods for a producing client. Second, the Friday payment run as the first proposer proof, in
+Bankowość: the one optimisation every small company does by hand, small enough that due date and
+discount do most of the work, and the host's best moment ("Friday's payments: 14 invoices,
+182 000 zł, balance after 41 000. Approve?"). Third, rosters, routing, production scheduling and
+capital allocation when the first client whose business pack needs them arrives, as a module of
+that pack, propose-first. Our buyers today run accounting offices and small companies and do not
+schedule production, so this brief costs a page and no code.
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
@@ -4679,3 +4751,14 @@ approval releases them all; nothing books to an account nobody has checked.
   finish, an API call is two facts, running instances keep their version.
   Rhea's apps (WMS, OMS, document flows) are packages of smart documents.
   A dedicated session; the first proof rebuilds prepaid costs as one.
+- **A solver proposes; a kernel method computes** (KK, 2026-11-04, "Optimal
+  decisions" above). One right answer — FIFO, allocation, MRP netting,
+  matching, the effective interest rate, reciprocal cost allocation — is a
+  kernel method in exact arithmetic, recomputed on replay. A good plan among
+  many — the payment run, a schedule, a route, a roster — is a solver's
+  proposal: the goal and constraints an approved, versioned definition; the
+  plan a fact with its inputs, model, solver, objective and binding
+  constraints; a rule checks it, autonomy act/propose/earn it, replay never
+  re-solves. The solver sits behind a contract the kernel does not name.
+  Order: bookkeeping's equations, the payment run, production with its
+  first client. Nothing built.

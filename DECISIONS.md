@@ -5913,3 +5913,24 @@ choice.
   by default and the people screens were built by hand on top — the case the Apps rule was written
   for. Outside the kernel the word is "action" (Polish "czynność"), never "door" or "verb"; the code
   keeps the spec's "activity".
+
+## 2026-11-04 — An equation with one answer is a kernel method; an optimisation is a proposer, never a rule (KK: "Rhea optimal decisions", accepting the assessment)
+- **The dividing line.** A calculation with one right answer (FIFO, allocation with the remainder,
+  MRP netting, matching, the effective interest rate of a loan at amortised cost, the reciprocal
+  allocation of auxiliary departments' costs) is a kernel method in exact arithmetic with declared
+  rounding, recomputed on replay. A search for a good plan among many (which invoices to pay on
+  Friday, a production sequence, a route, a roster, where the capital goes) never runs where rules
+  run: no single answer, solver- and time-limit-dependent, floating point inside — invariants 4 and 6.
+- **A solver is the fourth proposer**, after the person, the agent and a connector. The goal and the
+  constraints are a definition, drafted by the interview, approved and versioned like a rule. The
+  solver reads the locked analysis copy as of a place in the log, within the scope. Its plan is a fact:
+  inputs' as-of, model version, solver and version, objective value, binding constraints (the "why");
+  amounts in minor units after the model's declared rounding. A rule checks the plan (checking is
+  cheap where finding is hard); the App's autonomy — act, propose, earn it — applies; replay replays
+  the plan and never re-solves. Dedup key: model version plus the as-of (invariant 10).
+- **The kernel knows no solver by name**: a solver contract like a market's or a channel's. A pure Go
+  simplex for the first linear cases, a mixed-integer solver as a separate process when a client needs
+  one; nothing chosen.
+- **Order of work:** bookkeeping's own equations first (amortised cost is on the exam and missing),
+  the Friday payment run as the first proposer proof, production and logistics with the first client
+  whose pack needs them. Nothing built today; the brief is DIRECTION "Optimal decisions".
