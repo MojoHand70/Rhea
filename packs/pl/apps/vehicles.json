@@ -1,6 +1,6 @@
 {
   "app": "vehicles",
-  "version": 2,
+  "version": 3,
   "title": "Samochody i leasing",
   "layer": "law",
   "place": {
@@ -102,10 +102,24 @@
     },
     {
       "name": "lease_contract",
-      "version": 1,
+      "version": 2,
       "domain": "finance",
       "is_document": false,
       "label_field": "number",
+      "lifecycle": {
+        "field": "status",
+        "transitions": {
+          "active": [
+            "active",
+            "ended"
+          ]
+        }
+      },
+      "amendable": [
+        "status",
+        "next_period",
+        "end"
+      ],
       "fields": [
         {
           "name": "number",
@@ -120,11 +134,28 @@
             "operational",
             "financial",
             "rental"
-          ]
+          ],
+          "description": "rodzaj umowy, jak nazywa ją rynek i ustawa o CIT: leasing operacyjny (art. 17b), finansowy (art. 17f) albo najem"
+        },
+        {
+          "name": "books",
+          "type": "enum",
+          "required": false,
+          "values": [
+            "finance",
+            "operating"
+          ],
+          "description": "jak księgi traktują umowę: leasing finansowy — przedmiot wśród środków trwałych, zobowiązanie wobec finansującego, rata dzielona na kapitał i odsetki wewnętrzną stopą zwrotu (art. 3 ust. 4 UoR, KSR 5) — albo operacyjny: raty kosztem, jak w podatku (uproszczenie art. 3 ust. 6 UoR)"
+        },
+        {
+          "name": "lessor",
+          "type": "ref<company>",
+          "required": false
         },
         {
           "name": "start",
-          "type": "date"
+          "type": "date",
+          "description": "dzień przyjęcia przedmiotu leasingu do używania"
         },
         {
           "name": "end",
@@ -153,6 +184,74 @@
         {
           "name": "vat_deducted",
           "type": "money"
+        },
+        {
+          "name": "asset_value",
+          "type": "money",
+          "required": false,
+          "description": "wartość przedmiotu leasingu netto z umowy: wartość początkowa środka trwałego i zobowiązania u korzystającego"
+        },
+        {
+          "name": "initial_fee",
+          "type": "money",
+          "required": false,
+          "description": "opłata wstępna netto, płatna przy przyjęciu przedmiotu"
+        },
+        {
+          "name": "instalment",
+          "type": "money",
+          "required": false,
+          "description": "rata netto"
+        },
+        {
+          "name": "months",
+          "type": "int",
+          "required": false,
+          "description": "liczba miesięcy od pierwszej do ostatniej raty"
+        },
+        {
+          "name": "every",
+          "type": "int",
+          "required": false,
+          "description": "co ile miesięcy przypada rata"
+        },
+        {
+          "name": "residual",
+          "type": "money",
+          "required": false,
+          "description": "cena wykupu netto, płatna z ostatnią ratą"
+        },
+        {
+          "name": "first_instalment",
+          "type": "date",
+          "required": false
+        },
+        {
+          "name": "depreciation_rate",
+          "type": "decimal",
+          "required": false,
+          "description": "roczna stawka amortyzacji przedmiotu w księgach, w procentach"
+        },
+        {
+          "name": "effective_rate",
+          "type": "decimal",
+          "required": false,
+          "description": "wewnętrzna stopa zwrotu umowy w skali roku, w procentach: stopa, którą raty i wykup dyskontują się do wartości przedmiotu pomniejszonej o opłatę wstępną"
+        },
+        {
+          "name": "next_period",
+          "type": "string",
+          "required": false,
+          "description": "miesiąc, w którym do ksiąg wejdą następne odsetki z harmonogramu; pusty, gdy wszystkie weszły"
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "required": false,
+          "values": [
+            "active",
+            "ended"
+          ]
         }
       ]
     }

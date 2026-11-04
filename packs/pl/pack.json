@@ -1,12 +1,17 @@
 {
   "pack": "pl",
-  "version": 59,
+  "version": 60,
   "kind": "market",
   "market": "PL",
   "install": "installation",
   "stage": "initial",
   "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
   "history": [
+    {
+      "versions": "60",
+      "date": "2026-11-04",
+      "changes": "Leasing finansowy u korzystającego (KSR 5, art. 3 ust. 4 UoR; KK 2026-11-04: podział raty na kapitał i odsetki tą samą metodą co pożyczki): osoba wpisuje umowę raz — wartość przedmiotu, opłatę wstępną, ratę, okres, co ile miesięcy rata, cenę wykupu, termin pierwszej raty, dzień przyjęcia przedmiotu, stawkę amortyzacji — a Rhea liczy wewnętrzną stopę zwrotu umowy i dzieli każdą ratę na odsetki i kapitał; przedmiot wchodzi do środków trwałych w wartości z umowy wobec zobowiązania z tytułu leasingu (Wn 010 / Ma 242, nowe konto), amortyzuje się jak każdy środek trwały, odsetki każdego miesiąca wchodzą do ksiąg, gdy miesiąc się zaczyna (Wn 751 / Ma 242), a faktury finansującego — opłata wstępna, raty, wykup — księgują się na 242 (konto kosztów finansującego ustawia się na 242 wraz z umową), więc saldo 242 to zobowiązanie w skorygowanej cenie nabycia. Umowa, której księgi traktują operacyjnie (uproszczenie art. 3 ust. 6), księguje się jak dotąd: raty kosztem. Leasing finansowy w księgach przy leasingu operacyjnym podatkowo czeka na rozliczenie podatkowe następnej wersji — Rhea mówi to zadaniem. Aplikacja Leasing (rata leasingu, odsetki leasingu za okres, umowa leasingu v2 w Samochodach i leasingu v3), środek trwały v3 ze źródłem (zakup albo leasing), Słownik v31."
+    },
     {
       "versions": "59",
       "date": "2026-11-04",
@@ -140,7 +145,7 @@
     {
       "versions": "33",
       "date": "2026-10-19",
-      "changes": "Zamknięcie roku i podział wyniku (rejestr EXAM.md 6.1.7, 6.1.2 c, 9.1.3): drzwi close_year zamykają konta wynikowe na dzień bilansowy — każde konto kosztów, przychodów i podatku dochodowego oddaje saldo na 860 Wynik finansowy; drzwi approve_statement (zatwierdzenie sprawozdania, art. 53 UoR) przenoszą wynik z 860 na 820 Rozliczenie wyniku finansowego w dniu zatwierdzenia; drzwi distribute_result (uchwała o podziale zysku albo pokryciu straty, art. 191–192 i 231 KSH) księgują odpis na kapitał zapasowy (Wn 820 / Ma 802), dywidendy (Wn 820 / Ma 241) i pokrycie straty z kapitału zapasowego (Wn 802 / Ma 820); drzwi pay_dividend księgują wypłatę z potrąceniem zryczałtowanego podatku 19% (art. 30a ust. 1 pkt 4 i art. 41 ust. 4 PIT; art. 22 ust. 1 CIT): Wn 241 brutto / Ma 130 netto, Ma 225 podatek; nowe konta 802, 820, 241; widoki kapitaly i podzial-wyniku. Uproszczenia: wariant porównawczy bez zmiany stanu produktów (konto 490 nie bierze udziału), zaliczka na dywidendę i wkłady niepieniężne — w następnych wersjach."
+      "changes": "Zamknięcie roku i podział wyniku (rejestr EXAM.md 6.1.7, 6.1.2 c, 9.1.3): drzwi close_year zamykają konta wynikowe na dzień bilansowy — każde konto kosztów, przychodów i podatku dochodowego oddaje saldo na 860 Wynik finansowy; drzwi approve_statement (zatwierdzenie sprawozdania, art. 53 UoR) przenoszą wynik z 860 na 820 Rozliczenie wyniku finansowego w dniu zatwierdzenia; drzwi distribute_result (uchwała o podziale zysku albo pokryciu straty, art. 191–192 i 231 KSH) księgują odpis na kapitał zapasowy (Wn 820 / Ma 802), dywidendy (Wn 820 / Ma 242) i pokrycie straty z kapitału zapasowego (Wn 802 / Ma 820); drzwi pay_dividend księgują wypłatę z potrąceniem zryczałtowanego podatku 19% (art. 30a ust. 1 pkt 4 i art. 41 ust. 4 PIT; art. 22 ust. 1 CIT): Wn 241 brutto / Ma 130 netto, Ma 225 podatek; nowe konta 802, 820, 241; widoki kapitaly i podzial-wyniku. Uproszczenia: wariant porównawczy bez zmiany stanu produktów (konto 490 nie bierze udziału), zaliczka na dywidendę i wkłady niepieniężne — w następnych wersjach."
     },
     {
       "versions": "32",
@@ -246,6 +251,7 @@
     "provisions",
     "stocktake",
     "loans",
+    "leases",
     "equity",
     "year-close",
     "reports",
@@ -937,6 +943,17 @@
       "payload": {
         "code": "240",
         "name": "Pożyczki otrzymane",
+        "type": "creditor",
+        "market": "pl"
+      }
+    },
+    {
+      "event_type": "account.created",
+      "occurred_at": "2026-01-01",
+      "dedup_key": "pack/pl/account/242",
+      "payload": {
+        "code": "242",
+        "name": "Zobowiązania z tytułu leasingu finansowego",
         "type": "creditor",
         "market": "pl"
       }

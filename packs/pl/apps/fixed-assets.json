@@ -1,6 +1,6 @@
 {
   "app": "fixed-assets",
-  "version": 2,
+  "version": 3,
   "title": "Środki trwałe",
   "layer": "law",
   "place": {
@@ -13,7 +13,7 @@
   "data": [
     {
       "name": "fixed_asset",
-      "version": 2,
+      "version": 3,
       "domain": "finance",
       "is_document": false,
       "label_field": "name",
@@ -107,6 +107,21 @@
             "depreciated",
             "disposed"
           ]
+        },
+        {
+          "name": "source",
+          "type": "enum",
+          "required": false,
+          "values": [
+            "purchase",
+            "lease"
+          ],
+          "description": "skąd środek trwały: z zakupu albo budowy (080), albo z leasingu finansowego — wtedy zobowiązanie wobec finansującego, nie 080"
+        },
+        {
+          "name": "lease",
+          "type": "ref<lease_contract>",
+          "required": false
         },
         {
           "name": "book",
@@ -599,7 +614,7 @@
       "rule_id": "pl-post-fixed-asset-acceptance",
       "priority": 200,
       "effective_from": "2026-01-01",
-      "description": "Przyjęty środek trwały księguje się w dniu przyjęcia: Wn 010 Środki trwałe / Ma 080 Środki trwałe w budowie, w wartości początkowej",
+      "description": "Przyjęty środek trwały z zakupu albo budowy księguje się w dniu przyjęcia: Wn 010 Środki trwałe / Ma 080 Środki trwałe w budowie, w wartości początkowej; przedmiot leasingu finansowego księguje jego własna reguła, wobec finansującego",
       "spec": {
         "match": {
           "event_type": "object.materialized",
@@ -608,6 +623,9 @@
               "path": "$.object_type",
               "op": "eq",
               "value": "fixed_asset"
+            },
+            {
+              "formula": "=coalesce($.state.source, \"purchase\") <> \"lease\""
             }
           ]
         },

@@ -1,0 +1,745 @@
+{
+  "app": "leases",
+  "version": 1,
+  "title": "Leasing",
+  "layer": "law",
+  "place": {
+    "activity": "bank"
+  },
+  "shows": [
+    "desk",
+    "phone"
+  ],
+  "data": [
+    {
+      "name": "lease_instalment",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "date",
+      "fields": [
+        {
+          "name": "lease",
+          "type": "ref<lease_contract>",
+          "required": true
+        },
+        {
+          "name": "n",
+          "type": "int",
+          "required": true
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true,
+          "description": "termin raty z umowy"
+        },
+        {
+          "name": "period",
+          "type": "string",
+          "required": true,
+          "description": "miesiąc, w którym odsetki tej raty wchodzą do ksiąg: miesiąc terminu raty, a dla rat z miesięcy, które minęły przed wprowadzeniem umowy — miesiąc wprowadzenia"
+        },
+        {
+          "name": "opening",
+          "type": "money",
+          "required": true,
+          "description": "zobowiązanie przed ratą"
+        },
+        {
+          "name": "interest",
+          "type": "money",
+          "required": true,
+          "description": "część odsetkowa raty wewnętrzną stopą zwrotu: koszt finansowy okresu"
+        },
+        {
+          "name": "nominal_interest",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "capital",
+          "type": "money",
+          "required": true,
+          "description": "część kapitałowa raty: o tyle maleje zobowiązanie"
+        },
+        {
+          "name": "payment",
+          "type": "money",
+          "required": true,
+          "description": "rata netto; ostatnia z ceną wykupu"
+        },
+        {
+          "name": "closing",
+          "type": "money",
+          "required": true,
+          "description": "zobowiązanie po racie"
+        },
+        {
+          "name": "rate",
+          "type": "decimal",
+          "required": true,
+          "description": "wewnętrzna stopa zwrotu za okres raty, w procentach"
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "lease_interest",
+      "version": 1,
+      "domain": "finance",
+      "is_document": false,
+      "label_field": "period",
+      "fields": [
+        {
+          "name": "lease",
+          "type": "ref<lease_contract>",
+          "required": true
+        },
+        {
+          "name": "instalments",
+          "type": "int",
+          "required": true,
+          "description": "ile rat harmonogramu oddało odsetki w tym miesiącu: jedna, a więcej, gdy umowę wprowadzono po ich terminach"
+        },
+        {
+          "name": "period",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true
+        },
+        {
+          "name": "amount",
+          "type": "money",
+          "required": true
+        },
+        {
+          "name": "book",
+          "type": "string",
+          "required": true
+        }
+      ]
+    }
+  ],
+  "uses": [
+    "lease_contract",
+    "fixed_asset",
+    "company",
+    "task",
+    "posting"
+  ],
+  "tabs": [
+    {
+      "view_id": "umowy-leasingu",
+      "version": 1,
+      "notion": "list",
+      "title": "Umowy leasingu",
+      "domain": "finance",
+      "function": "rozrachunki",
+      "spec": {
+        "object_type": "lease_contract",
+        "columns": [
+          {
+            "field": "number",
+            "label": "Numer umowy"
+          },
+          {
+            "field": "lessor",
+            "label": "Finansujący"
+          },
+          {
+            "field": "description",
+            "label": "Przedmiot"
+          },
+          {
+            "field": "kind",
+            "label": "Rodzaj"
+          },
+          {
+            "field": "books",
+            "label": "W księgach"
+          },
+          {
+            "field": "start",
+            "label": "Przyjęcie"
+          },
+          {
+            "field": "asset_value",
+            "label": "Wartość przedmiotu"
+          },
+          {
+            "field": "instalment",
+            "label": "Rata"
+          },
+          {
+            "field": "months",
+            "label": "Miesiące"
+          },
+          {
+            "field": "residual",
+            "label": "Wykup"
+          },
+          {
+            "field": "effective_rate",
+            "label": "Stopa zwrotu (%)"
+          },
+          {
+            "field": "next_period",
+            "label": "Następne odsetki"
+          },
+          {
+            "field": "status",
+            "label": "Status"
+          }
+        ]
+      }
+    },
+    {
+      "view_id": "harmonogram-leasingu",
+      "version": 1,
+      "notion": "list",
+      "title": "Harmonogram",
+      "domain": "finance",
+      "function": "rozrachunki",
+      "spec": {
+        "object_type": "lease_instalment",
+        "columns": [
+          {
+            "field": "lease",
+            "label": "Umowa"
+          },
+          {
+            "field": "n",
+            "label": "Nr"
+          },
+          {
+            "field": "date",
+            "label": "Termin"
+          },
+          {
+            "field": "opening",
+            "label": "Zobowiązanie przed"
+          },
+          {
+            "field": "interest",
+            "label": "Odsetki"
+          },
+          {
+            "field": "capital",
+            "label": "Kapitał"
+          },
+          {
+            "field": "payment",
+            "label": "Rata"
+          },
+          {
+            "field": "closing",
+            "label": "Zobowiązanie po"
+          }
+        ]
+      }
+    }
+  ],
+  "actions": [
+    {
+      "name": "record_lease",
+      "domain": "finance",
+      "description": "Umowa leasingu albo najmu z umowy: numer, finansujący, przedmiot, rodzaj (operacyjny, finansowy, najem), jak traktują ją księgi (finansowy wg KSR 5 albo operacyjny — raty kosztem), wartość przedmiotu netto, opłata wstępna, rata netto, okres w miesiącach, co ile miesięcy rata, cena wykupu, termin pierwszej raty, dzień przyjęcia przedmiotu, roczna stawka amortyzacji przedmiotu (gdy w księgach finansowy) i dzień wprowadzenia do ksiąg; przy leasingu finansowym w księgach Rhea sama liczy wewnętrzną stopę zwrotu, dzieli raty na kapitał i odsetki, przyjmuje przedmiot do środków trwałych wobec zobowiązania z tytułu leasingu i ustawia konto kosztów finansującego na 242, żeby jego faktury zmniejszały to zobowiązanie; jedna umowa na numer",
+      "spec": {
+        "inputs": [
+          {
+            "name": "number",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "lessor",
+            "type": "ref<company>",
+            "required": false
+          },
+          {
+            "name": "description",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "kind",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "operational",
+              "financial",
+              "rental"
+            ]
+          },
+          {
+            "name": "books",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "finance",
+              "operating"
+            ]
+          },
+          {
+            "name": "asset_value",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "initial_fee",
+            "type": "money",
+            "required": false
+          },
+          {
+            "name": "instalment",
+            "type": "money",
+            "required": true
+          },
+          {
+            "name": "months",
+            "type": "int",
+            "required": true
+          },
+          {
+            "name": "every",
+            "type": "int",
+            "required": true
+          },
+          {
+            "name": "residual",
+            "type": "money",
+            "required": false
+          },
+          {
+            "name": "first_instalment",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "start",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "depreciation_rate",
+            "type": "decimal",
+            "required": false
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "occurred_at",
+            "type": "date",
+            "required": false
+          }
+        ],
+        "emits": "lease.recorded",
+        "who": [
+          "human"
+        ]
+      }
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "pl-record-lease",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Umowa leasingu staje się zapisem z warunkami z umowy i wewnętrzną stopą zwrotu w skali roku — stopą, którą raty i wykup dyskontują się do wartości przedmiotu pomniejszonej o opłatę wstępną; wartość netto umowy to opłata wstępna, raty i wykup razem; umowa w księgach finansowa wskazuje miesiąc pierwszych odsetek — miesiąc pierwszej raty, a gdy ten minął przed wprowadzeniem, miesiąc wprowadzenia; jedna umowa na numer",
+      "spec": {
+        "match": {
+          "event_type": "lease.recorded",
+          "where": [
+            {
+              "formula": "=count(l in objects(lease_contract, number, $.number)) = 0"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "lease_contract",
+            "fields": {
+              "number": "=$.number",
+              "kind": "=$.kind",
+              "books": "=$.books",
+              "lessor": "=$.lessor",
+              "description": "=$.description",
+              "start": "=$.start",
+              "end": "=add_months($.first_instalment, $.months - $.every)",
+              "net": "=coalesce($.initial_fee, 0) + $.instalment * round($.months / $.every, 0, half_up) + coalesce($.residual, 0)",
+              "asset_value": "=$.asset_value",
+              "initial_fee": "=coalesce($.initial_fee, 0)",
+              "instalment": "=$.instalment",
+              "months": "=$.months",
+              "every": "=$.every",
+              "residual": "=coalesce($.residual, 0)",
+              "first_instalment": "=$.first_instalment",
+              "depreciation_rate": "=$.depreciation_rate",
+              "effective_rate": "=lease_rate($.asset_value, coalesce($.initial_fee, 0), $.instalment, $.months, $.every, coalesce($.residual, 0))",
+              "next_period": "=if($.books = \"finance\", if(month($.first_instalment) < month($.date), month($.date), month($.first_instalment)), \"\")",
+              "status": "active"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 3 ust. 4: umowa, na mocy której jednostka przyjęła do odpłatnego używania obce środki trwałe, zalicza je do swoich aktywów trwałych, gdy spełnia co najmniej jeden z siedmiu warunków — przeniesienie własności, prawo nabycia po cenie niższej od rynkowej, okres co najmniej 3/4 okresu ekonomicznej użyteczności, suma opłat co najmniej 90% wartości rynkowej, przyrzeczenie kolejnej umowy, możliwość wypowiedzenia z poniesieniem kosztów, przedmiot dostosowany do potrzeb korzystającego",
+          "ustawa o rachunkowości art. 3 ust. 6: jednostka niepodlegająca badaniu może kwalifikować umowy leasingu według zasad ustawy o podatku dochodowym — stąd wybór „w księgach: operacyjny”",
+          "Krajowy Standard Rachunkowości nr 5 „Leasing, najem i dzierżawa”: ewidencja u korzystającego — przedmiot leasingu finansowego wśród środków trwałych, zobowiązanie wobec finansującego, opłaty dzielone na część kapitałową i odsetkową metodą wewnętrznej stopy zwrotu"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-lessor-invoices-reduce-lease-liability",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Faktury finansującego za leasing finansowy w księgach — opłata wstępna, raty, wykup — zmniejszają zobowiązanie z tytułu leasingu, nie są kosztem: konto kosztów finansującego to 242; saldo 242 to zobowiązanie w skorygowanej cenie nabycia, bo odsetki okresu dopisują się do niego osobno",
+      "spec": {
+        "match": {
+          "event_type": "lease.recorded",
+          "where": [
+            {
+              "formula": "=$.books = \"finance\" and coalesce($.lessor, \"\") <> \"\" and count(l in objects(lease_contract, number, $.number)) = 0"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "company",
+            "target": "=$.lessor",
+            "set": {
+              "cost_account": "242"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "Krajowy Standard Rachunkowości nr 5 „Leasing, najem i dzierżawa”: u korzystającego opłata wstępna i część kapitałowa opłat zmniejszają zobowiązanie z tytułu leasingu finansowego, część odsetkowa jest kosztem finansowym",
+          "wzorcowy plan kont: 242 Zobowiązania z tytułu leasingu finansowego (konto pakietu), 010 Środki trwałe, 071 Umorzenie, 401 Amortyzacja, 751 Koszty finansowe"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-lease-tax-split-waits",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Leasing finansowy w księgach, a operacyjny podatkowo: kosztem podatkowym są raty, kosztem księgowym amortyzacja i odsetki — tę różnicę pakiet rozliczy w następnej wersji; do tego czasu zaliczka na podatek liczy koszty księgowe, więc Rhea zapisuje zadanie dla osoby, która rozlicza podatek",
+      "spec": {
+        "match": {
+          "event_type": "lease.recorded",
+          "where": [
+            {
+              "formula": "=$.books = \"finance\" and $.kind = \"operational\" and count(l in objects(lease_contract, number, $.number)) = 0"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "task",
+            "fields": {
+              "title": "Leasing finansowy w księgach, operacyjny podatkowo: rozlicz różnicę w zaliczce",
+              "status": "open",
+              "due_date": "=$.date",
+              "priority": "high",
+              "category": "taxes",
+              "description": "=$.number"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o CIT (t.j. Dz. U. z 2026 r. poz. 554) art. 17b ust. 1: w leasingu operacyjnym opłaty ustalone w umowie są kosztem uzyskania przychodów korzystającego — a nie amortyzacja i odsetki, które liczą księgi przy ujęciu finansowym",
+          "ustawa o CIT art. 16 ust. 1 pkt 49a: opłaty z tytułu umowy leasingu samochodu osobowego ponad proporcję 150 000 zł do wartości samochodu nie są kosztem"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-schedule-lease",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Harmonogram leasingu finansowego w księgach: Rhea dzieli każdą ratę na odsetki i kapitał wewnętrzną stopą zwrotu umowy — odsetki okresu to zobowiązanie przed ratą razy stopa, kapitał to reszta raty; ostatnia rata z ceną wykupu domyka zobowiązanie do zera; rata z miesiąca, który minął przed wprowadzeniem umowy, wchodzi do ksiąg w miesiącu wprowadzenia",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "lease_contract"
+            },
+            {
+              "formula": "=$.state.books = \"finance\""
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "lease_instalment",
+            "each": "=lease_schedule($.state.asset_value, $.state.initial_fee, $.state.instalment, $.state.months, $.state.every, $.state.residual, $.state.first_instalment)",
+            "fields": {
+              "lease": "=$.doc.object_id",
+              "n": "=$.line.state.n",
+              "date": "=$.line.state.date",
+              "period": "=if(month($.line.state.date) < $.doc.state.next_period, $.doc.state.next_period, month($.line.state.date))",
+              "opening": "=$.line.state.opening",
+              "interest": "=$.line.state.interest",
+              "nominal_interest": "=$.line.state.nominal_interest",
+              "capital": "=$.line.state.capital",
+              "payment": "=$.line.state.payment",
+              "closing": "=$.line.state.closing",
+              "rate": "=$.line.state.rate",
+              "book": "pl-stat"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "Krajowy Standard Rachunkowości nr 5 „Leasing, najem i dzierżawa”: opłaty leasingowe u korzystającego dzieli się na część kapitałową i odsetkową za pomocą wewnętrznej stopy zwrotu — stopy, przy której wartość bieżąca opłat równa się wartości przedmiotu",
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 28 ust. 8a: skorygowana cena nabycia zobowiązania — wartość początkowa pomniejszona o spłaty kapitału, skorygowana o odsetki efektywną stopą procentową"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-recognise-leased-asset",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Przedmiot leasingu finansowego w księgach wchodzi do środków trwałych korzystającego w dniu przyjęcia, w wartości przedmiotu z umowy, ze stawką amortyzacji z umowy i amortyzacją od następnego miesiąca — jak każdy środek trwały, tylko ze źródłem „leasing” i wobec finansującego, nie z budowy",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "lease_contract"
+            },
+            {
+              "formula": "=$.state.books = \"finance\""
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "fixed_asset",
+            "fields": {
+              "name": "=$.state.description",
+              "number": "=$.state.number",
+              "kst": "",
+              "description": "=$.state.description",
+              "initial_value": "=$.state.asset_value",
+              "accepted_date": "=$.state.start",
+              "amortization_type": "linear",
+              "annual_rate": "=$.state.depreciation_rate",
+              "start": "=end_of_month($.state.start) + 1",
+              "status": "active",
+              "source": "lease",
+              "lease": "=$.object_id",
+              "book": "pl-stat"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości (t.j. Dz. U. z 2026 r. poz. 522) art. 3 ust. 4: przedmiot umowy spełniającej warunki leasingu finansowego zalicza się do aktywów trwałych korzystającego",
+          "Krajowy Standard Rachunkowości nr 5 „Leasing, najem i dzierżawa”: korzystający ujmuje przedmiot leasingu finansowego jako środek trwały w wartości godziwej albo wartości bieżącej opłat, gdy niższa, i amortyzuje go według zasad przyjętych dla własnych środków trwałych",
+          "ustawa o rachunkowości art. 32 ust. 3: na dzień przyjęcia środka trwałego do używania ustala się stawkę i metodę amortyzacji"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-leased-asset",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Przedmiot leasingu finansowego księguje się w dniu przyjęcia wobec finansującego: Wn 010 Środki trwałe / Ma 242 Zobowiązania z tytułu leasingu finansowego, w wartości przedmiotu",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "fixed_asset"
+            },
+            {
+              "formula": "=coalesce($.state.source, \"purchase\") = \"lease\""
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.accepted_date",
+            "lines": [
+              {
+                "account": "010",
+                "debit": "=$.state.initial_value"
+              },
+              {
+                "account": "242",
+                "credit": "=$.state.initial_value"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "Krajowy Standard Rachunkowości nr 5 „Leasing, najem i dzierżawa”: korzystający ujmuje przedmiot leasingu finansowego jako środek trwały i równocześnie zobowiązanie wobec finansującego",
+          "wzorcowy plan kont: 242 Zobowiązania z tytułu leasingu finansowego (konto pakietu), 010 Środki trwałe, 071 Umorzenie, 401 Amortyzacja, 751 Koszty finansowe"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-book-lease-interest",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Gdy zaczyna się miesiąc, każda umowa leasingu finansowego w księgach, której następne odsetki należą do miesiąca, który się skończył, oddaje je do ksiąg jednym zapisem: część odsetkową rat tego miesiąca, w terminie raty, gdy to jedna rata w swoim miesiącu, a na ostatni dzień miesiąca, gdy w zapisie są raty z miesięcy, które minęły przed wprowadzeniem umowy",
+      "spec": {
+        "match": {
+          "event_type": "time.month_opened",
+          "where": [
+            {
+              "formula": "=count(l in objects(lease_contract, next_period, month(add_months($.date, -1)))) > 0"
+            }
+          ]
+        },
+        "effect": {
+          "object": {
+            "type": "lease_interest",
+            "each": "=objects(lease_contract, next_period, month(add_months($.date, -1)))",
+            "fields": {
+              "lease": "=$.line.object_id",
+              "instalments": "=count(i in objects(lease_instalment, lease, $.line.object_id) where i.period = month(add_months($.doc.date, -1)))",
+              "period": "=month(add_months($.doc.date, -1))",
+              "date": "=if(all(i in objects(lease_instalment, lease, $.line.object_id) where i.period = month(add_months($.doc.date, -1)) : month(i.date) = i.period), max(i in objects(lease_instalment, lease, $.line.object_id) where i.period = month(add_months($.doc.date, -1)) : i.date), end_of_month(add_months($.doc.date, -1)))",
+              "amount": "=sum(i in objects(lease_instalment, lease, $.line.object_id) where i.period = month(add_months($.doc.date, -1)) : i.interest)",
+              "book": "pl-stat"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "Krajowy Standard Rachunkowości nr 5 „Leasing, najem i dzierżawa”: część odsetkowa opłaty leasingowej jest kosztem finansowym okresu, którego dotyczy",
+          "ustawa o rachunkowości art. 6 ust. 1: w księgach ujmuje się wszystkie przypadające na dany okres koszty, niezależnie od terminu ich zapłaty"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-post-lease-interest",
+      "priority": 200,
+      "effective_from": "2026-01-01",
+      "description": "Część odsetkowa rat leasingu finansowego za miesiąc jest kosztem finansowym i zwiększa zobowiązanie wobec finansującego, które faktura za ratę potem zmniejsza o całą ratę: Wn 751 / Ma 242, w dniu odsetek",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "lease_interest"
+            },
+            {
+              "formula": "=$.state.amount > 0"
+            }
+          ]
+        },
+        "effect": {
+          "postings": {
+            "book": "pl-stat",
+            "currency": "PLN",
+            "date": "=$.state.date",
+            "lines": [
+              {
+                "account": "751",
+                "debit": "=$.state.amount"
+              },
+              {
+                "account": "242",
+                "credit": "=$.state.amount"
+              }
+            ]
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 42 ust. 3: wynik operacji finansowych stanowi różnicę między przychodami finansowymi a kosztami finansowymi, w szczególności z tytułu odsetek",
+          "Krajowy Standard Rachunkowości nr 5 „Leasing, najem i dzierżawa”: część odsetkowa opłaty leasingowej jest kosztem finansowym korzystającego",
+          "wzorcowy plan kont: 242 Zobowiązania z tytułu leasingu finansowego (konto pakietu), 010 Środki trwałe, 071 Umorzenie, 401 Amortyzacja, 751 Koszty finansowe"
+        ]
+      }
+    },
+    {
+      "rule_id": "pl-advance-lease",
+      "priority": 100,
+      "effective_from": "2026-01-01",
+      "description": "Po odsetkach miesiąca umowa leasingu wskazuje miesiąc następnych odsetek: najbliższy miesiąc rat po tym, który właśnie oddał swoje; pusty, gdy to były ostatnie",
+      "spec": {
+        "match": {
+          "event_type": "object.materialized",
+          "where": [
+            {
+              "path": "$.object_type",
+              "op": "eq",
+              "value": "lease_interest"
+            },
+            {
+              "formula": "=$.state.amount > 0"
+            }
+          ]
+        },
+        "effect": {
+          "amend": {
+            "type": "lease_contract",
+            "target": "=$.state.lease",
+            "set": {
+              "next_period": "=if(count(i in objects(lease_instalment, lease, $.state.lease) where i.period > $.state.period) = 0, \"\", min(i in objects(lease_instalment, lease, $.state.lease) where i.period > $.state.period : i.period))"
+            }
+          }
+        }
+      },
+      "warrant": {
+        "basis": "statute",
+        "scope": "pl",
+        "citations": [
+          "ustawa o rachunkowości art. 6 ust. 1: koszt okresu ujmuje się raz, w swoim okresie"
+        ]
+      }
+    }
+  ]
+}

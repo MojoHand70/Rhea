@@ -5971,3 +5971,38 @@ choice.
   `next_period` says how far the books are); a finance lease's split and the tax view are the
   second slice; bonds and shares as objects, market price, and the 2025 paper's task I-1 stay
   missing in EXAM.md 6.1.8 f; the face renders the new tab generically, no face change.
+
+## 2026-11-04 — The second slice: a finance lease split by the same method (KK: "can you take the finance lease split under KSR 5 on the same method")
+- **One equation, two ways a contract states it.** A loan names its rate and the method derives
+  the instalments; a lease names the instalments and the method derives the rate — the internal
+  rate of return KSR 5 splits each payment by. `lease_schedule(value, initial, instalment, months,
+  every, residual, first)` and `lease_rate(…)` share the solver and the rows with `amortised_cost`
+  (one `amortise` in the kernel, both contracts' instalments fed to it); a lease states no rate of
+  its own, so a row's nominal interest is its effective interest and the capital the rest.
+- **The lease contract stays where it was defined, the Leasing App uses it.** `lease_contract`
+  v2 (in Samochody i leasing) gains the contract's terms, its books treatment (`books`: finance
+  per art. 3 ust. 4 / KSR 5, or operating by the art. 3 ust. 6 simplification), the rate and
+  `next_period`; the new App `leases` keeps the instalment and the month's interest records, the
+  action and the rules, and names the contract among what it `uses` — a data table is defined by
+  one App and read and written by every App (KK 2026-10-27).
+- **The books of a finance lease, lessee's side.** The asset enters the fixed assets at the
+  contract's value with `source: lease` and depreciates by the existing rules; its acceptance
+  posts against the lease liability (Wn 010 / Ma 242), never 080 — the acceptance rule of the
+  fixed-assets App now steps aside for leased assets. The month's interest posts Wn 751 / Ma 242
+  as the clock opens the next month, one fact per contract per month (the loan's lesson). The
+  lessor's invoices — the first payment, the instalments, the buy-out — reduce the liability
+  because the contract sets the lessor's cost account to 242; so the balance of 242 is the
+  liability at amortised cost and equals the schedule's closing amount when the lessor invoices
+  as scheduled. No stored "liability" field: the books are the truth, the schedule the plan.
+- **Account 242.** 241 was taken (dividends to owners) — the first load said so, master data
+  being append-only under its key. 242 Zobowiązania z tytułu leasingu finansowego, a pack account.
+- **The tax side waits, loudly.** A lease finance in the books and operating for tax (the common
+  car lease of an audited company) misstates the CIT advance until the tax adjustment per contract
+  exists: the advance counts depreciation and interest where the tax cost is the instalments
+  (art. 17b CIT), plus the 150 000 zł car limit. The pack raises a task on such a contract and
+  says why; the small company's default — books operating, as the tax does — books nothing new.
+  Owed: the tax adjustment as a fact per contract per month into the advance (EXAM.md 7.1.9).
+- **Assessed and left:** the contract's end (the buy-out closing it, status `ended`); the lessor's
+  side; the VAT share on passenger cars (the `vat_deduction_limit` fields from v1 stay unused);
+  a degressive instalment schedule (payments as a list) — the method takes equal instalments;
+  the operating-in-books lease keeps no schedule.

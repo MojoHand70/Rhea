@@ -4576,7 +4576,9 @@ recorded here: it is a case for Rhea, the architecture already has the shape for
 needs deciding is a dividing line, not a new engine. Built the same day, on KK's "let's go":
 the first equation — amortised cost with the effective interest rate as a kernel method the
 formula language calls, and the Poland pack's loan schedule on it (DECISIONS 2026-11-04,
-second entry).
+second entry); then, after KK deployed, the second slice on the same method: the lessee's
+finance lease under KSR 5, the contract's instalments split by the internal rate of return,
+the asset against the lease liability, the Leasing App (pl v60; DECISIONS, third entry).
 
 **The dividing line: one right answer, or a good answer among many.** A calculation with one
 right answer belongs inside the kernel and is recomputed on replay. These are the arithmetic

@@ -13,7 +13,7 @@
   "tabs": [
     {
       "view_id": "slownik",
-      "version": 30,
+      "version": 31,
       "notion": "words",
       "title": "Słownik",
       "domain": "finance",
@@ -324,6 +324,18 @@
           "loan_interest": {
             "label": "Odsetki od pożyczki za okres",
             "plural": "Odsetki od pożyczek za okresy",
+            "shape": "card",
+            "kind": "entry"
+          },
+          "lease_instalment": {
+            "label": "Rata leasingu",
+            "plural": "Raty leasingu",
+            "shape": "card",
+            "kind": "entry"
+          },
+          "lease_interest": {
+            "label": "Odsetki leasingowe za okres",
+            "plural": "Odsetki leasingowe za okresy",
             "shape": "card",
             "kind": "entry"
           },
@@ -725,6 +737,47 @@
           "loan.next_period": "Następne odsetki (miesiąc)",
           "loan_interest.loan": "Pożyczka",
           "loan_interest.instalments": "Liczba rat",
+          "lease_contract.number": "Numer umowy",
+          "lease_contract.kind": "Rodzaj",
+          "lease_contract.books": "W księgach",
+          "lease_contract.lessor": "Finansujący",
+          "lease_contract.start": "Przyjęcie przedmiotu",
+          "lease_contract.end": "Ostatnia rata",
+          "lease_contract.description": "Przedmiot",
+          "lease_contract.net": "Wartość netto umowy",
+          "lease_contract.vat": "VAT",
+          "lease_contract.gross": "Wartość brutto umowy",
+          "lease_contract.vat_deduction_limit": "Limit odliczenia VAT",
+          "lease_contract.vat_deducted": "VAT odliczony",
+          "lease_contract.asset_value": "Wartość przedmiotu",
+          "lease_contract.initial_fee": "Opłata wstępna",
+          "lease_contract.instalment": "Rata",
+          "lease_contract.months": "Okres (miesiące)",
+          "lease_contract.every": "Rata co (miesiące)",
+          "lease_contract.residual": "Wykup",
+          "lease_contract.first_instalment": "Pierwsza rata",
+          "lease_contract.depreciation_rate": "Stawka amortyzacji (%)",
+          "lease_contract.effective_rate": "Wewnętrzna stopa zwrotu (%)",
+          "lease_contract.next_period": "Następne odsetki (miesiąc)",
+          "lease_contract.status": "Status",
+          "lease_instalment.lease": "Umowa",
+          "lease_instalment.n": "Nr",
+          "lease_instalment.date": "Termin",
+          "lease_instalment.period": "Miesiąc w księgach",
+          "lease_instalment.opening": "Zobowiązanie przed ratą",
+          "lease_instalment.interest": "Odsetki",
+          "lease_instalment.nominal_interest": "Odsetki",
+          "lease_instalment.capital": "Kapitał",
+          "lease_instalment.payment": "Rata",
+          "lease_instalment.closing": "Zobowiązanie po racie",
+          "lease_instalment.rate": "Stopa zwrotu za okres (%)",
+          "lease_interest.lease": "Umowa",
+          "lease_interest.instalments": "Liczba rat",
+          "lease_interest.period": "Miesiąc",
+          "lease_interest.date": "Dzień",
+          "lease_interest.amount": "Odsetki",
+          "fixed_asset.source": "Źródło",
+          "fixed_asset.lease": "Umowa leasingu",
           "loan_interest.period": "Miesiąc",
           "loan_interest.date": "Dzień",
           "loan_interest.amount": "Odsetki",
@@ -1172,6 +1225,23 @@
             "equal_capital": "raty malejące",
             "bullet": "odsetki okresowo, kapitał na koniec"
           },
+          "lease_contract.kind": {
+            "operational": "operacyjny",
+            "financial": "finansowy",
+            "rental": "najem"
+          },
+          "lease_contract.books": {
+            "finance": "finansowy (KSR 5)",
+            "operating": "operacyjny (raty kosztem)"
+          },
+          "lease_contract.status": {
+            "active": "trwa",
+            "ended": "zakończona"
+          },
+          "fixed_asset.source": {
+            "purchase": "zakup albo budowa",
+            "lease": "leasing finansowy"
+          },
           "deferred_tax.side": {
             "asset": "aktywa",
             "liability": "pasywa"
@@ -1304,6 +1374,7 @@
           "loan.repaid": "Spłata pożyczki",
           "loan.interest_charged": "Odsetki od pożyczki",
           "loan.scheduled": "Harmonogram pożyczki",
+          "lease.recorded": "Umowa leasingu",
           "deferred_tax.recognised": "Odroczony podatek ustalony",
           "deferred_tax.reversed": "Odroczony podatek odwrócony",
           "fx.balances.revalued": "Wycena bilansowa rozrachunków w walucie",
@@ -1392,6 +1463,7 @@
           "repay_loan": "spłata pożyczki",
           "charge_loan_interest": "odsetki od pożyczki",
           "schedule_loan": "harmonogram pożyczki",
+          "record_lease": "umowa leasingu",
           "recognise_deferred_tax": "odroczony podatek dochodowy",
           "reverse_deferred_tax": "odwrócenie odroczonego podatku",
           "revalue_fx_balances": "wycena bilansowa walut",
@@ -1597,6 +1669,9 @@
                   },
                   {
                     "app": "loans"
+                  },
+                  {
+                    "app": "leases"
                   }
                 ]
               }
