@@ -773,10 +773,11 @@ func (x *Executor) expandEffect(ctx context.Context, root core.Event, idBase str
 		return nil, fmt.Errorf("rule %s v%d each: %w", r.ID, r.Version, err)
 	}
 	var arr []any
-	if t.IsCollection() {
+	if t.IsCollection() || t.IsRows() {
 		// Each over a keyed collection (KK 2026-10-18: a close releases every
-		// open schedule): the element is the object as a cascade carries it,
-		// {object_type, object_id, state}, its state typed at $.line.state.
+		// open schedule) or over a kernel method's rows (a loan's schedule):
+		// the element is the object as a cascade carries it, {object_type,
+		// object_id, state}, its state typed at $.line.state.
 		items, err := t.Collection(payload, x.env(ctx, payload, lookup, get))
 		if err != nil {
 			return nil, fmt.Errorf("rule %s v%d each: %w", r.ID, r.Version, err)
@@ -1053,7 +1054,17 @@ func (x *Executor) env(ctx context.Context, payload any, lookup core.Lookup, get
 		if typed == nil {
 			typed = map[string]string{}
 		}
-		typed["$"] = shape.Name
+		// the door's inputs are typed by its shape: at the root, or at
+		// $.doc inside an each's {doc, line, n} scope
+		at := "$"
+		if m, ok := payload.(map[string]any); ok {
+			if _, doc := m["doc"]; doc {
+				if _, line := m["line"]; line {
+					at = "$.doc"
+				}
+			}
+		}
+		typed[at] = shape.Name
 		memo[shape.Name] = known{shape, true}
 	}
 	return &core.Env{

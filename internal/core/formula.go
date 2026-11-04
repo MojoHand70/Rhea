@@ -50,6 +50,13 @@ import (
 // currencies are one, an error when the market published none;
 // ref(T, field, v) — the id of the single T whose field equals v;
 // objects(T, field, v) — the T objects whose field equals v, as a list.
+// Kernel methods (DIRECTION "Optimal decisions": one right answer, computed
+// in the kernel, recomputed on replay) are functions too:
+// amortised_cost(nominal, fee, rate, months, every, kind, first) — the
+// schedule of a loan or a bond at amortised cost with the effective
+// interest rate (amortised.go), a list of amortised_cost_row objects an
+// each may walk; effective_rate(nominal, fee, rate, months, every, kind) —
+// that rate per year, in per cent, to four places.
 // Division is admitted only under a round(): where precision can be lost,
 // the stance is declared, never implied.
 
@@ -618,10 +625,7 @@ type CollectionRead struct {
 }
 
 func (e *checkEnv) fieldType(objType, field string) ty {
-	if e.types == nil {
-		return anyT
-	}
-	ot, ok := e.types(objType)
+	ot, ok := catalogType(e.types, objType)
 	if !ok {
 		return anyT
 	}
@@ -959,6 +963,40 @@ func (e *checkEnv) checkCall(n *node, rounded bool) (ty, error) {
 			return anyT, fmt.Errorf("at %d: is_iban wants text, got %s", n.pos, x.kind)
 		}
 		return ty{kind: KBool}, nil
+	case "amortised_cost", "effective_rate":
+		// the kernel method's inputs: two amounts, a rate, two whole
+		// numbers of months, a kind, and for the schedule the first day
+		want := []string{"an amount", "an amount", "a rate", "whole months", "whole months", "a kind", "a date"}
+		if n.text == "effective_rate" {
+			want = want[:6]
+		}
+		if err := argc(len(want)); err != nil {
+			return anyT, err
+		}
+		for i, w := range want {
+			x, err := e.check(n.args[i], rounded)
+			if err != nil {
+				return anyT, err
+			}
+			ok := x.kind == KAny
+			switch w {
+			case "an amount", "a rate":
+				ok = ok || x.kind.numeric()
+			case "whole months":
+				ok = ok || x.kind == KInt
+			case "a kind":
+				ok = ok || x.kind == KString
+			case "a date":
+				ok = ok || x.kind == KDate || x.kind == KString
+			}
+			if !ok {
+				return anyT, fmt.Errorf("at %d: %s wants %s as argument %d, got %s", n.pos, n.text, w, i+1, x.kind)
+			}
+		}
+		if n.text == "effective_rate" {
+			return ty{kind: KDecimal}, nil
+		}
+		return ty{kind: KList, typ: amortisedRowType.Name}, nil
 	case "end_of_month":
 		if err := argc(1); err != nil {
 			return anyT, err

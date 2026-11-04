@@ -549,8 +549,8 @@ func (s RuleSpec) Validate(target *ObjectType) error {
 		if err != nil {
 			return fmt.Errorf("effect.object.each: %w", err)
 		}
-		if pt.kind != "path" && !pt.IsCollection() {
-			return fmt.Errorf("effect.object.each wants a =$.path fan-out or a collection, =objects(T, field, value), got %q", s.Effect.Object.Each)
+		if pt.kind != "path" && !pt.IsCollection() && !pt.IsRows() {
+			return fmt.Errorf("effect.object.each wants a =$.path fan-out, a collection, =objects(T, field, value), or a method's rows, =amortised_cost(…), got %q", s.Effect.Object.Each)
 		}
 	}
 	for name, tmpl := range s.Effect.Object.Fields {

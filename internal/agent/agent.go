@@ -255,7 +255,15 @@ TEMPLATES - every field value in an effect is a template string:
     "=sum(m in objects(stock_movement, item, $.state.item) where m.location = $.state.location:
       if(m.direction = \"in\", m.qty, -m.qty))" is the book quantity of an item in a location
   * no loops, no variables, no string building. Algorithms (FIFO, allocation) are not
-    formulas: they arrive as kernel methods.
+    formulas: they arrive as kernel methods, called like functions. The first:
+    amortised_cost(nominal, fee, rate, months, every, kind, first) is a loan's or a bond's
+    schedule at amortised cost with the effective interest rate — a list of rows (n, date,
+    period, opening, interest, nominal_interest, capital, payment, closing, rate) an each
+    walks ("each": "=amortised_cost($.loan.nominal, coalesce($.fee, 0), $.loan.interest_rate,
+    $.months, 1, \"annuity\", $.first_instalment)", fields from $.line.state.interest …);
+    the rate in per cent a year, every the instalment's months (1, 2, 3, 4, 6, 12), kind one
+    of annuity, equal_capital, bullet; effective_rate(nominal, fee, rate, months, every, kind)
+    is that rate a year in per cent.
 Money fields take "=$.path" to a decimal string, "=sum(...)" or a formula. Dates are
 copied as strings or computed. A field typed "ref<T>" links to an object of type T, in
 one of two ways: "=ref(T, field, $.path)" looks it up by a field value (the referenced

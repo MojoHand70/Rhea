@@ -38,6 +38,7 @@ type Template struct {
 	f       *Formula
 	path    []pathSeg // path only
 	refType string    // ref only: the resolved type
+	rows    string    // formula only: the type of the rows a kernel method returns, when the formula is one call to such a method
 }
 
 // Lookup finds objects in current state: the object_ids of every object of
@@ -104,6 +105,8 @@ func ParseTemplate(s string) (Template, error) {
 		t.kind, t.path = "path", f.tree.path
 	case f.prog.refTyp != "":
 		t.kind, t.refType = "ref", f.prog.refTyp
+	case f.tree.kind == nCall && methodRows[f.tree.text] != "":
+		t.rows = methodRows[f.tree.text]
 	}
 	return t, nil
 }
@@ -183,11 +186,18 @@ func (t Template) IsCollection() bool {
 	return t.kind == "formula" && strings.HasPrefix(strings.TrimSpace(strings.TrimPrefix(t.raw, "=")), "objects(")
 }
 
-// Collection runs a collection read and returns its objects, ids and state,
-// in log order, under the collection cap.
+// IsRows reports whether the template is one call to a kernel method whose
+// result is a list of typed rows, =amortised_cost(…) — the other collection
+// an each may walk: computed, not read, each row typed by the kernel's own
+// type and carrying no object id.
+func (t Template) IsRows() bool { return t.rows != "" }
+
+// Collection runs a collection read, or a method whose result is rows, and
+// returns its objects, ids and state, in log order, under the collection
+// cap; a method's rows carry no id.
 func (t Template) Collection(payload any, env *Env) ([]CollectionItem, error) {
-	if !t.IsCollection() {
-		return nil, fmt.Errorf("%s is not a collection read, =objects(T, field, value)", t.raw)
+	if !t.IsCollection() && !t.IsRows() {
+		return nil, fmt.Errorf("%s is not a collection read, =objects(T, field, value), nor a method's rows", t.raw)
 	}
 	v, _, err := t.f.run(payload, env)
 	if err != nil {
@@ -202,7 +212,11 @@ func (t Template) Collection(payload any, env *Env) ([]CollectionItem, error) {
 		if el.Kind != KObject || !ok {
 			return nil, fmt.Errorf("%s holds a %s, not an object", t.raw, el.Kind)
 		}
-		out = append(out, CollectionItem{ID: el.Origin, Type: el.Type, State: state})
+		id := el.Origin
+		if t.IsRows() {
+			id = ""
+		}
+		out = append(out, CollectionItem{ID: id, Type: el.Type, State: state})
 	}
 	return out, nil
 }
