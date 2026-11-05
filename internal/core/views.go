@@ -246,12 +246,19 @@ type NavActivity struct {
 // so they fall under no rest, and reached from the records that refer to
 // them — the raw lists behind a screen built for people (KK 2026-10-30:
 // "Grupy" twice, "Miejsca w grupach", "Umocowania biur" under Użytkownicy).
+// Cabinet marks a section the Nav Bar does not draw among its functions:
+// an activity's list holds at most six, folders only where the pack says
+// (KK 2026-11-05, "A"), and the rest of its functions sit in the cabinet —
+// found by the search box, listed under one line at the foot, "Wszystkie
+// funkcje". Its items are placed, so no rest catches them; the rest itself
+// may sit in the cabinet.
 type NavSection struct {
-	ID     string    `json:"id,omitempty"`
-	Title  string    `json:"title,omitempty"`
-	Items  []NavItem `json:"items,omitempty"`
-	Rest   bool      `json:"rest,omitempty"`
-	Hidden bool      `json:"hidden,omitempty"`
+	ID      string    `json:"id,omitempty"`
+	Title   string    `json:"title,omitempty"`
+	Items   []NavItem `json:"items,omitempty"`
+	Rest    bool      `json:"rest,omitempty"`
+	Hidden  bool      `json:"hidden,omitempty"`
+	Cabinet bool      `json:"cabinet,omitempty"`
 }
 
 // NavItem opens an App — on one of its tabs where Tab names it (a view's id,
@@ -305,6 +312,7 @@ func (w *WordsSpec) arrange(a NavActivity) {
 			hs.Title = s.Title
 		}
 		hs.Rest = hs.Rest || s.Rest
+		hs.Cabinet = hs.Cabinet || s.Cabinet
 		for _, it := range s.Items {
 			if !slices.Contains(hs.Items, it) {
 				hs.Items = append(hs.Items, it)
@@ -340,6 +348,9 @@ func (w WordsSpec) checkArrangement() error {
 					return fmt.Errorf("words: %s: its id %q is a name, once in its activity", where, s.ID)
 				}
 				sections[s.ID] = true
+			}
+			if s.Hidden && s.Cabinet {
+				return fmt.Errorf("words: %s is hidden and in the cabinet at once: drawn nowhere, or behind Wszystkie funkcje", where)
 			}
 			if s.Rest {
 				rest++

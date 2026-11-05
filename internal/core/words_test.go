@@ -196,3 +196,51 @@ func TestWordsHideTheRawLists(t *testing.T) {
 		t.Fatalf("the mark is not written back: %s", b)
 	}
 }
+
+// A cabinet section holds the functions an activity's Nav Bar does not
+// draw (KK 2026-11-05, "A": at most six functions in a list, folders only
+// in Księgowość i podatki): found by the search box and listed under one
+// line at the foot, "Wszystkie funkcje". Its items are placed, so no rest
+// catches them; the rest itself may sit in the cabinet. A later pack's item
+// joins a cabinet section and the section stays a cabinet; a section both
+// hidden and in the cabinet — drawn nowhere and drawn at the foot — is
+// refused.
+func TestWordsKeepTheCabinet(t *testing.T) {
+	var w WordsSpec
+	if err := json.Unmarshal([]byte(`{"lang": "pl", "activities": [
+		{"id": "books", "title": "Księgowość i podatki", "sections": [
+			{"id": "books", "title": "Księgi", "items": [{"app": "journal"}]},
+			{"id": "parameters", "title": "Słowniki i parametry", "cabinet": true, "items": [{"app": "vat-rates"}, {"kind": "cit_limit"}]},
+			{"id": "rest", "title": "Pozostałe", "rest": true, "cabinet": true, "items": [{"app": "invoices"}]}]}]}`), &w); err != nil {
+		t.Fatal(err)
+	}
+	if err := w.Check(); err != nil {
+		t.Fatalf("an arrangement with a cabinet: %v", err)
+	}
+	secs := w.Activities[0].Sections
+	if secs[0].Cabinet || !secs[1].Cabinet || !secs[2].Cabinet || !secs[2].Rest {
+		t.Fatalf("the cabinet as read: %+v", secs)
+	}
+	b, _ := json.Marshal(secs[1])
+	if !strings.Contains(string(b), `"cabinet":true`) {
+		t.Fatalf("the mark is not written back: %s", b)
+	}
+	w.Merge(WordsSpec{Lang: "pl", Activities: []NavActivity{{ID: "books", Title: "Księgowość i podatki", Sections: []NavSection{
+		{ID: "parameters", Items: []NavItem{{App: "fx-rates"}}},
+		{ID: "equity", Title: "Kapitały i wynik", Cabinet: true, Items: []NavItem{{App: "equity"}}}}}}})
+	secs = w.Activities[0].Sections
+	if !secs[1].Cabinet || len(secs[1].Items) != 3 || secs[1].Items[2].App != "fx-rates" {
+		t.Fatalf("a later pack's item joins the cabinet section, which stays a cabinet: %+v", secs[1])
+	}
+	if len(secs) != 4 || !secs[3].Cabinet || secs[3].ID != "equity" {
+		t.Fatalf("a later pack's cabinet section joins as one: %+v", secs)
+	}
+	var bad WordsSpec
+	if err := json.Unmarshal([]byte(`{"lang": "pl", "activities": [{"id": "settings", "title": "Ustawienia", "sections": [
+		{"id": "users-records", "title": "Zapisy", "hidden": true, "cabinet": true, "items": [{"kind": "membership"}]}]}]}`), &bad); err != nil {
+		t.Fatal(err)
+	}
+	if err := bad.Check(); err == nil || !strings.Contains(err.Error(), "cabinet") {
+		t.Fatalf("a section both hidden and in the cabinet: %v", err)
+	}
+}
