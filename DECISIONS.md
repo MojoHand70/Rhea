@@ -6039,5 +6039,10 @@ choice.
   declined. Why: of the two options as restated KK chose A; the Nav Bar was an inventory of the books,
   a person's day is a route, and the box finds the rest. The cabinet is a mark on a section of the
   pack's arrangement (`cabinet`, beside `rest` and `hidden`), so a designer moves a function between
-  the frame and the cabinet as data, never in face code. Still open: Zamknięcie as its own icon;
-  KSeF's acceptance in the invoice's line.
+  the frame and the cabinet as data, never in face code. Still open: KSeF's acceptance in the
+  invoice's line.
+- **Zamknięcie stays a folder in Księgowość i podatki (KK, the same night: "Zamknięcie is in Accounting
+  and Taxes nav bar and it's ok").** No icon of its own on the Activity Bar. The month close, when built,
+  is an App that opens on its counter from its item in that folder (Zamknięcie › Zamknięcie miesiąca),
+  beside year close, RMK, provisions, the stocktake and the currency revaluation. Why: KK answered the
+  question posed with the shorter lists; the frame does not move for a work mode, the counter carries it.

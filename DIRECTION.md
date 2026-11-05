@@ -4755,7 +4755,7 @@ the cabinet Słowniki i parametry, Kapitały i wynik, Pozostałe. Środki trwał
 six flat: Firma, Użytkownicy, Grupy, Uprawnienia, Pakiety, Wygląd i biurko; Słownik in the cabinet.
 Terminy podatkowe stands in Dziś only; no function is in two places. Zamknięcie weighed as an
 activity of its own: month close is a work mode with a checklist, which KK named a priority, and
-the stream is its natural evidence — open, KK has not said.
+the stream is its natural evidence — KK, the same night: it stays in Księgowość i podatki, "and it's ok".
 
 **KK's answers, the same evening, on the first pictures** (the desk today beside the proposal,
 photographed from the face on Helios's books). *The counter: yes* — "it also gives us field for
@@ -4768,8 +4768,10 @@ record itself, which has its own page with Dlaczego. *The Nav Bar*: KK did not r
 question under the name it was given ("diet"), so it was restated in business terms — at most six
 functions in an activity's list, folders only in Księgowość i podatki, the rest behind one line at
 the foot and the search box; or every function visible, only better grouped — and KK chose the
-first: "A". Open still: whether Zamknięcie gets its own icon on the Activity Bar, and whether
-KSeF's acceptance folds into the invoice's own stream line.
+first: "A". Later the same night KK settled the folder question too: "Zamknięcie is in Accounting and
+Taxes nav bar and it's ok" — no icon of its own; the month close, when built, opens on its counter
+from its item in that folder. Open still: whether KSeF's acceptance folds into the invoice's own
+stream line.
 
 **Order of work.** (1) The gallery first: Sprzedaż's counter with the stream under it, on
 Helios's figures, light; then the office's Dziś over three clients. KK judges the model
