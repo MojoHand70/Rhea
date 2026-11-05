@@ -6006,3 +6006,24 @@ choice.
   side; the VAT share on passenger cars (the `vat_deduction_limit` fields from v1 stay unused);
   a degressive instalment schedule (payments as a list) — the method takes equal instalments;
   the operating-in-books lease keeps no schedule.
+
+## 2026-11-05 — The desk opens on a counter, shows the event stream, and is defined as data; she adapts what she offers, never where things are (KK: "let's put this down", answering the UX design)
+- **Three layers.** The frame (Activity Bar, a Nav Bar of at most six items per activity, no item
+  in two places), the counter (every activity and App opens on its summary: her sentence, figures,
+  signals, actions, the lists as tabs below), the cabinet (the rest, found in the box, never
+  browsed). Why: KK, 2026-11-05: the nav is "chaotic, undefined, dull", no "summary per function";
+  the Nav Bar was an inventory of the books, a person's day is a route.
+- **The event stream is a shape on the desk.** What came in and from where, which rule in which
+  version answered, what it produced, where it stands (booked, waiting for a person, refused,
+  nothing applied); on Dziś live, on every record as Historia, over the office as the night's
+  stream. Why: KK: "we say Rhea takes an event, checks for rules and does the job, but we never
+  show events"; it is the one surface no other system can draw.
+- **Both are App notions, not face code.** A `counter` and a `stream` join the App definition;
+  the pack gives defaults, a company's designer changes them, a person's pins and order are
+  preference facts. Why: KK: "everything here should be meta-defined, a modifiable app".
+- **She adapts what she offers, never the furniture.** Observe silently (the box's ranking,
+  "usually next", which figures lead), propose once (a yes is a visible, undoable fact), keep tone
+  and tempo and customs as preference facts. Why: KK: Rhea is AI also in "what she shows and how
+  she behaves and adapts to user habits, customs and even moods"; and the 2026-10-21 rule that the
+  frame never moves stands. DIRECTION "The desk as a host". First step: the gallery, Sprzedaż's
+  counter with the stream under it.

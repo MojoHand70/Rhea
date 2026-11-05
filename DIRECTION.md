@@ -4641,6 +4641,121 @@ capital allocation when the first client whose business pack needs them arrives,
 that pack, propose-first. Our buyers today run accounting offices and small companies and do not
 schedule production, so this brief costs a page and no code.
 
+## The desk as a host: the frame, the counter and the stream (KK, 2026-11-05)
+
+KK, after a morning in mOrganizer, mBank's bookkeeping for sole traders: *"what I still
+have trouble with is our UX. From a human point of view, our nav panels feel chaotic,
+undefined. Our nav doesn't follow the natural human behaviours. And is dull. We have no
+handy functions. It is very difficult to like it. Rhea is very messy as for a high class
+butler."* Then, on the comparison: *"mOrganizer is one of plenty and we should not blindly
+follow what they did. We just need to be more friendly, organized and structured. Yes, I
+know we wanted to be generic and I still believe so."* Two things missing by name: *"we
+also miss some summary per function"*, and *"one important but crucial functionality for
+Rhea in terms of UI: event log. We say Rhea takes an event, checks for rules and does the
+job. But we never show events."* And the frame for all of it: *"everything here should be
+meta-defined, a modifiable app, configurable. How I sell Rhea is that Rhea is AI. Not only
+in dimension of business rules and learning, but also in dimension of what she shows and
+how she behaves and adapts to user habits, customs and even moods."* Claude's design below,
+accepted by KK the same day (*"let's put this down and start the gallery artefact"*).
+
+**What it rests on, already decided, and does not move.** One box, one conversation, many
+tabs; the shapes as a closed set; the frame never moves by itself (2026-10-21). The desk in
+order: three kinds, the company switch at the top, Ludzie (2026-10-22). An App is one
+definition that says where it sits and which faces show it; a market's words arrange the
+Activity Bar and each Nav Bar (2026-10-23, 2026-10-26, 2026-10-30). The host remembers: a
+preference is a fact in the log, a habit an observation she may mention and never acts on
+unasked (2026-10-11). Alpha's lessons: the work item carries its verbs inline, screens are
+live, the activity bar follows the life of a business object. What was missing is named
+here: the layer between the frame and the lists, the event log on the desk, and the rule
+for what she adapts.
+
+**The diagnosis.** The Nav Bar is an inventory of the books, filed correctly and
+completely; a person's day is a route. On 2026-11-05 the Poland pack's arrangement gave
+seven activities; Księgowość i podatki held twenty-two items in seven folders, all of one
+weight; Dziś held four items, two of them dashboards; Terminy podatkowe sat in two
+activities; a bare Faktury from the core stood at the foot. Every item is a noun; not one
+is an action. Every activity opens on a list, so the figures a person wants first (what is
+owed, what is overdue, what waits for KSeF) sit in other items. The frame shows no state:
+every item the same grey text with a grey count, nothing ever red. Three ways to look for a
+thing (the Nav Bar's search, the box, her questions), none of being told. mOrganizer, for
+comparison and not for copying: six words on top and one box, each area opening on a
+summary with the verbs on it, state in the frame before anything is opened. It serves one
+sole trader with one company; Rhea's buyer is an office with forty clients, so its top bar
+does not transfer, while the principle transfers and matters more.
+
+**Three layers, each with its own form.**
+
+1. *The frame.* The few things done daily, in the order of the day: the Activity Bar as it
+   is, a short Nav Bar under each activity. Browsed, so short: at most six items per
+   activity, a section only where it holds three or more, no item in two places. The rest
+   stays reachable under one "Wszystkie funkcje" line at the foot and in the box.
+2. *The counter.* Each activity and each App opens on its summary, not its list. The
+   summary has one anatomy the desk draws from data: her one sentence on top ("Dwie
+   faktury po terminie, reszta w porządku"); three to five figures from the books, in the
+   monospace, each with "why?" under it; the signals that need a person, as coloured pills
+   with counts; the actions due here, as buttons named with the pack's action words; the
+   lists as tabs below. Sprzedaż: issued this month, owed, overdue; "4 czekają na KSeF",
+   "2 po terminie"; Wystaw fakturę, Wyślij do KSeF, Upomnij; then Faktury, Status,
+   Należności, Klienci. Dziś is the company's counter. The office's Dziś is the counter
+   over its clients: which client, what waits, who answers for it. Friendliness lives
+   here, not in decoration: a greeting by name, "stan na 10:36", light paper by default,
+   one type scale, empty states that say what happened last rather than "brak danych".
+3. *The cabinet.* Słowniki, raw lists, parameters, the odd report: never browsed, always
+   found, in milliseconds, as the box was decided.
+
+**The stream: what happened, and why.** The event log becomes a shape, the timeline of the
+six given its content, and the one thing no other system can draw: mOrganizer shows
+results, Rhea shows cause. A line has three parts and a mark: what came in and from where
+(KSeF, the bank, a person, the clock, Rhea herself); which rule in which version answered;
+what it produced, as figures that open; and where it stands: booked, waiting for a person,
+refused with the reason, or nothing applied, which is the worklist. Three places. On Dziś,
+live: the company's day as it happens; the live channel exists and the lines patch in as
+the executor writes. On every record: Historia becomes the events that touched it, the
+same lines filtered; Dlaczego already answers from the same data. Over the office: the
+night's stream across clients, filtered by source, rule, client or person; the morning
+note becomes a digest of this stream rather than a thing apart. It is the trust surface:
+"nothing appears without a rule" stops being a sentence and becomes something a person
+watches. In a demo, drop an invoice and the line appears. A person's own actions are lines
+too, which is where habits are counted.
+
+**Meta-defined.** Everything above is a definition, not face code. Two notions join the
+App definition (APPS.md, "The App definition"): a `counter` an App or an activity
+declares, naming its sentence's source, figures, signals, actions and lists by the views,
+view cells, actions and tabs the App already has, and which figures lead for which role;
+and the `stream` as a tab shape any App may show, with its filters: source, rule, record,
+person. The desk draws them and knows no business; the Polish pack's words place them.
+Three owners, as Apps have already: the pack gives the defaults; a company's owner or
+designer changes them in the App designer; a person keeps their own pins, order and hidden
+items as preference facts in the log. Nothing is hard-coded in the face but the shapes.
+
+**What she adapts, and what she never moves.** She adapts what she offers, never where
+things are; predictability is what makes an expert fast (2026-10-21). Three levels. *She
+observes silently*: what a person opens, when, what follows what; it feeds the box's
+ranking, the "usually next" action after a step, and which figures lead on the counter: an
+owner's Dziś leads with result and cash, an accountant's with what waits; same App,
+different person. *She proposes once*: "Otwierasz Należności w każdy poniedziałek.
+Postawić je pierwsze na poniedziałkowym Dziś?"; a yes is a fact the person sees and undoes
+under "Co o Tobie pamiętam". *She keeps tone and tempo*, the honest form of "moods": she
+cannot read a mood, she can read the signals, the hour, month end, how short the answers
+come, whether the person came to work or to check; from them she chooses one line or the
+full brief, a quiet desk showing only what is red or the whole picture; and she keeps the
+person's customs: Pan or ty, the figure format, the language. Each is a preference fact;
+nothing silent changes the layout.
+
+**The Nav Bar diet, the Poland pack.** Dziś: one counter, Poranek folded into it as tabs.
+Sprzedaż: the counter, then four lists. Banki: the counter, then Wyciągi, Do rozliczenia,
+Rachunki, Pożyczki i leasing. Księgowość i podatki: the counter; Księgi, Podatki,
+Zamknięcie, Sprawozdania as four folders of four; Słowniki i parametry to the cabinet.
+Zamknięcie weighed as an activity of its own: month close is a work mode with a checklist,
+which KK named a priority, and the stream is its natural evidence.
+
+**Order of work.** (1) The gallery first: Sprzedaż's counter with the stream under it, on
+Helios's figures, light; then the office's Dziś over three clients. KK judges the model
+there. (2) The two notions into APPS.md and the Polish pack's words; the desk learns to
+draw them. (3) The building order: the stream first, since it is the one thing nobody else
+has and its channel exists; then the counters; then the diet; then her proposals. Each in
+the gallery first, checked as the face's check asks.
+
 ## Language decisions with a recorded destination
 
 - **Rule cascade.** KK's call (2026-10-02): rules matching *derived* events,
