@@ -6027,3 +6027,8 @@ choice.
   she behaves and adapts to user habits, customs and even moods"; and the 2026-10-21 rule that the
   frame never moves stands. DIRECTION "The desk as a host". First step: the gallery, Sprzedaż's
   counter with the stream under it.
+- **KK's answers on the first pictures (same day).** The counter stays as the opening of an activity.
+  The stream line is one row: when, from where, what came in, what came of it in words, the mark;
+  no postings and no rule text in the line, both open from a figure or the record. Why: KK: the
+  postings double the main information and the rule's words "sound like a Robocop"; details on
+  click. The Nav Bar question stays open: restated to KK in business terms.

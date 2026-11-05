@@ -4749,6 +4749,16 @@ Zamknięcie, Sprawozdania as four folders of four; Słowniki i parametry to the 
 Zamknięcie weighed as an activity of its own: month close is a work mode with a checklist,
 which KK named a priority, and the stream is its natural evidence.
 
+**KK's answers, the same evening, on the first pictures** (the desk today beside the proposal,
+photographed from the face on Helios's books). *The counter: yes* — "it also gives us field for
+future improvements". *The stream: too detailed and cluttered.* The postings (Wn/Ma) double the
+main information and the rule's words in the line "sound like a Robocop"; neither belongs in the
+line. So a line is one row: when, from where, what came in with the event's own figures, what
+came of it in a few words (rozliczona z FS 49/2026; zaksięgowana, VAT za wrzesień; czeka na
+rozliczenie), and the mark. The rule, its version and the postings open from a figure or from the
+record itself, which has its own page with Dlaczego. *The Nav Bar*: KK did not recognise the
+question under the name it was given, so it is restated below in business terms, undecided.
+
 **Order of work.** (1) The gallery first: Sprzedaż's counter with the stream under it, on
 Helios's figures, light; then the office's Dziś over three clients. KK judges the model
 there. (2) The two notions into APPS.md and the Polish pack's words; the desk learns to
