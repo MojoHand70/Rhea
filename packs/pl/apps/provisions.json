@@ -1,11 +1,11 @@
 {
   "app": "provisions",
-  "version": 2,
+  "version": 3,
   "title": "Rezerwy i odpisy",
   "layer": "law",
   "place": {
     "activity": "books",
-    "section": "periodic"
+    "section": "close"
   },
   "shows": [
     "desk",

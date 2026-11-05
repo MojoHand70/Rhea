@@ -4742,12 +4742,20 @@ full brief, a quiet desk showing only what is red or the whole picture; and she 
 person's customs: Pan or ty, the figure format, the language. Each is a preference fact;
 nothing silent changes the layout.
 
-**The shorter function lists, the Poland pack.** Dziś: one counter, Poranek folded into it as tabs.
-Sprzedaż: the counter, then four lists. Banki: the counter, then Wyciągi, Do rozliczenia,
-Rachunki, Pożyczki i leasing. Księgowość i podatki: the counter; Księgi, Podatki,
-Zamknięcie, Sprawozdania as four folders of four; Słowniki i parametry to the cabinet.
-Zamknięcie weighed as an activity of its own: month close is a work mode with a checklist,
-which KK named a priority, and the stream is its natural evidence.
+**The shorter function lists, the Poland pack** (shipped 2026-11-05 as pack v61, after KK's "A";
+the cabinet is a mark on a section, `cabinet`, beside `rest` and `hidden`). Dziś: Dziś, Zadania,
+Terminy podatkowe, Poranek — four lines, until the counter folds Poranek into its tabs. Sprzedaż,
+six flat: Faktury sprzedaży, Status faktur, Należności do pilnowania, Należności według wieku,
+Wysyłki KSeF, Klienci. Koszty, three: Faktury zakupu, PZ, Dostawcy. Banki, six: Pozycje wyciągów,
+Wpłaty and Wypłaty do rozliczenia, Rachunki bankowe, Pożyczki, Leasing. Księgowość i podatki, the
+one activity with folders: Księgi (Dziennik, ZOiS, Plan kont, Archiwum dokumentów), Podatki (VAT,
+CIT, Deklaracje), Zamknięcie (miesiąca, roku, RMK, Rezerwy i odpisy, Inwentaryzacja, Wycena
+bilansowa walut — the former Operacje okresowe), Sprawozdania (two), Raporty (the kept ones); in
+the cabinet Słowniki i parametry, Kapitały i wynik, Pozostałe. Środki trwałe, three. Ustawienia,
+six flat: Firma, Użytkownicy, Grupy, Uprawnienia, Pakiety, Wygląd i biurko; Słownik in the cabinet.
+Terminy podatkowe stands in Dziś only; no function is in two places. Zamknięcie weighed as an
+activity of its own: month close is a work mode with a checklist, which KK named a priority, and
+the stream is its natural evidence — open, KK has not said.
 
 **KK's answers, the same evening, on the first pictures** (the desk today beside the proposal,
 photographed from the face on Helios's books). *The counter: yes* — "it also gives us field for

@@ -256,3 +256,63 @@ func TestTheUsersMenuIsThreeScreens(t *testing.T) {
 		}
 	}
 }
+
+// The Nav Bars are short (KK 2026-11-05, "A"): an activity's list holds at
+// most six functions, folders only in Księgowość i podatki and each of at
+// most six, every function once in the whole arrangement, and what an
+// activity does not draw stands in its cabinet — never in the open list,
+// never lost: the rest section is in the cabinet too. Dziś, Sprzedaż, Koszty,
+// Banki, Środki trwałe and Ustawienia are flat lists.
+func TestTheNavBarsAreShort(t *testing.T) {
+	m, _, err := pack.ReadFile(filepath.Join("..", "..", "packs", "pl", "pack.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var w core.WordsSpec
+	for _, v := range m.ViewDefs {
+		if v.Notion == "words" {
+			if err := json.Unmarshal(v.Spec, &w); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	var wrong []string
+	seen := map[string]string{}
+	for _, a := range w.Activities {
+		drawn, cabinet := 0, 0
+		for _, s := range a.Sections {
+			for _, it := range s.Items {
+				key := it.App + "/" + it.Tab + "/" + it.Kind
+				if at, ok := seen[key]; ok && !s.Hidden {
+					wrong = append(wrong, fmt.Sprintf("%s is in two places: %s and %s", key, at, a.ID))
+				}
+				seen[key] = a.ID
+			}
+			switch {
+			case s.Hidden:
+			case s.Cabinet:
+				cabinet += len(s.Items)
+			case s.Rest:
+				wrong = append(wrong, a.ID+": the rest stands in the open list, not in the cabinet")
+			case s.Title != "" && a.ID != "books":
+				wrong = append(wrong, fmt.Sprintf("%s: folder %q — folders only in Księgowość i podatki", a.ID, s.Title))
+			case s.Title != "":
+				drawn++ // a folder is one line
+				if len(s.Items) > 6 {
+					wrong = append(wrong, fmt.Sprintf("%s: folder %q holds %d functions, at most six", a.ID, s.Title, len(s.Items)))
+				}
+			default:
+				drawn += len(s.Items)
+			}
+		}
+		if drawn > 6 {
+			wrong = append(wrong, fmt.Sprintf("%s draws %d functions, at most six", a.ID, drawn))
+		}
+		if a.ID == "books" && cabinet == 0 {
+			wrong = append(wrong, "Księgowość i podatki has no cabinet: Słowniki i parametry and the rest belong there")
+		}
+	}
+	if len(wrong) > 0 {
+		t.Fatalf("the Nav Bars: %s", strings.Join(wrong, "; "))
+	}
+}

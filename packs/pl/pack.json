@@ -1,12 +1,17 @@
 {
   "pack": "pl",
-  "version": 60,
+  "version": 61,
   "kind": "market",
   "market": "PL",
   "install": "installation",
   "stage": "initial",
   "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
   "history": [
+    {
+      "versions": "61",
+      "date": "2026-11-05",
+      "changes": "Krótsze listy funkcji (KK 2026-11-05: „A”): każda aktywność pokazuje w swojej liście najwyżej sześć funkcji, foldery tylko w Księgowości i podatkach (Księgi, Podatki, Zamknięcie, Sprawozdania, Raporty), a pozostałe funkcje aktywności stoją poza listą — pod jedną linią u dołu, „Wszystkie funkcje”, i w polu szukania. Sprzedaż: sześć pozycji bez folderów (Faktury sprzedaży, Status faktur, Należności do pilnowania, Należności według wieku, Wysyłki KSeF, Klienci); Koszty i Środki trwałe po trzy; Banki sześć; Zamknięcie zbiera zamknięcie miesiąca i roku, RMK, rezerwy i odpisy, inwentaryzację i wycenę bilansową walut (dotychczasowe „Operacje okresowe” znikają); Terminy podatkowe tylko w Dziś; Słowniki i parametry, Kapitały i wynik oraz Pozostałe pod „Wszystkie funkcje”; Ustawienia: Firma, Użytkownicy, Grupy, Uprawnienia, Pakiety, Wygląd i biurko bez folderu, Słownik pod „Wszystkie funkcje”. Rozliczenia międzyokresowe v3, Rezerwy i odpisy v3, Inwentaryzacja v3 (miejsce: Zamknięcie), Kapitały i wynik v3 (miejsce: Kapitały i wynik), Słownik v3 ze słownikiem v32."
+    },
     {
       "versions": "60",
       "date": "2026-11-04",

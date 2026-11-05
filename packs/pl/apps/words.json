@@ -1,6 +1,6 @@
 {
   "app": "words",
-  "version": 2,
+  "version": 3,
   "title": "Słownik",
   "layer": "platform",
   "place": {
@@ -13,7 +13,7 @@
   "tabs": [
     {
       "view_id": "slownik",
-      "version": 31,
+      "version": 32,
       "notion": "words",
       "title": "Słownik",
       "domain": "finance",
@@ -1587,27 +1587,20 @@
                   },
                   {
                     "app": "sales-invoices",
-                    "tab": "ksef-submissions"
-                  }
-                ]
-              },
-              {
-                "id": "receivables",
-                "title": "Należności",
-                "items": [
-                  {
-                    "app": "sales-invoices",
                     "tab": "naleznosci-do-pilnowania"
                   },
                   {
                     "app": "reports",
                     "tab": "naleznosci-wiek"
+                  },
+                  {
+                    "app": "sales-invoices",
+                    "tab": "ksef-submissions"
                   }
                 ]
               },
               {
                 "id": "customers",
-                "title": "Klienci",
                 "items": [
                   {
                     "app": "clients"
@@ -1634,7 +1627,6 @@
               },
               {
                 "id": "suppliers",
-                "title": "Dostawcy",
                 "items": [
                   {
                     "app": "suppliers"
@@ -1714,28 +1706,6 @@
                   },
                   {
                     "app": "tax-declarations"
-                  },
-                  {
-                    "app": "tax-calendar"
-                  }
-                ]
-              },
-              {
-                "id": "periodic",
-                "title": "Operacje okresowe",
-                "items": [
-                  {
-                    "app": "prepaid-costs"
-                  },
-                  {
-                    "app": "provisions"
-                  },
-                  {
-                    "app": "fx-rates",
-                    "tab": "wycena-bilansowa-walut"
-                  },
-                  {
-                    "app": "stocktake"
                   }
                 ]
               },
@@ -1750,7 +1720,17 @@
                     "app": "year-close"
                   },
                   {
-                    "app": "equity"
+                    "app": "prepaid-costs"
+                  },
+                  {
+                    "app": "provisions"
+                  },
+                  {
+                    "app": "stocktake"
+                  },
+                  {
+                    "app": "fx-rates",
+                    "tab": "wycena-bilansowa-walut"
                   }
                 ]
               },
@@ -1775,6 +1755,7 @@
               {
                 "id": "parameters",
                 "title": "Słowniki i parametry",
+                "cabinet": true,
                 "items": [
                   {
                     "app": "parties",
@@ -1793,14 +1774,25 @@
                 ]
               },
               {
+                "id": "equity",
+                "title": "Kapitały i wynik",
+                "cabinet": true,
+                "items": [
+                  {
+                    "app": "equity"
+                  }
+                ]
+              },
+              {
                 "id": "rest",
                 "title": "Pozostałe",
+                "rest": true,
+                "cabinet": true,
                 "items": [
                   {
                     "app": "invoices"
                   }
-                ],
-                "rest": true
+                ]
               }
             ]
           },
@@ -1841,7 +1833,6 @@
               },
               {
                 "id": "users",
-                "title": "Użytkownicy",
                 "items": [
                   {
                     "app": "people",
@@ -1891,10 +1882,15 @@
                     "app": "packs"
                   },
                   {
-                    "app": "words"
-                  },
-                  {
                     "app": "settings"
+                  }
+                ]
+              },
+              {
+                "cabinet": true,
+                "items": [
+                  {
+                    "app": "words"
                   }
                 ]
               }

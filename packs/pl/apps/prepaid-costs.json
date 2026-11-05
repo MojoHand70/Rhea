@@ -1,11 +1,11 @@
 {
   "app": "prepaid-costs",
-  "version": 2,
+  "version": 3,
   "title": "Rozliczenia międzyokresowe",
   "layer": "law",
   "place": {
     "activity": "books",
-    "section": "periodic"
+    "section": "close"
   },
   "shows": [
     "desk",
