@@ -4742,7 +4742,7 @@ full brief, a quiet desk showing only what is red or the whole picture; and she 
 person's customs: Pan or ty, the figure format, the language. Each is a preference fact;
 nothing silent changes the layout.
 
-**The Nav Bar diet, the Poland pack.** Dziś: one counter, Poranek folded into it as tabs.
+**The shorter function lists, the Poland pack.** Dziś: one counter, Poranek folded into it as tabs.
 Sprzedaż: the counter, then four lists. Banki: the counter, then Wyciągi, Do rozliczenia,
 Rachunki, Pożyczki i leasing. Księgowość i podatki: the counter; Księgi, Podatki,
 Zamknięcie, Sprawozdania as four folders of four; Słowniki i parametry to the cabinet.
@@ -4757,13 +4757,17 @@ line. So a line is one row: when, from where, what came in with the event's own 
 came of it in a few words (rozliczona z FS 49/2026; zaksięgowana, VAT za wrzesień; czeka na
 rozliczenie), and the mark. The rule, its version and the postings open from a figure or from the
 record itself, which has its own page with Dlaczego. *The Nav Bar*: KK did not recognise the
-question under the name it was given, so it is restated below in business terms, undecided.
+question under the name it was given ("diet"), so it was restated in business terms — at most six
+functions in an activity's list, folders only in Księgowość i podatki, the rest behind one line at
+the foot and the search box; or every function visible, only better grouped — and KK chose the
+first: "A". Open still: whether Zamknięcie gets its own icon on the Activity Bar, and whether
+KSeF's acceptance folds into the invoice's own stream line.
 
 **Order of work.** (1) The gallery first: Sprzedaż's counter with the stream under it, on
 Helios's figures, light; then the office's Dziś over three clients. KK judges the model
 there. (2) The two notions into APPS.md and the Polish pack's words; the desk learns to
 draw them. (3) The building order: the stream first, since it is the one thing nobody else
-has and its channel exists; then the counters; then the diet; then her proposals. Each in
+has and its channel exists; then the counters; then the shorter lists; then her proposals. Each in
 the gallery first, checked as the face's check asks.
 
 ## Language decisions with a recorded destination

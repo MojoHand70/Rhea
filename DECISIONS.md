@@ -6031,4 +6031,13 @@ choice.
   The stream line is one row: when, from where, what came in, what came of it in words, the mark;
   no postings and no rule text in the line, both open from a figure or the record. Why: KK: the
   postings double the main information and the rule's words "sound like a Robocop"; details on
-  click. The Nav Bar question stays open: restated to KK in business terms.
+  click. The Nav Bar question, restated in business terms, KK answered the same day: the next bullet.
+- **Shorter function lists (KK, 2026-11-05: "A").** An activity's Nav Bar holds at most six
+  functions; folders only in Księgowość i podatki, each of at most six; every other function of the
+  activity sits in its cabinet — not drawn, found by the search box, and listed under one line at the
+  foot, "Wszystkie funkcje". The alternative, every function visible and only better grouped, is
+  declined. Why: of the two options as restated KK chose A; the Nav Bar was an inventory of the books,
+  a person's day is a route, and the box finds the rest. The cabinet is a mark on a section of the
+  pack's arrangement (`cabinet`, beside `rest` and `hidden`), so a designer moves a function between
+  the frame and the cabinet as data, never in face code. Still open: Zamknięcie as its own icon;
+  KSeF's acceptance in the invoice's line.
