@@ -134,14 +134,15 @@ func TestM3PolandPack(t *testing.T) {
 	// kinds, the Harmonogram view, schedule_loan, eight rules; v60 a finance
 	// lease on the same method: the Leasing App with the instalment and the
 	// month's interest kinds, two views, record_lease, nine rules, the lease
-	// liability account 242.)
+	// liability account 242; v61 the shorter function lists — the words alone,
+	// nothing new counted.)
 	packPath := filepath.Join("..", "..", "packs", "pl", "pack.json")
 	sum, err := pack.Load(ctx, s, packPath, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if sum.Types != 46 || sum.Views != 45 || sum.Rules != 169 || sum.Activities != 48 || sum.Events != 69 || sum.Apps != 25 || sum.Skipped != 0 ||
-		sum.Bundle != "pack-pl-v60" {
+		sum.Bundle != "pack-pl-v61" {
 		t.Fatalf("first load: %+v", sum)
 	}
 	// Idempotent: a reload changes nothing — its 25 Apps skipped with the rest.
@@ -169,7 +170,7 @@ func TestM3PolandPack(t *testing.T) {
 	// Approving the pack's bundle IS the installation: its types, views and
 	// rules activate together, and the chart of accounts and the VAT rates
 	// materialize from the waiting events.
-	post("/api/bundles/pack-pl-v60/approve", map[string]any{"approved_by": "krzysztof"}, nil)
+	post("/api/bundles/pack-pl-v61/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	if wl, _ := s.UnmatchedRawEvents(ctx); len(wl) != 0 {
 		t.Fatalf("worklist not cleared after approvals: %d", len(wl))
 	}
