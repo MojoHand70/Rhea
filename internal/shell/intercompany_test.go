@@ -103,7 +103,7 @@ func TestIntercompany(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	for _, id := range []string{"pack-pl-v61", "pack-de-v5"} {
+	for _, id := range []string{"pack-pl-v62", "pack-de-v5"} {
 		post("/api/bundles/"+id+"/approve", map[string]any{"approved_by": "krzysztof"}, nil)
 	}
 	activate("register-company", core.RuleSpec{

@@ -1,12 +1,17 @@
 {
   "pack": "pl",
-  "version": 61,
+  "version": 62,
   "kind": "market",
   "market": "PL",
   "install": "installation",
   "stage": "initial",
   "disclaimer": "Pakiet przygotowała sztuczna inteligencja (AI). To wersja wstępna: reguły mogą zawierać błędy i będą się zmieniać, w miarę jak sprawdzą je księgowi, doradcy podatkowi i biegli rewidenci.",
   "history": [
+    {
+      "versions": "62",
+      "date": "2026-11-06",
+      "changes": "Strumień zdarzeń mówi słowami pakietu (KK 2026-11-05: „we never show events”, „each event should be an event, not just a row”; słowa reguł nie mają brzmieć „jak Robocop”): każda z 204 reguł firmy na polskim pakiecie dostaje jedno zdanie, jak czyta się jej krok w strumieniu — z faktami kroku w środku (numer, kwota, miesiąc, kontrahent), z obszarem, który go załatwił (Bank, Księgi, Rozrachunki, Sprzedaż, Zakupy, KSeF, VAT, CIT, Zamknięcie, Środki trwałe, Pożyczki, Leasing, Rezerwy, RMK, Magazyn, Kapitały, Waluty, JPK, Kartoteka, Użytkownicy, Dokumenty, Pakiety, Klienci, Dostawcy) i, gdzie trzeba, ze znakiem „czeka na osobę” albo „odrzucone”; zapis rozliczenia milczy, bo mówi o nim krok rozliczonej faktury; każde zdarzenie, które wchodzi do ksiąg, ma tytuł karty (wpływ 1 230,00 zł: Nabywca S.A., tytułem FV 1/09/2026; wystawiono fakturę FV 1/09/2026 na 1 230,00 zł; zaczął się październik). Słowa strategii dopasowania (po numerze, po kwocie, po kilku kwotach, od najstarszej, wskazane przez osobę). Słownik v4 ze słownikiem v33."
+    },
     {
       "versions": "61",
       "date": "2026-11-05",

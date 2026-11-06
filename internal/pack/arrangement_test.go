@@ -316,3 +316,66 @@ func TestTheNavBarsAreShort(t *testing.T) {
 		t.Fatalf("the Nav Bars: %s", strings.Join(wrong, "; "))
 	}
 }
+
+// The stream speaks the pack's words (KK 2026-11-05: "each event should be an
+// event", rule words that do not "sound like a Robocop"): every rule of the
+// packs a Polish company has says, in Polish, how its step reads, and every
+// fact that enters the books has a title for its card; an event's name alone
+// is no title, a type's name alone no step.
+func TestThePolandPackSaysEveryStep(t *testing.T) {
+	var rules []pack.Rule
+	events := map[string]bool{}
+	for _, p := range []string{"core/core.json", "common/people.json", "common/periods.json", "common/documents.json", "pl/pack.json", "pl/warehouse.json"} {
+		m, _, err := pack.ReadFile(filepath.Join("..", "..", "packs", p))
+		if err != nil {
+			t.Fatalf("%s: %v", p, err)
+		}
+		rules = append(rules, m.Rules...)
+	}
+	m, _, err := pack.ReadFile(filepath.Join("..", "..", "packs", "pl", "pack.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var w core.WordsSpec
+	for _, v := range m.ViewDefs {
+		if v.Notion == "words" {
+			if err := json.Unmarshal(v.Spec, &w); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	if err := w.Check(); err != nil {
+		t.Fatalf("the words: %v", err)
+	}
+	var mute []string
+	for _, r := range rules {
+		if _, ok := w.Steps[r.RuleID]; !ok {
+			mute = append(mute, r.RuleID)
+		}
+		if et := r.Spec.Match.EventType; et != "" && !strings.HasPrefix(et, "object.") && !strings.HasPrefix(et, "objects.") {
+			events[et] = true
+		}
+	}
+	if len(rules) < 200 {
+		t.Fatalf("rules read: %d, the packs hold more", len(rules))
+	}
+	if len(mute) > 0 {
+		t.Fatalf("%d rules have no step words: %s", len(mute), strings.Join(mute, ", "))
+	}
+	var untitled []string
+	for et := range events {
+		if sw, ok := w.Steps["event:"+et]; !ok || strings.TrimSpace(sw.Says) == "" {
+			untitled = append(untitled, et)
+		}
+	}
+	slices.Sort(untitled)
+	if len(untitled) > 0 {
+		t.Fatalf("%d facts have no card title: %s", len(untitled), strings.Join(untitled, ", "))
+	}
+	// a step's area is one of the words the lists are arranged by, or a word of its own, never empty on a step that speaks
+	for k, sw := range w.Steps {
+		if strings.TrimSpace(sw.Says) != "" && strings.TrimSpace(sw.Area) == "" && !strings.HasPrefix(k, "type:") {
+			t.Errorf("step %s names no area", k)
+		}
+	}
+}

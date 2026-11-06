@@ -1,6 +1,6 @@
 {
   "app": "words",
-  "version": 3,
+  "version": 4,
   "title": "Słownik",
   "layer": "platform",
   "place": {
@@ -13,7 +13,7 @@
   "tabs": [
     {
       "view_id": "slownik",
-      "version": 32,
+      "version": 33,
       "notion": "words",
       "title": "Słownik",
       "domain": "finance",
@@ -1296,6 +1296,13 @@
             "sent": "Wysłana",
             "accepted": "Złożona",
             "rejected": "Odrzucona"
+          },
+          "matching.strategy": {
+            "reference": "po numerze",
+            "exact": "po kwocie",
+            "subset": "po kilku kwotach",
+            "oldest_first": "od najstarszej",
+            "selected": "wskazane przez osobę"
           }
         },
         "events": {
@@ -1933,6 +1940,1179 @@
           "result": [
             "Jaki mam wynik od stycznia?"
           ]
+        },
+        "steps": {
+          "core-client-from-sales-invoice": {
+            "says": "nowy klient od {since|d}",
+            "area": "Klienci"
+          },
+          "core-set-client-terms": {
+            "says": "warunki klienta zmienione",
+            "area": "Klienci"
+          },
+          "core-client-added": {
+            "says": "klient dodany ręcznie, od {since|d}",
+            "area": "Klienci"
+          },
+          "core-client-added-known": {
+            "says": "klient już znany: warunki uzupełnione",
+            "area": "Klienci"
+          },
+          "core-install-pack": {
+            "says": "pakiet {pack|f} zainstalowany od {from|d}",
+            "area": "Pakiety"
+          },
+          "core-switch-off-pack": {
+            "says": "pakiet wyłączony od {to|d}",
+            "area": "Pakiety"
+          },
+          "core-supplier-from-purchase-invoice": {
+            "says": "nowy dostawca od {since|d}",
+            "area": "Dostawcy"
+          },
+          "core-set-supplier-terms": {
+            "says": "warunki dostawcy zmienione",
+            "area": "Dostawcy"
+          },
+          "core-supplier-added": {
+            "says": "dostawca dodany ręcznie, od {since|d}",
+            "area": "Dostawcy"
+          },
+          "core-supplier-added-known": {
+            "says": "dostawca już znany: warunki uzupełnione",
+            "area": "Dostawcy"
+          },
+          "register-received-document": {
+            "says": "plik {name|f} przyjęty, czeka na odczyt",
+            "area": "Dokumenty"
+          },
+          "mark-document-read": {
+            "says": "plik odczytany: jego fakty są już zdarzeniami",
+            "area": "Dokumenty"
+          },
+          "register-issued-document": {
+            "says": "plik {name|f} wydany",
+            "area": "Dokumenty"
+          },
+          "register-person": {
+            "says": "osoba {name} zarejestrowana ({handle|f})",
+            "area": "Użytkownicy"
+          },
+          "appoint-deputy": {
+            "says": "zastępca wyznaczony",
+            "area": "Użytkownicy"
+          },
+          "move-person-status": {
+            "says": "status osoby: {status|lvalue:status}",
+            "area": "Użytkownicy"
+          },
+          "identify-person": {
+            "says": "dane osoby uzupełnione",
+            "area": "Użytkownicy"
+          },
+          "declare-role": {
+            "says": "rola {name} zadeklarowana",
+            "area": "Użytkownicy"
+          },
+          "change-role": {
+            "says": "uprawnienia roli zmienione",
+            "area": "Użytkownicy"
+          },
+          "grant-membership": {
+            "says": "dostęp nadany od {from|d}",
+            "area": "Użytkownicy"
+          },
+          "grant-membership-until": {
+            "says": "dostęp nadany od {from|d} do {to|d}",
+            "area": "Użytkownicy"
+          },
+          "end-membership": {
+            "says": "dostęp zakończony z dniem {to|d}",
+            "area": "Użytkownicy"
+          },
+          "grant-mandate": {
+            "says": "umocowanie biura od {from|d}",
+            "area": "Użytkownicy"
+          },
+          "grant-mandate-until": {
+            "says": "umocowanie biura od {from|d} do {to|d}",
+            "area": "Użytkownicy"
+          },
+          "end-mandate": {
+            "says": "umocowanie biura zakończone z dniem {to|d}",
+            "area": "Użytkownicy"
+          },
+          "appoint-substitute": {
+            "says": "zastępstwo od {from|d} do {to|d}",
+            "area": "Użytkownicy"
+          },
+          "end-substitution": {
+            "says": "zastępstwo zakończone z dniem {to|d}",
+            "area": "Użytkownicy"
+          },
+          "declare-group": {
+            "says": "grupa {name} założona",
+            "area": "Użytkownicy"
+          },
+          "join-group": {
+            "says": "w grupie od {from|d}",
+            "area": "Użytkownicy"
+          },
+          "leave-group": {
+            "says": "miejsce w grupie zakończone z dniem {to|d}",
+            "area": "Użytkownicy"
+          },
+          "lock-period": {
+            "says": "miesiąc {month|month} zablokowany: żadnych nowych zapisów",
+            "area": "Zamknięcie"
+          },
+          "pl-propose-bank-account": {
+            "says": "rachunek {number|f} zgłoszony, czeka na zatwierdzenie",
+            "area": "Bank",
+            "state": "wait"
+          },
+          "pl-bank-account-from-statement": {
+            "says": "rachunek {number|f} z wyciągu, nikt go nie zgłosił: czeka na zatwierdzenie",
+            "area": "Bank",
+            "state": "wait"
+          },
+          "pl-bank-account-on-statement": {
+            "says": "pierwszy wyciąg z tego rachunku: {seen_on|d}",
+            "area": "Bank"
+          },
+          "pl-approve-bank-account": {
+            "says": "rachunek zatwierdzony przez {approved_by}",
+            "area": "Bank"
+          },
+          "pl-reject-bank-account": {
+            "says": "rachunek odrzucony: {reason}",
+            "area": "Bank",
+            "state": "no"
+          },
+          "pl-close-bank-account": {
+            "says": "rachunek zamknięty z dniem {closed_on|d}",
+            "area": "Bank"
+          },
+          "pl-bank-operation": {
+            "says": "rozpoznana jako {kind|lvalue:bank_operation.kind}",
+            "area": "Bank"
+          },
+          "pl-post-incoming-payment": {
+            "says": "zaksięgowana: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-outgoing-payment": {
+            "says": "zaksięgowana: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-match-incoming": {
+            "says": "dopasowana do {other|f} {strategy|lvalue:matching.strategy}",
+            "area": "Rozrachunki"
+          },
+          "pl-match-outgoing": {
+            "says": "dopasowana do {other|f} {strategy|lvalue:matching.strategy}",
+            "area": "Rozrachunki"
+          },
+          "pl-settle-sales-invoice": {
+            "says": "faktura {label|f} {status|lvalue:sales_invoice.status}",
+            "area": "Sprzedaż"
+          },
+          "pl-settle-purchase-invoice": {
+            "says": "faktura {label|f} {status|lvalue:purchase_invoice.status}",
+            "area": "Zakupy"
+          },
+          "pl-settle-incoming-operation": {
+            "says": "wpłata {settlement_status|lvalue:settlement_status}",
+            "area": "Rozrachunki"
+          },
+          "pl-settle-outgoing-operation": {
+            "says": "wypłata {settlement_status|lvalue:settlement_status}",
+            "area": "Rozrachunki"
+          },
+          "pl-record-incoming-settlement": {
+            "says": ""
+          },
+          "pl-record-outgoing-settlement": {
+            "says": ""
+          },
+          "pl-record-difference": {
+            "says": "różnica {amount|m} ({direction|lvalue:matching_difference.direction}) zapisana na {account|f}",
+            "area": "Rozrachunki"
+          },
+          "pl-post-short-difference": {
+            "says": "różnica zaksięgowana: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-over-difference": {
+            "says": "różnica zaksięgowana: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-fx-difference": {
+            "says": "różnica kursowa zaksięgowana: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-explain-bank-operation": {
+            "says": "nie czeka na rozliczenie: wiadomo, czym jest",
+            "area": "Bank"
+          },
+          "pl-post-explained-bank-operation": {
+            "says": "zaksięgowana na swoim koncie: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-reclassify-bank-operation": {
+            "says": "przeksięgowana na swoje konto: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-classify-bank-operation": {
+            "says": "osoba powiedziała, czym jest: {kind|lvalue:bank_operation.kind}",
+            "area": "Bank"
+          },
+          "pl-register-account": {
+            "says": "konto {code|f} {name} w planie kont",
+            "area": "Księgi"
+          },
+          "pl-set-tax-treatment": {
+            "says": "znaczenie podatkowe konta ustalone",
+            "area": "Księgi"
+          },
+          "pl-register-cit-limit": {
+            "says": "limity CIT na rok od {year_start|d}",
+            "area": "CIT"
+          },
+          "pl-declare-cit-status": {
+            "says": "status CIT firmy zadeklarowany",
+            "area": "CIT"
+          },
+          "pl-cit-advance": {
+            "says": "zaliczka na CIT za {period|month}: {advance|m}",
+            "area": "CIT"
+          },
+          "pl-post-cit-advance": {
+            "says": "zaliczka zaksięgowana: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-recompute-cit-advance": {
+            "says": "zaliczka przeliczona: {advance|m}",
+            "area": "CIT"
+          },
+          "pl-post-cit-advance-correction": {
+            "says": "różnica z przeliczenia zaksięgowana: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-recognise-deferred-tax": {
+            "says": "podatek odroczony, {title}: {amount|m}",
+            "area": "CIT"
+          },
+          "pl-post-deferred-tax-liability": {
+            "says": "rezerwa na podatek odroczony zaksięgowana: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-deferred-tax-asset": {
+            "says": "aktywa z tytułu podatku odroczonego zaksięgowane: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-reverse-deferred-tax": {
+            "says": "różnica przejściowa odwrócona z dniem {reversed_on|d}",
+            "area": "CIT"
+          },
+          "pl-post-deferred-tax-liability-reversal": {
+            "says": "odwrócenie rezerwy zaksięgowane: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-deferred-tax-asset-reversal": {
+            "says": "odwrócenie aktywów zaksięgowane: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-record-development-costs": {
+            "says": "prace rozwojowe {title} aktywowane: {amount|m}",
+            "area": "Środki trwałe"
+          },
+          "pl-post-development-costs": {
+            "says": "aktywowanie zaksięgowane: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-amortise-development-costs": {
+            "says": "odpis prac rozwojowych: zostaje {unamortised|m}",
+            "area": "Środki trwałe"
+          },
+          "pl-post-development-costs-amortisation": {
+            "says": "odpis zaksięgowany: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-approve-statement-profit": {
+            "says": "zysk roku przeniesiony na rozliczenie wyniku: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Kapitały"
+          },
+          "pl-approve-statement-loss": {
+            "says": "strata roku przeniesiona na rozliczenie wyniku: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Kapitały"
+          },
+          "pl-distribute-result": {
+            "says": "uchwała o podziale wyniku z {resolution_date|d}",
+            "area": "Kapitały"
+          },
+          "pl-post-result-to-reserve": {
+            "says": "odpis na kapitał zapasowy zaksięgowany: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-result-to-dividends": {
+            "says": "dywidenda jako zobowiązanie wobec wspólników: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-loss-cover": {
+            "says": "pokrycie straty z kapitału zapasowego: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-pay-dividend-withheld": {
+            "says": "dywidenda wypłacona z potrąceniem podatku: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-pay-dividend-exempt": {
+            "says": "dywidenda wypłacona bez podatku: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-record-policy-change": {
+            "says": "zmiana zasad rachunkowości: {title}",
+            "area": "Kapitały"
+          },
+          "pl-post-policy-change": {
+            "says": "skutek zmiany zasad zaksięgowany: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-measure-without-going-concern": {
+            "says": "wycena bez kontynuacji: {item}, odpis {write_down|m}",
+            "area": "Kapitały"
+          },
+          "pl-post-measurement-without-going-concern": {
+            "says": "odpis zaksięgowany: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-cessation-provision": {
+            "says": "rezerwa na zaniechanie działalności zaksięgowana: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-accept-fixed-asset": {
+            "says": "środek trwały {name} przyjęty do używania, wartość {initial_value|m}",
+            "area": "Środki trwałe"
+          },
+          "pl-post-fixed-asset-acceptance": {
+            "says": "przyjęcie zaksięgowane: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-depreciate-fixed-assets": {
+            "says": "odpisy amortyzacyjne za {period|month}: {n|f} {n|plural:środek,środki,środków}",
+            "area": "Środki trwałe"
+          },
+          "pl-post-depreciation": {
+            "says": "odpisy zaksięgowane: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-finish-depreciation": {
+            "says": "środek trwały umorzony w całości",
+            "area": "Środki trwałe"
+          },
+          "pl-dispose-fixed-asset": {
+            "says": "środek trwały zlikwidowany z dniem {liquidation_date|d}: {liquidation_reason}",
+            "area": "Środki trwałe"
+          },
+          "pl-post-fixed-asset-disposal": {
+            "says": "likwidacja zaksięgowana: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-fixed-asset-disposal-depreciated": {
+            "says": "likwidacja zaksięgowana: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-cost-moved-from-construction": {
+            "says": "koszt zdjęty z budowy zaksięgowany: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-record-asset-advance": {
+            "says": "zaliczka na środek trwały {title}: {amount_pln|m}",
+            "area": "Środki trwałe"
+          },
+          "pl-post-asset-advance": {
+            "says": "zaliczka zaksięgowana: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-settle-asset-advance": {
+            "says": "zaliczka rozliczona z dniem {settled_on|d}",
+            "area": "Środki trwałe"
+          },
+          "pl-post-asset-advance-settlement": {
+            "says": "rozliczenie zaliczki zaksięgowane: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-revalue-fx-balances": {
+            "says": "wycena bilansowa {currency|f} na {balance_date|d}",
+            "area": "Waluty"
+          },
+          "pl-post-fx-revaluation-receivables": {
+            "says": "wycena należności zaksięgowana: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-storno-fx-revaluation-receivables": {
+            "says": "wycena należności cofnięta w nowym roku: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-fx-revaluation-payables": {
+            "says": "wycena zobowiązań zaksięgowana: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-storno-fx-revaluation-payables": {
+            "says": "wycena zobowiązań cofnięta w nowym roku: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-pz-from-delivery": {
+            "says": "dokument PZ od {supplier} z {date|d}",
+            "area": "Magazyn"
+          },
+          "pl-pz-lines": {
+            "says": "pozycje PZ: {n|f} {n|plural:pozycja,pozycje,pozycji}",
+            "area": "Magazyn"
+          },
+          "pl-pz-line-moves-stock": {
+            "says": "towar przyjęty na magazyn: {n|f} {n|plural:ruch,ruchy,ruchów}",
+            "area": "Magazyn"
+          },
+          "pl-pz-line-posts": {
+            "says": "przyjęcie zaksięgowane: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-record-lease": {
+            "says": "umowa leasingu {number|f} zapisana",
+            "area": "Leasing"
+          },
+          "pl-lessor-invoices-reduce-lease-liability": {
+            "says": "faktury finansującego będą zmniejszać zobowiązanie z leasingu",
+            "area": "Leasing"
+          },
+          "pl-lease-tax-split-waits": {
+            "says": "zadanie: rozliczenie podatkowe leasingu czeka na osobę",
+            "area": "Leasing",
+            "state": "wait"
+          },
+          "pl-schedule-lease": {
+            "says": "harmonogram leasingu: {n|f} {n|plural:rata,raty,rat}",
+            "area": "Leasing"
+          },
+          "pl-recognise-leased-asset": {
+            "says": "przedmiot leasingu w środkach trwałych, wartość {initial_value|m}",
+            "area": "Środki trwałe"
+          },
+          "pl-post-leased-asset": {
+            "says": "przedmiot leasingu zaksięgowany: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-book-lease-interest": {
+            "says": "odsetki leasingu za {period|month}: {amount|m}",
+            "area": "Leasing"
+          },
+          "pl-post-lease-interest": {
+            "says": "odsetki zaksięgowane: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-advance-lease": {
+            "says": "umowa wskazuje następny miesiąc odsetek: {next_period|month}",
+            "area": "Leasing"
+          },
+          "pl-record-loan-received": {
+            "says": "pożyczka otrzymana, {title}: {nominal|m}",
+            "area": "Pożyczki"
+          },
+          "pl-record-loan-granted": {
+            "says": "pożyczka udzielona, {title}: {nominal|m}",
+            "area": "Pożyczki"
+          },
+          "pl-post-loan-received": {
+            "says": "wypłata pożyczki zaksięgowana: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-loan-granted": {
+            "says": "wypłata pożyczki zaksięgowana: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-schedule-loan": {
+            "says": "harmonogram pożyczki: {n|f} {n|plural:rata,raty,rat}",
+            "area": "Pożyczki"
+          },
+          "pl-measure-loan-at-amortised-cost": {
+            "says": "pożyczka wyceniana w skorygowanej cenie nabycia, stopa efektywna {effective_rate|f}",
+            "area": "Pożyczki"
+          },
+          "pl-post-loan-fee-received": {
+            "says": "prowizja zaksięgowana: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-loan-fee-granted": {
+            "says": "prowizja zaksięgowana: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-book-loan-interest": {
+            "says": "odsetki pożyczki za {period|month}: {amount|m}",
+            "area": "Pożyczki"
+          },
+          "pl-post-scheduled-interest-received": {
+            "says": "odsetki zaksięgowane: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-scheduled-interest-granted": {
+            "says": "odsetki zaksięgowane: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-accrue-scheduled-interest": {
+            "says": "kwota do zapłaty po odsetkach: {open|m}",
+            "area": "Pożyczki"
+          },
+          "pl-repay-loan": {
+            "says": "spłata: zostaje {open|m}",
+            "area": "Pożyczki"
+          },
+          "pl-post-loan-repayment-received": {
+            "says": "spłata zaksięgowana: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-loan-repayment-granted": {
+            "says": "spłata zaksięgowana: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-accrue-loan-interest": {
+            "says": "odsetki naliczone: do zapłaty {open|m}",
+            "area": "Pożyczki"
+          },
+          "pl-post-loan-interest-received-accrued": {
+            "says": "odsetki zaksięgowane: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-loan-interest-received-paid": {
+            "says": "odsetki zaksięgowane: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-loan-interest-granted-accrued": {
+            "says": "odsetki zaksięgowane: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-loan-interest-granted-paid": {
+            "says": "odsetki zaksięgowane: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-company-account": {
+            "says": "rachunek {iban|f} zapisany przy firmie",
+            "area": "Kartoteka"
+          },
+          "pl-identify-company": {
+            "says": "dane firmy uzupełnione",
+            "area": "Kartoteka"
+          },
+          "pl-identify-company-owner": {
+            "says": "dane firmy i właściciel uzupełnione",
+            "area": "Kartoteka"
+          },
+          "pl-declare-company-form": {
+            "says": "firma podała swoją formę: {vat_status|lvalue:vat_status}, {books|lvalue:books}, {income_tax|lvalue:income_tax}",
+            "area": "Kartoteka"
+          },
+          "pl-declare-company-form-exemption": {
+            "says": "firma podała swoją formę ze zwolnieniem z VAT: {books|lvalue:books}, {income_tax|lvalue:income_tax}",
+            "area": "Kartoteka"
+          },
+          "pl-declare-company-accounts": {
+            "says": "rachunki firmy podane: podatkowy, ZUS, właściciela",
+            "area": "Kartoteka"
+          },
+          "pl-enter-company": {
+            "says": "firma {name} wpisana, NIP {vat_id|f}",
+            "area": "Kartoteka"
+          },
+          "pl-enter-company-form": {
+            "says": "firma {name} wpisana, NIP {vat_id|f}",
+            "area": "Kartoteka"
+          },
+          "pl-enter-company-known": {
+            "says": "firma już znana po NIP: dane uzupełnione",
+            "area": "Kartoteka"
+          },
+          "pl-declare-financial-year": {
+            "says": "rok obrotowy zaczyna się od miesiąca {financial_year_start|f}",
+            "area": "Kartoteka"
+          },
+          "pl-spread-cost": {
+            "says": "koszt rozłożony w czasie od {start|month} na {months|f} {months|plural:miesiąc,miesiące,miesięcy}: {amount|m}",
+            "area": "RMK"
+          },
+          "pl-post-prepaid-cost": {
+            "says": "przeniesiony na rozliczenia międzyokresowe: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-release-prepaid-costs": {
+            "says": "raty RMK za {period|month}: {n|f} {n|plural:koszt,koszty,kosztów}",
+            "area": "RMK"
+          },
+          "pl-post-prepaid-release": {
+            "says": "raty zaksięgowane w koszty: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-finish-prepaid-cost": {
+            "says": "koszt rozliczony w całości",
+            "area": "RMK"
+          },
+          "pl-create-provision": {
+            "says": "{title}: {amount|m} utworzone",
+            "area": "Rezerwy"
+          },
+          "pl-post-provision-liability": {
+            "says": "rezerwa zaksięgowana: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-provision-accrual": {
+            "says": "bierne RMK zaksięgowane: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-use-provision": {
+            "says": "rezerwa wykorzystana: {used|m}",
+            "area": "Rezerwy"
+          },
+          "pl-post-provision-use-liability": {
+            "says": "wykorzystanie zaksięgowane: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-provision-use-accrual": {
+            "says": "wykorzystanie zaksięgowane: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-release-provision": {
+            "says": "rezerwa rozwiązana: {released|m}",
+            "area": "Rezerwy"
+          },
+          "pl-post-provision-release-liability": {
+            "says": "rozwiązanie zaksięgowane: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-provision-release-accrual": {
+            "says": "rozwiązanie zaksięgowane: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-write-down-receivable": {
+            "says": "odpis aktualizujący należność: {amount|m}, {reason}",
+            "area": "Rezerwy"
+          },
+          "pl-post-write-down-deductible": {
+            "says": "odpis zaksięgowany: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-write-down-non-deductible": {
+            "says": "odpis zaksięgowany (NKUP): {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-settle-write-down": {
+            "says": "odpis zakończony z dniem {settled_on|d}",
+            "area": "Rezerwy"
+          },
+          "pl-post-write-down-reversed": {
+            "says": "odpis odwrócony: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-write-down-written-off": {
+            "says": "należność spisana w ciężar odpisu: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-write-down-inventory": {
+            "says": "odpis aktualizujący zapasy, {title}: {amount|m}",
+            "area": "Rezerwy"
+          },
+          "pl-post-inventory-write-down": {
+            "says": "odpis zapasów zaksięgowany: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-reverse-inventory-write-down": {
+            "says": "odpis zapasów cofnięty z dniem {reversed_on|d}",
+            "area": "Rezerwy"
+          },
+          "pl-post-inventory-write-down-reversal": {
+            "says": "cofnięcie odpisu zaksięgowane: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-book-purchase-invoice": {
+            "says": "w księgach jako {label|f}, VAT za {vat_period|month}",
+            "area": "Zakupy"
+          },
+          "pl-book-purchase-invoice-ksef": {
+            "says": "w księgach jako {label|f} (z KSeF), VAT za {vat_period|month}",
+            "area": "Zakupy"
+          },
+          "pl-post-purchase-invoice": {
+            "says": "zaksięgowana: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-purchase-invoice-gross": {
+            "says": "zaksięgowana: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-supplier-account": {
+            "says": "rachunek dostawcy z faktury zapisany przy firmie",
+            "area": "Kartoteka"
+          },
+          "pl-set-cost-account": {
+            "says": "konto kosztów dostawcy: {cost_account|f}",
+            "area": "Kartoteka"
+          },
+          "pl-book-sales-invoice": {
+            "says": "w księgach jako {label|f}, VAT za {vat_period|month}",
+            "area": "Sprzedaż"
+          },
+          "pl-post-sales-invoice": {
+            "says": "zaksięgowana: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-sales-invoice-no-vat": {
+            "says": "zaksięgowana: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-sales-invoice-goods": {
+            "says": "zaksięgowana: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-sales-invoice-goods-no-vat": {
+            "says": "zaksięgowana: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-sales-invoice-other": {
+            "says": "zaksięgowana: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-sales-invoice-other-no-vat": {
+            "says": "zaksięgowana: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-cost-of-goods-sold": {
+            "says": "towary zeszły z zapasów: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-cost-of-materials-sold": {
+            "says": "materiały zeszły z zapasów: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-record-ksef-submission": {
+            "says": "numer KSeF {ksef_ref|f} zapisany przy fakturze",
+            "area": "KSeF"
+          },
+          "pl-record-ksef-rejection": {
+            "says": "KSeF odrzucił fakturę: {reason}",
+            "area": "KSeF",
+            "state": "no"
+          },
+          "pl-ksef-rejection-task": {
+            "says": "zadanie na dziś: {title}",
+            "area": "KSeF",
+            "state": "wait"
+          },
+          "pl-jpk-filing-prepared": {
+            "says": "plik JPK za {period|month} przygotowany, czeka na podpis",
+            "area": "JPK",
+            "state": "wait"
+          },
+          "pl-jpk-filing-signed": {
+            "says": "plik JPK podpisany, czeka na wysłanie",
+            "area": "JPK"
+          },
+          "pl-jpk-filing-sent": {
+            "says": "wysłany do bramki, numer referencyjny {reference|f}",
+            "area": "JPK"
+          },
+          "pl-jpk-filing-accepted": {
+            "says": "bramka przyjęła: UPO, złożony {filed_on|d}",
+            "area": "JPK"
+          },
+          "pl-jpk-filing-rejected": {
+            "says": "odrzucony: {reason}",
+            "area": "JPK",
+            "state": "no"
+          },
+          "pl-jpk-rejection-task": {
+            "says": "zadanie na dziś: {title}",
+            "area": "JPK",
+            "state": "wait"
+          },
+          "pl-register-vat-rate": {
+            "says": "stawka VAT {code|f} ({percent|f}%)",
+            "area": "VAT"
+          },
+          "pl-settle-vat": {
+            "says": "VAT za {period|month} rozliczony: {vat_due|m} do zapłaty",
+            "area": "VAT"
+          },
+          "pl-close-year-expenses": {
+            "says": "konta kosztów zamknięte na dzień bilansowy: {n|f} {n|plural:konto,konta,kont}",
+            "area": "Zamknięcie"
+          },
+          "pl-close-year-revenues": {
+            "says": "konta przychodów zamknięte na dzień bilansowy: {n|f} {n|plural:konto,konta,kont}",
+            "area": "Zamknięcie"
+          },
+          "pl-close-year-income-tax": {
+            "says": "konta podatku dochodowego zamknięte: {n|f} {n|plural:konto,konta,kont}",
+            "area": "Zamknięcie"
+          },
+          "pl-close-year-clearing": {
+            "says": "konto rozliczeniowe zamknięte na dzień bilansowy",
+            "area": "Zamknięcie"
+          },
+          "pl-post-year-close-debit": {
+            "says": "przeniesione na wynik finansowy: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "pl-post-year-close-credit": {
+            "says": "przeniesione na wynik finansowy: {n|f} {n|plural:zapis,zapisy,zapisów}",
+            "area": "Księgi"
+          },
+          "event:bank.statement.line": {
+            "says": "{direction|lvalue:bank_operation.direction} {amount|m}: {counterparty}, tytułem {reference|f}",
+            "area": "Bank"
+          },
+          "event:bank.account.seen": {
+            "says": "wyciąg z rachunku {number|f}",
+            "area": "Bank"
+          },
+          "event:bank_account.proposed": {
+            "says": "zgłoszono rachunek {number|f}",
+            "area": "Bank"
+          },
+          "event:bank_account.approved": {
+            "says": "zatwierdzono rachunek bankowy",
+            "area": "Bank"
+          },
+          "event:bank_account.rejected": {
+            "says": "odrzucono rachunek bankowy",
+            "area": "Bank"
+          },
+          "event:bank_account.closed": {
+            "says": "zamknięto rachunek bankowy",
+            "area": "Bank"
+          },
+          "event:bank_operation.classified": {
+            "says": "osoba nazwała pozycję wyciągu: {kind|lvalue:bank_operation.kind}",
+            "area": "Bank"
+          },
+          "event:sales.invoice.issued": {
+            "says": "wystawiono fakturę {number|f} na {gross|m}",
+            "area": "Sprzedaż"
+          },
+          "event:purchase.invoice.received": {
+            "says": "wpłynęła faktura {number|f} na {gross|m}",
+            "area": "Zakupy"
+          },
+          "event:ksef.invoice.submitted": {
+            "says": "KSeF przyjął fakturę {number|f}",
+            "area": "KSeF"
+          },
+          "event:ksef.invoice.rejected": {
+            "says": "KSeF odrzucił fakturę {number|f}",
+            "area": "KSeF"
+          },
+          "event:period.closed": {
+            "says": "zamknięto miesiąc {period|month}, księga {book|f}",
+            "area": "Zamknięcie"
+          },
+          "event:year.closed": {
+            "says": "zamknięto rok na {year_end|d}",
+            "area": "Zamknięcie"
+          },
+          "event:time.month_opened": {
+            "says": "zaczął się {month|month}",
+            "area": "Zamknięcie"
+          },
+          "event:company.registered": {
+            "says": "firma {name} zarejestrowana",
+            "area": "Kartoteka"
+          },
+          "event:company.entered": {
+            "says": "firma {name} wpisana",
+            "area": "Kartoteka"
+          },
+          "event:company.identified": {
+            "says": "firma podała swoje dane",
+            "area": "Kartoteka"
+          },
+          "event:company.form.declared": {
+            "says": "firma podała swoją formę",
+            "area": "Kartoteka"
+          },
+          "event:company.accounts.declared": {
+            "says": "firma podała swoje rachunki",
+            "area": "Kartoteka"
+          },
+          "event:company.financial_year.declared": {
+            "says": "firma podała swój rok obrotowy",
+            "area": "Kartoteka"
+          },
+          "event:company.cost_account.set": {
+            "says": "ustalono konto kosztów dostawcy",
+            "area": "Kartoteka"
+          },
+          "event:company.cit_status.declared": {
+            "says": "firma podała swój status CIT",
+            "area": "CIT"
+          },
+          "event:account.created": {
+            "says": "konto {code|f} {name} założone",
+            "area": "Księgi"
+          },
+          "event:account.tax_treatment.set": {
+            "says": "ustalono znaczenie podatkowe konta",
+            "area": "Księgi"
+          },
+          "event:vat_rate.defined": {
+            "says": "stawka VAT {code|f} zdefiniowana",
+            "area": "VAT"
+          },
+          "event:cit_limit.defined": {
+            "says": "zdefiniowano limity CIT",
+            "area": "CIT"
+          },
+          "event:fixed_asset.accepted": {
+            "says": "przyjęto środek trwały {name}",
+            "area": "Środki trwałe"
+          },
+          "event:fixed_asset.disposed": {
+            "says": "zlikwidowano środek trwały",
+            "area": "Środki trwałe"
+          },
+          "event:construction.cost_moved": {
+            "says": "zdjęto koszt z budowy",
+            "area": "Środki trwałe"
+          },
+          "event:asset_advance.paid": {
+            "says": "zapłacono zaliczkę na środek trwały, {title}",
+            "area": "Środki trwałe"
+          },
+          "event:asset_advance.settled": {
+            "says": "rozliczono zaliczkę na środek trwały",
+            "area": "Środki trwałe"
+          },
+          "event:cost.spread": {
+            "says": "rozłożono koszt w czasie",
+            "area": "RMK"
+          },
+          "event:provision.created": {
+            "says": "utworzono rezerwę: {title}",
+            "area": "Rezerwy"
+          },
+          "event:provision.used": {
+            "says": "wykorzystano rezerwę",
+            "area": "Rezerwy"
+          },
+          "event:provision.released": {
+            "says": "rozwiązano rezerwę",
+            "area": "Rezerwy"
+          },
+          "event:receivable.written_down": {
+            "says": "odpis aktualizujący należność",
+            "area": "Rezerwy"
+          },
+          "event:receivable.write_down.settled": {
+            "says": "zakończono odpis należności",
+            "area": "Rezerwy"
+          },
+          "event:inventory.written_down": {
+            "says": "odpis aktualizujący zapasy: {title}",
+            "area": "Rezerwy"
+          },
+          "event:inventory.write_down.reversed": {
+            "says": "cofnięto odpis zapasów",
+            "area": "Rezerwy"
+          },
+          "event:loan.received": {
+            "says": "otrzymano pożyczkę, {title}: {nominal|m}",
+            "area": "Pożyczki"
+          },
+          "event:loan.granted": {
+            "says": "udzielono pożyczki, {title}: {nominal|m}",
+            "area": "Pożyczki"
+          },
+          "event:loan.scheduled": {
+            "says": "ustalono harmonogram pożyczki",
+            "area": "Pożyczki"
+          },
+          "event:loan.repaid": {
+            "says": "spłata pożyczki: {amount|m}",
+            "area": "Pożyczki"
+          },
+          "event:loan.interest_charged": {
+            "says": "odsetki od pożyczki: {amount|m}",
+            "area": "Pożyczki"
+          },
+          "event:lease.recorded": {
+            "says": "zapisano umowę leasingu {number|f}",
+            "area": "Leasing"
+          },
+          "event:fx.balances.revalued": {
+            "says": "wycena bilansowa walut na {balance_date|d}",
+            "area": "Waluty"
+          },
+          "event:delivery.received": {
+            "says": "przyjęto dostawę od {supplier}",
+            "area": "Magazyn"
+          },
+          "event:development_costs.capitalised": {
+            "says": "aktywowano prace rozwojowe: {title}",
+            "area": "Środki trwałe"
+          },
+          "event:development_costs.amortised": {
+            "says": "odpis prac rozwojowych",
+            "area": "Środki trwałe"
+          },
+          "event:deferred_tax.recognised": {
+            "says": "ujęto podatek odroczony: {title}",
+            "area": "CIT"
+          },
+          "event:deferred_tax.reversed": {
+            "says": "odwrócono podatek odroczony",
+            "area": "CIT"
+          },
+          "event:cit_advance.recomputed": {
+            "says": "przeliczono zaliczkę na CIT",
+            "area": "CIT"
+          },
+          "event:statement.approved": {
+            "says": "zatwierdzono sprawozdanie",
+            "area": "Kapitały"
+          },
+          "event:result.distributed": {
+            "says": "uchwała o podziale wyniku",
+            "area": "Kapitały"
+          },
+          "event:dividend.paid": {
+            "says": "wypłacono dywidendę: {gross|m}",
+            "area": "Kapitały"
+          },
+          "event:policy.changed": {
+            "says": "zmieniono zasady rachunkowości",
+            "area": "Kapitały"
+          },
+          "event:going_concern.measured": {
+            "says": "wycena bez założenia kontynuacji",
+            "area": "Kapitały"
+          },
+          "event:cessation.provided": {
+            "says": "rezerwa na zaniechanie działalności",
+            "area": "Kapitały"
+          },
+          "event:jpk.filing.prepared": {
+            "says": "przygotowano plik JPK za {period|month}",
+            "area": "JPK"
+          },
+          "event:jpk.filing.signed": {
+            "says": "podpisano plik JPK",
+            "area": "JPK"
+          },
+          "event:jpk.filing.sent": {
+            "says": "wysłano plik JPK",
+            "area": "JPK"
+          },
+          "event:jpk.filing.accepted": {
+            "says": "bramka przyjęła plik JPK",
+            "area": "JPK"
+          },
+          "event:jpk.filing.rejected": {
+            "says": "bramka odrzuciła plik JPK",
+            "area": "JPK"
+          },
+          "event:document.received": {
+            "says": "przyjęto plik {name|f}",
+            "area": "Dokumenty"
+          },
+          "event:document.read": {
+            "says": "odczytano plik",
+            "area": "Dokumenty"
+          },
+          "event:document.issued": {
+            "says": "wydano plik {name|f}",
+            "area": "Dokumenty"
+          },
+          "event:pack.installed": {
+            "says": "zainstalowano pakiet {pack|f}",
+            "area": "Pakiety"
+          },
+          "event:pack.switched_off": {
+            "says": "wyłączono pakiet {pack|f}",
+            "area": "Pakiety"
+          },
+          "event:person.registered": {
+            "says": "zarejestrowano osobę {name}",
+            "area": "Użytkownicy"
+          },
+          "event:person.identified": {
+            "says": "osoba podała swoje dane",
+            "area": "Użytkownicy"
+          },
+          "event:person.deputy_appointed": {
+            "says": "wyznaczono zastępcę",
+            "area": "Użytkownicy"
+          },
+          "event:person.status_changed": {
+            "says": "zmieniono status osoby",
+            "area": "Użytkownicy"
+          },
+          "event:role.declared": {
+            "says": "zadeklarowano rolę {name}",
+            "area": "Użytkownicy"
+          },
+          "event:role.changed": {
+            "says": "zmieniono rolę",
+            "area": "Użytkownicy"
+          },
+          "event:membership.granted": {
+            "says": "nadano dostęp",
+            "area": "Użytkownicy"
+          },
+          "event:membership.ended": {
+            "says": "zakończono dostęp",
+            "area": "Użytkownicy"
+          },
+          "event:mandate.granted": {
+            "says": "nadano umocowanie biura",
+            "area": "Użytkownicy"
+          },
+          "event:mandate.ended": {
+            "says": "zakończono umocowanie biura",
+            "area": "Użytkownicy"
+          },
+          "event:substitution.appointed": {
+            "says": "wyznaczono zastępstwo",
+            "area": "Użytkownicy"
+          },
+          "event:substitution.ended": {
+            "says": "zakończono zastępstwo",
+            "area": "Użytkownicy"
+          },
+          "event:group.declared": {
+            "says": "założono grupę {name}",
+            "area": "Użytkownicy"
+          },
+          "event:group.joined": {
+            "says": "dodano do grupy",
+            "area": "Użytkownicy"
+          },
+          "event:group.left": {
+            "says": "usunięto z grupy",
+            "area": "Użytkownicy"
+          },
+          "event:client.added": {
+            "says": "dodano klienta",
+            "area": "Klienci"
+          },
+          "event:client.terms.set": {
+            "says": "ustalono warunki klienta",
+            "area": "Klienci"
+          },
+          "event:supplier.added": {
+            "says": "dodano dostawcę",
+            "area": "Dostawcy"
+          },
+          "event:supplier.terms.set": {
+            "says": "ustalono warunki dostawcy",
+            "area": "Dostawcy"
+          }
         }
       }
     }

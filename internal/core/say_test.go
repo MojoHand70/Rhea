@@ -15,7 +15,7 @@ import (
 func TestWordsSayAStep(t *testing.T) {
 	var w WordsSpec
 	if err := json.Unmarshal([]byte(`{"lang": "pl",
-		"values": {"bank_operation.kind": {"transfer": "zapłata kontrahenta", "fee": "opłata bankowa"}},
+		"values": {"bank_operation.kind": {"transfer": "Zapłata kontrahenta", "fee": "opłata bankowa"}},
 		"steps": {
 			"pl-match-incoming": {"says": "dopasowana do {other|f} po {strategy|value:matching.strategy}", "area": "Rozrachunki"},
 			"pl-post-incoming-payment": {"says": "zaksięgowana: {n|f} {n|plural:zapis,zapisy,zapisów}", "area": "Księgi"},
@@ -63,6 +63,9 @@ func TestWordsSayAStep(t *testing.T) {
 		{w.Steps["pl-post-incoming-payment"].Says, map[string]any{"n": 12}, "zaksięgowana: [12] zapisów"},
 		{w.Steps["pl-post-incoming-payment"].Says, map[string]any{"n": 23}, "zaksięgowana: [23] zapisy"},
 		{w.Steps["pl-bank-operation"].Says, map[string]any{"kind": "fee"}, "rozpoznana jako opłata bankowa"},
+		{w.Steps["pl-bank-operation"].Says, map[string]any{"kind": "transfer"}, "rozpoznana jako Zapłata kontrahenta"},
+		// a value's word lowered for the middle of a sentence; an abbreviation keeps its capitals
+		{"to {kind|lvalue:bank_operation.kind} i {x|lower}", map[string]any{"kind": "transfer", "x": "ZUS"}, "to zapłata kontrahenta i ZUS"},
 		{w.Steps["pl-settle-vat"].Says, map[string]any{"period": "2026-09", "vat_due": float64(509000)}, "VAT za (2026-09:month) rozliczony: <509000 > do zapłaty"},
 		// a raw payload carries money as a decimal string: it is parsed, never guessed; the currency rides along
 		{w.Steps["event:bank.statement.line"].Says, map[string]any{"direction": "credit", "amount": "795.81", "currency": "PLN", "counterparty": "Hostingowo", "reference": "HOS/1/2026"}, "credit <79581 PLN> · Hostingowo, tytułem [HOS/1/2026]"},

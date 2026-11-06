@@ -46,7 +46,7 @@ type SayPart struct {
 	As string `json:"as,omitempty"`
 }
 
-var sayFormats = []string{"f", "m", "d", "month", "value", "plural"}
+var sayFormats = []string{"f", "m", "d", "month", "value", "lvalue", "lower", "plural"}
 
 // Say renders a template over the facts a lookup answers for. Placeholders:
 // {name} the value as text; {name|f} a figure; {name|m} money (a decimal
@@ -112,12 +112,17 @@ func (w WordsSpec) Say(tpl string, lookup func(string) (any, bool)) []SayPart {
 				s = s[:7]
 			}
 			parts = append(parts, SayPart{D: s, As: "month"})
-		case "value":
+		case "value", "lvalue":
 			s := fmt.Sprint(v)
 			if lbl := w.valueWord(arg, s); lbl != "" {
 				s = lbl
 			}
+			if format == "lvalue" {
+				s = lowerFirst(s)
+			}
 			text(s)
+		case "lower":
+			text(lowerFirst(fmt.Sprint(v)))
 		case "plural":
 			n, ok := countOf(v)
 			if !ok {
@@ -128,6 +133,20 @@ func (w WordsSpec) Say(tpl string, lookup func(string) (any, bool)) []SayPart {
 			text(fmt.Sprint(v))
 		}
 	}
+}
+
+// lowerFirst lowers a word's first letter for the middle of a sentence
+// ("Zapłata kontrahenta" after "rozpoznana jako"); an abbreviation of two
+// capitals (KSeF, ZUS, VAT) keeps them.
+func lowerFirst(s string) string {
+	r := []rune(s)
+	if len(r) == 0 {
+		return s
+	}
+	if len(r) > 1 && strings.ToUpper(string(r[1])) == string(r[1]) && strings.ToLower(string(r[1])) != string(r[1]) {
+		return s
+	}
+	return strings.ToLower(string(r[0])) + string(r[1:])
 }
 
 // valueWord is the words' label for an enum value: the field's own ("type.field"),
@@ -263,10 +282,11 @@ func (w WordsSpec) checkSteps() error {
 			format, arg, _ := strings.Cut(format, ":")
 			switch format {
 			case "f", "m", "d", "month":
-			case "value":
+			case "value", "lvalue":
 				if strings.TrimSpace(arg) == "" {
-					return fmt.Errorf("words: step %s: {%s|value} names no field", key, name)
+					return fmt.Errorf("words: step %s: {%s|%s} names no field", key, name, format)
 				}
+			case "lower":
 			case "plural":
 				if len(strings.Split(arg, ",")) < 2 {
 					return fmt.Errorf("words: step %s: {%s|plural} needs the noun's forms, at least two", key, name)

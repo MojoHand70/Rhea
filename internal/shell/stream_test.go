@@ -116,6 +116,7 @@ func TestStreamTellsWhatHappened(t *testing.T) {
 		OccurredAt string         `json:"occurred_at"`
 		EventType  string         `json:"event_type"`
 		Title      []core.SayPart `json:"title"`
+		Source     string         `json:"source"`
 		State      string         `json:"state"`
 		ObjectID   string         `json:"object_id"`
 		ObjectType string         `json:"object_type"`
@@ -160,22 +161,25 @@ func TestStreamTellsWhatHappened(t *testing.T) {
 	if pay.State != "ok" || pay.ObjectType != "bank_operation" || pay.ObjectID == "" {
 		t.Fatalf("the payment's card: %+v", pay)
 	}
-	if got := rules(pay); got != "pl-bank-operation,pl-post-incoming-payment,pl-match-incoming,pl-settle-incoming-operation,pl-settle-sales-invoice,pl-record-incoming-settlement" {
+	// the settlement record is silent: the settled invoice's step says it (the pack's words)
+	if got := rules(pay); got != "pl-bank-operation,pl-post-incoming-payment,pl-match-incoming,pl-settle-incoming-operation,pl-settle-sales-invoice" {
 		t.Fatalf("the payment's steps: %s", got)
 	}
 	if pay.Steps[1].N != 2 || pay.Steps[1].ObjectType != "posting" || pay.Steps[0].RuleVersion == 0 || pay.Steps[0].ObjectID != pay.ObjectID {
 		t.Fatalf("the posting step folds the rule's two entries: %+v", pay.Steps[1])
 	}
-	// without step words the kernel still speaks: the type's name and the record's label, the match's
-	// other side by its label — no business of its own, no language of its own
-	if got := flat(pay.Steps[0].Says); got != "Pozycja wyciągu zapłata FV 1/09/2026" {
-		t.Fatalf("a step without words: %q", got)
+	// the steps read in the pack's Polish, each with the area that handled it; money travels as minor
+	// units with its currency, a month as a month, for the face to format
+	for i, want := range []struct{ says, area string }{
+		{"rozpoznana jako zapłata kontrahenta", "Bank"}, {"zaksięgowana: 2 zapisy", "Księgi"},
+		{"dopasowana do FV 1/09/2026 po numerze", "Rozrachunki"}, {"wpłata rozliczona", "Rozrachunki"},
+		{"faktura FV 1/09/2026 zapłacona", "Sprzedaż"}} {
+		if got := flat(pay.Steps[i].Says); got != want.says || pay.Steps[i].Area != want.area {
+			t.Fatalf("step %d reads %q (%s), want %q (%s)", i, got, pay.Steps[i].Area, want.says, want.area)
+		}
 	}
-	if got := flat(pay.Steps[2].Says); !strings.Contains(got, "FV 1/09/2026") {
-		t.Fatalf("the match names the invoice: %q", got)
-	}
-	if got := flat(pay.Title); got != "Pozycja wyciągu bankowego · zapłata FV 1/09/2026" {
-		t.Fatalf("a title without words: %q", got)
+	if got := flat(pay.Title); got != "wpływ 123000: Nabywca S.A., tytułem zapłata FV 1/09/2026" || pay.Title[1].C != "PLN" || pay.Source != "Bank" {
+		t.Fatalf("the payment's title: %q, money in %q, from %q", got, pay.Title[1].C, pay.Source)
 	}
 	// every step names its rule version and the fact it is
 	for _, st := range pay.Steps {
@@ -187,6 +191,12 @@ func TestStreamTellsWhatHappened(t *testing.T) {
 	fv2 := find(page.Cards, "sales.invoice.issued")
 	if got := rules(fv2); got != "pl-book-sales-invoice,pl-post-sales-invoice" || fv2.Steps[1].N != 3 || fv2.ObjectType != "sales_invoice" {
 		t.Fatalf("the invoice's card: %s %+v", got, fv2)
+	}
+	if got := flat(fv2.Steps[0].Says); got != "w księgach jako FV 2/09/2026, VAT za 2026-09" || fv2.Steps[0].Says[3].As != "month" || flat(fv2.Steps[1].Says) != "zaksięgowana: 3 zapisy" {
+		t.Fatalf("the invoice's steps: %q, %q", got, flat(fv2.Steps[1].Says))
+	}
+	if got := flat(fv2.Title); got != "wystawiono fakturę FV 2/09/2026 na 61500" {
+		t.Fatalf("the invoice's title: %q", got)
 	}
 
 	// the page before: the next facts, none repeated
@@ -220,6 +230,10 @@ func TestStreamTellsWhatHappened(t *testing.T) {
 	get("/api/stream?limit=1", 200, &page)
 	if len(page.Cards) != 1 || page.Cards[0].EventType != "parcel.lost" || page.Cards[0].State != "none" || len(page.Cards[0].Steps) != 0 {
 		t.Fatalf("the unexplained fact's card: %+v", page.Cards)
+	}
+	// a fact the words do not know still has a title: its own name — the kernel speaks, in no language
+	if got := flat(page.Cards[0].Title); got != "parcel.lost" {
+		t.Fatalf("a title without words: %q", got)
 	}
 	get("/api/stream?limit=x", 400, nil)
 }
