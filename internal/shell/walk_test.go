@@ -166,6 +166,10 @@ func TestEveryReadIsTheCompanysOwn(t *testing.T) {
 		{"GET /api/blobs/{hash}", "GET", "/api/blobs/" + hash, nil},
 		{"GET /api/time", "GET", "/api/time", nil},
 		{"GET /api/health", "GET", "/api/health", nil},
+		// the stream of events: a's owner sees a's facts, never b's, nor b's note's history by its id
+		{"GET /api/stream", "GET", "/api/stream", nil},
+		{"GET /api/stream", "GET", "/api/stream?limit=5&before=0", nil},
+		{"GET /api/stream", "GET", "/api/stream?object=" + note, nil},
 		{"POST /api/rules/{id}/simulate", "POST", "/api/rules/" + rule + "/simulate", nil},
 		{"POST /api/backfill/simulate", "POST", "/api/backfill/simulate", nil},
 		{"POST /api/bundles/{id}/simulate", "POST", "/api/bundles/" + kept.ID + "/simulate", nil},
@@ -220,7 +224,8 @@ func TestEveryReadIsTheCompanysOwn(t *testing.T) {
 	// B's owner reads the same routes and finds B's books: what A was not
 	// shown is there to be shown
 	for _, path := range []string{"/api/objects?type=note", "/api/objects/" + note, "/api/explain?object=" + note, "/api/worklist",
-		"/api/said?view=briefing", "/api/untaught", "/api/rules", "/api/bundles", "/api/bundles/" + kept.ID + "/preview", "/api/blobs/" + hash} {
+		"/api/said?view=briefing", "/api/untaught", "/api/rules", "/api/bundles", "/api/bundles/" + kept.ID + "/preview", "/api/blobs/" + hash,
+		"/api/stream", "/api/stream?object=" + note} {
 		if code, body := walkCall(t, w, "olga", b, "GET", path, nil); code != 200 || !strings.Contains(body, mark) {
 			t.Errorf("b's owner at %s: %d %s", path, code, body)
 		}
