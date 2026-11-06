@@ -167,6 +167,12 @@ type WordsSpec struct {
 	// invoice counts in (2026-10-18): market knowledge for whoever reads the
 	// books, the reporting author first, so the kernel names none of it.
 	Notes []string `json:"notes,omitempty"`
+	// Steps say, per rule, how its step reads in the stream of events (KK
+	// 2026-11-05): a sentence template with the step's facts in it, the
+	// area that handled it, whether it waits for a person; "event:<type>"
+	// titles a raw event's card, "type:<object type>" speaks for rules that
+	// make that type and have no words of their own. See StepWords and Say.
+	Steps map[string]StepWords `json:"steps,omitempty"`
 }
 
 // Merge lays later words over these (DIRECTION 2026-10-24, step 3): a
@@ -224,6 +230,12 @@ func (w *WordsSpec) Merge(o WordsSpec) {
 		if !slices.Contains(w.Notes, n) {
 			w.Notes = append(w.Notes, n)
 		}
+	}
+	if len(o.Steps) > 0 && w.Steps == nil {
+		w.Steps = map[string]StepWords{}
+	}
+	for k, v := range o.Steps {
+		w.Steps[k] = v
 	}
 }
 
@@ -450,7 +462,7 @@ func (w WordsSpec) Check() error {
 			}
 		}
 	}
-	return nil
+	return w.checkSteps()
 }
 
 // StatementSpec: spec of a `statement` notion — one object's figures laid
