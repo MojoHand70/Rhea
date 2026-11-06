@@ -134,7 +134,12 @@ build step):
 - **Tabs** (main area): each opened function or object becomes a tab; tab content is an
   object-tailored editor rendered generically from a ViewDef.
 
-The shell knows nothing about invoices; it knows how to render the six notions.
+The shell knows nothing about invoices; it knows how to render the six notions. Beside the
+ViewDefs it renders the invariant layer itself through four native surfaces: the worklist (facts
+no rule answered), the rules with their approvals, the provenance walk (why a record exists), and
+the stream of events (every recent fact with the steps the rules took, each step a sentence of
+the pack's words, each with its rule version and the record it made; a record's history is the
+chains that name it).
 
 ## §6 Milestone ladder
 

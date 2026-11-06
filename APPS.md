@@ -286,6 +286,14 @@ the face's check and the live walk guard what the person sees.
    step 2, with what a record shows.
 7. **The starter questions and the stand-in domain words** — the pack's words: the questions are (Rhea be714d9, pack
    v47; rheaface d4c36a0); the domain words stand in only where a pack arranges nothing.
+8. **The stream of events** (KK 2026-11-05: "we never show events"; "each event should be an event, not just a
+   row") — the kernel serves it (`GET /api/stream`): a card per raw fact, newest first, titled in the pack's words,
+   and under it the steps the rules took, grouped by rule, each a sentence of the pack's with the step's facts in
+   it, the area that handled it, whether it waits for a person, its rule version and the record it made. The
+   sentences are the words' `steps` (keyed by rule, `event:<type>` for a title, `type:<kind>` as a fallback); a
+   rule without words shows as its kind's name and label. The face draws the cards and formats figures, money
+   and dates; it knows no sentence. A record's history (`?object=`) is the chains that name it. What an App
+   adds to this — which facts stand under its counter, which filters it offers — comes with the counters.
 
 ## Order within step 1
 

@@ -45,6 +45,12 @@ var activeRulesSQL string
 //go:embed queries/chain.sql
 var chainSQL string
 
+//go:embed queries/recent_roots.sql
+var recentRootsSQL string
+
+//go:embed queries/roots_naming.sql
+var rootsNamingSQL string
+
 //go:embed queries/bundle_rejection.sql
 var bundleRejectionSQL string
 
@@ -589,6 +595,27 @@ func (s *Store) Installation(ctx context.Context) (string, error) {
 // ChainOf returns every derived event rooted at a raw event, in log order.
 func (s *Store) ChainOf(ctx context.Context, rootID int64) ([]core.Event, error) {
 	rows, err := s.Pool.Query(ctx, chainSQL, rootID)
+	if err != nil {
+		return nil, err
+	}
+	return scanEvents(rows)
+}
+
+// RecentRoots is the stream's page: the scope's own raw facts, newest first,
+// before an event (0: from the newest), at most limit of them. The kernel's
+// verbs and uneventful days are left out (recent_roots.sql).
+func (s *Store) RecentRoots(ctx context.Context, before int64, limit int) ([]core.Event, error) {
+	rows, err := s.Pool.Query(ctx, recentRootsSQL, CompanyOf(ctx), before, limit)
+	if err != nil {
+		return nil, err
+	}
+	return scanEvents(rows)
+}
+
+// RootsNaming is a record's history: the raw roots of every chain in which
+// some event names the object, newest first, at most limit of them.
+func (s *Store) RootsNaming(ctx context.Context, objectID string, limit int) ([]core.Event, error) {
+	rows, err := s.Pool.Query(ctx, rootsNamingSQL, CompanyOf(ctx), objectID, limit)
 	if err != nil {
 		return nil, err
 	}

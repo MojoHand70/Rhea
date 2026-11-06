@@ -256,6 +256,7 @@ func (s *Server) mux() http.Handler {
 	mux.HandleFunc("GET /api/files/{writer}", s.handleFile)
 	mux.HandleFunc("POST /api/files/{writer}/issue", s.handleIssueFile)
 	mux.HandleFunc("GET /api/live", s.handleLive)
+	mux.HandleFunc("GET /api/stream", s.handleStream)
 	mux.HandleFunc("GET /api/rules", s.handleRules)
 	mux.HandleFunc("GET /api/promotions", s.handlePromotions)
 	mux.HandleFunc("GET /api/changes", s.handleChanges)

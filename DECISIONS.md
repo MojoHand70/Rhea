@@ -6063,3 +6063,22 @@ choice.
 - **The rule for posing decisions.** Before a policy question goes to KK it is asked whether it is a
   setting the client chooses in Rhea (a group, a preference, an interview answer) with a default; only
   what must be fixed is posed as a decision. Why: KK's answer above, 2026-11-06.
+
+## 2026-11-06 — The stream is served by the kernel in the pack's words: step sentences per rule, cards per fact, a record's history as the chains that name it (KK 2026-11-05/06: the stream first, data before face)
+- **Sentences are the pack's, keyed by rule.** The words gain `steps`: `{rule_id: {says, area, state}}`, with
+  `event:<type>` for a card's title and `type:<kind>` as a fallback; placeholders `{x}`, `{x|f}` figure,
+  `{x|m}` money, `{x|d}` date, `{x|month}`, `{x|value:type.field}`, `{n|plural:one,few,many}`. The kernel
+  renders parts (text, figure, money with currency, date) and the face formats by locale. Why: KK's
+  "Robocop" objection and "everything meta-defined": the words are data a pack or a designer changes; the
+  face knows no Polish and no business. Simplest grammar that covers the 204 rules; noted as spec-silent.
+- **A card's scope is the company's own facts.** Acting for a company, the stream shows that company's
+  facts only; the installation's rows (a pack's chart of accounts, its rates) show unscoped, to the house.
+  Why: a pack load is not what happened in a client's books.
+- **A person sees a card when a step of it made a record of a type they may read**; a card no rule
+  answered belongs to whoever may see the worklist. Why: the same rights as the records themselves,
+  per card, without a new right.
+- **Steps of one rule under one cause fold into one step that counts them** (three postings: one step,
+  `{n}` = 3); a rule's step may be silent when another step says it (a settlement record, said by the
+  settled document's step). Why: KK: the postings doubled the main information.
+- **Assessed and left (2026-11-06):** one chain query per card, pages of at most 100; measured before
+  any caching. Time events are cards only when they moved the books.
