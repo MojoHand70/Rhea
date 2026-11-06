@@ -6046,3 +6046,20 @@ choice.
   is an App that opens on its counter from its item in that folder (Zamknięcie › Zamknięcie miesiąca),
   beside year close, RMK, provisions, the stocktake and the currency revaluation. Why: KK answered the
   question posed with the shorter lists; the frame does not move for a work mode, the counter carries it.
+
+## 2026-11-06 — Policy questions become Rhea's settings: who confirms a close step is a group, how strict the close is comes from the client's interview, KSeF acceptance per invoice by default with a bulk mode (KK, answering the close and stream questions: "can the answer to these questions actually be a part of Rhea implementation?")
+- **Responsibility is a group.** Who confirms a person-step of the month close is a group of the
+  company, as Bankowość approves bank accounts: the pack creates the default groups, adding a person
+  to one makes them responsible, a substitute inherits it. Why: KK: "can we create a User Group for
+  that? Adding a user to this group makes him responsible."
+- **The close's strictness is the client's setting, from the interview, with the pack's defaults.**
+  Whether a month may close with an open step (default: only with a written reason, recorded and shown
+  to the step's owner); whether and who may reopen a closed month (default: a recorded reopening with a
+  reason, then a new close). Why: KK: the answers are part of Rhea, not fixed by us.
+- **KSeF acceptance in the stream: per invoice by default, in bulk as a choice.** By default each
+  accepted invoice is a step on that invoice's own card; a client who accepts in bulk — large volumes,
+  automatic acceptance — chooses one card per batch. Why: KK: "we need both alternatives to choose
+  from, by default on invoice level, but I can imagine a client who needs a bulk acceptance."
+- **The rule for posing decisions.** Before a policy question goes to KK it is asked whether it is a
+  setting the client chooses in Rhea (a group, a preference, an interview answer) with a default; only
+  what must be fixed is posed as a decision. Why: KK's answer above, 2026-11-06.
