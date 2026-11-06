@@ -222,6 +222,25 @@ func TestStreamTellsWhatHappened(t *testing.T) {
 	if len(hist.Cards) != 2 || hist.Cards[0].EventType != "bank.statement.line" || hist.Cards[1].EventType != "sales.invoice.issued" || hist.Cards[1].ObjectID != invoiceID {
 		t.Fatalf("the invoice's history: %+v", hist.Cards)
 	}
+	// a step the pack marks as waiting for a person waits only until someone acts: the account proposed and
+	// approved above reads as done, a second one nobody has decided on waits, and its card with it
+	if _, err := x.TriggerActivity(ctx, "propose_bank_account", map[string]any{"name": "Rachunek pomocniczy", "number": "PL27114020040000300201355387", "currency": "PLN", "proposed_by": "krzysztof"}, "krzysztof", "acct-2"); err != nil {
+		t.Fatal(err)
+	}
+	get("/api/stream?limit=40", 200, &page)
+	var proposals []card
+	for _, c := range page.Cards {
+		if c.EventType == "bank_account.proposed" {
+			proposals = append(proposals, c)
+		}
+	}
+	if len(proposals) != 2 || proposals[0].State != "wait" || proposals[0].Steps[0].State != "wait" || proposals[1].State != "ok" || proposals[1].Steps[0].State != "ok" {
+		t.Fatalf("the proposals' states, newest first: %+v", proposals)
+	}
+	if got := flat(proposals[0].Steps[0].Says); got != "rachunek PL27114020040000300201355387 zgłoszony, czeka na zatwierdzenie" {
+		t.Fatalf("the waiting step: %q", got)
+	}
+
 	// a fact no rule answered is a card too, standing in the state "none": a question, not a story
 	tr, err := x.TriggerActivity(ctx, "submit_event", map[string]any{"event_type": "parcel.lost", "occurred_at": "2026-09-26", "payload": map[string]any{"what": "a parcel"}}, "test", "lost")
 	if err != nil || tr.Booked != 0 {

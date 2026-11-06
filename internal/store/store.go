@@ -51,6 +51,9 @@ var recentRootsSQL string
 //go:embed queries/roots_naming.sql
 var rootsNamingSQL string
 
+//go:embed queries/named_after.sql
+var namedAfterSQL string
+
 //go:embed queries/bundle_rejection.sql
 var bundleRejectionSQL string
 
@@ -620,6 +623,17 @@ func (s *Store) RootsNaming(ctx context.Context, objectID string, limit int) ([]
 		return nil, err
 	}
 	return scanEvents(rows)
+}
+
+// NamedAfter says whether some fact after the given one names the record:
+// what a step that waits for a person is resolved by.
+func (s *Store) NamedAfter(ctx context.Context, objectID string, after int64) (bool, error) {
+	rows, err := s.Pool.Query(ctx, namedAfterSQL, CompanyOf(ctx), after, objectID)
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close()
+	return rows.Next(), rows.Err()
 }
 
 // GetEvent reads one fact by its id: of the company acted for, or the

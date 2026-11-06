@@ -31,7 +31,9 @@ import (
 // Scope: the company acted for sees its own facts (store.RecentRoots); a
 // signed-in person sees a card when some step of it made a record of a type
 // they may read, or, for a card no rule answered, when they may see the
-// worklist. Assessed and left (2026-11-06): one chain query per card.
+// worklist. A step the pack marks as waiting for a person waits until a later
+// fact names its record (store.NamedAfter), then it stands as done. Assessed
+// and left (2026-11-06): one chain query per card, one more per waiting step.
 
 type streamStep struct {
 	Says        []core.SayPart `json:"says"`
@@ -347,6 +349,13 @@ func (t *teller) step(ctx context.Context, group []core.Event) (streamStep, bool
 		st.Says, st.Area = t.words.Say(sw.Says, lookupIn(facts)), sw.Area
 		if sw.State != "" {
 			st.State = sw.State
+		}
+		// a step that waits for a person waits until a later fact names its record — the approval, the
+		// refusal, the decision; then it stands as done, whatever the pack's word for the step says
+		if st.State == "wait" && st.ObjectID != "" {
+			if named, err := t.s.Store.NamedAfter(ctx, st.ObjectID, ev.ID); err == nil && named {
+				st.State = "ok"
+			}
 		}
 		return st, true
 	}
